@@ -4,10 +4,16 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var expressHbs = require('express-handlebars');
+var mongoose = require('mongoose');
+var config = require('./config/config.js');
+
 
 var indexRouter = require('./routes/index');
 
 var app = express();
+
+mongoose.connect(config.db.connstr,{ useNewUrlParser: true });
+
 
 // view engine setup
 //app.set('views', path.join(__dirname, 'views'));

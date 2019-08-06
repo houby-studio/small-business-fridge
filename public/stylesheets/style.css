@@ -1,0 +1,35 @@
+html {
+    height: 100%;
+}
+
+body {
+    height: 100%;
+}
+
+body {
+    font-family: 'Muli', sans-serif;
+}
+
+.container-fluid {
+    max-height: 100%;
+    padding-left: 0px;
+    padding-right: 0px;
+}
+
+.row {
+    margin-left: 0px;
+    margin-right: 0px;
+}
+
+img {
+    /*max-width:25rem;*/
+    max-height:15rem;
+    width:auto;
+    height:100%;
+}
+
+.cover {
+    object-fit: cover;
+    height: 25rem;
+    width: 100%;
+  }

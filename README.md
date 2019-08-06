@@ -10,13 +10,13 @@ You can either follow the guide as well and take inspiration from this project o
 
 ## Forking repo
 
-All you need to do is setup your very own config file containing all sensitive information. That is something you should add to your `.gitignore` file.
+All you need to do is download this repo and setup your very own config file containing all sensitive information. That is something you should add to your `.gitignore` file so your sensitive information never leave your computer to public repository.
 
 ## Following tutorial
 
 Well, you just watch the videos provided above and apply your own ideas in between.
 
-*Small tip: Start with installing [express generator](https://expressjs.com/en/starter/generator.html) with following command:  
+*Small tip: Start with installing [express generator](https://expressjs.com/en/starter/generator.html) with following command*:  
 `npm install -g express-generator`  
-`express --hbs`
+`express --hbs`  
 `npm install`
