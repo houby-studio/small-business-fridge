@@ -1,4 +1,4 @@
-<nav class="navbar sticky-top navbar-expand-lg navbar-dark bg-dark">
+<nav class="navbar sticky-top navbar-expand-lg navbar-dark bg-light">
   <a class="navbar-brand" href="#">Lednice IT</a>
   <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
     <span class="navbar-toggler-icon"></span>
@@ -11,6 +11,11 @@
       </li>
     </ul>
     <ul class="navbar-nav">
+      {{#if user}}
+        <li class="nav-item">
+          <a class="nav-link" href="#">{{user._json.preferred_username}}</a>
+        </li>
+      {{/if}}
       <li class="nav-item">
         <a class="nav-link" href="#"><i class="fas fa-user"></i> Uživatel</a>
       </li>

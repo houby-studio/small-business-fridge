@@ -10,7 +10,7 @@ router.get('/', function(req, res, next) {
     for (var i = 0; i < docs.length; i += chunkSize) {
       productChunks.push(docs.slice(i, i + chunkSize));
     }
-    res.render('shop/index', { title: 'Express', products: productChunks });
+    res.render('shop/index', { title: 'Express', products: productChunks, user: req.user });
   });
 });
 

@@ -20,3 +20,5 @@ Well, you just watch the videos provided above and apply your own ideas in betwe
 `npm install -g express-generator`  
 `express --hbs`  
 `npm install`
+
+We will use Azure authentication using this tutorial https://blogs.msdn.microsoft.com/kaevans/2017/03/10/creating-a-node-js-application-secured-by-azure-ad/ (of course not using jade but handlebars)

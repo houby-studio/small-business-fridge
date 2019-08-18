@@ -1,9 +1,9 @@
 {{# each products }}
     <div class="row">
         {{# each this }}
-            <div class="col-sm py-2">
+            <div class="col-sm py-2" style="max-width: 25%;">
                 <div class="card h-100 text-center">
-                    <img src="{{ this.imagePath }}" class="mx-auto img-responsive" alt="...">
+                    <img src="{{ this.imagePath }}" class="mx-auto my-2 img-responsive" alt="...">
                     <div class="card-body">
                         <h5 class="card-title">{{ this.displayName }}</h5>
                         <p class="card-text">{{ this.description }}</p>

@@ -10,9 +10,13 @@
     "debug": "~2.6.9",
     "express": "~4.16.1",
     "express-handlebars": "^3.1.0",
+    "express-session": "^1.16.2",
     "hbs": "~4.0.4",
     "http-errors": "~1.6.3",
+    "method-override": "^3.0.0",
     "mongoose": "^5.6.8",
-    "morgan": "~1.9.1"
+    "morgan": "~1.9.1",
+    "passport": "^0.4.0",
+    "passport-azure-ad": "^4.1.0"
   }
 }
