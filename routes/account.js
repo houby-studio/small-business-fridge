@@ -1,11 +1,7 @@
 var express = require('express');
 var router = express.Router();
 var Product = require('../models/product');
-
-function ensureAuthenticated(req, res, next) {
-	if (req.isAuthenticated()) { return next(); }
-	res.redirect('/login');
-};
+var ensureAuthenticated = require('../functions/ensureAuthenticated').ensureAuthenticated;
 
 /* GET account page. */
 router.get('/', ensureAuthenticated, function (req, res) {
