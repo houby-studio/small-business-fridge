@@ -1,24 +1,42 @@
-<nav class="navbar sticky-top navbar-expand-lg navbar-dark bg-light">
-  <a class="navbar-brand" href="#">Lednice IT</a>
+<nav class="navbar sticky-top navbar-expand-lg navbar-dark bg-light mb-3">
+  <a class="navbar-brand" href="/">Lednice IT</a>
   <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
     <span class="navbar-toggler-icon"></span>
   </button>
 
   <div class="collapse navbar-collapse" id="navbarSupportedContent">
     <ul class="navbar-nav mr-auto">
+      {{#if user}}
+        <li class="nav-item active">
+          <a class="nav-link" href="/shop"><i class="fas fa-shopping-basket"></i> Nakupovat <span class="sr-only"></span></a>
+        </li>
+      {{/if}}
       <li class="nav-item active">
-        <a class="nav-link" href="#"><i class="fas fa-home"></i> Úvod <span class="sr-only">(current)</span></a>
+        <a class="nav-link" href="/about"><i class="fas fa-question-circle"></i> O aplikaci <span class="sr-only">(current)</span></a>
       </li>
     </ul>
     <ul class="navbar-nav">
       {{#if user}}
+        <div class="input-group">
+          <div class="input-group-prepend">
+            <button class="btn btn-secondary dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="fas fa-user"></i> {{user.displayName}}</button>
+            <div class="dropdown-menu">
+              <a class="dropdown-item" href="#"><i class="fas fa-id-card"></i> Profil</a>
+              <a class="dropdown-item" href="#"><i class="fas fa-shopping-cart"></i> Objednávky</a>
+              <a class="dropdown-item" href="#"><i class="fas fa-file-invoice-dollar"></i> Faktury</a>
+              <div role="separator" class="dropdown-divider"></div>
+              <a class="dropdown-item" href="#"><i class="fas fa-dolly"></i> Naskladnit</a>
+              <a class="dropdown-item" href="#"><i class="fas fa-cash-register"></i> Vyfakturovat</a>
+              <a class="dropdown-item" href="#"><i class="fas fa-boxes"></i> Stav skladu</a>
+            </div>
+          </div>
+          <a class="btn btn-danger nav-link" href="/logout"><i class="fas fa-sign-out-alt"></i> Odhlásit</a>
+        </div>
+      {{else}}
         <li class="nav-item">
-          <a class="nav-link" href="#">{{user._json.preferred_username}}</a>
+          <a class="btn btn-success nav-link" href="/login"><i class="fas fa-sign-in-alt"></i> Přihlásit</a>
         </li>
       {{/if}}
-      <li class="nav-item">
-        <a class="nav-link" href="/login"><i class="fas fa-user"></i> Uživatel</a>
-      </li>
     </ul>
   </div>
 </nav>

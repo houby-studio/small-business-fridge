@@ -1,0 +1,33 @@
+{{# each products }}
+    <div class="row">
+        {{# each this }}
+            <div class="col-sm py-3" style="max-width: 25%;">
+                <div class="card h-100 text-center">
+                    <img src="{{ this.imagePath }}" class="mx-auto my-2 img-responsive" alt="...">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ this.displayName }}</h5>
+                        <p class="card-text">{{ this.description }}</p>
+                    </div>
+                    <div class="card-footer text-muted">
+                        <div class="row">
+                            <p>Skladem: 15</p>
+                        </div>
+                        <div class="row">
+                            <div class="col-xl">
+                                <div class="input-group mb-3">
+                                        <input type="text" class="form-control" value="{{ this.price }}" disabled>
+                                    <div class="input-group-append">
+                                        <span class="input-group-text">Kč</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl">
+                                <a href="#" class="btn btn-primary float-right">Zakoupit</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {{/each}}
+    </div>
+{{/each}}

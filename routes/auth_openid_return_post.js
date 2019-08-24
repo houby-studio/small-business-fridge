@@ -17,7 +17,7 @@ router.post('/',
     },
     function(req, res) {
         if (req.user.oid)
-        res.redirect('/');
+        res.redirect('/shop');
 });
 
 module.exports = router;

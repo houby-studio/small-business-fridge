@@ -8,17 +8,16 @@ var OIDCStrategy = require('passport-azure-ad').OIDCStrategy;
 var User = require('../models/user');
 
 // array to hold logged in users
-var users = [];
+//var users = []; // using array like this really
 
-// Helper function to loop through users array
+// Helper function to find user in database
 var findByOid = function(oid, fn) {
-	for (var i = 0, len = users.length; i < len; i++) {
-	  var user = users[i];
-	  if (user.oid === oid) {
-		return fn(null, user);
-	  }
-	}
-	return fn(null, null);
+    User.findOne({'oid': oid}, function (err, user) {
+      if (err) {
+        return fn(err);
+      }
+      return fn(null, user);
+    });
 };
 
 // Helper function to work with user object
@@ -58,6 +57,7 @@ passport.use(new OIDCStrategy({
     if (!profile.oid) {
       return done(new Error("No oid found"), null);
     }
+
     // asynchronous verification
     process.nextTick(function () {
       findByOid(profile.oid, function(err, user) {
@@ -66,17 +66,20 @@ passport.use(new OIDCStrategy({
         }
         if (!user) {
           // Auto-registration
-          users.push(profile);
+          //users.push(profile); Original placement of users push to array
           User.findOne({'oid': profile.oid}, function (err, user) {
             if (err) {
               return done(err);
             }
             // If user does not exist in database, automatically register as customer (not admin, not supplier, auto increment keypad ID)
             if (!user) {
+              console.log('Triggered no user, creating new.');
               var newUser = new User();
               newUser.oid = profile.oid;
               newUser.displayName = profile.displayName;
               newUser.email = profile._json.email;
+              profile.admin = false;
+              profile.supplier = false;
               newUser.admin = false;
               newUser.supplier = false;
               // Async function to find highest keypad ID and increment it by one.
@@ -102,8 +105,13 @@ passport.use(new OIDCStrategy({
                   }
                 });
               });
+            } else {
+              console.log('Profile found in database.');
+              profile.admin = user.admin;
+              profile.supplier = user.supplier;
             }
           });
+          //users.push(profile); in case you want to use in-memory array instead of querying database
           return done(null, profile);
         }
         return done(null, user);

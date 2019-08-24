@@ -1,33 +1,59 @@
-{{# each products }}
+<div class="row">
+    <div class="col text-center">
+        <div class="h1">Logo Lednice IT</div>        
+    </div>
+</div>
+{{#if user}}
     <div class="row">
-        {{# each this }}
-            <div class="col-sm py-2" style="max-width: 25%;">
-                <div class="card h-100 text-center">
-                    <img src="{{ this.imagePath }}" class="mx-auto my-2 img-responsive" alt="...">
-                    <div class="card-body">
-                        <h5 class="card-title">{{ this.displayName }}</h5>
-                        <p class="card-text">{{ this.description }}</p>
-                    </div>
-                    <div class="card-footer text-muted">
-                        <div class="row">
-                            <p>Skladem: 15</p>
-                        </div>
-                        <div class="row">
-                            <div class="col-xl">
-                                <div class="input-group mb-3">
-                                        <input type="text" class="form-control" value="{{ this.price }}" disabled>
-                                    <div class="input-group-append">
-                                        <span class="input-group-text">Kč</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-xl">
-                                <a href="#" class="btn btn-primary float-right">Zakoupit</a>
-                            </div>
-                        </div>
-                    </div>
+        <div class="col">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Mějte přehled!</h5>
+                    <p class="card-text">Bojíte se, že nebudete mít na zaplacení? Děsí Vás, že nemáte přehled o tom, kolik utrácíte? Už nikdy víc! Kdykoli si na e-shopu zkontrolujte svou historii objednávek.</p>
+                </div>
+                <div class="card-footer text-muted">
+                    <a href="#" class="btn btn-primary">Objednávky</a>
                 </div>
             </div>
-        {{/each}}
+        </div>
+        <div class="col">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Nakupujte!</h5>
+                    <p class="card-text">Vstupte do světa vychlazených nápojů! Ceny jsou příznivé, nápoje jsou Vám vždy na dosah a s přehledným e-shopem si můžete vybrat nápoj, který máme skladem a rovnou jej objednat!</p>
+                </div>
+                <div class="card-footer text-muted">
+                    <a href="#" class="btn btn-primary">Nakupovat</a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Máte vše zaplacené?</h5>
+                    <p class="card-text">Nevíte, zda jste již uhradili všechna Vaše vyúčtování? Nechce se Vám chodit osobně za dodavatelem, abyste se jej zeptali? Jednoduše zkontrolujte Vaše faktury a vše si ověřte!</p>
+                </div>
+                <div class="card-footer text-muted">
+                    <a href="#" class="btn btn-primary">Faktury</a>
+                </div>
+            </div>
+        </div>
     </div>
-{{/each}}
+    {{#if user.supplier }}
+        <div class="row">
+            <div class="col">
+                <div class="card h-100 text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Dovezl jsi nové zboží?</h5>
+                    <p class="card-text">Chvála ti, ó veliký dodavateli. Díky, že jsi nás poctil další dodávkou chlazených nápojů, jenž zchladí naši žízeň!</p>
+                </div>
+                <div class="card-footer text-muted">
+                    <a href="#" class="btn btn-primary">Naskladnit</a>
+                </div>
+            </div>
+            </div>
+        </div>
+    {{/if}}
+{{else}}
+
+{{/if}}
