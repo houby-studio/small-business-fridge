@@ -1,11 +1,13 @@
 {{# each products }}
     <div class="row">
         {{# each this }}
-            <div class="col-sm py-3" style="max-width: 25%;">
+            <div class="col-lg-3 py-3">
                 <div class="card h-100 text-center">
-                    <img src="{{ this.imagePath }}" class="mx-auto my-2 img-responsive" alt="...">
+                    <div class="card-header h4">
+                        {{ this.displayName }}
+                    </div>
+                    <img src="{{ this.imagePath }}" class="mx-auto my-2 img-fluid shop-image-thumbnail" alt="...">
                     <div class="card-body">
-                        <h5 class="card-title">{{ this.displayName }}</h5>
                         <p class="card-text">{{ this.description }}</p>
                     </div>
                     <div class="card-footer text-muted">

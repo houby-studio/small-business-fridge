@@ -18,10 +18,17 @@ var config = require('./config/config.js'); // configuration file
 require('./functions/azure-passport');
 
 // Load routes from routes folder to later app.use them.
+// Access for all
 var indexRouter = require('./routes/index');
-var shopRouter = require('./routes/shop');
 var aboutRouter = require('./routes/about');
+// Access for logged in users
+var shopRouter = require('./routes/shop');
 var accountRouter = require('./routes/account');
+// Access for suppliers
+var AddProductsRouter = require('./routes/supplier_add_products');
+// Forms for suppliers
+var AddProductsFormRouter = require('./routes/form-handler/supplier_add_products');
+// Passport routes
 var loginRouter = require('./routes/login');
 var logoutRouter = require('./routes/logout');
 var authOpenId = require('./routes/auth_openid');
@@ -48,10 +55,17 @@ app.use(passport.initialize());
 app.use(passport.session())
 
 // Application routes
+// Access for all
 app.use('/', indexRouter);
-app.use('/shop', shopRouter);
 app.use('/about', aboutRouter);
+// Access for logged in users
+app.use('/shop', shopRouter);
 app.use('/account', accountRouter);
+// Access for suppliers
+app.use('/add_products', AddProductsRouter);
+// Forms for suppliers
+app.use('/add_products_form', AddProductsFormRouter);
+// Passport routes
 app.use('/login', loginRouter);
 app.use('/logout', logoutRouter);
 app.use('/auth/openid', authOpenId);

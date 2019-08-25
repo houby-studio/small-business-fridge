@@ -21,15 +21,28 @@ body {
     margin-right: 0px;
 }
 
-img {
-    /*max-width:25rem;*/
-    max-height:15rem;
-    width:auto;
-    height:100%;
-}
-
 .cover {
     object-fit: cover;
     height: 25rem;
     width: 100%;
+}
+
+.form-image-thumbnail {
+    max-height: 11rem !important;
+}
+
+.shop-image-thumbnail {
+    max-height: 13rem !important;
+}
+
+@media screen and (max-width: 991px) {
+    .btn {
+        width: 100% !important;
+    }
+    .float-right {
+        float: none !important;
+    }
+    .w-100-lg {
+        width: 100% !important;
+    }
 }

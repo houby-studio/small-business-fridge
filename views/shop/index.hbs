@@ -1,14 +1,16 @@
 <div class="row">
     <div class="col text-center">
-        <div class="h1">Logo Lednice IT</div>        
+        <div class="h1">Logo Lednice IT</div>
     </div>
 </div>
 {{#if user}}
     <div class="row">
-        <div class="col">
+        <div class="col-sm py-3">
             <div class="card h-100 text-center">
+                <div class="card-header h4">
+                    Mějte přehled!
+                </div>
                 <div class="card-body">
-                    <h5 class="card-title">Mějte přehled!</h5>
                     <p class="card-text">Bojíte se, že nebudete mít na zaplacení? Děsí Vás, že nemáte přehled o tom, kolik utrácíte? Už nikdy víc! Kdykoli si na e-shopu zkontrolujte svou historii objednávek.</p>
                 </div>
                 <div class="card-footer text-muted">
@@ -16,21 +18,25 @@
                 </div>
             </div>
         </div>
-        <div class="col">
+        <div class="col-sm py-3">
             <div class="card h-100 text-center">
+                <div class="card-header h4">
+                    Nakupujte!
+                </div>
                 <div class="card-body">
-                    <h5 class="card-title">Nakupujte!</h5>
                     <p class="card-text">Vstupte do světa vychlazených nápojů! Ceny jsou příznivé, nápoje jsou Vám vždy na dosah a s přehledným e-shopem si můžete vybrat nápoj, který máme skladem a rovnou jej objednat!</p>
                 </div>
                 <div class="card-footer text-muted">
-                    <a href="#" class="btn btn-primary">Nakupovat</a>
+                    <a href="/shop" class="btn btn-primary">Nakupovat</a>
                 </div>
             </div>
         </div>
-        <div class="col">
+        <div class="col-sm py-3">
             <div class="card h-100 text-center">
+                <div class="card-header h4">
+                    Máte vše zaplacené?
+                </div>
                 <div class="card-body">
-                    <h5 class="card-title">Máte vše zaplacené?</h5>
                     <p class="card-text">Nevíte, zda jste již uhradili všechna Vaše vyúčtování? Nechce se Vám chodit osobně za dodavatelem, abyste se jej zeptali? Jednoduše zkontrolujte Vaše faktury a vše si ověřte!</p>
                 </div>
                 <div class="card-footer text-muted">
@@ -41,19 +47,63 @@
     </div>
     {{#if user.supplier }}
         <div class="row">
-            <div class="col">
+            <div class="col-sm py-3">
                 <div class="card h-100 text-center">
-                <div class="card-body">
-                    <h5 class="card-title">Dovezl jsi nové zboží?</h5>
-                    <p class="card-text">Chvála ti, ó veliký dodavateli. Díky, že jsi nás poctil další dodávkou chlazených nápojů, jenž zchladí naši žízeň!</p>
-                </div>
-                <div class="card-footer text-muted">
-                    <a href="#" class="btn btn-primary">Naskladnit</a>
+                    <div class="card-header h4">
+                        Potřebujete prachy?
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">Kdo by nepotřeboval! Zkasírujte ty pijany! Na pár kliknutí vyfakturujte veškerou dosavadní útratu a rozešlete jim vyúčtování e-mailem.</p>
+                    </div>
+                    <div class="card-footer text-muted">
+                        <a href="#" class="btn btn-primary">Vyfakturovat</a>
+                    </div>
                 </div>
             </div>
+            <div class="col-sm py-3">
+                <div class="card h-100 text-center">
+                    <div class="card-header h4">
+                        Dovezl jste nové zboží?
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">Chvála ti, ó veliký dodavateli. Díky, že jste nás poctil další dodávkou chlazených nápojů, jenž zchladí naši nekonečnou žízeň!</p>
+                    </div>
+                    <div class="card-footer text-muted">
+                        <a href="/add_products" class="btn btn-primary">Naskladnit</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm py-3">
+                <div class="card h-100 text-center">
+                    <div class="card-header h4">
+                        Jak je na tom Váš sklad?
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">Je libo zkontrolovat, jak jsou na tom Vámi dodané zásoby? Kolik jste vlastně dovezl a kolik ještě zbývá? Netřeba hádat, podívejte se!</p>
+                    </div>
+                    <div class="card-footer text-muted">
+                        <a href="#" class="btn btn-primary">Stav skladu</a>
+                    </div>
+                </div>
             </div>
         </div>
     {{/if}}
 {{else}}
-
+    <div class="row">
+        <div class="col-sm py-3"></div>
+        <div class="col-sm py-3">
+            <div class="card h-100 text-center">
+                <div class="card-header h4">
+                    Vítejte v e-shopu!
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Předtím, než budete pokračovat, je nutné přihlásit se účtem Azure Active Directory!</p>
+                </div>
+                <div class="card-footer text-muted">
+                    <a href="/login" class="btn btn-primary">Přihlásit</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm py-3"></div>
+    </div>
 {{/if}}

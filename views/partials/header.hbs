@@ -17,21 +17,19 @@
     </ul>
     <ul class="navbar-nav">
       {{#if user}}
-        <div class="input-group">
-          <div class="input-group-prepend">
-            <button class="btn btn-secondary dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="fas fa-user"></i> {{user.displayName}}</button>
-            <div class="dropdown-menu">
-              <a class="dropdown-item" href="#"><i class="fas fa-id-card"></i> Profil</a>
-              <a class="dropdown-item" href="#"><i class="fas fa-shopping-cart"></i> Objednávky</a>
-              <a class="dropdown-item" href="#"><i class="fas fa-file-invoice-dollar"></i> Faktury</a>
-              <div role="separator" class="dropdown-divider"></div>
-              <a class="dropdown-item" href="#"><i class="fas fa-dolly"></i> Naskladnit</a>
-              <a class="dropdown-item" href="#"><i class="fas fa-cash-register"></i> Vyfakturovat</a>
-              <a class="dropdown-item" href="#"><i class="fas fa-boxes"></i> Stav skladu</a>
-            </div>
+        <div class="dropdown">
+          <button class="btn btn-secondary dropdown-toggle w-100 nav-link" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="fas fa-user"></i> {{user.displayName}}</button>
+          <div class="dropdown-menu">
+            <a class="dropdown-item" href="/profile"><i class="fas fa-id-card"></i> Profil</a>
+            <a class="dropdown-item" href="/orders"><i class="fas fa-shopping-cart"></i> Objednávky</a>
+            <a class="dropdown-item" href="/invoices"><i class="fas fa-file-invoice-dollar"></i> Faktury</a>
+            <div role="separator" class="dropdown-divider"></div>
+            <a class="dropdown-item" href="/add_products"><i class="fas fa-dolly"></i> Naskladnit</a>
+            <a class="dropdown-item" href="#"><i class="fas fa-cash-register"></i> Vyfakturovat</a>
+            <a class="dropdown-item" href="#"><i class="fas fa-boxes"></i> Stav skladu</a>
           </div>
-          <a class="btn btn-danger nav-link" href="/logout"><i class="fas fa-sign-out-alt"></i> Odhlásit</a>
         </div>
+        <a class="btn btn-danger nav-link" href="/logout"><i class="fas fa-sign-out-alt"></i> Odhlásit</a>
       {{else}}
         <li class="nav-item">
           <a class="btn btn-success nav-link" href="/login"><i class="fas fa-sign-in-alt"></i> Přihlásit</a>

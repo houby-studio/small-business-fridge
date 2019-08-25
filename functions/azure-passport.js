@@ -12,12 +12,12 @@ var User = require('../models/user');
 
 // Helper function to find user in database
 var findByOid = function(oid, fn) {
-    User.findOne({'oid': oid}, function (err, user) {
-      if (err) {
-        return fn(err);
-      }
-      return fn(null, user);
-    });
+  User.findOne({'oid': oid}, function (err, user) {
+    if (err) {
+      return fn(err);
+    }
+    return fn(null, user);
+  });
 };
 
 // Helper function to work with user object
