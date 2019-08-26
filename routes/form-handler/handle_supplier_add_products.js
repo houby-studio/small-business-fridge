@@ -19,7 +19,7 @@ router.post('/', ensureAuthenticated, function (req, res) {
         }
         console.log(req.body);
         console.log(req.user);
-        prod.stock.push({supplierId: req.user.id, ammount_supplied: req.body.product_ammount, ammount_left: req.body.product_ammount, price: req.body.product_price });
+        prod.stock.push({supplierId: req.user.id, amount_supplied: req.body.product_amount, amount_left: req.body.product_amount, price: req.body.product_price });
         prod.save(function (err) {
             if (err) {
                 console.log(err);

@@ -21,29 +21,19 @@ router.get('/', ensureAuthenticated, function (req, res) {
       }}
     }}
   ],
-  function(err, products) { // callback populate Product with results from aggregate
-    console.log(products);
-    Product.populate(
-      products.map(function(product) {return new Product(product) }), // Don't know exactly what map does
-      {
-        "path": "stock.Stock",
-        "match": { "amount_left": { "$gt": 0 } }
-      },
-      function(err, docs) {
-        if (err) {
-          res.status(err.status || 500);
-          res.render('error');
-        }
-        //console.log(docs);
-        var productChunks = [];
-        var chunkSize = 4;
-        for (var i = 0; i < docs.length; i += chunkSize) {
-          productChunks.push(docs.slice(i, i + chunkSize));
-        }
-        //console.log(req.user); to see what user object is present
-        res.render('shop/shop', { title: 'E-shop | Lednice IT', products: productChunks, user: req.user });
-      }
-    );
+  function(err, docs) { // callback populate Product with results from aggregate
+    if (err) {
+      res.status(err.status || 500);
+      res.render('error');
+    }
+    console.log(docs);
+    var productChunks = [];
+    var chunkSize = 4;
+    for (var i = 0; i < docs.length; i += chunkSize) {
+      productChunks.push(docs.slice(i, i + chunkSize));
+    }
+    //console.log(req.user); to see what user object is present
+    res.render('shop/shop', { title: 'E-shop | Lednice IT', products: productChunks, user: req.user });
   });
 
   /* Product.find(function(err, docs) {
