@@ -27,7 +27,7 @@ var accountRouter = require('./routes/account');
 // Access for suppliers
 var AddProductsRouter = require('./routes/supplier_add_products');
 // Forms for suppliers
-var AddProductsFormRouter = require('./routes/form-handler/supplier_add_products');
+var AddProductsFormRouter = require('./routes/form-handler/handle_supplier_add_products');
 // Passport routes
 var loginRouter = require('./routes/login');
 var logoutRouter = require('./routes/logout');

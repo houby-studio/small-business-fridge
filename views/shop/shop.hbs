@@ -12,12 +12,20 @@
                     </div>
                     <div class="card-footer text-muted">
                         <div class="row">
-                            <p>Skladem: 15</p>
+                            {{#if this.stock.0.amount_left}}
+                                <p>Skladem za tuto cenu: {{ this.stock.0.amount_left }}</p>
+                            {{else}}
+                                <p>Produkt není skladem.</p>
+                            {{/if }}
                         </div>
                         <div class="row">
                             <div class="col-xl">
                                 <div class="input-group mb-3">
-                                        <input type="text" class="form-control" value="{{ this.price }}" disabled>
+                                        {{#if this.stock.0.price }}
+                                            <input type="text" class="form-control" value="{{ this.stock.0.price }}" disabled>
+                                        {{else}}
+                                            <input type="text" class="form-control" value="B00M" disabled>
+                                        {{/if}}
                                     <div class="input-group-append">
                                         <span class="input-group-text">Kč</span>
                                     </div>
