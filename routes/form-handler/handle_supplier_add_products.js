@@ -17,20 +17,20 @@ router.post('/', ensureAuthenticated, function (req, res) {
             res.redirect('/add_products?' + query);
             return;
         }
-        console.log(req.body);
-        console.log(req.user);
+        //console.log(req.body);
+        //console.log(req.user);
         prod.stock.push({supplierId: req.user.id, amount_supplied: req.body.product_amount, amount_left: req.body.product_amount, price: req.body.product_price });
         prod.save(function (err) {
             if (err) {
                 console.log(err);
                 var query = querystring.stringify({
-                    "response": 'error', "module": 'db', "code": 401, "error": err.message
+                    "a": 'danger', "d": 1, "c": 'db', "m": err.message
                 });
                 res.redirect('/add_products?' + query);
                 return;
             }
             var query = querystring.stringify({
-                "response": 'success', "code": 200
+                "a": 'success', "s": 1, "m": `${prod.displayName} přidán v počtu ${req.body.product_amount}ks za ${req.body.product_price}Kč.`
             });
             res.redirect('/add_products?' + query);
             return;

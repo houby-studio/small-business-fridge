@@ -35,6 +35,16 @@ body {
     max-height: 13rem !important;
 }
 
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { 
+  -webkit-appearance: none; 
+  margin: 0; 
+}
+
+input[type=number] {
+    -moz-appearance:textfield; /* Firefox */
+}
+
 @media screen and (max-width: 991px) {
     .btn {
         width: 100% !important;

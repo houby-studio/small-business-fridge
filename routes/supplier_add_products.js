@@ -19,8 +19,18 @@ router.get('/', ensureAuthenticated, function (req, res) {
             'product_id': docs.map(a => a.id, b => b.imagePath),
             'product_image': docs.map(a => a.imagePath)
         });
+        // GET parameters
+        if (req.query.a) {
+            var alert = {
+                type: req.query.a,
+                component: req.query.c,
+                message: req.query.m,
+                success: req.query.s,
+                danger: req.query.d
+            };
+        }
         console.log(docs);
-        res.render('shop/supplier_add_products', { title: 'Naskladnit | Lednice IT', products: docs, user: req.user });
+        res.render('shop/supplier_add_products', { title: 'Naskladnit | Lednice IT', products: docs, user: req.user, alert: alert });
     });
 
 });
