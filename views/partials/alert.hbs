@@ -2,13 +2,13 @@
     <div class="alert alert-{{ alert.type }} alert-dismissible fade show" role="alert">
         <p class="alert-heading mb-0">
             {{#if alert.success}}
-                Úspěch
+               <i class="fas fa-check-circle"></i> Úspěch
             {{else if alert.warning}}
-                Varování
+                <i class="fas fa-exclamation-triangle"></i> Varování
             {{else if alert.danger}}
-                Chyba
+                <i class="fas fa-exclamation-circle"></i> Chyba
             {{else if alert.info}}
-                Info
+                <i class="fas fa-info-circle"></i> Info
             {{/if}}
         </p>
         <p class="mb-0">{{ alert.message }}</p>

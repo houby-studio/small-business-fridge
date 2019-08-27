@@ -3,10 +3,11 @@
         {{# each this }}
             <div class="col-lg-3 py-3">
                 <div class="card h-100 text-center">
+                    <form id="shop_buy_product" class="needs-validation" method="POST" action="/add_products_form" novalidate></form>
                     <div class="card-header h4">
                         {{ this.displayName }}
                     </div>
-                    <img src="{{ this.imagePath }}" class="mx-auto my-2 img-fluid shop-image-thumbnail" alt="...">
+                    <img src="{{ this.imagePath }}" class="mx-auto my-2 img-fluid shop-image-thumbnail" alt="{{ this.description }}">
                     <div class="card-body">
                         <p class="card-text">{{ this.description }}</p>
                     </div>
@@ -35,7 +36,10 @@
                                 <a href="#" class="btn btn-primary float-right">Zakoupit</a>
                             </div>
                         </div>
+                        <input type="hidden" id="user_id" name="user_id" value="{{ ../../user.id }}">
+                        <input type="hidden" id="product_id" name="product_id" value="{{ this._id }}">
                     </div>
+                    </form>
                 </div>
             </div>
         {{/each}}

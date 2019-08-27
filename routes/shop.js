@@ -26,13 +26,13 @@ router.get('/', ensureAuthenticated, function (req, res) {
       res.status(err.status || 500);
       res.render('error');
     }
-    console.log(docs);
+    //console.log(docs);
     var productChunks = [];
     var chunkSize = 4;
     for (var i = 0; i < docs.length; i += chunkSize) {
       productChunks.push(docs.slice(i, i + chunkSize));
     }
-    //console.log(req.user); to see what user object is present
+    //console.log(req.user); //to see what user object is present
     res.render('shop/shop', { title: 'E-shop | Lednice IT', products: productChunks, user: req.user });
   });
 
