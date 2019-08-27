@@ -9,10 +9,12 @@ var expressSession = require('express-session');
 var expressHbs = require('express-handlebars'); // extended handlebars functionality
 var mongoose = require('mongoose'); // database
 var mongoStore = require('connect-mongo')(expressSession);
-var https = require('https'); // Using HTTPS for debug
-var fs = require('fs'); // Loading certificate from file for debug
 var passport = require('passport'); // authentication method
 var config = require('./config/config.js'); // configuration file
+if (config.config.debug) {
+  var https = require('https'); // Using HTTPS for debug
+  var fs = require('fs'); // Loading certificate from file for debug
+}
 
 // Functions
 require('./functions/azure-passport');
@@ -88,12 +90,15 @@ app.use(function(err, req, res, next) {
   res.render('error');
 });
 
-// Besides HTTP, we create also HTTPS server - debug only, later nginx will take care of that (or will it?)
-var options = {
-  key: fs.readFileSync('./config/key.pem'),
-  cert: fs.readFileSync('./config/cert.pem')
-};
-// Create an HTTPS service identical to the HTTP service.
-https.createServer(options, app).listen(443);
+if (config.config.debug) {
+  // When testing, we want to use self sign for localhost website. In producktion we rely on reverse proxy (nginx/apache etc.)
+  var options = {
+    key: fs.readFileSync('./config/key.pem'),
+    cert: fs.readFileSync('./config/cert.pem')
+  };
+  // Create an HTTPS service identical to the HTTP service.
+  https.createServer(options, app).listen(443);
+}
+
 
 module.exports = app;
