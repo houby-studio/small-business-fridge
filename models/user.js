@@ -7,7 +7,8 @@ var schema = new Schema({
 	email: {type: String, required: true},
 	keypadId: {type: Number, required: true},
 	admin: {type: Boolean, required: true},
-	supplier: {type: Boolean, required: true}
+	supplier: {type: Boolean, required: true},
+	showAllProducts: {type: Boolean, required: true}
 });
 
 module.exports = mongoose.model('User', schema);

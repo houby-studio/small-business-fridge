@@ -6,9 +6,15 @@ var ensureAuthenticated = require('../functions/ensureAuthenticated').ensureAuth
 /* GET home page. */
 router.get('/', ensureAuthenticated, function (req, res) {
 
+  if (req.user.showAllProducts) {
+    var filter = {};
+  } else {
+    var filter = { "stock.amount_left": { "$gt" : 0 }};
+  }
+
   // This crazy query which can be roughly translated for SQL people to "SELECT * FROM Product WHERE Stock.ammount_left > 0"
   Product.aggregate([
-    //{ "$match": { "stock.amount_left": { "$gt" : 0 } } }, // if we want to display only products which match only if any stock ammount left is greater than 0
+    { "$match": filter}, // Depending on user preferences, get either all products or only ones in stock
     { "$project": { // Since aggregate doesn't return resulting object, but plain value, we have to project it to cast its content back to object
       "keypadId": "$keypadId",
       "displayName": "$displayName",
@@ -32,8 +38,18 @@ router.get('/', ensureAuthenticated, function (req, res) {
     for (var i = 0; i < docs.length; i += chunkSize) {
       productChunks.push(docs.slice(i, i + chunkSize));
     }
+  // GET parameters
+  if (req.query.a) {
+    var alert = {
+        type: req.query.a,
+        component: req.query.c,
+        message: req.query.m,
+        success: req.query.s,
+        danger: req.query.d
+    };
+  }
     //console.log(req.user); //to see what user object is present
-    res.render('shop/shop', { title: 'E-shop | Lednice IT', products: productChunks, user: req.user });
+    res.render('shop/shop', { title: 'E-shop | Lednice IT', products: productChunks, user: req.user, alert: alert });
   });
 
   /* Product.find(function(err, docs) {

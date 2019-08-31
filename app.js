@@ -30,6 +30,7 @@ var accountRouter = require('./routes/account');
 var AddProductsRouter = require('./routes/supplier_add_products');
 // Forms for suppliers
 var AddProductsFormRouter = require('./routes/form-handler/handle_supplier_add_products');
+var BuyProductFormRouter = require('./routes/form-handler/handle_buy_product');
 // Passport routes
 var loginRouter = require('./routes/login');
 var logoutRouter = require('./routes/logout');
@@ -67,6 +68,7 @@ app.use('/account', accountRouter);
 app.use('/add_products', AddProductsRouter);
 // Forms for suppliers
 app.use('/add_products_form', AddProductsFormRouter);
+app.use('/buy_product_form', BuyProductFormRouter);
 // Passport routes
 app.use('/login', loginRouter);
 app.use('/logout', logoutRouter);
