@@ -54,9 +54,9 @@ router.post('/', ensureAuthenticated, function (req, res) {
                     "a": 'success', "s": 1, "m": `Zakoupili jste ${req.body.display_name} za ${req.body.product_price}Kč.`
                 });
                 res.redirect('/shop?' + query);
-                var subject = `Děkujeme za nákup! Zakoupený produkt: ${req.body.display_name}`;
-                var body = `<h1>Výborná volba!</h1><h3>Níže zasíláme detaily o tom, čím jste si udělali radost:</h3><p>Název: ${req.body.display_name}</p><p>Cena: ${req.body.product_price}</p><p>Kdy: ${moment().format('LLLL')}</p>`;
-                mailer.sendMail(req.user.email, subject, body);
+                var subject = `Děkujeme za nákup!`;
+                var body = `<h1>Výborná volba!</h1><p>Čím jste si udělali radost</p><img src="cid:image@prdelka.eu"/>'<p>Název: ${req.body.display_name}<br>Cena: ${req.body.product_price}Kč<br>Kdy: ${moment().format('LLLL')}</p>`;
+                mailer.sendMail(req.user.email, subject, body, obj.imagePath);
                 return;
             });
         });
