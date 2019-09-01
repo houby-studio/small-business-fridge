@@ -7,6 +7,8 @@ var ensureAuthenticated = require('../../functions/ensureAuthenticated').ensureA
 var Order = require('../../models/order');
 var Product = require('../../models/product');
 
+moment.locale('cs');
+
 router.post('/', ensureAuthenticated, function (req, res) {
 
     var newOrder = new Order({

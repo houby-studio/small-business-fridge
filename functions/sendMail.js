@@ -19,7 +19,7 @@ module.exports = {
             from: config.mail.from,
             to: mailto,
             subject: mailsubject,
-            text: mailbody
+            html: mailbody
         };
         
         transporter.sendMail(mailOptions, function(error, info){
