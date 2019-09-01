@@ -18,15 +18,15 @@ module.exports = {
         var mailOptions = {
             from: config.mail.from,
             to: mailto,
-            subject: 'Sending Email using Node.js',
-            text: 'That was easy!'
+            subject: mailsubject,
+            text: mailbody
         };
         
         transporter.sendMail(mailOptions, function(error, info){
             if (error) {
                 console.log(error);
             } else {
-                console.log('Email sent: ' + info.response);
+                //console.log('Email sent: ' + info.response);
             }
         });
     }
