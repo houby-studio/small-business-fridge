@@ -26,6 +26,7 @@ var aboutRouter = require('./routes/about');
 // Access for logged in users
 var shopRouter = require('./routes/shop');
 var accountRouter = require('./routes/account');
+var ordersRouter = require('./routes/orders');
 // Access for suppliers
 var AddProductsRouter = require('./routes/supplier_add_products');
 // Forms for suppliers
@@ -64,6 +65,7 @@ app.use('/about', aboutRouter);
 // Access for logged in users
 app.use('/shop', shopRouter);
 app.use('/account', accountRouter);
+app.use('/orders', ordersRouter);
 // Access for suppliers
 app.use('/add_products', AddProductsRouter);
 // Forms for suppliers

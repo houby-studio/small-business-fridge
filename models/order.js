@@ -10,4 +10,6 @@ var schema = new Schema({
     //paid: {type: Boolean, default: false}
 });
 
+//schema.pre('findOne', autoPopulateStock).pre('find', autoPopulateStock).pre('exec', autoPopulateStock); sadlz does not work
+
 module.exports = mongoose.model('Order', schema);

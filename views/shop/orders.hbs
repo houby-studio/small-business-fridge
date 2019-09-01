@@ -1,0 +1,46 @@
+<div class="row my-3">
+    <div class="col">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <th scope="col">Datum</th>
+                    <th scope="col">Produkt</th>
+                    <th scope="col">Cena</th>
+                    <th scope="col">Dodavatel</th>
+                    <th scope="col">Fakturováno</th>
+                    <th scope="col">Zaplaceno</th>
+                </thead>
+                <tbody>
+                    {{# each orders }}
+                        <tr>
+                            <td>
+                                {{ this.order_date }}
+                            </td>
+                            <td>
+                                {{ this.productInfo.0.displayName}}
+                            </td>
+                            <td>
+                                {{ this.productInfo.0.stock.0.price}}Kč
+                            </td>
+                            <td>
+                                {{ this.productInfo.0.stock.0.supplierId }}
+                            </td>
+                            <td>
+                                {{#if this.invoice }}
+                                    Ano
+                                {{else}}
+                                    Ne
+                                {{/if}}
+                            </td>
+                            <td>
+                                Ne
+                            </td>
+                        </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<script type="text/javascript" src="/javascripts/alert_timeout.js"></script>
+<script type="text/javascript" src="/javascripts/form_validate.js"></script>
