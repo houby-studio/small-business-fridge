@@ -4,6 +4,9 @@ var config = require('../config/config');
 module.exports = {
 
     sendMail: function(mailto, mailsubject, mailbody) {
+        // In case system error occurs, send warning to mail from config.
+        if (mailto == 'system') { mailto = config.mail.systemMail; }
+
         var transporter = nodemailer.createTransport({
             port: config.mail.port,
             host: config.mail.host,
