@@ -3,6 +3,7 @@ var express = require('express');
 var router = express.Router();
 var ensureAuthenticated = require('../../functions/ensureAuthenticated').ensureAuthenticated;
 var Product = require('../../models/product');
+var Delivery = require('../../models/delivery');
 
 router.post('/', ensureAuthenticated, function (req, res) {
 
@@ -17,10 +18,15 @@ router.post('/', ensureAuthenticated, function (req, res) {
             res.redirect('/add_products?' + query);
             return;
         }
-        //console.log(req.body);
-        //console.log(req.user);
-        prod.stock.push({supplierId: req.user.id, amount_supplied: req.body.product_amount, amount_left: req.body.product_amount, price: req.body.product_price });
-        prod.save(function (err) {
+        var newDelivery = new Delivery({
+            'supplierId': req.user.id,
+            'productId': req.body.product_id,
+            'amount_supplied': req.body.product_amount,
+            'amount_left': req.body.product_amount,
+            'price': req.body.product_price,
+        });
+
+        newDelivery.save(function (err) {
             if (err) {
                 console.log(err);
                 var query = querystring.stringify({

@@ -5,7 +5,7 @@ var router = express.Router();
 var mailer = require('../../functions/sendMail');
 var ensureAuthenticated = require('../../functions/ensureAuthenticated').ensureAuthenticated;
 var Order = require('../../models/order');
-var Product = require('../../models/product');
+var Delivery = require('../../models/delivery');
 
 moment.locale('cs');
 
@@ -13,10 +13,10 @@ router.post('/', ensureAuthenticated, function (req, res) {
 
     var newOrder = new Order({
         'buyerId': req.user.id,
-        'stockId': req.body.product_id
+        'deliveryId': req.body.product_id
     });
 
-    Product.findOne({"stock._id": req.body.product_id}, function(err,obj) {
+    Delivery.findOne({ '_id': req.body.product_id}, function(err,obj) {
         if (err) {
             console.log(err);
             var query = querystring.stringify({
@@ -25,7 +25,7 @@ router.post('/', ensureAuthenticated, function (req, res) {
             res.redirect('/shop?' + query);
             return;
         }
-        obj.stock.id(req.body.product_id).amount_left--;
+        obj.amount_left--;
         obj.save(function (err) {
             if (err) {
                 console.log(err);

@@ -11,19 +11,19 @@
                     <th scope="col">Zaplaceno</th>
                 </thead>
                 <tbody>
-                    {{# each orders }}
+                    {{# each orders.results }}
                         <tr>
                             <td>
                                 {{ this.order_date }}
                             </td>
                             <td>
-                                {{ this.productInfo.0.displayName}}
+                                {{ this.productInfo.displayName}}
                             </td>
                             <td>
-                                {{ this.productInfo.0.stock.0.price}}Kč
+                                {{ this.deliveryInfo.price}}Kč
                             </td>
                             <td>
-                                {{ this.productInfo.0.stock.0.supplierId }}
+                                {{ this.supplierInfo.displayName }}
                             </td>
                             <td>
                                 {{#if this.invoice }}

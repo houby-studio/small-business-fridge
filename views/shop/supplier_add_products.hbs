@@ -15,7 +15,7 @@
                             <select name="product_id" id="product_id" class="custom-select" onchange="loadProductImage()" required>
                                 <option value="" selected>Vyberte ze seznamu..</option>
                                 {{# each products }}
-                                <option value="{{ this.id }}">{{ this.displayName }}</option> 
+                                <option value="{{ this.id }}">{{ this.displayName }}</option>
                                 {{/each}}
                             </select>
                         </div>

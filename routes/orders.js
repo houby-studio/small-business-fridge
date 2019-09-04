@@ -1,6 +1,8 @@
 var express = require('express');
 var router = express.Router();
 var moment = require('moment');
+var Mongoose = require('mongoose');
+var ObjectId = Mongoose.Types.ObjectId;
 var Product = require('../models/product');
 var Order = require('../models/order');
 var ensureAuthenticated = require('../functions/ensureAuthenticated').ensureAuthenticated;
@@ -11,10 +13,32 @@ moment.locale('cs');
 router.get('/', ensureAuthenticated, function (req, res) {
 
     Order.aggregate([
-        { "$match": { 'buyerId': req.user._id} },
-        { "$sort": { '_id': -1}},
-        { "$lookup": { from: 'products', localField: 'stockId', foreignField: 'stock._id', as: 'productInfo'} },
-        { "$lookup": { from: 'invoices', localField: 'invoiceId', foreignField: '_id', as: 'invoiceInfo'} }
+        { $match: { 'buyerId': req.user._id} },
+        { $sort: { '_id': -1 } },
+        { $lookup: { from: 'deliveries', localField: 'deliveryId', foreignField: '_id', as: 'deliveryInfo'} },
+        { $unwind: '$deliveryInfo'},
+        { $lookup: { from: 'users', localField: 'deliveryInfo.supplierId', foreignField: '_id', as: 'supplierInfo'} },
+        { $unwind: '$supplierInfo'},
+        { $lookup: { from: 'products', localField: 'deliveryInfo.productId', foreignField: '_id', as: 'productInfo'} },
+        { $unwind: '$productInfo'},
+        { $group: {
+            _id: null,
+            total: { $sum: 1},
+            totalUnpaid: { $sum: {$eq: [ 'invoice', false ]}},
+            results: { $push: '$$ROOT'}
+        }},
+        { $project: {
+            total: 1,
+            results: 1
+        }}
+        /*{ $project: { not sure yet if I want to calculate fields in query or in javascript later
+            order_date: 1,
+            'deliveryInfo.price': 1,
+            'productInfo.displayName': 1,
+            'supplierInfo.displayName': 1,
+            invoice: 1,
+            totalPaid: 1
+        }}*/
     ], function (err, docs) {
         console.log(docs);
         if (req.query.a) {
@@ -24,12 +48,13 @@ router.get('/', ensureAuthenticated, function (req, res) {
                 message: req.query.m,
                 success: req.query.s,
                 danger: req.query.d
-            };
+            };  
         }
-        docs.forEach(function(element) {
+
+        docs[0].results.forEach(function(element) {
             element.order_date = moment(element.order_date).format('LLLL');
         });
-        res.render('shop/orders', { title: 'Objednávky | Lednice IT', orders: docs, user: req.user, alert: alert });
+        res.render('shop/orders', { title: 'Objednávky | Lednice IT', orders: docs[0], user: req.user, alert: alert });
     });
   //res.redirect('/');
 });

@@ -14,20 +14,21 @@ router.get('/', ensureAuthenticated, function (req, res) {
 
   // This crazy query which can be roughly translated for SQL people to "SELECT * FROM Product WHERE Stock.ammount_left > 0"
   Product.aggregate([
-    { "$match": filter}, // Depending on user preferences, get either all products or only ones in stock
-    { "$project": { // Since aggregate doesn't return resulting object, but plain value, we have to project it to cast its content back to object
-      "keypadId": "$keypadId",
-      "displayName": "$displayName",
-      "description": "$description",
-      "imagePath": "$imagePath",
-      "stock": {"$filter": { // We filter only the stock object from array where ammount left is greater than 0
-          "input": '$stock',
-          "as": 'stock',
-          "cond": { "$gt": ['$$stock.amount_left', 0]}
+    { $match: filter}, // Depending on user preferences, get either all products or only ones in stock
+    { $lookup: { from: 'deliveries', localField: '_id', foreignField: 'productId', as: 'stock'} },
+    { $project: {
+      keypadId: "$keypadId",
+      displayName: "$displayName",
+      description: "$description",
+      imagePath: "$imagePath",
+      stock: { $filter: { // We filter only the stock object from array where ammount left is greater than 0
+          input: '$stock',
+          as: 'stock',
+          cond: { $gt: ['$$stock.amount_left', 0]}
       }}
     }}
   ],
-  function(err, docs) { // callback populate Product with results from aggregate
+  function(err, docs) {
     if (err) {
       res.status(err.status || 500);
       res.render('error');
