@@ -9,13 +9,13 @@ router.get('/', ensureAuthenticated, function (req, res) {
   if (req.user.showAllProducts) {
     var filter = {};
   } else {
-    var filter = { "stock.amount_left": { "$gt" : 0 }};
+    var filter = { "$stock.amount_left": { "$gt" : 0 }};
   }
 
   // This crazy query which can be roughly translated for SQL people to "SELECT * FROM Product WHERE Stock.ammount_left > 0"
   Product.aggregate([
-    { $match: filter}, // Depending on user preferences, get either all products or only ones in stock
     { $lookup: { from: 'deliveries', localField: '_id', foreignField: 'productId', as: 'stock'} },
+    { $match: filter}, // Depending on user preferences, get either all products or only ones in stock
     { $project: {
       keypadId: "$keypadId",
       displayName: "$displayName",
