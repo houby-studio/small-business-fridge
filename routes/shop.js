@@ -9,7 +9,7 @@ router.get('/', ensureAuthenticated, function (req, res) {
   if (req.user.showAllProducts) {
     var filter = {};
   } else {
-    var filter = { "$stock.amount_left": { "$gt" : 0 }};
+    var filter = { "stock.amount_left": { "$gt" : 0 }};
   }
 
   // This crazy query which can be roughly translated for SQL people to "SELECT * FROM Product WHERE Stock.ammount_left > 0"
