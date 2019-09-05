@@ -6,9 +6,9 @@ var schema = new Schema({
 	displayName: {type: String, required: true},
 	email: {type: String, required: true},
 	keypadId: {type: Number, required: true},
-	admin: {type: Boolean, required: true},
-	supplier: {type: Boolean, required: true},
-	showAllProducts: {type: Boolean, required: true}
+	admin: {type: Boolean, default: false},
+	supplier: {type: Boolean, default: false},
+	showAllProducts: {type: Boolean, default: false}
 });
 
 module.exports = mongoose.model('User', schema);

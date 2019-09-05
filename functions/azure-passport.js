@@ -80,8 +80,6 @@ passport.use(new OIDCStrategy({
               newUser.email = profile._json.email;
               profile.admin = false;
               profile.supplier = false;
-              newUser.admin = false;
-              newUser.supplier = false;
               // Async function to find highest keypad ID and increment it by one.
               var latestUser = function(callback) {
                 User.find().sort({keypadId:-1}).limit(1).exec(function(err, res) {
