@@ -23,13 +23,27 @@ router.get('/', ensureAuthenticated, function (req, res) {
         { $unwind: '$productInfo'},
         { $group: {
             _id: null,
-            total: { $sum: 1},
-            totalUnpaid: { $sum: {$eq: [ 'invoice', false ]}},
+            totalOrders: { $sum: 1},
+            totalSpend: { $sum: '$deliveryInfo.price'},
             results: { $push: '$$ROOT'}
         }},
         { $project: {
-            total: 1,
-            results: 1
+            totalOrders: 1,
+            totalSpend: 1,
+            results: 1,
+            totalUnpaid: {
+                $let: {
+                    vars: {
+                           'field': {
+                               $filter: {
+                                      input: "$results",
+                                      as: "calc",
+                                      cond: { $eq: ['$$calc.invoice', false ] }
+                              }}  
+                      },
+                      in: { $sum: "$$field.deliveryInfo.price" }
+                  }
+            },
         }}
         /*{ $project: { not sure yet if I want to calculate fields in query or in javascript later
             order_date: 1,
