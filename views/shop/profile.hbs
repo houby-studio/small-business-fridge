@@ -1,0 +1,62 @@
+<div class="row">
+    <div class="col">
+        <div class="card w-50 mx-auto w-100-lg">
+            <div class="card-header h4 text-center">
+                Profil
+            </div>
+            <div class="card-body">
+                <form>
+                    <div class="form-group row">
+                        <label for="staticEmail" class="col-lg-4 col-form-label"><i class="fas fa-keyboard"></i> ID</label>
+                        <div class="col-lg-8">
+                        <input type="text" readonly class="form-control-plaintext" id="staticKeyPad" value="{{ user.keypadId }}">
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <label for="staticEmail" class="col-lg-4 col-form-label">Jméno</label>
+                        <div class="col-lg-8">
+                        <input type="text" readonly class="form-control-plaintext" id="staticName" value="{{ user.displayName }}">
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <label for="staticEmail" class="col-lg-4 col-form-label">E-mail</label>
+                        <div class="col-lg-8">
+                        <input type="text" readonly class="form-control-plaintext" id="staticEmail" value="{{ user.email }}">
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row mt-3">
+    <div class="col">
+        <div class="card w-50 mx-auto w-100-lg">
+            <div class="card-header h4 text-center">
+                Preference
+            </div>
+            <div class="card-body">
+                <form id="profile" class="needs-validation" method="POST" action="/profile" novalidate>
+                    <div class="form-group row">
+                        <div class="col-lg">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input" id="checkAllProducts" name="checkAllProducts">
+                                <label class="custom-control-label" for="checkAllProducts">Zobrazovat produkty co nejsou skladem.</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-lg">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input" id="checkSendEmailEshop" name="checkSendEmailEshop">
+                                <label class="custom-control-label" for="checkSendEmailEshop">Odesílat e-mail po nákupu v e-shopu.</label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script type="text/javascript" src="/javascripts/alert_timeout.js"></script>
+<script type="text/javascript" src="/javascripts/form_validate.js"></script>

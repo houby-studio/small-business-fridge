@@ -26,7 +26,7 @@ var aboutRouter = require('./routes/about');
 var changelogRouter = require('./routes/changelog');
 // Access for logged in users
 var shopRouter = require('./routes/shop');
-var accountRouter = require('./routes/account');
+var profileRouter = require('./routes/profile');
 var ordersRouter = require('./routes/orders');
 // Access for suppliers
 var AddProductsRouter = require('./routes/supplier_add_products');
@@ -63,7 +63,7 @@ app.use('/about', aboutRouter);
 app.use('/changelog', changelogRouter);
 // Access for logged in users
 app.use('/shop', shopRouter);
-app.use('/account', accountRouter);
+app.use('/profile', profileRouter);
 app.use('/orders', ordersRouter);
 // Access for suppliers
 app.use('/add_products', AddProductsRouter);
