@@ -4,11 +4,15 @@ var router = express.Router();
 var ensureAuthenticated = require('../../functions/ensureAuthenticated').ensureAuthenticated;
 var Product = require('../../models/product');
 var Delivery = require('../../models/delivery');
+var csrf = require('csurf');
+var csrfProtection = csrf();
+router.use(csrfProtection);
 
 router.post('/', ensureAuthenticated, function (req, res) {
 
     if (!req.user.supplier) {
-        res.render('shop/role_missing', {title: 'Nedostatečná oprávnění | Lednice IT', user: req.user });
+        res.redirect('/');
+        return;
     }
     Product.findById(req.body.product_id, function (err, prod) {
         if (err) {

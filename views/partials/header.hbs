@@ -23,10 +23,12 @@
             <a class="dropdown-item" href="/profile"><i class="fas fa-id-card"></i> Profil</a>
             <a class="dropdown-item" href="/orders"><i class="fas fa-shopping-cart"></i> Objednávky</a>
             <a class="dropdown-item" href="/invoices"><i class="fas fa-file-invoice-dollar"></i> Faktury</a>
-            <div role="separator" class="dropdown-divider"></div>
-            <a class="dropdown-item" href="/add_products"><i class="fas fa-dolly"></i> Naskladnit</a>
-            <a class="dropdown-item" href="#"><i class="fas fa-cash-register"></i> Vyfakturovat</a>
-            <a class="dropdown-item" href="#"><i class="fas fa-boxes"></i> Stav skladu</a>
+            {{#if user.supplier }}
+              <div role="separator" class="dropdown-divider"></div>
+              <a class="dropdown-item" href="/add_products"><i class="fas fa-dolly"></i> Naskladnit</a>
+              <a class="dropdown-item" href="#"><i class="fas fa-cash-register"></i> Vyfakturovat</a>
+              <a class="dropdown-item" href="#"><i class="fas fa-boxes"></i> Stav skladu</a>
+            {{/if}}
           </div>
         </div>
         <a class="btn btn-danger nav-link" href="/logout"><i class="fas fa-sign-out-alt"></i> Odhlásit</a>

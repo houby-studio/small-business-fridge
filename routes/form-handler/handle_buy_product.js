@@ -6,6 +6,9 @@ var mailer = require('../../functions/sendMail');
 var ensureAuthenticated = require('../../functions/ensureAuthenticated').ensureAuthenticated;
 var Order = require('../../models/order');
 var Delivery = require('../../models/delivery');
+var csrf = require('csurf');
+var csrfProtection = csrf();
+router.use(csrfProtection);
 
 moment.locale('cs');
 
@@ -15,7 +18,7 @@ router.post('/', ensureAuthenticated, function (req, res) {
         'buyerId': req.user.id,
         'deliveryId': req.body.product_id
     });
-
+    console.log(req.body);
     Delivery.findOne({ '_id': req.body.product_id}, function(err,obj) {
         if (err) {
             console.log(err);

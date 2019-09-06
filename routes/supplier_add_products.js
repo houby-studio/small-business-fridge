@@ -1,14 +1,21 @@
+var querystring = require('querystring');
 var express = require('express');
 var router = express.Router();
-var Product = require('../models/product');
 var ensureAuthenticated = require('../functions/ensureAuthenticated').ensureAuthenticated;
+var Product = require('../models/product');
+var Delivery = require('../models/delivery');
+var csrf = require('csurf');
+var csrfProtection = csrf();
+router.use(csrfProtection);
 
 /* GET home page. */
 router.get('/', ensureAuthenticated, function (req, res) {
 
     if (!req.user.supplier) {
-        res.render('shop/role_missing', {title: 'Nedostatečná oprávnění | Lednice IT', user: req.user });
+        res.redirect('/');
+        return;
     }
+
     Product.find(function(err, docs) {
         if (err) {
             res.status(err.status || 500);
@@ -30,7 +37,7 @@ router.get('/', ensureAuthenticated, function (req, res) {
             };
         }
         console.log(docs);
-        res.render('shop/supplier_add_products', { title: 'Naskladnit | Lednice IT', products: docs, user: req.user, alert: alert });
+        res.render('shop/supplier_add_products', { title: 'Naskladnit | Lednice IT', products: docs, user: req.user, alert: alert, csrfToken: req.csrfToken() });
     });
 
 });

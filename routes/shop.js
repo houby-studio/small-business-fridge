@@ -2,6 +2,9 @@ var express = require('express');
 var router = express.Router();
 var Product = require('../models/product');
 var ensureAuthenticated = require('../functions/ensureAuthenticated').ensureAuthenticated;
+var csrf = require('csurf');
+var csrfProtection = csrf();
+router.use(csrfProtection);
 
 /* GET home page. */
 router.get('/', ensureAuthenticated, function (req, res) {
@@ -50,7 +53,7 @@ router.get('/', ensureAuthenticated, function (req, res) {
     };
   }
     //console.log(req.user); //to see what user object is present
-    res.render('shop/shop', { title: 'E-shop | Lednice IT', products: productChunks, user: req.user, alert: alert });
+    res.render('shop/shop', { title: 'E-shop | Lednice IT', products: productChunks, user: req.user, alert: alert, csrfToken: req.csrfToken() });
   });
 });
 
