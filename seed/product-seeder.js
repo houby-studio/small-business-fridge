@@ -3,7 +3,7 @@ var config = require('../config/config');
 
 var mongoose = require('mongoose');
 
-mongoose.connect(config.db.connstr,{ useNewUrlParser: true });
+mongoose.connect(config.config.db.connstr,{ useNewUrlParser: true });
 
 var products = [
     new Product({
@@ -11,49 +11,58 @@ var products = [
 		uniqueName: 'monster_absolute_zero',
 		displayName: 'Monster Zero',
 		description: 'Nula cukru, nula chuti.',
-		imagePath: 'images/01_monster_zero.png',
-        price: 26
+		imagePath: './images/monster-absolutely-zero.png',
     }),
     new Product({
         keypadId: 2,
 		uniqueName: 'monster_hamilton',
 		displayName: 'Monster Hamilton',
 		description: 'Býval jednička, ale doktor jej nahradil.',
-		imagePath: 'images/02_monster_hamilton.png',
-        price: 25
+		imagePath: './images/monster-lewis-hamilton.png',
     }),
     new Product({
         keypadId: 3,
 		uniqueName: 'monster_rossi',
 		displayName: 'Monster Rossi',
 		description: 'S Valentinem, nebo-li „The Doctor®“, jsme vytvořili tým, který stvořil náš nejrychlejší Monster v historii. Díky své lehké, intenzivní, osvěžující citrusové příchutě a plné dávce naší legendátní směsi Monster Energy váís dostaneme zpátky do nejvyšší rychlosti!.',
-		imagePath: 'images/03_monster_rossi.png',
-        price: 25
+		imagePath: './images/monster-the-doctor.png',
     }),
     new Product({
         keypadId: 4,
 		uniqueName: 'monster_energy',
 		displayName: 'Monster',
 		description: 'Otevři si plechovku toho nejkrutějšího energetického nápoje na planetě, MONSTER energy.',
-		imagePath: 'images/04_monster_energy.png',
-        price: 25
+		imagePath: './images/monster-energy.png',
     }),
 	new Product({
 		keypadId: 5,
 		uniqueName: 'bigshock_zero',
 		displayName: 'BigShock Zero',
-        imagePath: 'images/05_bigshock_zero.png',
+        imagePath: './images/bigshock-gold.png',
         description: 'Podávejte vychlazené.',
-        price: 24
 	}),
 	new Product({
 		keypadId: 6,
 		uniqueName: 'birell_fruit',
 		displayName: 'Birell Fruit',
-        imagePath: 'images/06_birell_fruit.png',
+        imagePath: './images/birell-limo.png',
         description: 'Ovocná příchuť!',
-        price: 16
+    }),
+    new Product({
+		keypadId: 7,
+		uniqueName: 'coca-cola',
+		displayName: 'Coca-Cola plech',
+        imagePath: './images/coca-cola.png',
+        description: 'Coca-Cola je nejoblíbenějším a nejprodávanějším nealkoholickým nápojem v dějinách a zároveň nejznámější značkou světa.',
+    }),
+    new Product({
+		keypadId: 8,
+		uniqueName: 'rockstar-twister-wacked',
+		displayName: 'Rockstar Twister Wacked',
+        imagePath: './images/rockstar-twister-wacked.png',
+        description: 'Pokud čekáš pořádnou dávku energie a kofeinu v neobvyklých příchutích, Rockstar Twister je tou pravou volbou!',
 	})
+    
 ];
 
 var done = 0;

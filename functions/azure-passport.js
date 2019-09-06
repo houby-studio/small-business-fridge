@@ -57,7 +57,6 @@ passport.use(new OIDCStrategy({
     if (!profile.oid) {
       return done(new Error("No oid found"), null);
     }
-
     // asynchronous verification
     process.nextTick(function () {
       findByOid(profile.oid, function(err, user) {
@@ -83,7 +82,11 @@ passport.use(new OIDCStrategy({
               // Async function to find highest keypad ID and increment it by one.
               var latestUser = function(callback) {
                 User.find().sort({keypadId:-1}).limit(1).exec(function(err, res) {
-                  callback(err, res[0].keypadId+1);
+                  if (!res[0]) {
+                    callback(err, 1); 
+                  } else {
+                    callback(err, res[0].keypadId+1);
+                  }
                 });
               };
               // Call function from above and handle user creation in callback
@@ -96,18 +99,18 @@ passport.use(new OIDCStrategy({
                   if (err) {
                     console.log(err);
                   } else {
-                    console.log(`New User ${newUser.displayName} inserted into database.`);
+                    //console.log(`New User ${newUser.displayName} inserted into database.`);
                     var subject = `Welcome to our fridge ${newUser.displayName}`;
                     var body = `<h1>Welcome abord!</h1><p>Hope you will like it here</p><p>Your keypad ID is: ${newUser.keypadID}</p>`;
                     mailer.sendMail(newUser.email, subject, body);
                   }
                 });
               });
-            } else {
+            } /*else {
               console.log('Profile found in database.');
               profile.admin = user.admin;
               profile.supplier = user.supplier;
-            }
+            }*/
           });
           //users.push(profile); in case you want to use in-memory array instead of querying database
           return done(null, profile);

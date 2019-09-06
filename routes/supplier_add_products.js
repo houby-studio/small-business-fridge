@@ -1,4 +1,3 @@
-var querystring = require('querystring');
 var express = require('express');
 var router = express.Router();
 var ensureAuthenticated = require('../functions/ensureAuthenticated').ensureAuthenticated;
@@ -33,7 +32,11 @@ router.get('/', ensureAuthenticated, function (req, res) {
         res.redirect('/');
         return;
     }
-    renderPage(req, res);    
+    if (req.session.alert) {
+        var alert = req.session.alert;
+        delete req.session.alert;
+    }
+    renderPage(req, res, alert);
 
 });
 
@@ -53,7 +56,8 @@ router.post('/', ensureAuthenticated, function (req, res) {
                 message: err.message,
                 danger: 1,
             };
-            renderPage(req, res, alert);
+            req.session.alert = alert;
+            res.redirect('/add_products');
             return;
         }
         var newDelivery = new Delivery({
@@ -72,15 +76,16 @@ router.post('/', ensureAuthenticated, function (req, res) {
                     message: err.message,
                     danger: 1,
                 };
-                renderPage(req, res, alert);
+                req.session.alert = alert;
+                res.redirect('/add_products');
             }
             var alert = {
                 type: 'success',
                 message: `${prod.displayName} přidán v počtu ${req.body.product_amount}ks za ${req.body.product_price}Kč.`,
                 success: 1,
             };
-            renderPage(req, res, 
-                alert);
+            req.session.alert = alert;
+            res.redirect('/add_products');
         });
     });
 });

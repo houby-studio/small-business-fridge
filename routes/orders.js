@@ -1,9 +1,6 @@
 var express = require('express');
 var router = express.Router();
 var moment = require('moment');
-var Mongoose = require('mongoose');
-var ObjectId = Mongoose.Types.ObjectId;
-var Product = require('../models/product');
 var Order = require('../models/order');
 var ensureAuthenticated = require('../functions/ensureAuthenticated').ensureAuthenticated;
 

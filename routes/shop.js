@@ -1,13 +1,17 @@
 var express = require('express');
 var router = express.Router();
+var moment = require('moment');
 var Product = require('../models/product');
+var Order = require('../models/order');
+var Delivery = require('../models/delivery');
+var mailer = require('../functions/sendMail');
 var ensureAuthenticated = require('../functions/ensureAuthenticated').ensureAuthenticated;
 var csrf = require('csurf');
 var csrfProtection = csrf();
 router.use(csrfProtection);
+moment.locale('cs');
 
-/* GET home page. */
-router.get('/', ensureAuthenticated, function (req, res) {
+function renderPage(req, res, alert) {
 
   if (req.user.showAllProducts) {
     var filter = {};
@@ -36,24 +40,71 @@ router.get('/', ensureAuthenticated, function (req, res) {
       res.status(err.status || 500);
       res.render('error');
     }
-    //console.log(docs);
     var productChunks = [];
     var chunkSize = 4;
     for (var i = 0; i < docs.length; i += chunkSize) {
       productChunks.push(docs.slice(i, i + chunkSize));
     }
-  // GET parameters
-  if (req.query.a) {
-    var alert = {
-        type: req.query.a,
-        component: req.query.c,
-        message: req.query.m,
-        success: req.query.s,
-        danger: req.query.d
-    };
-  }
-    //console.log(req.user); //to see what user object is present
+
     res.render('shop/shop', { title: 'E-shop | Lednice IT', products: productChunks, user: req.user, alert: alert, csrfToken: req.csrfToken() });
+  });
+}
+
+/* GET home page. */
+router.get('/', ensureAuthenticated, function (req, res) {
+
+  if (req.session.alert) {
+    var alert = req.session.alert;
+    delete req.session.alert;
+  }
+  renderPage(req, res, alert);
+  
+});
+
+router.post('/', ensureAuthenticated, function (req, res) {
+
+  var newOrder = new Order({
+      'buyerId': req.user.id,
+      'deliveryId': req.body.product_id
+  });
+
+  Delivery.findOne({ '_id': req.body.product_id}, function(err,obj) {
+      if (err) {
+        var alert = { type: 'danger', component: 'db', message: err.message, danger: 1};
+        req.session.alert = alert;
+        res.redirect('/shop');
+        return;
+      }
+      obj.amount_left--;
+      obj.save(function (err) {
+          if (err) {
+              var alert = { type: 'danger', component: 'db', message: err.message, danger: 1};
+              req.session.alert = alert;
+              res.redirect('/shop');
+              var subject = `Nepodařilo se zapsat změny do databáze!`;
+              var body = `<h1>Chyba při zapisování do databáze při nákupu!</h1><p>Pokus o snížení skladové zásoby skončil chybou. Zkontrolujte konzistenci databáze!</p><p>Chyba: ${err.message}</p>`;
+              mailer.sendMail('system', subject, body);
+              return;
+          }
+          newOrder.save(function(err) {
+              if (err) {
+                  var alert = { type: 'danger', component: 'db', message: err.message, danger: 1};
+                  req.session.alert = alert;
+                  res.redirect('/shop');
+                  var subject = `Nepodařilo se zapsat změny do databáze!`;
+                  var body = `<h1>Chyba při zapisování do databáze při nákupu!</h1><p>Pokus o vytvoření záznamu nákupu skončil chybou. Zkontrolujte konzistenci databáze!</p><p>Chyba: ${err.message}</p>`;
+                  mailer.sendMail('system', subject, body);
+                  return;
+              }
+              var alert = { type: 'success', message: `Zakoupili jste ${req.body.display_name} za ${req.body.product_price}Kč.`, success: 1};
+              req.session.alert = alert;
+              res.redirect('/shop');
+              var subject = `Děkujeme za nákup!`;
+              var body = `<h1>Výborná volba!</h1><p>Tímto jste si udělali radost:</p><img width="135" height="240" style="width: auto; height: 10rem;" alt="Obrázek zakoupeného produktu" src="cid:image@prdelka.eu"/><p>Název: ${req.body.display_name}<br>Cena: ${req.body.product_price}Kč<br>Kdy: ${moment().format('LLLL')}</p><p>Přijďte zas!</p>`;
+              mailer.sendMail(req.user.email, subject, body, req.body.image_path);
+              return;
+          });
+      });
   });
 });
 
