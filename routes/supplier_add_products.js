@@ -8,38 +8,81 @@ var csrf = require('csurf');
 var csrfProtection = csrf();
 router.use(csrfProtection);
 
-/* GET home page. */
+function renderPage(req, res, alert) {
+    
+    Product.find(function(err, docs) {
+        if (err) {
+            res.status(err.status || 500);
+            res.render('error');
+        }
+
+        docs.client_data = JSON.stringify ({
+            'product_id': docs.map(a => a.id, b => b.imagePath),
+            'product_image': docs.map(a => a.imagePath)
+        });
+
+        console.log(docs);
+        res.render('shop/supplier_add_products', { title: 'Naskladnit | Lednice IT', products: docs, user: req.user, alert: alert, csrfToken: req.csrfToken() });
+    });
+};
+
+/* GET add product page. */
 router.get('/', ensureAuthenticated, function (req, res) {
 
     if (!req.user.supplier) {
         res.redirect('/');
         return;
     }
+    renderPage(req, res);    
 
-    Product.find(function(err, docs) {
+});
+
+/* POST add product form handle. */
+router.post('/', ensureAuthenticated, function (req, res) {
+
+    if (!req.user.supplier) {
+        res.redirect('/');
+        return;
+    }
+
+    Product.findById(req.body.product_id, function (err, prod) {
         if (err) {
-            res.status(err.status || 500);
-            res.render('error');
-        }
-        // docs.stringify = JSON.stringify(docs); // Stringify whole object to pass it to client
-        docs.client_data = JSON.stringify ({
-            'product_id': docs.map(a => a.id, b => b.imagePath),
-            'product_image': docs.map(a => a.imagePath)
-        });
-        // GET parameters
-        if (req.query.a) {
             var alert = {
-                type: req.query.a,
-                component: req.query.c,
-                message: req.query.m,
-                success: req.query.s,
-                danger: req.query.d
+                type: 'danger',
+                component: 'db',
+                message: err.message,
+                danger: 1,
             };
+            renderPage(req, res, alert);
+            return;
         }
-        console.log(docs);
-        res.render('shop/supplier_add_products', { title: 'Naskladnit | Lednice IT', products: docs, user: req.user, alert: alert, csrfToken: req.csrfToken() });
-    });
+        var newDelivery = new Delivery({
+            'supplierId': req.user.id,
+            'productId': req.body.product_id,
+            'amount_supplied': req.body.product_amount,
+            'amount_left': req.body.product_amount,
+            'price': req.body.product_price,
+        });
 
+        newDelivery.save(function (err) {
+            if (err) {
+                var alert = {
+                    type: 'danger',
+                    component: 'db',
+                    message: err.message,
+                    danger: 1,
+                };
+                renderPage(req, res, alert);
+            }
+            var alert = {
+                type: 'success',
+                message: `${prod.displayName} přidán v počtu ${req.body.product_amount}ks za ${req.body.product_price}Kč.`,
+                success: 1,
+            };
+            renderPage(req, res, 
+                alert);
+        });
+    });
 });
 
 module.exports = router;

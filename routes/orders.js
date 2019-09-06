@@ -64,10 +64,12 @@ router.get('/', ensureAuthenticated, function (req, res) {
                 danger: req.query.d
             };  
         }
+        if (docs[0]) {
+            docs[0].results.forEach(function(element) {
+                element.order_date = moment(element.order_date).format('LLLL');
+            });
+        }
 
-        docs[0].results.forEach(function(element) {
-            element.order_date = moment(element.order_date).format('LLLL');
-        });
         res.render('shop/orders', { title: 'Objednávky | Lednice IT', orders: docs[0], user: req.user, alert: alert });
     });
   //res.redirect('/');
