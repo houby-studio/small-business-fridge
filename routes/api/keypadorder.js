@@ -17,7 +17,7 @@ router.post('/', function(req, res, next) {
 
     var newOrder = new Order();
 
-    // Find user by keypadId
+    // Find user by keypadId -- probably unneeded and can be found during aggregation below
     User.findOne({ keypadId: req.body.customer }, function (err, user) {
         if (err) {
             res.status(err.status || 500);
@@ -29,7 +29,7 @@ router.post('/', function(req, res, next) {
 
         // Get product
         Product.aggregate([
-            { $match: { 'keypadId': req.body.product } },
+            { $match: { 'keypadId': Number(req.body.keypadId) } },
             { $lookup: { from: 'deliveries', localField: '_id', foreignField: 'productId', as: 'stock'} },
             { $project: {
               keypadId: "$keypadId",
@@ -50,7 +50,29 @@ router.post('/', function(req, res, next) {
                 return;
                 }
 
-                console.log(product.stock);
+                newOrder.deliveryId = product[0].stock[0]._id;
+
+                Delivery.findByIdAndUpdate(product[0].stock[0]._id, {amount_left: product[0].stock[0].amount_left--}, function (err, delivery) {
+                    if (err) {
+                        res.status(err.status || 500);
+                        res.render('error');
+                        return;
+                    }
+
+                    newOrder.save(function(err) {
+                        if (err) {
+                            var subject = `Nepodařilo se zapsat změny do databáze!`;
+                            var body = `<h1>Chyba při zapisování do databáze při nákupu!</h1><p>Pokus o vytvoření záznamu nákupu skončil chybou. Zkontrolujte konzistenci databáze!</p><p>Chyba: ${err.message}</p>`;
+                            mailer.sendMail('system', subject, body);
+                            return;
+                        }
+                        console.log('great success?');
+                        var subject = `Děkujeme za nákup!`;
+                        var body = `<h1>Výborná volba!</h1><p>Tímto jste si udělali radost:</p><img width="135" height="240" style="width: auto; height: 10rem;" alt="Obrázek zakoupeného produktu" src="cid:image@prdelka.eu"/><p>Název: ${req.body.display_name}<br>Cena: ${req.body.product_price}Kč<br>Kdy: ${moment().format('LLLL')}</p><p>Přijďte zas!</p>`;
+                        mailer.sendMail(user.email, subject, body, product[0].image_path);
+                        return;
+                    });
+                });
             }
         );
     });
