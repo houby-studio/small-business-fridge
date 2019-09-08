@@ -6,10 +6,6 @@ var Order = require('../../models/order');
 var Product = require('../../models/product');
 var Delivery = require('../../models/delivery');
 
-router.get('/', function(req, res, next) {
-    console.log('yes');
-});
-
 /* GET about page. */
 router.post('/', function(req, res, next) {
 
@@ -33,6 +29,7 @@ router.post('/', function(req, res, next) {
 
         // Get product
         Product.aggregate([
+            { $match: { 'keypadId': req.body.product } },
             { $lookup: { from: 'deliveries', localField: '_id', foreignField: 'productId', as: 'stock'} },
             { $project: {
               keypadId: "$keypadId",
@@ -53,7 +50,7 @@ router.post('/', function(req, res, next) {
                 return;
                 }
 
-                console.log(product.stock[0]);
+                console.log(product.stock);
             }
         );
     });
