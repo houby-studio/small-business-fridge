@@ -74,7 +74,7 @@ router.post('/', function(req, res, next) {
                             return;
                         }
                         var subject = `Děkujeme za nákup!`;
-                        var body = `<h1>Výborná volba!</h1><p>Tímto jste si udělali radost:</p><img width="135" height="240" style="width: auto; height: 10rem;" alt="Obrázek zakoupeného produktu" src="cid:image@prdelka.eu"/><p>Název: ${product.displayName}<br>Cena: ${product[0].stock[0].price}Kč<br>Kdy: ${moment().format('LLLL')}</p><p>Přijďte zas!</p>`;
+                        var body = `<h1>Výborná volba!</h1><p>Tímto jste si udělali radost:</p><img width="135" height="240" style="width: auto; height: 10rem;" alt="Obrázek zakoupeného produktu" src="cid:image@prdelka.eu"/><p>Název: ${product[0].displayName}<br>Cena: ${product[0].stock[0].price}Kč<br>Kdy: ${moment().format('LLLL')}</p><p>Přijďte zas!</p>`;
                         mailer.sendMail(user.email, subject, body, product[0].imagePath);
                         res.status(200);
                         res.render('success');
