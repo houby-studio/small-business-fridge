@@ -13,11 +13,18 @@
                         </div>
                         <div class="card-footer text-muted">
                             <div class="row">
-                                {{#if this.stock.0.amount_left}}
-                                    <p>Skladem za tuto cenu: {{ this.stock.0.amount_left }}</p>
-                                {{else}}
-                                    <p>Produkt není skladem.</p>
-                                {{/if }}
+                                <div class="col-lg-8 text-left">
+                                    {{#if this.stock.0.amount_left}}
+                                        <p>Skladem za tuto cenu: {{ this.stock.0.amount_left }}</p>
+                                    {{else}}
+                                        <p>Produkt není skladem.</p>
+                                    {{/if }}
+                                </div>
+                                {{#if this.keypadId}}
+                                    <div class="col-lg-4 text-right">
+                                        <i class="fas fa-keyboard"></i> {{ this.keypadId }}
+                                    </div>
+                                {{/if}}
                             </div>
                             <div class="row">
                                 <div class="col-xl">
