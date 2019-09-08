@@ -51,15 +51,15 @@ router.post('/', function(req, res, next) {
                 res.render('error');
                 return;
                 }
-                if (typeof product[0].stock[0] === 'undefined' || typeof product[0] === 'undefined') {
+                if (typeof product[0] === 'undefined' || typeof product[0].stock[0] === 'undefined') {
                     res.status(500);
                     res.render('error');
                     return;
                 }
                 newOrder.deliveryId = product[0].stock[0]._id;
-                var newAmount = product[0].stock[0].amount_left;
+                var newAmount = product[0].stock[0].amount_left-1;
 
-                Delivery.findByIdAndUpdate(product[0].stock[0]._id, { amount_left: newAmount-- }, function (err, delivery) {
+                Delivery.findByIdAndUpdate(product[0].stock[0]._id, { amount_left: newAmount }, function (err, delivery) {
                     if (err) {
                         res.status(err.status || 500);
                         res.render('error');
@@ -73,17 +73,17 @@ router.post('/', function(req, res, next) {
                             mailer.sendMail('system', subject, body);
                             return;
                         }
-                        console.log('great success?');
                         var subject = `Děkujeme za nákup!`;
                         var body = `<h1>Výborná volba!</h1><p>Tímto jste si udělali radost:</p><img width="135" height="240" style="width: auto; height: 10rem;" alt="Obrázek zakoupeného produktu" src="cid:image@prdelka.eu"/><p>Název: ${req.body.display_name}<br>Cena: ${req.body.product_price}Kč<br>Kdy: ${moment().format('LLLL')}</p><p>Přijďte zas!</p>`;
                         mailer.sendMail(user.email, subject, body, product[0].image_path);
-                        return;
+                        res.status(200);
+                        res.render('success');
                     });
                 });
             }
         );
     });
-    res.status(200);
+
 });
 
 module.exports = router;
