@@ -3,7 +3,12 @@ var router = express.Router();
 var config = require('../../config/config');
 var User = require('../../models/user');
 var Order = require('../../models/order');
+var Product = require('../../models/product');
 var Delivery = require('../../models/delivery');
+
+router.get('/', function(req, res, next) {
+    console.log('yes');
+});
 
 /* GET about page. */
 router.post('/', function(req, res, next) {
@@ -14,22 +19,48 @@ router.post('/', function(req, res, next) {
         return;
     }
 
+    var newOrder = new Order();
+
     // Find user by keypadId
-    User.findOne({ keypadId: req.body.user }, function (err, user) {
+    User.findOne({ keypadId: req.body.customer }, function (err, user) {
         if (err) {
             res.status(err.status || 500);
             res.render('error');
             return;
         }
 
-        console.log(user);
+        newOrder.buyerId = user._id;
+
+        // Get product
+        Product.aggregate([
+            { $lookup: { from: 'deliveries', localField: '_id', foreignField: 'productId', as: 'stock'} },
+            { $project: {
+              keypadId: "$keypadId",
+              displayName: "$displayName",
+              description: "$description",
+              imagePath: "$imagePath",
+              stock: { $filter: { // We filter only the stock object from array where ammount left is greater than 0
+                  input: '$stock',
+                  as: 'stock',
+                  cond: { $gt: ['$$stock.amount_left', 0]}
+              }}
+            }}
+        ],
+            function(err, product) {
+                if (err) {
+                res.status(err.status || 500);
+                res.render('error');
+                return;
+                }
+
+                console.log(product.stock[0]);
+            }
+        );
     });
+    res.status(200);
 
     /*
-    var newOrder = new Order({
-        'buyerId': req.user.id,
-        'deliveryId': req.body.product_id
-    });
+    
   
     Delivery.findOne({ '_id': req.body.product_id}, function(err,obj) {
         if (err) {
