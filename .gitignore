@@ -1,6 +1,9 @@
 # Config
 config/
 
+# API
+api.php
+
 # Logs
 logs
 *.log
