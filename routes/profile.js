@@ -1,10 +1,31 @@
 var express = require('express');
 var router = express.Router();
+var User = require('../models/user');
 var ensureAuthenticated = require('../functions/ensureAuthenticated').ensureAuthenticated;
 
 /* GET about page. */
 router.get('/', ensureAuthenticated, function(req, res, next) {
       res.render('shop/profile', { title: 'Profil | Lednice IT', user: req.user });
+});
+
+router.post('/', ensureAuthenticated, function(req, res, next) {      
+      //console.log(req);
+      var Bool = (req.body.value === 'true');
+      if (req.body.name == 'checkAllProducts') {
+            User.findByIdAndUpdate(req.user.id, { showAllProducts: Bool }, { upsert: true }, function (err, docs) {
+                  if (err) {
+                        console.log(err);
+                        return;
+                  }
+            });
+      } else if (req.body.name == 'checkSendEmailEshop') {
+            User.findByIdAndUpdate(req.user.id, { sendMailOnEshopPurchase: Bool }, function (err, docs) {
+                  if (err) {
+                        console.log(err);
+                        return;
+                  }
+            });
+      }
 });
 
 module.exports = router;

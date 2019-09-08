@@ -8,7 +8,8 @@ var schema = new Schema({
 	keypadId: {type: Number, required: true},
 	admin: {type: Boolean, default: false},
 	supplier: {type: Boolean, default: false},
-	showAllProducts: {type: Boolean, default: false}
+	showAllProducts: {type: Boolean, default: false},
+	sendMailOnEshopPurchase: {type: Boolean, default: true}
 });
 
 module.exports = mongoose.model('User', schema);

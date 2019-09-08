@@ -36,11 +36,10 @@
                 Preference
             </div>
             <div class="card-body">
-                <form id="profile" class="needs-validation" method="POST" action="/profile" novalidate>
                     <div class="form-group row">
                         <div class="col-lg">
                             <div class="custom-control custom-checkbox">
-                                <input type="checkbox" class="custom-control-input" id="checkAllProducts" name="checkAllProducts">
+                                <input type="checkbox" class="custom-control-input" id="checkAllProducts" name="checkAllProducts" {{#if user.showAllProducts}} checked {{/if}}>
                                 <label class="custom-control-label" for="checkAllProducts">Zobrazovat produkty co nejsou skladem.</label>
                             </div>
                         </div>
@@ -48,15 +47,15 @@
                     <div class="form-group row">
                         <div class="col-lg">
                             <div class="custom-control custom-checkbox">
-                                <input type="checkbox" class="custom-control-input" id="checkSendEmailEshop" name="checkSendEmailEshop">
+                                <input type="checkbox" class="custom-control-input" id="checkSendEmailEshop" name="checkSendEmailEshop" {{#if user.sendMailOnEshopPurchase}} checked {{/if}}>
                                 <label class="custom-control-label" for="checkSendEmailEshop">Odesílat e-mail po nákupu v e-shopu.</label>
                             </div>
                         </div>
                     </div>
-                </form>
             </div>
         </div>
     </div>
 </div>
 <script type="text/javascript" src="/javascripts/alert_timeout.js"></script>
 <script type="text/javascript" src="/javascripts/form_validate.js"></script>
+<script type="text/javascript" src="/javascripts/user_update_realtime.js"></script>
