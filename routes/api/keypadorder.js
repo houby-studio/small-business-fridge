@@ -51,15 +51,15 @@ router.post('/', function(req, res, next) {
                 res.render('error');
                 return;
                 }
-                if (!product[0].stock[0]) {
-                    res.status(err.status || 500);
+                if (typeof product[0].stock[0] === 'undefined' || typeof product[0] === 'undefined') {
+                    res.status(500);
                     res.render('error');
                     return;
                 }
                 newOrder.deliveryId = product[0].stock[0]._id;
-                var newAmount = product[0].stock[0].amount_left--;
+                var newAmount = product[0].stock[0].amount_left;
 
-                Delivery.findByIdAndUpdate(newOrder.deliveryId, { amount_left: newAmount }, function (err, delivery) {
+                Delivery.findByIdAndUpdate(product[0].stock[0]._id, { amount_left: newAmount-- }, function (err, delivery) {
                     if (err) {
                         res.status(err.status || 500);
                         res.render('error');

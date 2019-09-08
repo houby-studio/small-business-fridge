@@ -10,16 +10,16 @@ router.get('/', ensureAuthenticated, function(req, res, next) {
 
 router.post('/', ensureAuthenticated, function(req, res, next) {      
       //console.log(req);
-      var Bool = (req.body.value === 'true');
+      var newValue = (req.body.value === 'true');
       if (req.body.name == 'checkAllProducts') {
-            User.findByIdAndUpdate(req.user.id, { showAllProducts: Bool }, { upsert: true }, function (err, docs) {
+            User.findByIdAndUpdate(req.user.id, { showAllProducts: newValue }, { upsert: true }, function (err, docs) {
                   if (err) {
                         console.log(err);
                         return;
                   }
             });
       } else if (req.body.name == 'checkSendEmailEshop') {
-            User.findByIdAndUpdate(req.user.id, { sendMailOnEshopPurchase: Bool }, function (err, docs) {
+            User.findByIdAndUpdate(req.user.id, { sendMailOnEshopPurchase: newValue }, function (err, docs) {
                   if (err) {
                         console.log(err);
                         return;
