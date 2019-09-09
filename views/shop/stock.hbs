@@ -1,0 +1,30 @@
+<div class="row">
+    <div class="col">
+        <div class="card text-center w-50 mx-auto w-100-lg">
+            <div class="card-header h4">
+                Stav skladu
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <th scope="col" class="text-left">Produkt</th>
+                            <th scope="col">Skladem</th>
+                        </thead>
+                        <tbody>
+                            {{#each stock}}
+                            <tr>
+                                <th scope="row" class="text-left">{{ this.product.displayName }}</th>
+                                <td>{{ this.amount_left }}</td>
+                            </tr>
+                            {{/each}}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer text-muted">
+                Vytvořeno pomocí Node.js a MongoDB
+            </div>
+        </div>
+    </div>
+</div>

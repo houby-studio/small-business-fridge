@@ -29,7 +29,8 @@ var shopRouter = require('./routes/shop');
 var profileRouter = require('./routes/profile');
 var ordersRouter = require('./routes/orders');
 // Access for suppliers
-var AddProductsRouter = require('./routes/supplier_add_products');
+var addProductsRouter = require('./routes/supplier_add_products');
+var stockRouter = require('./routes/stock');
 // Passport routes
 var loginRouter = require('./routes/login');
 var logoutRouter = require('./routes/logout');
@@ -68,7 +69,8 @@ app.use('/shop', shopRouter);
 app.use('/profile', profileRouter);
 app.use('/orders', ordersRouter);
 // Access for suppliers
-app.use('/add_products', AddProductsRouter);
+app.use('/add_products', addProductsRouter);
+app.use('/stock', stockRouter);
 // Passport routes
 app.use('/login', loginRouter);
 app.use('/logout', logoutRouter);
