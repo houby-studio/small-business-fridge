@@ -23,12 +23,14 @@ router.get('/', function(req, res, next) {
         }},
         { $project: {
             amount_left: 1,
-            displayName: '$product.displayName',
-            last_week: {
-                $filter: {
-                    input: '$bought',
-                    as: 'orders',
-                    cond: {$gte: ['$$orders.order_date', new Date(new Date() - 7 * 60 * 60 * 24 * 1000)]}
+            display_name: '$product.displayName',
+            last_Xdays: {
+                $size: {
+                    $filter: {
+                        input: '$bought',
+                        as: 'orders',
+                        cond: {$gte: ['$$orders.order_date', new Date(new Date() - 14 * 60 * 60 * 24 * 1000)]} // X = 14 days right now
+                    }
                 }
             }
 
