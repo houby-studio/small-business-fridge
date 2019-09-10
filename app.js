@@ -52,12 +52,12 @@ app.engine('.hbs', expressHbs({defaultLayout: 'layout', extname: '.hbs'}));
 app.set('view engine', '.hbs');
 app.use(methodOverride());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
-app.use(expressSession({ cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 }, secret: config.config.cookie_secret, resave: false, saveUninitialized: false, store: new mongoStore({ mongooseConnection: mongoose.connection, ttl: 14 * 24 * 60 * 60, autoRemove: 'native' }) }));
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser(config.config.parser_secret));
+app.use(expressSession({ cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 }, name: 'sessionId', secret: config.config.cookie_secret, httpOnly: true, secure: true, resave: false, saveUninitialized: false, store: new mongoStore({ mongooseConnection: mongoose.connection, ttl: 14 * 24 * 60 * 60, autoRemove: 'native' }) }));
 app.use(passport.initialize());
-app.use(passport.session())
+app.use(passport.session());
 
 // Application routes
 // Access for all
