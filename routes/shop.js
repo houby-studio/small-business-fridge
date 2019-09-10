@@ -63,6 +63,13 @@ router.get('/', ensureAuthenticated, function (req, res) {
 
 router.post('/', ensureAuthenticated, function (req, res) {
 
+  if (req.user.id != req.body.user_id) {
+    var alert = { type: 'danger', component: 'web', message: 'Při zpracování objednávky došlo k chybě. Zkuste to prosím znovu.', danger: 1};
+    req.session.alert = alert;
+    res.redirect('/shop');
+    return;
+  }
+
   var newOrder = new Order({
       'buyerId': req.user.id,
       'deliveryId': req.body.product_id

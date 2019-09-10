@@ -1,10 +1,15 @@
+// aggregate sketch: orders with deliveries[filtered bu supplier Id] > group by users > craete invoice with total cost and send email > write invoice = true and invoice id to all orders
 var express = require('express');
 var router = express.Router();
+var User = require('../models/user');
+var Order = require('../models/order');
+var Product = require('../models/product');
 var Delivery = require('../models/delivery');
 
 /* GET about page. */
 router.get('/', function(req, res, next) {
 
+    // Info view for supplier
     Delivery.aggregate([
         { $match: { 'supplierId': req.user._id } },
         { $lookup: { from: 'products', localField: 'productId', foreignField: '_id', as: 'product'} },
@@ -32,6 +37,7 @@ router.get('/', function(req, res, next) {
             }
 
         }}
+        //{ $match: { amount_left: { $gt: 0 } } },
     ], function(err, docs) {
         if (err) {
             var alert = { type: 'danger', component: 'db', message: err.message, danger: 1};
@@ -40,7 +46,7 @@ router.get('/', function(req, res, next) {
             return;
         }
         console.log(docs);
-        res.render('shop/stock', { title: 'Stav skladu | Lednice IT', user: req.user, stock: docs });
+        res.render('shop/invoice', { title: 'Stav skladu | Lednice IT', user: req.user, stock: docs });
     });
 });
 

@@ -30,6 +30,7 @@ var profileRouter = require('./routes/profile');
 var ordersRouter = require('./routes/orders');
 // Access for suppliers
 var addProductsRouter = require('./routes/supplier_add_products');
+var invoiceRouter = require('./routes/invoice');
 var stockRouter = require('./routes/stock');
 // Passport routes
 var loginRouter = require('./routes/login');
@@ -70,6 +71,7 @@ app.use('/profile', profileRouter);
 app.use('/orders', ordersRouter);
 // Access for suppliers
 app.use('/add_products', addProductsRouter);
+app.use('/invoice', invoiceRouter);
 app.use('/stock', stockRouter);
 // Passport routes
 app.use('/login', loginRouter);
