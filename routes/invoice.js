@@ -15,15 +15,15 @@ router.get('/', function(req, res, next) {
         { $lookup: { from: 'products', localField: 'productId', foreignField: '_id', as: 'product'} },
         { $unwind: '$product'},
         { $lookup: { from: 'orders', localField: '_id', foreignField: 'deliveryId', as: 'bought' } },
-        { $unwind: { path: '$bought', preserveNullAndEmptyArrays: true } },
+        //{ $unwind: { path: '$bought', preserveNullAndEmptyArrays: true } },
         { $group: {
             _id: '$productId',
             product: { $first: '$product'},
             amount_left: { $sum: '$amount_left' },
-            //amount_supplied: { $sum: '$amount_supplied' },
+            amount_supplied: { $sum: '$amount_supplied' },
             bought: { $push: '$bought' }
         }},
-        { $project: {
+        /*{ $project: {
             amount_left: 1,
             display_name: '$product.displayName',
             last_Xdays: {
@@ -36,7 +36,7 @@ router.get('/', function(req, res, next) {
                 }
             }
 
-        }}
+        }}*/
         //{ $match: { amount_left: { $gt: 0 } } },
     ], function(err, docs) {
         if (err) {
