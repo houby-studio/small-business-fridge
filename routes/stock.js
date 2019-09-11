@@ -1,9 +1,15 @@
 var express = require('express');
 var router = express.Router();
 var Delivery = require('../models/delivery');
+var ensureAuthenticated = require('../functions/ensureAuthenticated').ensureAuthenticated;
 
 /* GET about page. */
-router.get('/', function(req, res, next) {
+router.get('/', ensureAuthenticated, function(req, res, next) {
+
+    if (!req.user.supplier) {
+        res.redirect('/');
+        return;
+    }
 
     Delivery.aggregate([
         { $match: { 'supplierId': req.user._id } },
