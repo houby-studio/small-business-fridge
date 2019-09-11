@@ -57,7 +57,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser(config.config.parser_secret));
-app.use(expressSession({ cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 }, name: 'sessionId', secret: config.config.cookie_secret, httpOnly: true, secure: true, resave: false, saveUninitialized: false, store: new mongoStore({ mongooseConnection: mongoose.connection, ttl: 14 * 24 * 60 * 60, autoRemove: 'native' }) }));
+app.use(expressSession({ cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 }, secret: config.config.cookie_secret, httpOnly: true, secure: true, resave: false, saveUninitialized: false, store: new mongoStore({ mongooseConnection: mongoose.connection, ttl: 14 * 24 * 60 * 60, autoRemove: 'native' }) }));
 app.use(passport.initialize());
 app.use(passport.session());
 
