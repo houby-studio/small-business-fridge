@@ -50,6 +50,7 @@ mongoose.connect(config.config.db.connstr,{ useNewUrlParser: true });
 
 // View engine setup
 app.engine('.hbs', expressHbs({defaultLayout: 'layout', extname: '.hbs'}));
+app.enable('trust proxy');
 app.set('view engine', '.hbs');
 app.use(methodOverride());
 app.use(express.json());
