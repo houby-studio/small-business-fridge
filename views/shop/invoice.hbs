@@ -1,0 +1,112 @@
+<div class="row">
+    <div class="col">
+        <div class="card text-center w-50 mx-auto w-100-lg">
+            <div class="card-header h4">
+                Vyfakturovat
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <tbody>
+                            <tr>
+                                <th scope="row" class="text-left">Celkem k fakturaci</th>
+                                <td>{{ stock.total_num_orders_notinvoiced }} Ks</td>
+                                <td>{{ stock.total_sum_orders_notinvoiced }} Kč</td>
+                            </tr>
+                            <tr>
+                                <th scope="row" class="text-left">Celkem fakturováno</th>
+                                <td>{{ stock.total_num_orders_invoiced }} Ks</td>
+                                <td>{{ stock.total_sum_orders_invoiced }} Kč</td>
+                            </tr>
+                            <tr>
+                                <th scope="row" class="text-left">Celkem na skladě</th>
+                                <td>{{ stock.total_num_stocked }} Ks</td>
+                                <td>{{ stock.total_sum_stocked }} Kč</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row mt-3">
+    <div class="col">
+        <div class="card text-center w-50 mx-auto w-100-lg">
+            <div class="card-header h4">
+                Podrobný přehled
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <th scope="col" class="text-left">Produkt</th>
+                            <th scope="col"># vyfakturovaných</th>
+                            <th scope="col"># nevyfakturovaných</th>
+                            <th scope="col">Částka k fakturaci</th>
+                            <th scope="col">Fakturováno</th>
+                            <th scope="col">Hodnota na skladě</th>
+                        </thead>
+                        <tbody>
+                            {{#each stock.stock}}
+                            <tr>
+                                <th scope="row" class="text-left">{{ this.product.displayName }}</th>
+                                <td>{{ this.num_orders_invoiced }}ks</td>
+                                <td>{{ this.num_orders_notinvoiced }}ks</td>
+                                <td>{{ this.sum_orders_notinvoiced }}Kč</td>
+                                <td>{{ this.sum_orders_invoiced }}Kč</td>
+                                <td>{{ this.sum_stocked }}Kč</td>
+                            </tr>
+                            {{/each}}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!--
+<div class="row">
+    <canvas id="myChart" width="400" height="400"></canvas>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0/dist/Chart.min.js"></script>
+<script>
+var ctx = document.getElementById('myChart').getContext('2d');
+var myChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Orange'],
+        datasets: [{
+            label: 'Datum',
+            data: [12, 19, 3, 5, 2, 3],
+            backgroundColor: [
+                'rgba(255, 99, 132, 0.2)',
+                'rgba(54, 162, 235, 0.2)',
+                'rgba(255, 206, 86, 0.2)',
+                'rgba(75, 192, 192, 0.2)',
+                'rgba(153, 102, 255, 0.2)',
+                'rgba(255, 159, 64, 0.2)'
+            ],
+            borderColor: [
+                'rgba(255, 99, 132, 1)',
+                'rgba(54, 162, 235, 1)',
+                'rgba(255, 206, 86, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(153, 102, 255, 1)',
+                'rgba(255, 159, 64, 1)'
+            ],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        scales: {
+            yAxes: [{
+                ticks: {
+                    beginAtZero: true
+                }
+            }]
+        }
+    }
+});
+</script>
+-->

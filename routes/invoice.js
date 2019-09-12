@@ -27,32 +27,70 @@ router.get('/', ensureAuthenticated, function(req, res, next) {
             product: { $first: '$product'},
             amount_left: { $sum: '$amount_left' },
             amount_supplied: { $sum: '$amount_supplied' },
-            orders_notinvoiced: { $push: { $size: { $filter: {
+            orders: { $push: '$orders' },
+            num_orders_notinvoiced: { $sum: { $size: { $filter: { 
                 input: '$orders',
-                as: 'not_invoiced',
-                cond: { $eq: ['$$not_invoiced.invoice'] }   
+                as: 'notinvoiced',
+                cond: { $eq: ['$$notinvoiced.invoice', false] }
             }}}},
-            orders_invoiced: { $push: { $size: { $filter: {
+            num_orders_invoiced: { $sum: { $size: { $filter: { 
                 input: '$orders',
                 as: 'invoiced',
-                cond: { $eq: ['$$invoiced.invoice'] }
-            }}}}
+                cond: { $eq: ['$$invoiced.invoice', true] }
+            }}}},
+            sum_orders_notinvoiced: { $sum: { $sum: { $map: {
+                input: { 
+                    $filter: {
+                        input: '$orders',
+                        as: 'notinvoiced',
+                        cond: { $eq: ['$$notinvoiced.invoice', false] }
+                    }
+                },
+                as: 'total',
+                in: '$price',
+            }}}},
+            sum_orders_invoiced: { $sum: { $sum: { $map: {
+                input: { 
+                    $filter: {
+                        input: '$orders',
+                        as: 'invoiced',
+                        cond: { $eq: ['$$invoiced.invoice', true] }
+                    }
+                },
+                as: 'total',
+                in: '$price',
+            }}}},
+            sum_stocked: { $sum: { $multiply: [ '$price', '$amount_left' ] }},
+            root: { $push: '$$ROOT'}
         }},
+        { $group: {
+            _id: null,
+            stock: { $push: '$$ROOT'},
+            total_num_orders_invoiced: { $sum: '$num_orders_invoiced'},
+            total_num_orders_notinvoiced: { $sum: '$num_orders_notinvoiced'},
+            total_sum_orders_invoiced: { $sum: '$sum_orders_invoiced'},
+            total_sum_orders_notinvoiced: { $sum: '$sum_orders_notinvoiced'},
+            total_num_stocked: { $sum: '$amount_left'},
+            total_sum_stocked: { $sum: '$sum_stocked'},
+            /*total_sum_orders_invoiced: 1,
+            total_sum_orders_notinvoiced: 1,
+            total_sum_cash_stocked: 1,*/
+        }},
+        //{ $unwind: '$stock' }
         /*{ $project: {
             amount_left: 1,
             display_name: '$product.displayName',
-            last_Xdays: {
-                $size: {
-                    $filter: {
-                        input: '$bought',
-                        as: 'orders',
-                        cond: {$gte: ['$$orders.order_date', new Date(new Date() - 14 * 60 * 60 * 24 * 1000)]} // X = 14 days right now
-                    }
-                }
-            }
-
+            num_orders_invoiced: 1,
+            num_orders_notinvoiced: 1,
+            sum_orders_invoiced: 1,
+            sum_orders_notinvoiced: 1,
+            sum_cash_stocked: 1,
+            total_num_orders_invoiced: { $sum: '$num_orders_invoiced'},
+            total_num_orders_notinvoiced: { $sum: '$num_orders_notinvoiced'},
+            total_sum_orders_invoiced: 1,
+            total_sum_orders_notinvoiced: 1,
+            total_sum_cash_stocked: 1,
         }}*/
-        //{ $match: { amount_left: { $gt: 0 } } },
     ], function(err, docs) {
         if (err) {
             var alert = { type: 'danger', component: 'db', message: err.message, danger: 1};
@@ -60,8 +98,8 @@ router.get('/', ensureAuthenticated, function(req, res, next) {
             res.redirect('/');
             return;
         }
-        console.log(docs);
-        res.render('shop/invoice', { title: 'Stav skladu | Lednice IT', user: req.user, stock: docs });
+        console.log(docs[0]);
+        res.render('shop/invoice', { title: 'Stav skladu | Lednice IT', user: req.user, stock: docs[0] });
     });
 });
 
