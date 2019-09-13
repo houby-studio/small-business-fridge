@@ -1,27 +1,36 @@
 <div class="row">
     <div class="col">
-        <div class="card text-center w-50 mx-auto w-100-lg">
+        <div class="card text-center mx-auto">
             <div class="card-header h4">
-                Vyfakturovat
+                Fakturace
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        <div class="card text-center mx-auto">
+            <div class="card-header h4">
+                Celkový přehled
             </div>
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table">
                         <tbody>
                             <tr>
-                                <th scope="row" class="text-left">Celkem k fakturaci</th>
-                                <td>{{ stock.total_num_orders_notinvoiced }} Ks</td>
-                                <td>{{ stock.total_sum_orders_notinvoiced }} Kč</td>
+                                <th scope="row" class="text-left"><i class="far fa-money-bill-alt" alt="Nevyfakturováno"></i> Celkem k fakturaci</th>
+                                <td>{{ stock.total_num_orders_notinvoiced }}ks</td>
+                                <td>{{ stock.total_sum_orders_notinvoiced }}Kč</td>
                             </tr>
                             <tr>
-                                <th scope="row" class="text-left">Celkem fakturováno</th>
-                                <td>{{ stock.total_num_orders_invoiced }} Ks</td>
-                                <td>{{ stock.total_sum_orders_invoiced }} Kč</td>
+                                <th scope="row" class="text-left"><i class="fas fa-file-invoice-dollar" alt="Vyfakturováno"></i> Celkem fakturováno</th>
+                                <td>{{ stock.total_num_orders_invoiced }}ks</td>
+                                <td>{{ stock.total_sum_orders_invoiced }}Kč</td>
                             </tr>
                             <tr>
-                                <th scope="row" class="text-left">Celkem na skladě</th>
-                                <td>{{ stock.total_num_stocked }} Ks</td>
-                                <td>{{ stock.total_sum_stocked }} Kč</td>
+                                <th scope="row" class="text-left"><i class="fas fa-boxes" alt="Sklad"></i> Celkem na skladě</th>
+                                <td>{{ stock.total_num_stocked }}ks</td>
+                                <td>{{ stock.total_sum_stocked }}Kč</td>
                             </tr>
                         </tbody>
                     </table>
@@ -32,29 +41,63 @@
 </div>
 <div class="row mt-3">
     <div class="col">
-        <div class="card text-center w-50 mx-auto w-100-lg">
+        <div class="card text-center mx-auto">
             <div class="card-header h4">
                 Podrobný přehled
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-xl-6 pr-xl-none">
+        <div class="card text-center mx-auto">
+            <div class="card-header h4">
+                Podle kusů
             </div>
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table">
                         <thead>
                             <th scope="col" class="text-left">Produkt</th>
-                            <th scope="col"># vyfakturovaných</th>
-                            <th scope="col"># nevyfakturovaných</th>
-                            <th scope="col">Částka k fakturaci</th>
-                            <th scope="col">Fakturováno</th>
-                            <th scope="col">Hodnota na skladě</th>
+                            <th scope="col" class="text-muted" data-toggle="tooltip" title="Vyfakturováno"><i class="fas fa-file-invoice-dollar" alt="Vyfakturováno"></i></th>
+                            <th scope="col" data-toggle="tooltip" title="Nevyfakturováno"><i class="far fa-money-bill-alt" alt="Nevyfakturováno"></i></th>
+                            <th scope="col" data-toggle="tooltip" title="Sklad"><i class="fas fa-boxes" alt="Sklad"></i></th>
                         </thead>
                         <tbody>
                             {{#each stock.stock}}
                             <tr>
-                                <th scope="row" class="text-left">{{ this.product.displayName }}</th>
-                                <td>{{ this.num_orders_invoiced }}ks</td>
-                                <td>{{ this.num_orders_notinvoiced }}ks</td>
+                                <th scope="row" class="text-left text-nowrap">{{ this.product.displayName }}</th>
+                                <td class="text-nowrap text-muted">{{ this.num_orders_invoiced }}ks</td>
+                                <td class="text-nowrap">{{ this.num_orders_notinvoiced }}ks</td>
+                                <td class="text-nowrap">{{ this.amount_left }}ks</td>
+                            </tr>
+                            {{/each}}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-6 pl-xl-none">
+        <div class="card text-center mx-auto">
+            <div class="card-header h4">
+                Podle částky
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <th scope="col" class="text-left hide-xl">Produkt</th>
+                            <th scope="col" class="text-muted" data-toggle="tooltip" title="Vyfakturováno"><i class="fas fa-file-invoice-dollar" alt="Vyfakturováno"></i></th>
+                            <th scope="col" data-toggle="tooltip" title="Nevyfakturováno"><i class="far fa-money-bill-alt" alt="Nevyfakturováno"></i></th>
+                            <th scope="col" data-toggle="tooltip" title="Sklad"><i class="fas fa-boxes" alt="Sklad"></i></th>
+                        </thead>
+                        <tbody>
+                            {{#each stock.stock}}
+                            <tr>
+                                <th scope="row" class="text-left hide-xl text-nowrap">{{ this.product.displayName }}</th>
+                                <td class="text-muted">{{ this.sum_orders_invoiced }}Kč</td>
                                 <td>{{ this.sum_orders_notinvoiced }}Kč</td>
-                                <td>{{ this.sum_orders_invoiced }}Kč</td>
                                 <td>{{ this.sum_stocked }}Kč</td>
                             </tr>
                             {{/each}}
@@ -65,6 +108,11 @@
         </div>
     </div>
 </div>
+<script>
+$(function () {
+  $('[data-toggle="tooltip"]').tooltip()
+})
+</script> 
 <!--
 <div class="row">
     <canvas id="myChart" width="400" height="400"></canvas>

@@ -56,3 +56,15 @@ input[type=number] {
         width: 100% !important;
     }
 }
+
+@media screen and (min-width: 1200px) {
+    .hide-xl {
+        display: none;
+    }
+    .pr-xl-none {
+        padding-right: 0;
+    }
+    .pl-xl-none {
+        padding-left: 0;
+    }
+}
