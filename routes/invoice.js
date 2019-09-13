@@ -1,6 +1,7 @@
 // aggregate sketch: orders with deliveries[filtered bu supplier Id] > group by users > craete invoice with total cost and send email > write invoice = true and invoice id to all orders
 var express = require('express');
 var router = express.Router();
+var palette = require('google-palette'); // works like this?
 var User = require('../models/user');
 var Order = require('../models/order');
 var Product = require('../models/product');
@@ -100,6 +101,49 @@ router.get('/', ensureAuthenticated, function(req, res, next) {
         }
         console.log(docs[0]);
         res.render('shop/invoice', { title: 'Stav skladu | Lednice IT', user: req.user, stock: docs[0] });
+    });
+});
+
+router.post('/', ensureAuthenticated, function(req, res, next) {
+
+    if (!req.user.supplier) {
+        res.redirect('/');
+        return;
+    }
+
+    Delivery.aggregate([
+        { $match: { 'supplierId': req.user._id } },
+        { $lookup: { from: 'products', localField: 'productId', foreignField: '_id', as: 'product'} },
+        { $unwind: '$product'},
+        { $lookup: { from: 'orders', localField: '_id', foreignField: 'deliveryId', as: 'orders' } },
+        { $unwind: { path: '$orders', preserveNullAndEmptyArrays: true } },
+        { $addFields: { 'orders.product': '$product'} },
+        { $addFields: { 'orders.price': '$price'} },
+        { $match: { 'orders.invoice': false } },
+        { $lookup: { from: 'users', localField: 'orders.buyerId', foreignField: '_id', as: 'user' } },
+        { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+        { $group: {
+            _id: '$orders.buyerId',
+            user: { $first: '$user' },
+            orders: { $push: '$orders' },
+            //product: { $first: '$product'},
+            //root: { $push: '$$ROOT'}
+        }},
+        { $project: {
+            user: 1,
+            orders: 1,
+            total_user_num_orders_notinvoiced: { $size: '$orders'},
+            total_user_sum_orders_notinvoiced: { $sum: '$orders.price' },
+        }}
+    ], function(err, docs) {
+        if (err) {
+            var alert = { type: 'danger', component: 'db', message: err.message, danger: 1};
+            req.session.alert = alert;
+            res.redirect('/');
+            return;
+        }
+        console.log(docs);
+        res.render('shop/invoice', { title: 'Stav skladu | Lednice IT', user: req.user, stock: docs });
     });
 });
 
