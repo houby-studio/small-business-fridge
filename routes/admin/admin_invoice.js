@@ -118,7 +118,7 @@ function renderPage(req, res, alert) {
                 for (var i = 0; i < udocs.length; i++) {
                     udocs[i].color = graphColors[i];
                     udocs[i].orders.forEach(function(element) {
-                        element.order_date = moment(element.order_date).format('LLLL');
+                        element.order_date_format = moment(element.order_date).format('LLLL');
                     });
                 }
             }

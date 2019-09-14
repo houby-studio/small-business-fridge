@@ -148,6 +148,15 @@ $(document).ready(function () {
         },
         fixedHeader: true,
         lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "Vše"]],
+        columnDefs: [
+            { "orderData":[ 0 ],   "targets": [ 4 ] },
+            {
+                "targets": [ 4 ],
+                "visible": false,
+                "searchable": false
+            }
+        ],
+        //order: true,
         //scrollY: '60vh',
         //scrollCollapse: true,
         //stateSave: true

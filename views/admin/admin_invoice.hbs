@@ -131,19 +131,21 @@
                 <div class="table-responsive text-left">
                     <table class="table" id="table-orders">
                         <thead>
-                            <th scope="col" data-sortable="true" data-field="id">Datum</th>
+                            <th scope="col">Datum</th>
                             <th scope="col">Jméno</th>
                             <th scope="col">Produkt</th>
                             <th scope="col">Cena</th>
+                            <th scope="col">Date</th>
                         </thead>
                         <tbody>
                             {{#each userview}}
                                 {{#each orders}}
                                 <tr>
-                                    <td>{{ this.order_date }}</th>
+                                    <td>{{ this.order_date_format }}</th>
                                     <td>{{ ../user }}</td>
                                     <td>{{ this.product.displayName }}</td>
                                     <td>{{ this.price }}Kč</td>
+                                    <td>{{ this.order_date }}</td>
                                 </tr>
                                 {{/each}}
                             {{/each}}
