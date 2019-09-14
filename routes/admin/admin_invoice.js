@@ -3,20 +3,17 @@ var router = express.Router();
 var palette = require('google-palette');
 var moment = require('moment');
 moment.locale('cs');
-var Delivery = require('../models/delivery');
-var ensureAuthenticated = require('../functions/ensureAuthenticated').ensureAuthenticated;
+var Delivery = require('../../models/delivery');
+var ensureAuthenticated = require('../../functions/ensureAuthenticated').ensureAuthenticated;
+var csrf = require('csurf');
+var csrfProtection = csrf();
+router.use(csrfProtection);
 
-// GET supplier invoice page.
-router.get('/', ensureAuthenticated, function(req, res, next) {
-
-    if (!req.user.supplier) {
-        res.redirect('/');
-        return;
-    }
+function renderPage(req, res, alert) {
 
     // Aggregate and group by productId for product based info - total amounts and total price for 'invoiced', 'not invoiced' and 'on stock'
     Delivery.aggregate([
-        { $match: { 'supplierId': req.user._id } }, // Get only deliveries inserted by supplier requesting the page
+        // { $match: { 'supplierId': req.user._id } }, // This is where gets different from regular mortal - we filter ALL deliveries
         { $lookup: { from: 'products', localField: 'productId', foreignField: '_id', as: 'product'} }, // join on product
         { $unwind: '$product'},
         { $lookup: { from: 'orders', localField: '_id', foreignField: 'deliveryId', as: 'orders' } }, // join on orders
@@ -80,7 +77,7 @@ router.get('/', ensureAuthenticated, function(req, res, next) {
 
         // Aggregate and group by user for user based info - total amounts and total price 'not invoiced' and all not invoiced orders
         Delivery.aggregate([
-            { $match: { 'supplierId': req.user._id } },
+            // { $match: { 'supplierId': req.user._id } }, // This is where gets different from regular mortal - we filter ALL deliveries
             { $lookup: { from: 'products', localField: 'productId', foreignField: '_id', as: 'product'} },
             { $unwind: '$product'},
             { $lookup: { from: 'orders', localField: '_id', foreignField: 'deliveryId', as: 'orders' } },
@@ -110,8 +107,6 @@ router.get('/', ensureAuthenticated, function(req, res, next) {
                 res.redirect('/');
                 return;
             }
-            // console.log(docs[0]);
-            // console.log(udocs);
             if (docs[0]) {
                 var graphColors = palette('mpn65', docs[0].stock.length);
                 for (var i = 0; i < docs[0].stock.length; i++) {
@@ -127,52 +122,24 @@ router.get('/', ensureAuthenticated, function(req, res, next) {
                     });
                 }
             }
-            res.render('shop/invoice', { title: 'Fakturace | Lednice IT', user: req.user, productview: docs[0], userview: udocs });
+            res.render('admin/admin_invoice', { title: 'Admin - Fakturace | Lednice IT', user: req.user, productview: docs[0], userview: udocs });
         });
     });
-});
+};
 
-router.post('/', ensureAuthenticated, function(req, res, next) {
+/* GET admin dashboard page. */
+router.get('/', ensureAuthenticated, function (req, res) {
 
-    if (!req.user.supplier) {
+    if (!req.user.admin) {
         res.redirect('/');
         return;
     }
+    if (req.session.alert) {
+        var alert = req.session.alert;
+        delete req.session.alert;
+    }
+    renderPage(req, res, alert);
 
-    Delivery.aggregate([
-        { $match: { 'supplierId': req.user._id } },
-        { $lookup: { from: 'products', localField: 'productId', foreignField: '_id', as: 'product'} },
-        { $unwind: '$product'},
-        { $lookup: { from: 'orders', localField: '_id', foreignField: 'deliveryId', as: 'orders' } },
-        { $unwind: { path: '$orders', preserveNullAndEmptyArrays: true } },
-        { $addFields: { 'orders.product': '$product'} },
-        { $addFields: { 'orders.price': '$price'} },
-        { $match: { 'orders.invoice': false } },
-        { $lookup: { from: 'users', localField: 'orders.buyerId', foreignField: '_id', as: 'user' } },
-        { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
-        { $group: {
-            _id: '$orders.buyerId',
-            user: { $first: '$user' },
-            orders: { $push: '$orders' },
-        }},
-        { $project: {
-            user: '$user.displayName',
-            'orders.product.displayName': 1,
-            'orders.order_date': 1,
-            'orders.price': 1,
-            total_user_num_orders_notinvoiced: { $size: '$orders'},
-            total_user_sum_orders_notinvoiced: { $sum: '$orders.price' },
-        }}
-    ], function(err, docs) {
-        if (err) {
-            var alert = { type: 'danger', component: 'db', message: err.message, danger: 1};
-            req.session.alert = alert;
-            res.redirect('/');
-            return;
-        }
-        console.log(docs);
-        res.render('shop/invoice', { title: 'Stav skladu | Lednice IT', user: req.user, stock: docs });
-    });
 });
 
 module.exports = router;

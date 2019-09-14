@@ -1,10 +1,9 @@
 var express = require('express');
 var router = express.Router();
 var moment = require('moment');
+moment.locale('cs');
 var Order = require('../models/order');
 var ensureAuthenticated = require('../functions/ensureAuthenticated').ensureAuthenticated;
-
-moment.locale('cs');
 
 /* GET home page. */
 router.get('/', ensureAuthenticated, function (req, res) {
@@ -51,7 +50,7 @@ router.get('/', ensureAuthenticated, function (req, res) {
             totalPaid: 1
         }}*/
     ], function (err, docs) {
-        console.log(docs);
+        //console.log(docs);
         if (req.query.a) {
             var alert = {
                 type: req.query.a,
@@ -69,7 +68,6 @@ router.get('/', ensureAuthenticated, function (req, res) {
 
         res.render('shop/orders', { title: 'Objednávky | Lednice IT', orders: docs[0], user: req.user, alert: alert });
     });
-  //res.redirect('/');
 });
 
 module.exports = router;

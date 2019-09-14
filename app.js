@@ -32,6 +32,9 @@ var ordersRouter = require('./routes/orders');
 var addProductsRouter = require('./routes/supplier_add_products');
 var invoiceRouter = require('./routes/invoice');
 var stockRouter = require('./routes/stock');
+// Access for admins
+var dashboardRouter = require('./routes/admin/admin_dashboard');
+var adminInvoiceRouter = require('./routes/admin/admin_invoice');
 // Passport routes
 var loginRouter = require('./routes/login');
 var logoutRouter = require('./routes/logout');
@@ -74,6 +77,9 @@ app.use('/orders', ordersRouter);
 app.use('/add_products', addProductsRouter);
 app.use('/invoice', invoiceRouter);
 app.use('/stock', stockRouter);
+// Access for admins
+app.use('/dashboard', dashboardRouter);
+app.use('/admin_invoice', adminInvoiceRouter);
 // Passport routes
 app.use('/login', loginRouter);
 app.use('/logout', logoutRouter);

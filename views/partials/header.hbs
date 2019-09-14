@@ -21,8 +21,12 @@
     <ul class="navbar-nav">
       {{#if user}}
         <div class="dropdown">
-          <button class="btn btn-secondary dropdown-toggle w-100 nav-link" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="fas fa-user"></i> {{user.displayName}}</button>
+          <button class="btn btn-secondary dropdown-toggle w-100 nav-link" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{#if user.admin}}<i class="fas fa-user-cog"></i>{{else}}<i class="fas fa-user">{{/if}}</i> {{user.displayName}}</button>
           <div class="dropdown-menu">
+            {{#if user.admin }}
+              <a class="dropdown-item" href="/dashboard"><i class="fas fa-columns"></i> Dashboard</a>
+              <div role="separator" class="dropdown-divider"></div>
+            {{/if}}
             <a class="dropdown-item" href="/profile"><i class="fas fa-id-card"></i> Profil</a>
             <a class="dropdown-item" href="/orders"><i class="fas fa-shopping-cart"></i> Objednávky</a>
             <a class="dropdown-item" href="/invoices"><i class="fas fa-file-invoice-dollar"></i> Faktury</a>
