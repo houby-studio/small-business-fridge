@@ -34,7 +34,6 @@ var invoiceRouter = require('./routes/invoice');
 var stockRouter = require('./routes/stock');
 // Access for admins
 var dashboardRouter = require('./routes/admin/admin_dashboard');
-var adminInvoiceRouter = require('./routes/admin/admin_invoice');
 // Passport routes
 var loginRouter = require('./routes/login');
 var logoutRouter = require('./routes/logout');
@@ -79,7 +78,7 @@ app.use('/invoice', invoiceRouter);
 app.use('/stock', stockRouter);
 // Access for admins
 app.use('/dashboard', dashboardRouter);
-app.use('/admin_invoice', adminInvoiceRouter);
+app.use('/admin_invoice', invoiceRouter);
 // Passport routes
 app.use('/login', loginRouter);
 app.use('/logout', logoutRouter);

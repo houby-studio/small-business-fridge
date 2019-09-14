@@ -14,9 +14,19 @@ router.get('/', ensureAuthenticated, function(req, res, next) {
         return;
     }
 
+    if (req.baseUrl === '/admin_invoice') {
+        if (!req.user.admin) {
+            res.redirect('/');
+            return;
+        }
+        var filter = {};
+    } else {
+        var filter = { 'supplierId': req.user._id };
+    }
+
     // Aggregate and group by productId for product based info - total amounts and total price for 'invoiced', 'not invoiced' and 'on stock'
     Delivery.aggregate([
-        { $match: { 'supplierId': req.user._id } }, // Get only deliveries inserted by supplier requesting the page
+        { $match: filter }, // Get only deliveries inserted by supplier requesting the page
         { $lookup: { from: 'products', localField: 'productId', foreignField: '_id', as: 'product'} }, // join on product
         { $unwind: '$product'},
         { $lookup: { from: 'orders', localField: '_id', foreignField: 'deliveryId', as: 'orders' } }, // join on orders
@@ -80,7 +90,7 @@ router.get('/', ensureAuthenticated, function(req, res, next) {
 
         // Aggregate and group by user for user based info - total amounts and total price 'not invoiced' and all not invoiced orders
         Delivery.aggregate([
-            { $match: { 'supplierId': req.user._id } },
+            { $match: filter },
             { $lookup: { from: 'products', localField: 'productId', foreignField: '_id', as: 'product'} },
             { $unwind: '$product'},
             { $lookup: { from: 'orders', localField: '_id', foreignField: 'deliveryId', as: 'orders' } },
@@ -124,10 +134,11 @@ router.get('/', ensureAuthenticated, function(req, res, next) {
                     udocs[i].color = graphColors[i];
                     udocs[i].orders.forEach(function(element) {
                         element.order_date_format = moment(element.order_date).format('LLLL');
+                        element.order_date = moment(element.order_date).format();
                     });
                 }
             }
-            res.render('shop/invoice', { title: 'Fakturace | Lednice IT', user: req.user, productview: docs[0], userview: udocs });
+            res.render('shop/invoice', { title: 'Fakturace | Lednice IT', user: req.user, productview: docs[0], userview: udocs, supplier: filter });
         });
     });
 });

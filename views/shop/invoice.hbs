@@ -26,9 +26,11 @@
                         </tbody>
                     </table>
                 </div>
-                <form id="invoice_all" class="needs-validation" method="POST" action="/invoice" novalidate>
-                    <input type="submit" class="btn btn-primary w-100" value="Vyfakturovat">
-                </form>
+                {{#if supplier.supplierId}}
+                    <form id="invoice_all" class="needs-validation" method="POST" action="/invoice" novalidate>
+                        <input type="submit" class="btn btn-primary w-100" value="Vyfakturovat">
+                    </form>
+                {{/if}}
             </div>
         </div>
     </div>
@@ -138,7 +140,7 @@
                             <th scope="col">Jméno</th>
                             <th scope="col">Produkt</th>
                             <th scope="col">Cena</th>
-                            <th scope="col">Date</th>
+                            <th scope="col" class="d-none">Date</th>
                         </thead>
                         <tbody>
                             {{#each userview}}
@@ -148,7 +150,7 @@
                                     <td>{{ ../user }}</td>
                                     <td>{{ this.product.displayName }}</td>
                                     <td>{{ this.price }}Kč</td>
-                                    <td>{{ this.order_date }}</td>
+                                    <td class="d-none">{{ this.order_date }}</td>
                                 </tr>
                                 {{/each}}
                             {{/each}}

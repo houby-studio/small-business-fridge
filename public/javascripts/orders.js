@@ -7,7 +7,15 @@ $(document).ready(function () {
         lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "Vše"]],
         // scrollY: '60vh',
         scrollCollapse: true,
-        stateSave: true
+        stateSave: true,
+        columnDefs: [
+            { "orderData":[ 4 ],   "targets": [ 0 ] },
+            {
+                "targets": [ 4 ],
+                "visible": false,
+                "searchable": true
+            }
+        ],
     });
     $('.dataTables_length').addClass('bs-select');
 });

@@ -149,11 +149,11 @@ $(document).ready(function () {
         fixedHeader: true,
         lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "Vše"]],
         columnDefs: [
-            { "orderData":[ 0 ],   "targets": [ 4 ] },
+            { "orderData":[ 4 ],   "targets": [ 0 ] },
             {
                 "targets": [ 4 ],
                 "visible": false,
-                "searchable": false
+                "searchable": true
             }
         ],
         //order: true,

@@ -62,7 +62,8 @@ router.get('/', ensureAuthenticated, function (req, res) {
         }
         if (docs[0]) {
             docs[0].results.forEach(function(element) {
-                element.order_date = moment(element.order_date).format('LLLL');
+                element.order_date_format = moment(element.order_date).format('LLLL');
+                element.order_date = moment(element.order_date).format();
             });
         }
 
