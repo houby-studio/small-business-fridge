@@ -28,6 +28,7 @@ router.post('/', function(req, res, next) {
         }
 
         newOrder.buyerId = user._id;
+        newOrder.keypadOrder = true;
 
         // Get product
         Product.aggregate([

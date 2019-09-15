@@ -8,6 +8,7 @@
                     <th scope="col">Cena</th>
                     <th scope="col">Dodavatel</th>
                     <th scope="col">Date</th>
+                    <th scope="col">Způsob</th>
                     <th scope="col">Fakturováno</th>
                     <th scope="col">Zaplaceno</th>
                 </thead>
@@ -28,6 +29,13 @@
                             </td>
                             <td>
                                 {{ this.order_date }}
+                            </td>
+                            <td>
+                                {{#if this.keypadOrder }}
+                                    Klávesnice
+                                {{else}}
+                                    E-Shop
+                                {{/if}}
                             </td>
                             <td>
                                 {{#if this.invoice }}
