@@ -7,7 +7,6 @@
                     <th scope="col">Produkt</th>
                     <th scope="col">Cena</th>
                     <th scope="col">Dodavatel</th>
-                    <th scope="col">Date</th>
                     <th scope="col">Způsob</th>
                     <th scope="col">Fakturováno</th>
                     <th scope="col">Zaplaceno</th>
@@ -16,7 +15,7 @@
                     {{# each orders.results }}
                         <tr>
                             <td>
-                                {{ this.order_date_format }}
+                                <span class="d-none">{{ this.order_date }}</span>{{ this.order_date_format }}
                             </td>
                             <td>
                                 {{ this.productInfo.displayName}}
@@ -26,9 +25,6 @@
                             </td>
                             <td>
                                 {{ this.supplierInfo.displayName }}
-                            </td>
-                            <td>
-                                {{ this.order_date }}
                             </td>
                             <td>
                                 {{#if this.keypadOrder }}

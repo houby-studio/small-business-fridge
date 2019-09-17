@@ -1,21 +1,12 @@
 // Bootstrap table customization
 $(document).ready(function () {
     $('#table-orders').DataTable({
+        order: [],
         language: {
             "url": "//cdn.datatables.net/plug-ins/1.10.19/i18n/Czech.json"
         },
         lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "Vše"]],
-        // scrollY: '60vh',
-        scrollCollapse: true,
         stateSave: true,
-        columnDefs: [
-            { "orderData":[ 4 ],   "targets": [ 0 ] },
-            {
-                "targets": [ 4 ],
-                "visible": false,
-                "searchable": true
-            }
-        ],
     });
     $('.dataTables_length').addClass('bs-select');
 });
