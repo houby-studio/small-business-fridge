@@ -4,6 +4,7 @@ var palette = require('google-palette');
 var moment = require('moment');
 moment.locale('cs');
 var Delivery = require('../models/delivery');
+var Order = require('../models/order');
 var ensureAuthenticated = require('../functions/ensureAuthenticated').ensureAuthenticated;
 
 // GET supplier invoice page.
@@ -120,8 +121,6 @@ router.get('/', ensureAuthenticated, function(req, res, next) {
                 res.redirect('/');
                 return;
             }
-            // console.log(docs[0]);
-            // console.log(udocs);
             if (docs[0]) {
                 var graphColors = palette('mpn65', docs[0].stock.length);
                 for (var i = 0; i < docs[0].stock.length; i++) {
@@ -138,7 +137,12 @@ router.get('/', ensureAuthenticated, function(req, res, next) {
                     });
                 }
             }
-            res.render('shop/invoice', { title: 'Fakturace | Lednice IT', user: req.user, productview: docs[0], userview: udocs, supplier: filter });
+
+            if (req.session.alert) {
+                var alert = req.session.alert;
+                delete req.session.alert;
+            }
+            res.render('shop/invoice', { title: 'Fakturace | Lednice IT', user: req.user, productview: docs[0], userview: udocs, supplier: filter, alert: alert });
         });
     });
 });
@@ -150,8 +154,9 @@ router.post('/', ensureAuthenticated, function(req, res, next) {
         return;
     }
 
+    // Aggregate and group by user to create invoice for each of them
     Delivery.aggregate([
-        { $match: { 'supplierId': req.user._id } },
+        { $match: { 'supplierId': req.user._id }},
         { $lookup: { from: 'products', localField: 'productId', foreignField: '_id', as: 'product'} },
         { $unwind: '$product'},
         { $lookup: { from: 'orders', localField: '_id', foreignField: 'deliveryId', as: 'orders' } },
@@ -159,6 +164,7 @@ router.post('/', ensureAuthenticated, function(req, res, next) {
         { $addFields: { 'orders.product': '$product'} },
         { $addFields: { 'orders.price': '$price'} },
         { $match: { 'orders.invoice': false } },
+        // { $set: { 'orders.invoice': true } }, // In the future could be easier on Mongo 4.2 with this new feature
         { $lookup: { from: 'users', localField: 'orders.buyerId', foreignField: '_id', as: 'user' } },
         { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
         { $group: {
@@ -167,7 +173,7 @@ router.post('/', ensureAuthenticated, function(req, res, next) {
             orders: { $push: '$orders' },
         }},
         { $project: {
-            user: '$user.displayName',
+            'orders._id': 1,
             'orders.product.displayName': 1,
             'orders.order_date': 1,
             'orders.price': 1,
@@ -182,7 +188,40 @@ router.post('/', ensureAuthenticated, function(req, res, next) {
             return;
         }
         console.log(docs);
-        res.render('shop/invoice', { title: 'Stav skladu | Lednice IT', user: req.user, stock: docs });
+
+        Order.find({}).populate('deliveryId').exec(function (err,dun) {/*.where({'deliveryId.supplierId': req.user._id}).exec(function (err,dun) {*/
+            console.log(dun);
+        });
+        Order.updateMany({'deliveryId.amount_supplied': 30}, {invoice: true}, function (err) {
+            if (err) {
+                console.log('errrrr');
+            }
+            var alert = { type: 'success', message: 'Fakturace úspěšně vygenerována!', success: 1};
+            req.session.alert = alert;
+            res.redirect('/invoice');
+            return;
+        })
+
+        // var bulk = Order.collection.initializeUnorderedBulkOp();
+        // bulk.find(
+        //     { $lookup: { from: 'deliveries', localField: 'deliveryId', foreignField: '_id', as: 'delivery'} },
+        //     { $unwind: '$delivery'},
+        //     { $match: { 'delivery.supplierId': req.user._id } }
+        // ).update({invoice: true});
+        // bulk.execute(function (err, test) {
+        //     if (err) {
+        //         var alert = { type: 'danger', component: 'db', message: err.message, danger: 1};
+        //         req.session.alert = alert;
+        //         res.redirect('/');
+        //         return;
+        //     }
+        //     console.log(test);
+        // });
+
+        // var alert = { type: 'success', message: 'Fakturace úspěšně vygenerována!', success: 1};
+        // req.session.alert = alert;
+        // res.redirect('/invoice');
+        // return;
     });
 });
 
