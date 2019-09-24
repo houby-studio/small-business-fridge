@@ -5,6 +5,7 @@ var moment = require('moment');
 moment.locale('cs');
 var Delivery = require('../models/delivery');
 var Order = require('../models/order');
+var Invoice = require('../models/invoice');
 var ensureAuthenticated = require('../functions/ensureAuthenticated').ensureAuthenticated;
 
 // GET supplier invoice page.
@@ -177,6 +178,7 @@ router.post('/', ensureAuthenticated, function(req, res, next) {
             'orders.product.displayName': 1,
             'orders.order_date': 1,
             'orders.price': 1,
+            user: 1,
             total_user_num_orders_notinvoiced: { $size: '$orders'},
             total_user_sum_orders_notinvoiced: { $sum: '$orders.price' },
         }}
@@ -189,18 +191,38 @@ router.post('/', ensureAuthenticated, function(req, res, next) {
         }
         console.log(docs);
 
-        Order.find({}).populate('deliveryId').exec(function (err,dun) {/*.where({'deliveryId.supplierId': req.user._id}).exec(function (err,dun) {*/
-            console.log(dun);
-        });
-        Order.updateMany({'deliveryId.amount_supplied': 30}, {invoice: true}, function (err) {
-            if (err) {
-                console.log('errrrr');
+        // Loop through array for each user
+        for (let i = 0; i < docs.length; i++) {
+            // Create new invoice to be sent to user
+            var newInvoice = new Invoice({
+                'buyerId': docs[i].user._id,
+                'supplierId': req.user.id,
+            });
+            var bulk = Order.collection.initializeUnorderedBulkOp();
+            // Loop through array for each order for that user
+            for (let p = 0; p < docs[i].orders.length; p++) {
+                newInvoice.ordersId.push(docs[i].orders[p]._id);
+                bulk.find( { _id: docs[i].orders[p]._id } ).updateOne( { $set: { invoice: true } } );
             }
-            var alert = { type: 'success', message: 'Fakturace úspěšně vygenerována!', success: 1};
-            req.session.alert = alert;
-            res.redirect('/invoice');
-            return;
-        })
+            // bulk.find( {} ).update( { $set: { invoice: false } } ); // for test purposes only
+            bulk.execute(function (err, items) {
+                newInvoice.save();
+                // Send e-mail
+            });
+        }
+
+        // Order.find({}).populate('deliveryId').exec(function (err,dun) {/*.where({'deliveryId.supplierId': req.user._id}).exec(function (err,dun) {*/
+        //     console.log(dun);
+        // });
+        // Order.updateMany({'deliveryId.amount_supplied': 30}, {invoice: true}, function (err) {
+        //     if (err) {
+        //         console.log('errrrr');
+        //     }
+            // var alert = { type: 'success', message: 'Fakturace úspěšně vygenerována!', success: 1};
+            // req.session.alert = alert;
+            // res.redirect('/invoice');
+            // return;
+        // })
 
         // var bulk = Order.collection.initializeUnorderedBulkOp();
         // bulk.find(
@@ -218,10 +240,10 @@ router.post('/', ensureAuthenticated, function(req, res, next) {
         //     console.log(test);
         // });
 
-        // var alert = { type: 'success', message: 'Fakturace úspěšně vygenerována!', success: 1};
-        // req.session.alert = alert;
-        // res.redirect('/invoice');
-        // return;
+        var alert = { type: 'success', message: 'Fakturace úspěšně vygenerována!', success: 1};
+        req.session.alert = alert;
+        res.redirect('/invoice');
+        return;
     });
 });
 
