@@ -3,7 +3,7 @@ var config = require('../config/config');
 
 module.exports = {
 
-    sendMail: function(mailto, mailsubject, mailbody, image) {
+    sendMail: function(mailto, mailsubject, mailbody, image, qrcode) {
         // In case system error occurs, send warning to mail obtained from config.
         if (mailto == 'system') { mailto = config.mail.systemMail; }
 
@@ -25,6 +25,15 @@ module.exports = {
         if (image) {
             mailOptions.attachments = [{
                 path: `./public/${image}`,
+                cid: 'image@prdelka.eu'
+            }];
+        }
+
+        if (qrcode) {
+            mailOptions.attachments = [{
+                //https://qr-platba.cz/pro-vyvojare/specifikace-formatu/
+                //https://www.npmjs.com/package/branded-qr-code
+                path: 'qr_api',
                 cid: 'image@prdelka.eu'
             }];
         }

@@ -3,6 +3,7 @@ var router = express.Router();
 var palette = require('google-palette');
 var moment = require('moment');
 moment.locale('cs');
+var mailer = require('../functions/sendMail');
 var Delivery = require('../models/delivery');
 var Order = require('../models/order');
 var Invoice = require('../models/invoice');
@@ -197,6 +198,7 @@ router.post('/', ensureAuthenticated, function(req, res, next) {
             var newInvoice = new Invoice({
                 'buyerId': docs[i].user._id,
                 'supplierId': req.user.id,
+                'totalCost': docs[i].total_user_sum_orders_notinvoiced
             });
             var bulk = Order.collection.initializeUnorderedBulkOp();
             // Loop through array for each order for that user
@@ -208,6 +210,9 @@ router.post('/', ensureAuthenticated, function(req, res, next) {
             bulk.execute(function (err, items) {
                 newInvoice.save();
                 // Send e-mail
+                var subject = `Fakturace!`;
+                var body = `<h1>Čas zaplatit co jste propil!</h1><p>Dodavatel ${req.user.displayName} provedl fakturaci.</p><img width="240" height="240" style="width: auto; height: 10rem;" alt="QR kód pro mobilní platbu." src="cid:image@prdelka.eu"/><p>Cena celkem: ${docs[i].total_user_sum_orders_notinvoiced}Kč<br>Nákupů celkem: Kdy: ${docs[i].total_user_num_orders_notinvoiced}ks<br>K datu: ${moment().format('LLLL')}</p><p>Díky!</p>`;
+                mailer.sendMail(req.user.email, subject, body, req.body.image_path);
             });
         }
 
