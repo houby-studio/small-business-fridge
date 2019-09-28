@@ -33,6 +33,7 @@ module.exports = {
             mailOptions.attachments = [{
                 //https://qr-platba.cz/pro-vyvojare/specifikace-formatu/
                 //https://www.npmjs.com/package/branded-qr-code
+                //https://www.npmjs.com/package/qrcode
                 path: 'qr_api',
                 cid: 'image@prdelka.eu'
             }];
