@@ -3,13 +3,11 @@ var router = express.Router();
 var User = require('../models/user');
 var ensureAuthenticated = require('../functions/ensureAuthenticated').ensureAuthenticated;
 
-/* GET about page. */
 router.get('/', ensureAuthenticated, function(req, res, next) {
       res.render('shop/profile', { title: 'Profil | Lednice IT', user: req.user });
 });
 
 router.post('/', ensureAuthenticated, function(req, res, next) {      
-      //console.log(req);
       var newValue = (req.body.value === 'true');
       if (req.body.name == 'checkAllProducts') {
             User.findByIdAndUpdate(req.user.id, { showAllProducts: newValue }, { upsert: true }, function (err, docs) {
@@ -20,6 +18,13 @@ router.post('/', ensureAuthenticated, function(req, res, next) {
             });
       } else if (req.body.name == 'checkSendEmailEshop') {
             User.findByIdAndUpdate(req.user.id, { sendMailOnEshopPurchase: newValue }, function (err, docs) {
+                  if (err) {
+                        console.log(err);
+                        return;
+                  }
+            });
+      } else if (req.body.name == 'realtime-iban') {
+            User.findByIdAndUpdate(req.user.id, { IBAN: req.body.value }, function (err, docs) {
                   if (err) {
                         console.log(err);
                         return;

@@ -1,5 +1,4 @@
-var qrcode = require(qrcode);
-var config = require('../config/config');
+var qrcode = require('qrcode');
 
 module.exports = {
 
@@ -23,7 +22,7 @@ module.exports = {
         // Crazy ugly QR code string
         var code = `SPD*1.0*ACC:${IBAN}*AM:${ammount}*CC:CZK*MSG:${msgTemplate}${payer}`;
         
-        var result = await qrcode.toDataURL(code);
+        var result = qrcode.toDataURL(code);
         return result;
     }
 

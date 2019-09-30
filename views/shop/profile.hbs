@@ -39,15 +39,15 @@
                     <div class="form-group row">
                         <div class="col-lg">
                             <div class="custom-control custom-checkbox">
-                                <input type="checkbox" class="custom-control-input" id="checkAllProducts" name="checkAllProducts" {{#if user.showAllProducts}} checked {{/if}}>
-                                <label class="custom-control-label" for="checkAllProducts">Zobrazovat produkty co nejsou skladem.</label>
+                                <input type="checkbox" class="custom-control-input realtime-checkbox" id="checkAllProducts" name="checkAllProducts" {{#if user.showAllProducts}} checked {{/if}}>
+                                <label class="custom-control-label" for="checkAllProducts">Zobrazovat produkty, které nejsou skladem.</label>
                             </div>
                         </div>
                     </div>
                     <div class="form-group row">
                         <div class="col-lg">
                             <div class="custom-control custom-checkbox">
-                                <input type="checkbox" class="custom-control-input" id="checkSendEmailEshop" name="checkSendEmailEshop" {{#if user.sendMailOnEshopPurchase}} checked {{/if}}>
+                                <input type="checkbox" class="custom-control-input realtime-checkbox" id="checkSendEmailEshop" name="checkSendEmailEshop" {{#if user.sendMailOnEshopPurchase}} checked {{/if}}>
                                 <label class="custom-control-label" for="checkSendEmailEshop">Odesílat e-mail po nákupu v e-shopu.</label>
                             </div>
                         </div>
@@ -56,5 +56,31 @@
         </div>
     </div>
 </div>
+{{#if user.supplier}}
+<div class="row mt-3">
+    <div class="col">
+        <div class="card w-50 mx-auto w-100-lg">
+            <div class="card-header h4 text-center">
+                Dodavatelské nastavení
+            </div>
+            <div class="card-body">
+                <div class="form-group row">
+                    <div class="col-lg">
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <div class="input-group-text">IBAN</div>
+                            </div>
+                            <input type="text" id="realtime-iban" name="realtime-iban" class="form-control" placeholder="IBAN" pattern="^CZ\d{22}$" minlength="24" maxlength="24" {{#if user.IBAN}}value="{{user.IBAN}}"{{/if}} required>
+                            <div class="input-group-append">
+                                <div class="input-group-text"><i id="iban-status" class="fas {{#if user.IBAN}}fa-check-circle{{else}}fa-times-circle{{/if}}"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{/if}}
 <script type="text/javascript" src="/javascripts/form_validate.js"></script>
 <script type="text/javascript" src="/javascripts/user_update_realtime.js"></script>
