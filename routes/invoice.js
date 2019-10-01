@@ -191,7 +191,6 @@ router.post('/', ensureAuthenticated, function(req, res, next) {
             res.redirect('/');
             return;
         }
-        console.log(docs);
 
         // Loop through array for each user
         for (let i = 0; i < docs.length; i++) {
@@ -207,13 +206,12 @@ router.post('/', ensureAuthenticated, function(req, res, next) {
                 newInvoice.ordersId.push(docs[i].orders[p]._id);
                 bulk.find( { _id: docs[i].orders[p]._id } ).updateOne( { $set: { invoice: true } } );
             }
-            // bulk.find( {} ).update( { $set: { invoice: false } } ); // for test purposes only
             bulk.execute(function (err, items) {
                 newInvoice.save();
                 // Send e-mail
                 qrPayment(req.user.IBAN, docs[i].total_user_sum_orders_notinvoiced, moment().format('YYYYMMDD'), docs[i].user.displayName, req.user.displayName, function (qrcode) {
                     var subject = `Fakturace!`;
-                    var body = `<h1>Přišel čas zúčtování!</h1><p>Velký a mocný dodavatel ${req.user.displayName} Vám zaslal fakturu.</p><h2>Fakturační údaje</h2><p>Částka k úhradě: ${docs[i].total_user_sum_orders_notinvoiced}Kč<br>Počet zakoupených produktů: ${docs[i].total_user_num_orders_notinvoiced}ks<br>Datum fakturace: ${moment().format('LLLL')}<br><a href="https://lednice.prdelka.eu/invoices">Více na webu Lednice IT</a></p><p>Platbu je možné provést hotově nebo převodem.<br>Po platbě si zkontrolujte, zda dodavatel označil Vaši platbu jako zaplacenou.</p>`;
+                    var body = `<h1>Přišel čas zúčtování!</h1><p>Váš nejoblíbenější dodavatel ${req.user.displayName} Vám zaslal fakturu.</p><h2>Fakturační údaje</h2><p>Částka k úhradě: ${docs[i].total_user_sum_orders_notinvoiced}Kč<br>Počet zakoupených produktů: ${docs[i].total_user_num_orders_notinvoiced}ks<br>Datum fakturace: ${moment().format('LLLL')}<br><a href="https://lednice.prdelka.eu/invoices">Více na webu Lednice IT</a></p><p>Platbu je možné provést hotově nebo převodem.<br>Po platbě si zkontrolujte, zda dodavatel označil Vaši platbu jako zaplacenou.</p>`;
                     if (req.user.IBAN) {
                         body += `<h2>QR platba</h2><img width="480" height="480" style="width: 20rem; height: 20rem;" alt="QR kód pro mobilní platbu se Vám nezobrazuje správně." src="${qrcode}"/><p>IBAN: ${req.user.IBAN}</p><p>Předem díky za včasnou platbu!</p>`;
                     };
@@ -221,7 +219,7 @@ router.post('/', ensureAuthenticated, function(req, res, next) {
                 });
             });
         }
-        var alert = { type: 'success', message: 'Fakturace úspěšně vygenerována!', success: 1};
+        var alert = { type: 'success', message: 'Fakturace úspěšně vygenerována a e-maily rozeslány zákazníkům!', success: 1};
         req.session.alert = alert;
         res.redirect('/invoice');
         return;
