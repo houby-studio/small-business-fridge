@@ -1,6 +1,6 @@
 var qrcode = require('qrcode');
 
-module.exports =  function(IBAN, ammount, date, payer, callback) {
+module.exports =  function(IBAN, ammount, date, payer, receiver, callback) {
         if (!IBAN) {
             console.log('Did not receive IBAN');
             return null;
@@ -15,14 +15,16 @@ module.exports =  function(IBAN, ammount, date, payer, callback) {
             return null;
         }
         console.log('got there');
-        var msgTemplate = 'LedniceIT - ';
+        var msgTemplate = 'LEDNICE IT - ';
         // MSG max length is 60 characters
         if ((payer.length + msgTemplate.length) > 60) {
             payer.substring(0, 60);
         }
 
         // Crazy ugly QR code string
-        var code = `SPD*1.0*ACC:${IBAN}*AM:${ammount}*CC:CZK*MSG:${msgTemplate}${payer}`;
+        var code = `SPD*1.0*ACC:${IBAN}*AM:${ammount}*CC:CZK*RN:${receiver}*MSG:${msgTemplate}${payer}`;
+        code = code.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+        console.log(code);
 
         qrcode.toDataURL(code, function (err, url) {
             return callback(url);
