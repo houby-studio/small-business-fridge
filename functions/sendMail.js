@@ -29,15 +29,15 @@ module.exports = {
             }];
         }
 
-        if (qrcode) {
-            mailOptions.attachments = [{
-                //https://qr-platba.cz/pro-vyvojare/specifikace-formatu/
-                //https://www.npmjs.com/package/branded-qr-code
-                //https://www.npmjs.com/package/qrcode
-                path: 'qr_api',
-                cid: 'image@prdelka.eu'
-            }];
-        }
+        // if (qrcode) {
+        //     mailOptions.attachments = [{
+        //         //https://qr-platba.cz/pro-vyvojare/specifikace-formatu/
+        //         //https://www.npmjs.com/package/branded-qr-code
+        //         //https://www.npmjs.com/package/qrcode
+        //         path: 'qr_api',
+        //         cid: 'image@prdelka.eu'
+        //     }];
+        // }
         
         transporter.sendMail(mailOptions, function(error, info){
             if (error) {
