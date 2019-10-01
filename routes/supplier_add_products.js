@@ -19,8 +19,7 @@ function renderPage(req, res, alert) {
             'product_id': docs.map(a => a.id, b => b.imagePath),
             'product_image': docs.map(a => a.imagePath)
         });
-
-        console.log(docs);
+        
         res.render('shop/supplier_add_products', { title: 'Naskladnit | Lednice IT', products: docs, user: req.user, alert: alert, csrfToken: req.csrfToken() });
     });
 };

@@ -24,12 +24,14 @@ router.post('/', ensureAuthenticated, function(req, res, next) {
                   }
             });
       } else if (req.body.name == 'realtime-iban') {
-            User.findByIdAndUpdate(req.user.id, { IBAN: req.body.value }, function (err, docs) {
-                  if (err) {
-                        console.log(err);
-                        return;
-                  }
-            });
+            if (/^CZ\d{22}$/.test(req.body.value)) {
+                  User.findByIdAndUpdate(req.user.id, { IBAN: req.body.value }, function (err, docs) {
+                        if (err) {
+                              console.log(err);
+                              return;
+                        }
+                  });
+            }
       }
 });
 

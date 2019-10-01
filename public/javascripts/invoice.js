@@ -2,9 +2,9 @@
 Chart.plugins.register({
 	afterDraw: function(chart) {
         const someIsNotZero = chart.data.datasets[0].data.some(item => item !== 0);
-        const isAllZero = !someIsNotZero;
-        if (isAllZero) {
+        if (!someIsNotZero) {
             // No data is present
+            $('#invoice_submit').attr("disabled", true);
             var ctx = chart.chart.ctx;
             var width = chart.chart.width;
             var height = chart.chart.height
@@ -108,9 +108,6 @@ $('#prod-swap').click(function() {
 
 // Product graph
 var ctx = document.getElementById('perProductSpent').getContext('2d');
-if (productDatasetAmountBought == 0) {
-    console.log(productDatasetAmountBought);
-}
 var perProductSpent = new Chart(ctx, {
     type: 'pie',
     data: {

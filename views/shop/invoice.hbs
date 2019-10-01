@@ -28,7 +28,8 @@
                 </div>
                 {{#if supplier.supplierId}}
                     <form id="invoice_all" class="needs-validation" method="POST" action="/invoice" novalidate>
-                        <input type="submit" class="btn btn-primary w-100" value="Vyfakturovat">
+                        <input id="invoice_submit" type="submit" class="btn btn-primary w-100" value="Vyfakturovat">
+                        {{#unless user.IBAN}}<a href="/profile" class="btn btn-info w-100"><i class="fas fa-info-circle"></i> Nemáte vyplněný IBAN pro QR platby.</a>{{/unless}}
                     </form>
                 {{/if}}
             </div>

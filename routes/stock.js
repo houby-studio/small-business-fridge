@@ -36,13 +36,11 @@ router.get('/', ensureAuthenticated, function(req, res, next) {
         }}
     ], function(err, docs) {
         if (err) {
-            console.log(err);
             var alert = { type: 'danger', component: 'db', message: err.message, danger: 1};
             req.session.alert = alert;
             res.redirect('/');
             return;
         }
-        console.log(docs);
         res.render('shop/stock', { title: 'Stav skladu | Lednice IT', user: req.user, stock: docs });
     });
 });

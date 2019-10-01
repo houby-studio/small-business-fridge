@@ -5,7 +5,10 @@ $('.realtime-checkbox').change(function() {
     });
 });
 
+
 $('#realtime-iban').on("paste keyup", function() {
+    
+    this.value = this.value.replace(/\s/g, '');
     if ($('#realtime-iban')[0].checkValidity()) {
         $('#iban-status').css({"color": "green"}).removeClass('fa-times-circle').addClass('fa-check-circle');
         $(this).css({"color": "green"});

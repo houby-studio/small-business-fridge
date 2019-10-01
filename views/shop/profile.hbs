@@ -66,11 +66,11 @@
             <div class="card-body">
                 <div class="form-group row">
                     <div class="col-lg">
-                        <div class="input-group">
+                        <div class="input-group" data-toggle="tooltip" title="IBAN musí začínat na CZ a mít celkovou délku 24 znaků.">
                             <div class="input-group-prepend">
                                 <div class="input-group-text">IBAN</div>
                             </div>
-                            <input type="text" id="realtime-iban" name="realtime-iban" class="form-control" placeholder="IBAN" pattern="^CZ\d{22}$" minlength="24" maxlength="24" {{#if user.IBAN}}value="{{user.IBAN}}"{{/if}} required>
+                            <input type="text" id="realtime-iban" name="realtime-iban" class="form-control" placeholder="CZ1212345678901234567890" pattern="^CZ\d{22}$" minlength="24" maxlength="32" data-toggle="tooltip" title="IBAN musí začínat na CZ a mít celkovou délku 24 znaků." {{#if user.IBAN}}value="{{user.IBAN}}"{{/if}} required>
                             <div class="input-group-append">
                                 <div class="input-group-text"><i id="iban-status" class="fas {{#if user.IBAN}}fa-check-circle{{else}}fa-times-circle{{/if}}"></i></div>
                             </div>
