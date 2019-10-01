@@ -1,8 +1,6 @@
 var qrcode = require('qrcode');
 
-module.exports = {
-
-    generatePaymentQR: function(IBAN, ammount, date, payer) {
+module.exports =  function(IBAN, ammount, date, payer) {
         if (!IBAN) {
             return null;
         } else if (!ammount) {
@@ -24,6 +22,4 @@ module.exports = {
         
         var result = qrcode.toDataURL(code);
         return result;
-    }
-
 }
