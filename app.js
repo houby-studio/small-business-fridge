@@ -29,8 +29,9 @@ var shopRouter = require('./routes/shop');
 var profileRouter = require('./routes/profile');
 var ordersRouter = require('./routes/orders');
 // Access for suppliers
-var addProductsRouter = require('./routes/supplier_add_products');
+var addProductsRouter = require('./routes/add_products');
 var invoiceRouter = require('./routes/invoice');
+var paymentsRouter = require('./routes/payments');
 var stockRouter = require('./routes/stock');
 // Access for admins
 var dashboardRouter = require('./routes/admin/admin_dashboard');
@@ -75,6 +76,7 @@ app.use('/orders', ordersRouter);
 // Access for suppliers
 app.use('/add_products', addProductsRouter);
 app.use('/invoice', invoiceRouter);
+app.use('/payments', paymentsRouter);
 app.use('/stock', stockRouter);
 // Access for admins
 app.use('/dashboard', dashboardRouter);

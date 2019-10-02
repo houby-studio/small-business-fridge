@@ -20,7 +20,7 @@ function renderPage(req, res, alert) {
             'product_image': docs.map(a => a.imagePath)
         });
         
-        res.render('shop/supplier_add_products', { title: 'Naskladnit | Lednice IT', products: docs, user: req.user, alert: alert, csrfToken: req.csrfToken() });
+        res.render('shop/add_products', { title: 'Naskladnit | Lednice IT', products: docs, user: req.user, alert: alert, csrfToken: req.csrfToken() });
     });
 };
 
