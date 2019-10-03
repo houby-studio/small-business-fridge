@@ -5,7 +5,7 @@ var schema = new Schema({
 	oid: {type: String, required: true},
 	displayName: {type: String, required: true},
 	email: {type: String, required: true},
-	IBAN: {type: String, required: true, minlength: 24, maxlength: 24},
+	IBAN: {type: String, minlength: 24, maxlength: 24},
 	keypadId: {type: Number, required: true},
 	admin: {type: Boolean, default: false},
 	supplier: {type: Boolean, default: false},
