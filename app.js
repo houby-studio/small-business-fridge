@@ -8,6 +8,10 @@ var expressSession = require('express-session');
 //var logger = require('morgan');
 var expressHbs = require('express-handlebars'); // extended handlebars functionality
 var mongoose = require('mongoose'); // database
+mongoose.set('useNewUrlParser', true);
+mongoose.set('useFindAndModify', false);
+mongoose.set('useCreateIndex', true);
+mongoose.set('useUnifiedTopology', true);
 var mongoStore = require('connect-mongo')(expressSession);
 var passport = require('passport'); // authentication method
 var config = require('./config/config.js'); // configuration file

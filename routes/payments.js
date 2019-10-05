@@ -34,7 +34,8 @@ router.get('/', ensureAuthenticated, function(req, res, next) {
         { $unwind: '$buyer'},
         { $project: {
             _id: 1,
-            buyer: '$buyer.displayName',
+            'buyer.displayName': 1,
+            'buyer.email': 1,
             paid: 1,
             requestPaid: 1,
             totalCost: 1,
@@ -71,40 +72,67 @@ router.get('/', ensureAuthenticated, function(req, res, next) {
     });
 });
 
+// Form post - Handles Invoice "paid" status changes
 router.post('/', ensureAuthenticated, function(req, res, next) {
-
-    if (req.body.action == 'approve') {
-        Invoice.findByIdAndUpdate(req.body.invoice_id, { paid: true }, { upsert: true }, function (err, docs) {
-            if (err) {
-                var alert = { type: 'danger', component: 'db', message: err.message, danger: 1};
-                req.session.alert = alert;
-                res.redirect('/payments');
-                return;
-            }
-            var alert = { type: 'success', message: `Faktura byla označena jako uhrazená.`, success: 1};
-            req.session.alert = alert;
-            res.redirect('/payments');
-            return;
-        });
-    } else if (req.body.action == 'storno') {
-        Invoice.findByIdAndUpdate(req.body.invoice_id, { paid: false }, { upsert: true }, function (err, docs) {
-            if (err) {
-                var alert = { type: 'danger', component: 'db', message: err.message, danger: 1};
-                req.session.alert = alert;
-                res.redirect('/payments');
-                return;
-            }
-            var alert = { type: 'success', message: `Platba byla stornována a faktura byla označena jako neuhrazená.`, success: 1};
-            req.session.alert = alert;
-            res.redirect('/payments');
-            return;
-        });
-    } else {
-        var alert = { type: 'danger', component: 'web', message: 'Při zpracování došlo k chybě. Požadovaná akce neexistuje!', danger: 1};
-        req.session.alert = alert;
-        res.redirect('/payments');
+    
+    if (!req.user.supplier) {
+        res.redirect('/');
         return;
     }
+
+    // Check if supplier changes invoice he owns
+    Invoice.findById(req.body.invoice_id, function (err, check) {
+        if (check.supplierId != req.user.id) {
+            var subject = `Neoprávněná akce?!`;
+            var body = `<h1>Jak se toto podařilo?!</h1><p>Dodavatel ${req.body.displayName} označil fakturu ID ${check._id} jako nezaplacenou, přestože ji nevytvořil.</p>Jeho akce byla revertována. Prověřte celou situaci!</p>`;
+            mailer.sendMail('system', subject, body);
+            var alert = { type: 'danger', message: `Nemáte oprávnění měnit status faktury, kterou jste nevytvořil!`, danger: 1};
+            req.session.alert = alert;
+            res.redirect('/payments');
+            return;
+        }
+
+        if (req.body.action == 'approve') {
+            // Handles status change to 'paid: true'
+            Invoice.findByIdAndUpdate(req.body.invoice_id, { paid: true }, { upsert: true }).populate('buyerId').exec(function (err, docs) {
+                if (err) {
+                    var alert = { type: 'danger', component: 'db', message: err.message, danger: 1};
+                    req.session.alert = alert;
+                    res.redirect('/payments');
+                    return;
+                }
+                var subject = `Vaše platba byla potvrzena!`;
+                var body = `<h1>Tak a je to!</h1><p>Váš dodavatel ${req.user.displayName} označil Vaši fakturu s datem vytvoření ${moment(docs.invoiceDate).format('LLLL')} a celkovou částkou k úhradě ${docs.totalCost} za zaplacenou.</p>`;
+                mailer.sendMail(docs.buyerId.email, subject, body);
+                var alert = { type: 'success', message: `Faktura byla označena jako uhrazená.`, success: 1};
+                req.session.alert = alert;
+                res.redirect('/payments');
+                return;
+            });
+        } else if (req.body.action == 'storno') {
+            // Handles status change to 'paid: false'
+            Invoice.findByIdAndUpdate(req.body.invoice_id, { paid: false }, { upsert: true }).populate('buyerId').exec(function (err, docs) {
+                if (err) {
+                    var alert = { type: 'danger', component: 'db', message: err.message, danger: 1};
+                    req.session.alert = alert;
+                    res.redirect('/payments');
+                    return;
+                }
+                var subject = `Vaše platba byla stornována!`;
+                var body = `<h1>Jak je toto možné?</h1><p>Váš dodavatel ${req.user.displayName} označil Vaši fakturu s datem vytvoření ${moment(docs.invoiceDate).format('LLLL')} a celkovou částkou k úhradě ${docs.totalCost} za nezaplacenou. Vyřiďte si s ním kde nastala chyba.</p>`;
+                mailer.sendMail(docs.buyerId.email, subject, body);
+                var alert = { type: 'success', message: `Platba byla stornována a faktura byla označena jako neuhrazená.`, success: 1};
+                req.session.alert = alert;
+                res.redirect('/payments');
+                return;
+            });
+        } else {
+            var alert = { type: 'danger', component: 'web', message: 'Při zpracování došlo k chybě. Požadovaná akce neexistuje!', danger: 1};
+            req.session.alert = alert;
+            res.redirect('/payments');
+            return;
+        }
+    });
 });
 
 module.exports = router;
