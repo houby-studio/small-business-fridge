@@ -32,6 +32,7 @@ var changelogRouter = require('./routes/changelog');
 var shopRouter = require('./routes/shop');
 var profileRouter = require('./routes/profile');
 var ordersRouter = require('./routes/orders');
+var invoicesRouter = require('./routes/invoices');
 // Access for suppliers
 var addProductsRouter = require('./routes/add_products');
 var invoiceRouter = require('./routes/invoice');
@@ -77,6 +78,7 @@ app.use('/changelog', changelogRouter);
 app.use('/shop', shopRouter);
 app.use('/profile', profileRouter);
 app.use('/orders', ordersRouter);
+app.use('/invoices', invoicesRouter);
 // Access for suppliers
 app.use('/add_products', addProductsRouter);
 app.use('/invoice', invoiceRouter);
@@ -84,7 +86,9 @@ app.use('/payments', paymentsRouter);
 app.use('/stock', stockRouter);
 // Access for admins
 app.use('/dashboard', dashboardRouter);
+app.use('/admin_orders', ordersRouter);
 app.use('/admin_invoice', invoiceRouter);
+app.use('/admin_payments', paymentsRouter);
 // Passport routes
 app.use('/login', loginRouter);
 app.use('/logout', logoutRouter);

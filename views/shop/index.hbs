@@ -5,7 +5,7 @@
 </div>
 {{#if user}}
     <div class="row">
-        <div class="col-sm py-3">
+        <div class="col-lg py-3">
             <div class="card h-100 text-center">
                 <div class="card-header h4">
                     Mějte přehled!
@@ -18,7 +18,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-sm py-3">
+        <div class="col-lg py-3">
             <div class="card h-100 text-center">
                 <div class="card-header h4">
                     Nakupujte!
@@ -31,7 +31,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-sm py-3">
+        <div class="col-lg py-3">
             <div class="card h-100 text-center">
                 <div class="card-header h4">
                     Máte vše zaplacené?
@@ -40,14 +40,14 @@
                     <p class="card-text">Nevíte, zda jste již uhradili všechna Vaše vyúčtování? Nechce se Vám chodit osobně za dodavatelem, abyste se jej zeptali? Jednoduše zkontrolujte Vaše faktury a vše si ověřte!</p>
                 </div>
                 <div class="card-footer text-muted">
-                    <a href="#" class="btn btn-primary">Faktury</a>
+                    <a href="/invoices" class="btn btn-primary">Faktury</a>
                 </div>
             </div>
         </div>
     </div>
     {{#if user.supplier }}
         <div class="row">
-            <div class="col-sm py-3">
+            <div class="col-lg py-3">
                 <div class="card h-100 text-center">
                     <div class="card-header h4">
                         Potřebujete prachy?
@@ -60,7 +60,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-sm py-3">
+            <div class="col-lg py-3">
                 <div class="card h-100 text-center">
                     <div class="card-header h4">
                         Dovezl jste nové zboží?
@@ -73,7 +73,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-sm py-3">
+            <div class="col-lg py-3">
                 <div class="card h-100 text-center">
                     <div class="card-header h4">
                         Jak jsou na tom zákazníci s placením?
@@ -90,8 +90,8 @@
     {{/if}}
 {{else}}
     <div class="row">
-        <div class="col-sm py-3"></div>
-        <div class="col-sm py-3">
+        <div class="col-lg py-3"></div>
+        <div class="col-lg py-3">
             <div class="card h-100 text-center">
                 <div class="card-header h4">
                     Vítejte v e-shopu!
@@ -104,6 +104,6 @@
                 </div>
             </div>
         </div>
-        <div class="col-sm py-3"></div>
+        <div class="col-lg py-3"></div>
     </div>
 {{/if}}

@@ -8,13 +8,25 @@ var ensureAuthenticated = require('../functions/ensureAuthenticated').ensureAuth
 /* GET home page. */
 router.get('/', ensureAuthenticated, function (req, res) {
 
+    if (req.baseUrl === '/admin_orders') {
+        if (!req.user.admin) {
+            res.redirect('/');
+            return;
+        }
+        var filter = {};
+    } else {
+        var filter = { 'buyerId': req.user._id };
+    }
+
     Order.aggregate([
-        { $match: { 'buyerId': req.user._id} },
+        { $match: filter },
         { $sort: { '_id': -1 } },
         { $lookup: { from: 'deliveries', localField: 'deliveryId', foreignField: '_id', as: 'deliveryInfo'} },
         { $unwind: '$deliveryInfo'},
         { $lookup: { from: 'users', localField: 'deliveryInfo.supplierId', foreignField: '_id', as: 'supplierInfo'} },
         { $unwind: '$supplierInfo'},
+        { $lookup: { from: 'users', localField: 'buyerId', foreignField: '_id', as: 'buyerInfo'} },
+        { $unwind: '$buyerInfo'},
         { $lookup: { from: 'products', localField: 'deliveryInfo.productId', foreignField: '_id', as: 'productInfo'} },
         { $unwind: '$productInfo'},
         { $group: {
@@ -41,16 +53,7 @@ router.get('/', ensureAuthenticated, function (req, res) {
                   }
             },
         }}
-        /*{ $project: { not sure yet if I want to calculate fields in query or in javascript later
-            order_date: 1,
-            'deliveryInfo.price': 1,
-            'productInfo.displayName': 1,
-            'supplierInfo.displayName': 1,
-            invoice: 1,
-            totalPaid: 1
-        }}*/
     ], function (err, docs) {
-        //console.log(docs);
         if (req.query.a) {
             var alert = {
                 type: req.query.a,
@@ -67,7 +70,7 @@ router.get('/', ensureAuthenticated, function (req, res) {
             });
         }
 
-        res.render('shop/orders', { title: 'Objednávky | Lednice IT', orders: docs[0], user: req.user, alert: alert });
+        res.render('shop/orders', { title: 'Objednávky | Lednice IT', orders: docs[0], admin: filter, user: req.user, alert: alert });
     });
 });
 

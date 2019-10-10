@@ -84,7 +84,7 @@ router.post('/', ensureAuthenticated, function(req, res, next) {
     Invoice.findById(req.body.invoice_id, function (err, check) {
         if (check.supplierId != req.user.id) {
             var subject = `Neoprávněná akce?!`;
-            var body = `<h1>Jak se toto podařilo?!</h1><p>Dodavatel ${req.body.displayName} označil fakturu ID ${check._id} jako nezaplacenou, přestože ji nevytvořil.</p>Jeho akce byla revertována. Prověřte celou situaci!</p>`;
+            var body = `<h1>Jak se toto podařilo?!</h1><p>Dodavatel ${req.body.displayName} se pokouší manipulovat s fakturou ID ${check._id}, přestože ji nevytvořil.</p>Jeho akce byla revertována. Prověřte celou situaci!</p>`;
             mailer.sendMail('system', subject, body);
             var alert = { type: 'danger', message: `Nemáte oprávnění měnit status faktury, kterou jste nevytvořil!`, danger: 1};
             req.session.alert = alert;

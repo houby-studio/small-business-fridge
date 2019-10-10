@@ -4,7 +4,7 @@
             <table id="table-invoices" class="table">
                 <thead>
                     <th scope="col">Datum</th>
-                    <th scope="col">Zákazník</th>
+                    <th scope="col">Dodavatel</th>
                     <th scope="col">Počet kusů</th>
                     <th scope="col">Cena celkem</th>
                     <th scope="col">Status</th>
@@ -17,7 +17,7 @@
                                 <span class="d-none">{{ this.invoiceDate }}</span>{{ this.invoiceDate_format }}
                             </td>
                             <td>
-                                {{ this.buyer.displayName }}
+                                {{ this.supplier.displayName }}
                             </td>
                             <td>
                                 {{ this.orders_sum }}ks
@@ -29,14 +29,16 @@
                                 {{ this.status }}
                             </td>
                             <td>
-                                {{#if supplier.supplierId}}
-                                    <form id="payments" class="needs-validation h-100" method="POST" action="/payments" novalidate>
-                                        {{#if this.paid}}
-                                            <input type="submit" class="btn btn-danger float-right w-100" value="Storno">
+                                {{#if this.paid}}
+                                    <input type="submit" class="btn btn-secondary float-right w-100" value="Uhrazeno" disabled data-toggle="tooltip" title="Faktura již byla označena dodavatelem jako uhrazená.">
+                                {{else}}
+                                    <form id="payments" class="needs-validation h-100" method="POST" action="/invoices" novalidate>
+                                        {{#if this.requestPaid}}
+                                            <input type="submit" class="btn btn-danger float-right w-100" value="Storno" {{#if this.paid}} disabled data-toggle="tooltip" title="Faktura již byla označena dodavatelem jako uhrazená." {{/if}}>
                                             <input type="hidden" id="action" name="action" value="storno">
                                         {{else}}
-                                            <input type="submit" class="btn btn-success float-right w-100" value="Zaplaceno">
-                                            <input type="hidden" id="action" name="action" value="approve">
+                                            <input type="submit" class="btn btn-success float-right w-100" value="Zaplaceno" {{#if this.paid}} disabled data-toggle="tooltip" title="Faktura již byla označena dodavatelem jako uhrazená." {{/if}}>
+                                            <input type="hidden" id="action" name="action" value="paid">
                                         {{/if}}
                                         <input type="hidden" id="invoice_id" name="invoice_id" value="{{ this._id }}">
                                         <input type="hidden" name="_csrf" value="{{ ../csrfToken }}">
