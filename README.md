@@ -7,7 +7,7 @@ Yes? Awesome!
 *Do you always carry enough change to pay it outright?*  
 No?  
 *Do you write it down on a paper and pay it off later?*  
-Maybe? That's nice, but.. 
+Maybe? That's nice, but..  
 *How often do you forget to write it down?*  
 *How often does the paper get lost?*  
 *How often do you want to know how much you spent and when?*  
