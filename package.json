@@ -18,6 +18,7 @@
     "http-errors": "~1.6.3",
     "method-override": "^3.0.0",
     "moment": "^2.24.0",
+    "mongodb-backup": "^1.6.9",
     "mongoose": "^5.6.8",
     "morgan": "~1.9.1",
     "nodemailer": "^6.3.0",

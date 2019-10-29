@@ -157,6 +157,13 @@ router.post('/', ensureAuthenticated, function(req, res, next) {
         return;
     }
 
+    // For dev purposes only - reverts all orders back to invoice:false
+    /* var bulk = Order.collection.initializeUnorderedBulkOp();
+    // Loop through array for each order for that user
+    bulk.find( { invoice: true } ).update( { $set: { invoice: false } } );
+    bulk.execute(function (err, items) {
+    }); */
+
     // Aggregate and group by user to create invoice for each of them
     Delivery.aggregate([
         { $match: { 'supplierId': req.user._id }},
@@ -206,8 +213,9 @@ router.post('/', ensureAuthenticated, function(req, res, next) {
                 newInvoice.ordersId.push(docs[i].orders[p]._id);
                 bulk.find( { _id: docs[i].orders[p]._id } ).updateOne( { $set: { invoice: true } } );
             }
+            newInvoice.save();
             bulk.execute(function (err, items) {
-                newInvoice.save();
+                //newInvoice.save();
                 // Send e-mail
                 qrPayment(req.user.IBAN, docs[i].total_user_sum_orders_notinvoiced, moment().format('YYYYMMDD'), docs[i].user.displayName, req.user.displayName, function (qrcode) {
                     var subject = `Fakturace!`;
