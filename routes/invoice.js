@@ -215,7 +215,7 @@ router.post('/', ensureAuthenticated, function(req, res, next) {
                     if (req.user.IBAN) {
                         body += `<h2>QR platba</h2><img width="480" height="480" style="width: 20rem; height: 20rem;" alt="QR kód pro mobilní platbu se Vám nezobrazuje správně." src="${qrcode}"/><p>IBAN: ${req.user.IBAN}</p><p>Předem díky za včasnou platbu!</p>`;
                     };
-                    mailer.sendMail(req.user.email, subject, body);
+                    mailer.sendMail(docs[i].user.email, subject, body);
                 });
             });
         }
