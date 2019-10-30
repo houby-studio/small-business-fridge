@@ -29,7 +29,7 @@
                                 {{ this.status }}
                             </td>
                             <td>
-                                {{#if supplier.supplierId}}
+                                {{#if ../supplier.supplierId}}
                                     <form id="payments" class="needs-validation h-100" method="POST" action="/payments" novalidate>
                                         {{#if this.paid}}
                                             <input type="submit" class="btn btn-danger float-right w-100" value="Storno">
