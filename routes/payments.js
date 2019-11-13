@@ -102,7 +102,7 @@ router.post('/', ensureAuthenticated, function(req, res, next) {
                     return;
                 }
                 var subject = `Vaše platba byla potvrzena!`;
-                var body = `<h1>Tak a je to!</h1><p>Váš dodavatel ${req.user.displayName} označil Vaši fakturu s datem vytvoření ${moment(docs.invoiceDate).format('LLLL')} a celkovou částkou k úhradě ${docs.totalCost} za zaplacenou.</p>`;
+                var body = `<h1>Obchod byl dokončen!</h1><p>Váš dodavatel ${req.user.displayName} potvrdil, že jste fakturu uhradil!</p><p>Podrobnosti k faktuře:<br>Datum fakturace: ${moment(docs.invoiceDate).format('LLLL')}<br>Celková částka k úhradě: ${docs.totalCost}Kč</p>`;
                 mailer.sendMail(docs.buyerId.email, subject, body);
                 var alert = { type: 'success', message: `Faktura byla označena jako uhrazená.`, success: 1};
                 req.session.alert = alert;
@@ -119,7 +119,7 @@ router.post('/', ensureAuthenticated, function(req, res, next) {
                     return;
                 }
                 var subject = `Vaše platba byla stornována!`;
-                var body = `<h1>Jak je toto možné?</h1><p>Váš dodavatel ${req.user.displayName} označil Vaši fakturu s datem vytvoření ${moment(docs.invoiceDate).format('LLLL')} a celkovou částkou k úhradě ${docs.totalCost} za nezaplacenou. Vyřiďte si s ním kde nastala chyba.</p>`;
+                var body = `<h1>Jak je toto možné?</h1><p>Váš dodavatel ${req.user.displayName} označil Vaši fakturu s datem vytvoření ${moment(docs.invoiceDate).format('LLLL')} a celkovou částkou k úhradě ${docs.totalCost}Kč za nezaplacenou. Vyřiďte si s ním kde nastala chyba.</p>`;
                 mailer.sendMail(docs.buyerId.email, subject, body);
                 var alert = { type: 'success', message: `Platba byla stornována a faktura byla označena jako neuhrazená.`, success: 1};
                 req.session.alert = alert;
