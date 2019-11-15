@@ -16,7 +16,7 @@ router.get('/', function (req,res, next) {
         res.render('error');
         return;
     }
-    
+
     console.log('Yay a request!');
     User.findOne({ keypadId: req.query.customer }, function (err, user) {
         if (err) {
@@ -24,7 +24,8 @@ router.get('/', function (req,res, next) {
             res.render('error');
             return;
         }
-    res.render(user.email);
+    console.log(user.email);
+    res.render('success');
     });
 
 });
