@@ -11,10 +11,16 @@ var User = require('../../models/user');
 
 router.get('/', function (req,res, next) {
 
+    if (!req.query.customer) {
+        res.status(400);
+        res.render('error');
+        return;
+    }
+    
     console.log('Yay a request!');
-    User.findOne({ keypadId: req.body.customer }, function (err, user) {
+    User.findOne({ keypadId: req.query.customer }, function (err, user) {
         if (err) {
-            res.status(err.status || 500);
+            res.status(err.status || 400);
             res.render('error');
             return;
         }
