@@ -13,7 +13,7 @@ router.get('/', function (req,res, next) {
 
     if (!req.query.customer) {
         res.status(400);
-        res.render('error');
+        res.send('error');
         return;
     }
 
@@ -21,11 +21,11 @@ router.get('/', function (req,res, next) {
     User.findOne({ keypadId: req.query.customer }, function (err, user) {
         if (err) {
             res.status(err.status || 400);
-            res.render('error');
+            res.send('error');
             return;
         }
     console.log(user.email);
-    res.render('success');
+    res.json(user.email);
     });
 
 });
