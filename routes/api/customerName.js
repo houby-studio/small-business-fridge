@@ -17,6 +17,10 @@ router.get('/', function (req,res, next) {
         return;
     }
 
+    if (req.get('apiKey') == 'test') {
+        console.log('Secret key OK');
+    }
+
     console.log('Yay a request!');
     User.findOne({ keypadId: req.query.customer }, function (err, user) {
         if (err) {
