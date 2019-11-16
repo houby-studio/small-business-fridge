@@ -1,5 +1,8 @@
 # Small Business Fridge
 
+[![HitCount](http://hits.dwyl.io/houby-studio/small-business-fridge.svg)](http://hits.dwyl.io/houby-studio/small-business-fridge)
+[![Known Vulnerabilities](https://snyk.io/test/github/houby-studio/small-business-fridge/badge.svg?style=flat-square)](https://snyk.io/test/github/houby-studio/small-business-fridge)
+
 ## Super simple e-shop for colleagues
 
 *Ever had some nice colleague, who delivers refreshments to your office and allows you to buy it without any profit?*  
