@@ -1,6 +1,7 @@
 # Small Business Fridge [![HitCount](http://hits.dwyl.io/houby-studio/small-business-fridge.svg)](http://hits.dwyl.io/houby-studio/small-business-fridge)
 
 [![GitHub version](https://badge.fury.io/gh/houby-studio%2Fsmall-business-fridge.svg)](https://badge.fury.io/gh/houby-studio%2Fsmall-business-fridge)
+[![GitHub version](https://david-dm.org/houby-studio/small-business-fridge.svg)](https://david-dm.org/)
 [![Known Vulnerabilities](https://snyk.io/test/github/houby-studio/small-business-fridge/badge.svg)](https://snyk.io/test/github/houby-studio/small-business-fridge)  
 
 
