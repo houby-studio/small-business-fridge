@@ -1,5 +1,5 @@
 # Config
-config/
+config/config.js
 
 # API
 api.php
