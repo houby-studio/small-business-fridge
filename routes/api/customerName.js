@@ -28,8 +28,8 @@ router.get('/', function (req,res, next) {
             res.send('error');
             return;
         }
-    console.log(user.email);
-    res.json(user.email);
+        console.log(user.email);
+        res.json(user.email);
     });
 
 });
