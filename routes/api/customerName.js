@@ -1,23 +1,18 @@
 var express = require('express');
 var router = express.Router();
-// var moment = require('moment');
-// var mailer = require('../../functions/sendMail');
-// var config = require('../../config/config');
+var config = require('../../config/config.js');
 var User = require('../../models/user');
-// var Order = require('../../models/order');
-// var Product = require('../../models/product');
-// var Delivery = require('../../models/delivery');
-
 
 router.get('/', function (req, res, next) {
 
     if (!req.query.customer) {
         res.status(400);
-        res.send('error');
+        res.set('Content-Type', 'text/html');
+        res.send('<h1>Bad request sent!</h1><p>Refer to documentation https://github.com/houby-studio/small-business-fridge/wiki/API-documentation#customerName</p>');
         return;
     }
 
-    if (req.get('apiKey') == 'test') {
+    if (req.get('apiKey') == config.config.api_secret) {
         console.log('Secret key OK');
     }
 
@@ -27,10 +22,11 @@ router.get('/', function (req, res, next) {
     }, function (err, user) {
         if (err) {
             res.status(err.status || 400);
-            res.send('error');
+            res.send('NOT_FOUND');
             return;
         }
         console.log(user.email);
+        res.set('Content-Type', 'application/json');
         res.json(user.email);
     });
 
