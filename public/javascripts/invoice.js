@@ -1,6 +1,6 @@
 // If nothing to invoice, replace non-existing or useless graph with text
 Chart.plugins.register({
-	afterDraw: function(chart) {
+    afterDraw: function (chart) {
         const someIsNotZero = chart.data.datasets[0].data.some(item => item !== 0);
         if (!someIsNotZero) {
             // No data is present
@@ -19,10 +19,10 @@ Chart.plugins.register({
 });
 
 // User graph swapper - changes between 'Spent amount in Kč and bought amount'
-$('#user-swap').click(function() {
+$('#user-swap').click(function () {
     var clicks = $(this).data('clicks');
     $('#user-spin').addClass('spin');
-	setTimeout(function () { 
+    setTimeout(function () {
         $('#user-spin').removeClass('spin');
     }, 300);
     if (clicks) {
@@ -67,7 +67,7 @@ var perUserSpent = new Chart(ctx, {
         plugins: {
             labels: {
                 render: function (args) {
-                  return args.value + 'Kč';
+                    return args.value + 'Kč';
                 },
                 fontColor: '#fff',
             }
@@ -76,10 +76,10 @@ var perUserSpent = new Chart(ctx, {
 });
 
 // Product graph swapper - changes between 'Spent amount in Kč and bought amount'
-$('#prod-swap').click(function() {
+$('#prod-swap').click(function () {
     var clicks = $(this).data('clicks');
     $('#prod-spin').addClass('spin');
-	setTimeout(function () { 
+    setTimeout(function () {
         $('#prod-spin').removeClass('spin');
     }, 300);
     if (clicks) {
@@ -124,7 +124,7 @@ var perProductSpent = new Chart(ctx, {
         plugins: {
             labels: {
                 render: function (args) {
-                  return args.value + 'Kč';
+                    return args.value + 'Kč';
                 },
                 fontColor: '#fff',
             }
@@ -145,7 +145,10 @@ $(document).ready(function () {
             "url": "//cdn.datatables.net/plug-ins/1.10.19/i18n/Czech.json"
         },
         fixedHeader: true,
-        lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "Vše"]],
+        lengthMenu: [
+            [10, 25, 50, -1],
+            [10, 25, 50, "Vše"]
+        ],
     });
     $('.dataTables_length').addClass('bs-select');
 });

@@ -3,9 +3,11 @@ var config = require('../config/config');
 
 module.exports = {
 
-    sendMail: function(mailto, mailsubject, mailbody, image) {
+    sendMail: function (mailto, mailsubject, mailbody, image) {
         // In case system error occurs, send warning to mail obtained from config.
-        if (mailto == 'system') { mailto = config.mail.systemMail; }
+        if (mailto == 'system') {
+            mailto = config.mail.systemMail;
+        }
 
         var transporter = nodemailer.createTransport({
             port: config.mail.port,
@@ -14,7 +16,7 @@ module.exports = {
                 rejectUnauthorized: false
             },
         });
-          
+
         var mailOptions = {
             from: config.mail.from,
             to: mailto,
@@ -28,8 +30,8 @@ module.exports = {
                 cid: 'image@prdelka.eu'
             }];
         }
-        
-        transporter.sendMail(mailOptions, function(error, info){
+
+        transporter.sendMail(mailOptions, function (error, info) {
             if (error) {
                 console.log(error);
             }

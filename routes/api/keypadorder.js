@@ -9,7 +9,7 @@ var Product = require('../../models/product');
 var Delivery = require('../../models/delivery');
 
 /* GET about page. */
-router.post('/', function(req, res, next) {
+router.post('/', function (req, res, next) {
 
     if (req.body.secret != config.config.api_secret) {
         res.status(err.status || 500);
@@ -20,7 +20,9 @@ router.post('/', function(req, res, next) {
     var newOrder = new Order();
 
     // Find user by keypadId -- probably unneeded and can be found during aggregation below
-    User.findOne({ keypadId: req.body.customer }, function (err, user) {
+    User.findOne({
+        keypadId: req.body.customer
+    }, function (err, user) {
         if (err) {
             res.status(err.status || 500);
             res.render('error');
@@ -31,26 +33,42 @@ router.post('/', function(req, res, next) {
         newOrder.keypadOrder = true;
 
         // Get product
-        Product.aggregate([
-            { $match: { 'keypadId': Number(req.body.product) } },
-            { $lookup: { from: 'deliveries', localField: '_id', foreignField: 'productId', as: 'stock'} },
-            { $project: {
-              keypadId: "$keypadId",
-              displayName: "$displayName",
-              description: "$description",
-              imagePath: "$imagePath",
-              stock: { $filter: { // We filter only the stock object from array where ammount left is greater than 0
-                  input: '$stock',
-                  as: 'stock',
-                  cond: { $gt: ['$$stock.amount_left', 0]}
-              }}
-            }}
-        ],
-            function(err, product) {
+        Product.aggregate([{
+                    $match: {
+                        'keypadId': Number(req.body.product)
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'deliveries',
+                        localField: '_id',
+                        foreignField: 'productId',
+                        as: 'stock'
+                    }
+                },
+                {
+                    $project: {
+                        keypadId: "$keypadId",
+                        displayName: "$displayName",
+                        description: "$description",
+                        imagePath: "$imagePath",
+                        stock: {
+                            $filter: { // We filter only the stock object from array where ammount left is greater than 0
+                                input: '$stock',
+                                as: 'stock',
+                                cond: {
+                                    $gt: ['$$stock.amount_left', 0]
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            function (err, product) {
                 if (err) {
-                res.status(err.status || 500);
-                res.render('error');
-                return;
+                    res.status(err.status || 500);
+                    res.render('error');
+                    return;
                 }
                 if (typeof product[0] === 'undefined' || typeof product[0].stock[0] === 'undefined') {
                     res.status(500);
@@ -58,16 +76,18 @@ router.post('/', function(req, res, next) {
                     return;
                 }
                 newOrder.deliveryId = product[0].stock[0]._id;
-                var newAmount = product[0].stock[0].amount_left-1;
+                var newAmount = product[0].stock[0].amount_left - 1;
 
-                Delivery.findByIdAndUpdate(product[0].stock[0]._id, { amount_left: newAmount }, function (err, delivery) {
+                Delivery.findByIdAndUpdate(product[0].stock[0]._id, {
+                    amount_left: newAmount
+                }, function (err, delivery) {
                     if (err) {
                         res.status(err.status || 500);
                         res.render('error');
                         return;
                     }
 
-                    newOrder.save(function(err) {
+                    newOrder.save(function (err) {
                         if (err) {
                             var subject = `Nepodařilo se zapsat změny do databáze!`;
                             var body = `<h1>Chyba při zapisování do databáze při nákupu!</h1><p>Pokus o vytvoření záznamu nákupu skončil chybou. Zkontrolujte konzistenci databáze!</p><p>Chyba: ${err.message}</p>`;

@@ -15,44 +15,102 @@ router.get('/', ensureAuthenticated, function (req, res) {
         }
         var filter = {};
     } else {
-        var filter = { 'buyerId': req.user._id };
+        var filter = {
+            'buyerId': req.user._id
+        };
     }
 
-    Order.aggregate([
-        { $match: filter },
-        { $sort: { '_id': -1 } },
-        { $lookup: { from: 'deliveries', localField: 'deliveryId', foreignField: '_id', as: 'deliveryInfo'} },
-        { $unwind: '$deliveryInfo'},
-        { $lookup: { from: 'users', localField: 'deliveryInfo.supplierId', foreignField: '_id', as: 'supplierInfo'} },
-        { $unwind: '$supplierInfo'},
-        { $lookup: { from: 'users', localField: 'buyerId', foreignField: '_id', as: 'buyerInfo'} },
-        { $unwind: '$buyerInfo'},
-        { $lookup: { from: 'products', localField: 'deliveryInfo.productId', foreignField: '_id', as: 'productInfo'} },
-        { $unwind: '$productInfo'},
-        { $group: {
-            _id: null,
-            totalOrders: { $sum: 1},
-            totalSpend: { $sum: '$deliveryInfo.price'},
-            results: { $push: '$$ROOT'}
-        }},
-        { $project: {
-            totalOrders: 1,
-            totalSpend: 1,
-            results: 1,
-            totalUnpaid: {
-                $let: {
-                    vars: {
-                           'field': {
-                               $filter: {
-                                      input: "$results",
-                                      as: "calc",
-                                      cond: { $eq: ['$$calc.invoice', false ] }
-                              }}  
-                      },
-                      in: { $sum: "$$field.deliveryInfo.price" }
-                  }
-            },
-        }}
+    Order.aggregate([{
+            $match: filter
+        },
+        {
+            $sort: {
+                '_id': -1
+            }
+        },
+        {
+            $lookup: {
+                from: 'deliveries',
+                localField: 'deliveryId',
+                foreignField: '_id',
+                as: 'deliveryInfo'
+            }
+        },
+        {
+            $unwind: '$deliveryInfo'
+        },
+        {
+            $lookup: {
+                from: 'users',
+                localField: 'deliveryInfo.supplierId',
+                foreignField: '_id',
+                as: 'supplierInfo'
+            }
+        },
+        {
+            $unwind: '$supplierInfo'
+        },
+        {
+            $lookup: {
+                from: 'users',
+                localField: 'buyerId',
+                foreignField: '_id',
+                as: 'buyerInfo'
+            }
+        },
+        {
+            $unwind: '$buyerInfo'
+        },
+        {
+            $lookup: {
+                from: 'products',
+                localField: 'deliveryInfo.productId',
+                foreignField: '_id',
+                as: 'productInfo'
+            }
+        },
+        {
+            $unwind: '$productInfo'
+        },
+        {
+            $group: {
+                _id: null,
+                totalOrders: {
+                    $sum: 1
+                },
+                totalSpend: {
+                    $sum: '$deliveryInfo.price'
+                },
+                results: {
+                    $push: '$$ROOT'
+                }
+            }
+        },
+        {
+            $project: {
+                totalOrders: 1,
+                totalSpend: 1,
+                results: 1,
+                totalUnpaid: {
+                    $let: {
+                        vars: {
+                            'field': {
+                                $filter: {
+                                    input: "$results",
+                                    as: "calc",
+                                    cond: {
+                                        $eq: ['$$calc.invoice', false]
+                                    }
+                                }
+                            }
+                        },
+                        in: {
+                            $sum: "$$field.deliveryInfo.price"
+                        }
+                    }
+                },
+            }
+        }
     ], function (err, docs) {
         if (req.query.a) {
             var alert = {
@@ -61,16 +119,22 @@ router.get('/', ensureAuthenticated, function (req, res) {
                 message: req.query.m,
                 success: req.query.s,
                 danger: req.query.d
-            };  
+            };
         }
         if (docs[0]) {
-            docs[0].results.forEach(function(element) {
+            docs[0].results.forEach(function (element) {
                 element.order_date_format = moment(element.order_date).format('LLLL');
                 element.order_date = moment(element.order_date).format();
             });
         }
 
-        res.render('shop/orders', { title: 'Objednávky | Lednice IT', orders: docs[0], admin: filter, user: req.user, alert: alert });
+        res.render('shop/orders', {
+            title: 'Objednávky | Lednice IT',
+            orders: docs[0],
+            admin: filter,
+            user: req.user,
+            alert: alert
+        });
     });
 });
 

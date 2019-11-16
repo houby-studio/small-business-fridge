@@ -11,7 +11,7 @@ var Invoice = require('../models/invoice');
 var ensureAuthenticated = require('../functions/ensureAuthenticated').ensureAuthenticated;
 
 // GET supplier invoice page.
-router.get('/', ensureAuthenticated, function(req, res, next) {
+router.get('/', ensureAuthenticated, function (req, res, next) {
 
     if (!req.user.supplier) {
         res.redirect('/');
@@ -25,101 +25,250 @@ router.get('/', ensureAuthenticated, function(req, res, next) {
         }
         var filter = {};
     } else {
-        var filter = { 'supplierId': req.user._id };
+        var filter = {
+            'supplierId': req.user._id
+        };
     }
 
     // Aggregate and group by productId for product based info - total amounts and total price for 'invoiced', 'not invoiced' and 'on stock'
-    Delivery.aggregate([
-        { $match: filter }, // Get only deliveries inserted by supplier requesting the page
-        { $lookup: { from: 'products', localField: 'productId', foreignField: '_id', as: 'product'} }, // join on product
-        { $unwind: '$product'},
-        { $lookup: { from: 'orders', localField: '_id', foreignField: 'deliveryId', as: 'orders' } }, // join on orders
-        { $group: {
-            _id: '$productId', // group by Product Id
-            product: { $first: '$product'},
-            amount_left: { $sum: '$amount_left' },
-            amount_supplied: { $sum: '$amount_supplied' },
-            orders: { $push: '$orders' },
-            num_orders_notinvoiced: { $sum: { $size: { $filter: { 
-                input: '$orders',
-                as: 'notinvoiced',
-                cond: { $eq: ['$$notinvoiced.invoice', false] }
-            }}}},
-            num_orders_invoiced: { $sum: { $size: { $filter: { 
-                input: '$orders',
-                as: 'invoiced',
-                cond: { $eq: ['$$invoiced.invoice', true] }
-            }}}},
-            sum_orders_notinvoiced: { $sum: { $sum: { $map: {
-                input: { 
-                    $filter: {
-                        input: '$orders',
-                        as: 'notinvoiced',
-                        cond: { $eq: ['$$notinvoiced.invoice', false] }
+    Delivery.aggregate([{
+            $match: filter
+        }, // Get only deliveries inserted by supplier requesting the page
+        {
+            $lookup: {
+                from: 'products',
+                localField: 'productId',
+                foreignField: '_id',
+                as: 'product'
+            }
+        }, // join on product
+        {
+            $unwind: '$product'
+        },
+        {
+            $lookup: {
+                from: 'orders',
+                localField: '_id',
+                foreignField: 'deliveryId',
+                as: 'orders'
+            }
+        }, // join on orders
+        {
+            $group: {
+                _id: '$productId', // group by Product Id
+                product: {
+                    $first: '$product'
+                },
+                amount_left: {
+                    $sum: '$amount_left'
+                },
+                amount_supplied: {
+                    $sum: '$amount_supplied'
+                },
+                orders: {
+                    $push: '$orders'
+                },
+                num_orders_notinvoiced: {
+                    $sum: {
+                        $size: {
+                            $filter: {
+                                input: '$orders',
+                                as: 'notinvoiced',
+                                cond: {
+                                    $eq: ['$$notinvoiced.invoice', false]
+                                }
+                            }
+                        }
                     }
                 },
-                as: 'total',
-                in: '$price',
-            }}}},
-            sum_orders_invoiced: { $sum: { $sum: { $map: {
-                input: { 
-                    $filter: {
-                        input: '$orders',
-                        as: 'invoiced',
-                        cond: { $eq: ['$$invoiced.invoice', true] }
+                num_orders_invoiced: {
+                    $sum: {
+                        $size: {
+                            $filter: {
+                                input: '$orders',
+                                as: 'invoiced',
+                                cond: {
+                                    $eq: ['$$invoiced.invoice', true]
+                                }
+                            }
+                        }
                     }
                 },
-                as: 'total',
-                in: '$price',
-            }}}},
-            sum_stocked: { $sum: { $multiply: [ '$price', '$amount_left' ] }},
-        }},
-        { $group: {
-            _id: null, // group all to get some total values across all products
-            stock: { $push: '$$ROOT'},
-            total_num_orders_invoiced: { $sum: '$num_orders_invoiced'},
-            total_num_orders_notinvoiced: { $sum: '$num_orders_notinvoiced'},
-            total_sum_orders_invoiced: { $sum: '$sum_orders_invoiced'},
-            total_sum_orders_notinvoiced: { $sum: '$sum_orders_notinvoiced'},
-            total_num_stocked: { $sum: '$amount_left'},
-            total_sum_stocked: { $sum: '$sum_stocked'},
-        }}
-    ], function(err, docs) {
+                sum_orders_notinvoiced: {
+                    $sum: {
+                        $sum: {
+                            $map: {
+                                input: {
+                                    $filter: {
+                                        input: '$orders',
+                                        as: 'notinvoiced',
+                                        cond: {
+                                            $eq: ['$$notinvoiced.invoice', false]
+                                        }
+                                    }
+                                },
+                                as: 'total',
+                                in: '$price',
+                            }
+                        }
+                    }
+                },
+                sum_orders_invoiced: {
+                    $sum: {
+                        $sum: {
+                            $map: {
+                                input: {
+                                    $filter: {
+                                        input: '$orders',
+                                        as: 'invoiced',
+                                        cond: {
+                                            $eq: ['$$invoiced.invoice', true]
+                                        }
+                                    }
+                                },
+                                as: 'total',
+                                in: '$price',
+                            }
+                        }
+                    }
+                },
+                sum_stocked: {
+                    $sum: {
+                        $multiply: ['$price', '$amount_left']
+                    }
+                },
+            }
+        },
+        {
+            $group: {
+                _id: null, // group all to get some total values across all products
+                stock: {
+                    $push: '$$ROOT'
+                },
+                total_num_orders_invoiced: {
+                    $sum: '$num_orders_invoiced'
+                },
+                total_num_orders_notinvoiced: {
+                    $sum: '$num_orders_notinvoiced'
+                },
+                total_sum_orders_invoiced: {
+                    $sum: '$sum_orders_invoiced'
+                },
+                total_sum_orders_notinvoiced: {
+                    $sum: '$sum_orders_notinvoiced'
+                },
+                total_num_stocked: {
+                    $sum: '$amount_left'
+                },
+                total_sum_stocked: {
+                    $sum: '$sum_stocked'
+                },
+            }
+        }
+    ], function (err, docs) {
         if (err) {
-            var alert = { type: 'danger', component: 'db', message: err.message, danger: 1};
+            var alert = {
+                type: 'danger',
+                component: 'db',
+                message: err.message,
+                danger: 1
+            };
             req.session.alert = alert;
             res.redirect('/');
             return;
         }
 
         // Aggregate and group by user for user based info - total amounts and total price 'not invoiced' and all not invoiced orders
-        Delivery.aggregate([
-            { $match: filter },
-            { $lookup: { from: 'products', localField: 'productId', foreignField: '_id', as: 'product'} },
-            { $unwind: '$product'},
-            { $lookup: { from: 'orders', localField: '_id', foreignField: 'deliveryId', as: 'orders' } },
-            { $unwind: { path: '$orders', preserveNullAndEmptyArrays: true } },
-            { $addFields: { 'orders.product': '$product'} },
-            { $addFields: { 'orders.price': '$price'} },
-            { $match: { 'orders.invoice': false } },
-            { $lookup: { from: 'users', localField: 'orders.buyerId', foreignField: '_id', as: 'user' } },
-            { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
-            { $group: {
-                _id: '$orders.buyerId',
-                user: { $first: '$user' },
-                orders: { $push: '$orders' },
-            }},
-            { $project: {
-                user: '$user.displayName',
-                'orders.product.displayName': 1,
-                'orders.order_date': 1,
-                'orders.price': 1,
-                total_user_num_orders_notinvoiced: { $size: '$orders'},
-                total_user_sum_orders_notinvoiced: { $sum: '$orders.price' },
-            }}
-        ], function(err, udocs) {
+        Delivery.aggregate([{
+                $match: filter
+            },
+            {
+                $lookup: {
+                    from: 'products',
+                    localField: 'productId',
+                    foreignField: '_id',
+                    as: 'product'
+                }
+            },
+            {
+                $unwind: '$product'
+            },
+            {
+                $lookup: {
+                    from: 'orders',
+                    localField: '_id',
+                    foreignField: 'deliveryId',
+                    as: 'orders'
+                }
+            },
+            {
+                $unwind: {
+                    path: '$orders',
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $addFields: {
+                    'orders.product': '$product'
+                }
+            },
+            {
+                $addFields: {
+                    'orders.price': '$price'
+                }
+            },
+            {
+                $match: {
+                    'orders.invoice': false
+                }
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'orders.buyerId',
+                    foreignField: '_id',
+                    as: 'user'
+                }
+            },
+            {
+                $unwind: {
+                    path: '$user',
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $group: {
+                    _id: '$orders.buyerId',
+                    user: {
+                        $first: '$user'
+                    },
+                    orders: {
+                        $push: '$orders'
+                    },
+                }
+            },
+            {
+                $project: {
+                    user: '$user.displayName',
+                    'orders.product.displayName': 1,
+                    'orders.order_date': 1,
+                    'orders.price': 1,
+                    total_user_num_orders_notinvoiced: {
+                        $size: '$orders'
+                    },
+                    total_user_sum_orders_notinvoiced: {
+                        $sum: '$orders.price'
+                    },
+                }
+            }
+        ], function (err, udocs) {
             if (err) {
-                var alert = { type: 'danger', component: 'db', message: err.message, danger: 1};
+                var alert = {
+                    type: 'danger',
+                    component: 'db',
+                    message: err.message,
+                    danger: 1
+                };
                 req.session.alert = alert;
                 res.redirect('/');
                 return;
@@ -134,7 +283,7 @@ router.get('/', ensureAuthenticated, function(req, res, next) {
                 var graphColors = palette('mpn65', udocs.length);
                 for (var i = 0; i < udocs.length; i++) {
                     udocs[i].color = graphColors[i];
-                    udocs[i].orders.forEach(function(element) {
+                    udocs[i].orders.forEach(function (element) {
                         element.order_date_format = moment(element.order_date).format('LLLL');
                         element.order_date = moment(element.order_date).format();
                     });
@@ -145,12 +294,19 @@ router.get('/', ensureAuthenticated, function(req, res, next) {
                 var alert = req.session.alert;
                 delete req.session.alert;
             }
-            res.render('shop/invoice', { title: 'Fakturace | Lednice IT', user: req.user, productview: docs[0], userview: udocs, supplier: filter, alert: alert });
+            res.render('shop/invoice', {
+                title: 'Fakturace | Lednice IT',
+                user: req.user,
+                productview: docs[0],
+                userview: udocs,
+                supplier: filter,
+                alert: alert
+            });
         });
     });
 });
 
-router.post('/', ensureAuthenticated, function(req, res, next) {
+router.post('/', ensureAuthenticated, function (req, res, next) {
 
     if (!req.user.supplier) {
         res.redirect('/');
@@ -165,35 +321,100 @@ router.post('/', ensureAuthenticated, function(req, res, next) {
     }); */
 
     // Aggregate and group by user to create invoice for each of them
-    Delivery.aggregate([
-        { $match: { 'supplierId': req.user._id }},
-        { $lookup: { from: 'products', localField: 'productId', foreignField: '_id', as: 'product'} },
-        { $unwind: '$product'},
-        { $lookup: { from: 'orders', localField: '_id', foreignField: 'deliveryId', as: 'orders' } },
-        { $unwind: { path: '$orders', preserveNullAndEmptyArrays: true } },
-        { $addFields: { 'orders.product': '$product'} },
-        { $addFields: { 'orders.price': '$price'} },
-        { $match: { 'orders.invoice': false } },
+    Delivery.aggregate([{
+            $match: {
+                'supplierId': req.user._id
+            }
+        },
+        {
+            $lookup: {
+                from: 'products',
+                localField: 'productId',
+                foreignField: '_id',
+                as: 'product'
+            }
+        },
+        {
+            $unwind: '$product'
+        },
+        {
+            $lookup: {
+                from: 'orders',
+                localField: '_id',
+                foreignField: 'deliveryId',
+                as: 'orders'
+            }
+        },
+        {
+            $unwind: {
+                path: '$orders',
+                preserveNullAndEmptyArrays: true
+            }
+        },
+        {
+            $addFields: {
+                'orders.product': '$product'
+            }
+        },
+        {
+            $addFields: {
+                'orders.price': '$price'
+            }
+        },
+        {
+            $match: {
+                'orders.invoice': false
+            }
+        },
         // { $set: { 'orders.invoice': true } }, // In the future could be easier on Mongo 4.2 with this new feature
-        { $lookup: { from: 'users', localField: 'orders.buyerId', foreignField: '_id', as: 'user' } },
-        { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
-        { $group: {
-            _id: '$orders.buyerId',
-            user: { $first: '$user' },
-            orders: { $push: '$orders' },
-        }},
-        { $project: {
-            'orders._id': 1,
-            'orders.product.displayName': 1,
-            'orders.order_date': 1,
-            'orders.price': 1,
-            user: 1,
-            total_user_num_orders_notinvoiced: { $size: '$orders'},
-            total_user_sum_orders_notinvoiced: { $sum: '$orders.price' },
-        }}
-    ], function(err, docs) {
+        {
+            $lookup: {
+                from: 'users',
+                localField: 'orders.buyerId',
+                foreignField: '_id',
+                as: 'user'
+            }
+        },
+        {
+            $unwind: {
+                path: '$user',
+                preserveNullAndEmptyArrays: true
+            }
+        },
+        {
+            $group: {
+                _id: '$orders.buyerId',
+                user: {
+                    $first: '$user'
+                },
+                orders: {
+                    $push: '$orders'
+                },
+            }
+        },
+        {
+            $project: {
+                'orders._id': 1,
+                'orders.product.displayName': 1,
+                'orders.order_date': 1,
+                'orders.price': 1,
+                user: 1,
+                total_user_num_orders_notinvoiced: {
+                    $size: '$orders'
+                },
+                total_user_sum_orders_notinvoiced: {
+                    $sum: '$orders.price'
+                },
+            }
+        }
+    ], function (err, docs) {
         if (err) {
-            var alert = { type: 'danger', component: 'db', message: err.message, danger: 1};
+            var alert = {
+                type: 'danger',
+                component: 'db',
+                message: err.message,
+                danger: 1
+            };
             req.session.alert = alert;
             res.redirect('/');
             return;
@@ -211,7 +432,13 @@ router.post('/', ensureAuthenticated, function(req, res, next) {
             // Loop through array for each order for that user
             for (let p = 0; p < docs[i].orders.length; p++) {
                 newInvoice.ordersId.push(docs[i].orders[p]._id);
-                bulk.find( { _id: docs[i].orders[p]._id } ).updateOne( { $set: { invoice: true } } );
+                bulk.find({
+                    _id: docs[i].orders[p]._id
+                }).updateOne({
+                    $set: {
+                        invoice: true
+                    }
+                });
             }
             newInvoice.save();
             bulk.execute(function (err, items) {
@@ -227,7 +454,11 @@ router.post('/', ensureAuthenticated, function(req, res, next) {
                 });
             });
         }
-        var alert = { type: 'success', message: 'Fakturace úspěšně vygenerována a e-maily rozeslány zákazníkům!', success: 1};
+        var alert = {
+            type: 'success',
+            message: 'Fakturace úspěšně vygenerována a e-maily rozeslány zákazníkům!',
+            success: 1
+        };
         req.session.alert = alert;
         res.redirect('/invoice');
         return;

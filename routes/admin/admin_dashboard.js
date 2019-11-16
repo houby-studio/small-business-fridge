@@ -7,8 +7,13 @@ router.use(csrfProtection);
 
 function renderPage(req, res, alert) {
 
-    res.render('admin/admin_dashboard', { title: 'Dashboard | Lednice IT', user: req.user, alert: alert, csrfToken: req.csrfToken() });
-    
+    res.render('admin/admin_dashboard', {
+        title: 'Dashboard | Lednice IT',
+        user: req.user,
+        alert: alert,
+        csrfToken: req.csrfToken()
+    });
+
 };
 
 /* GET admin dashboard page. */

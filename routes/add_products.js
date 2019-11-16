@@ -8,19 +8,25 @@ var csrfProtection = csrf();
 router.use(csrfProtection);
 
 function renderPage(req, res, alert) {
-    
-    Product.find(function(err, docs) {
+
+    Product.find(function (err, docs) {
         if (err) {
             res.status(err.status || 500);
             res.render('error');
         }
 
-        docs.client_data = JSON.stringify ({
+        docs.client_data = JSON.stringify({
             'product_id': docs.map(a => a.id, b => b.imagePath),
             'product_image': docs.map(a => a.imagePath)
         });
-        
-        res.render('shop/add_products', { title: 'Naskladnit | Lednice IT', products: docs, user: req.user, alert: alert, csrfToken: req.csrfToken() });
+
+        res.render('shop/add_products', {
+            title: 'Naskladnit | Lednice IT',
+            products: docs,
+            user: req.user,
+            alert: alert,
+            csrfToken: req.csrfToken()
+        });
     });
 };
 

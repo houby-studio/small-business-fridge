@@ -55,7 +55,7 @@ Go checkout [Wiki](https://github.com/houby-studio/small-bussiness-fridge/wiki) 
 
 ## Changelog
 
-2019-10-10 - v1.0 - Released first full version which offers basic functionality and is pretty much usable. Some operations like changing user roles (admin or supplier) or adding new product types require direct database access as it doesn't currently have any form on website to handle it.
+2019-10-10 - 1.0.0 - Released first full version which offers basic functionality and is pretty much usable. Some operations like changing user roles (admin or supplier) or adding new product types require direct database access as it doesn't currently have any form on website to handle it.
 
 ## License
 

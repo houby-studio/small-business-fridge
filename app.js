@@ -55,18 +55,39 @@ var User = require('./models/user');
 
 // Express app and database connection
 var app = express();
-mongoose.connect(config.config.db.connstr,{ useNewUrlParser: true });
+mongoose.connect(config.config.db.connstr, {
+  useNewUrlParser: true
+});
 
 // View engine setup
-app.engine('.hbs', expressHbs({defaultLayout: 'layout', extname: '.hbs'}));
+app.engine('.hbs', expressHbs({
+  defaultLayout: 'layout',
+  extname: '.hbs'
+}));
 app.enable('trust proxy');
 app.set('view engine', '.hbs');
 app.use(methodOverride());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({
+  extended: true
+}));
 app.use(cookieParser(config.config.parser_secret));
-app.use(expressSession({ cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 }, secret: config.config.cookie_secret, httpOnly: true, secure: true, resave: false, saveUninitialized: false, store: new mongoStore({ mongooseConnection: mongoose.connection, ttl: 14 * 24 * 60 * 60, autoRemove: 'native' }) }));
+app.use(expressSession({
+  cookie: {
+    maxAge: 30 * 24 * 60 * 60 * 1000
+  },
+  secret: config.config.cookie_secret,
+  httpOnly: true,
+  secure: true,
+  resave: false,
+  saveUninitialized: false,
+  store: new mongoStore({
+    mongooseConnection: mongoose.connection,
+    ttl: 14 * 24 * 60 * 60,
+    autoRemove: 'native'
+  })
+}));
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -101,12 +122,12 @@ app.use('/api/keypadorder', keypadOrderRouter);
 app.use('/api/customerName', customerName);
 
 // catch 404 and forward to error handler
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
   next(createError(404));
 });
 
 // error handler
-app.use(function(err, req, res, next) {
+app.use(function (err, req, res, next) {
   // set locals, only providing error in development
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};
@@ -125,6 +146,5 @@ if (config.config.debug) {
   // Create an HTTPS service identical to the HTTP service.
   https.createServer(options, app).listen(443);
 }
-
 
 module.exports = app;

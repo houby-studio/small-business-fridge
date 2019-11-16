@@ -11,8 +11,10 @@ var User = require('../models/user');
 //var users = []; // using array like this really
 
 // Helper function to find user in database
-var findByOid = function(oid, fn) {
-  User.findOne({'oid': oid}, function (err, user) {
+var findByOid = function (oid, fn) {
+  User.findOne({
+    'oid': oid
+  }, function (err, user) {
     if (err) {
       return fn(err);
     }
@@ -21,15 +23,15 @@ var findByOid = function(oid, fn) {
 };
 
 // Helper function to work with user object
-passport.serializeUser(function(user, done) {
-	done(null, user.oid);
+passport.serializeUser(function (user, done) {
+  done(null, user.oid);
 });
 
 // Helper function to work with user object
-passport.deserializeUser(function(oid, done) {
-	findByOid(oid, function (err, user) {
-	  done(err, user);
-	});
+passport.deserializeUser(function (oid, done) {
+  findByOid(oid, function (err, user) {
+    done(err, user);
+  });
 });
 
 // Define passport strategy using variables from config
@@ -53,20 +55,22 @@ passport.use(new OIDCStrategy({
     cookieEncryptionKeys: config.creds.cookieEncryptionKeys,
     clockSkew: config.creds.clockSkew,
   },
-  function(iss, sub, profile, accessToken, refreshToken, done) {
+  function (iss, sub, profile, accessToken, refreshToken, done) {
     if (!profile.oid) {
       return done(new Error("No oid found"), null);
     }
     // asynchronous verification
     process.nextTick(function () {
-      findByOid(profile.oid, function(err, user) {
+      findByOid(profile.oid, function (err, user) {
         if (err) {
           return done(err);
         }
         if (!user) {
           // Auto-registration
           //users.push(profile); Original placement of users push to array
-          User.findOne({'oid': profile.oid}, function (err, user) {
+          User.findOne({
+            'oid': profile.oid
+          }, function (err, user) {
             if (err) {
               return done(err);
             }
@@ -80,22 +84,24 @@ passport.use(new OIDCStrategy({
               profile.admin = false;
               profile.supplier = false;
               // Async function to find highest keypad ID and increment it by one.
-              var latestUser = function(callback) {
-                User.find().sort({keypadId:-1}).limit(1).exec(function(err, res) {
+              var latestUser = function (callback) {
+                User.find().sort({
+                  keypadId: -1
+                }).limit(1).exec(function (err, res) {
                   if (!res[0]) {
-                    callback(err, 1); 
+                    callback(err, 1);
                   } else {
-                    callback(err, res[0].keypadId+1);
+                    callback(err, res[0].keypadId + 1);
                   }
                 });
               };
               // Call function from above and handle user creation in callback
-              latestUser(function(err, res) {
+              latestUser(function (err, res) {
                 if (err) {
                   return done(err);
                 }
                 newUser.keypadId = res;
-                newUser.save(function(err, res) {
+                newUser.save(function (err, res) {
                   if (err) {
                     console.log(err);
                   } else {
@@ -106,11 +112,12 @@ passport.use(new OIDCStrategy({
                   }
                 });
               });
-            } /*else {
-              console.log('Profile found in database.');
-              profile.admin = user.admin;
-              profile.supplier = user.supplier;
-            }*/
+            }
+            /*else {
+                         console.log('Profile found in database.');
+                         profile.admin = user.admin;
+                         profile.supplier = user.supplier;
+                       }*/
           });
           //users.push(profile); in case you want to use in-memory array instead of querying database
           return done(null, profile);
