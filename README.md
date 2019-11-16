@@ -1,10 +1,10 @@
 # Small Business Fridge [![HitCount](http://hits.dwyl.io/houby-studio/small-business-fridge.svg)](http://hits.dwyl.io/houby-studio/small-business-fridge)
 
 [![GitHub version](https://badge.fury.io/gh/houby-studio%2Fsmall-business-fridge.svg)](https://badge.fury.io/gh/houby-studio%2Fsmall-business-fridge)
+[![Build Status](https://travis-ci.com/houby-studio/small-business-fridge.svg?branch=master)](https://travis-ci.com/houby-studio/small-business-fridge)
 [![GitHub version](https://david-dm.org/houby-studio/small-business-fridge.svg)](https://david-dm.org/)
-[![Known Vulnerabilities](https://snyk.io/test/github/houby-studio/small-business-fridge/badge.svg)](https://snyk.io/test/github/houby-studio/small-business-fridge)  
-
-
+[![Known Vulnerabilities](https://snyk.io/test/github/houby-studio/small-business-fridge/badge.svg)](https://snyk.io/test/github/houby-studio/small-business-fridge)
+[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/dwyl/esta/issues)
 
 ## Super simple e-shop for colleagues
 
