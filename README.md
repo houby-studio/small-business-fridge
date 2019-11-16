@@ -1,8 +1,8 @@
-# Small Business Fridge
+# Small Business Fridge [![HitCount](http://hits.dwyl.io/houby-studio/small-business-fridge.svg)](http://hits.dwyl.io/houby-studio/small-business-fridge)
 
 [![GitHub version](https://badge.fury.io/gh/houby-studio%2Fsmall-business-fridge.svg)](https://badge.fury.io/gh/houby-studio%2Fsmall-business-fridge)
 [![Known Vulnerabilities](https://snyk.io/test/github/houby-studio/small-business-fridge/badge.svg)](https://snyk.io/test/github/houby-studio/small-business-fridge)  
-[![HitCount](http://hits.dwyl.io/houby-studio/small-business-fridge.svg)](http://hits.dwyl.io/houby-studio/small-business-fridge)
+
 
 
 ## Super simple e-shop for colleagues
