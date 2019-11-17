@@ -66,6 +66,7 @@ router.get('/', function (req, res, next) {
             res.json('NOT_FOUND');
         } else {
             res.status(200);
+            user.displayName.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
             res.json(user.displayName);
         }
     });
