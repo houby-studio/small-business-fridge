@@ -24,8 +24,8 @@ describe("Small Business Fridge", () => {
                 .set('sbf-API-secret','veryveryverysecretapikey')
                 .end((err, res) => {
                     res.should.have.status(200);
-                    res.body.should.be.json;
-                    res.body.should.equal("James Jameson");
+                    res.should.be.json;
+                    res.body.should.eql("James Jameson");
                     done();
                 });
         });
@@ -36,7 +36,7 @@ describe("Small Business Fridge", () => {
                 .get('/api/customerName?customer=1')
                 .end((err, res) => {
                     res.should.have.status(400);
-                    res.body.should.be.json;
+                    res.should.be.json;
                     done();
                 });
         });
