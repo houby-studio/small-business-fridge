@@ -10,7 +10,7 @@ router.get('/', function (req, res, next) {
     if (!req.query.customer || req.get('sbf-API-secret') != config.config.api_secret) {
         res.status(400);
         res.set('Content-Type', 'text/html');
-        res.send('<h1>Bad request sent!</h1><p>Refer to documentation https://github.com/houby-studio/small-business-fridge/wiki/API-documentation#customerName</p>');
+        res.send('<h1>400 Bad request.</h1><p>For proper API usage refer to documentation <a href="https://github.com/houby-studio/small-business-fridge/wiki/API-documentation#customerName">https://github.com/houby-studio/small-business-fridge/wiki/API-documentation#customerName</a></p>');
         return;
     }
 
@@ -19,15 +19,16 @@ router.get('/', function (req, res, next) {
         keypadId: req.query.customer
     }, function (err, user) {
         if (err) {
+            console.log(err);
             res.status(400);
             res.set('Content-Type', 'text/html');
-            res.send('<h1>Bad request sent!</h1><p>Refer to documentation https://github.com/houby-studio/small-business-fridge/wiki/API-documentation#customerName</p>');
+            res.send('<h1>400 Bad request.</h1><p>For proper API usage refer to documentation https://github.com/houby-studio/small-business-fridge/wiki/API-documentation#customerName</p>');
             return;
         }
 
         // If database doesn't contain user with supplied keypadId, database returns empty object, which doesn't contain parameter displayName.
         res.set('Content-Type', 'application/json');
-        if (!user.displayName) {
+        if ('undefined' === user.displayName) {
             res.status(404);
             res.json('NOT_FOUND');
         } else {
