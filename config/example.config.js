@@ -12,9 +12,9 @@ exports.config = {
 
     },
 
-    cookie_secret: 'somethingverysecret',
-    parser_secret: 'alsosomethingverysecret',
-    api_secret: 'anothersomethingverysecret',
+    cookie_secret: 'verysecretverysecretverysecretverysecretverysecretoh',
+    parser_secret: 'ohverysecretverysecretverysecretverysecretverysecret',
+    api_secret: 'veryveryverysecretapikey',
     debug: false
 };
 
@@ -71,7 +71,7 @@ exports.creds = {
 
     // Required, the reply URL registered in AAD for your app
 
-    redirectUrl: 'https://lednice.example.com/auth/openid/return',
+    redirectUrl: 'https://example.com/auth/openid/return',
 
 
 
