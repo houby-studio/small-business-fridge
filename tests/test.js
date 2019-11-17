@@ -34,10 +34,9 @@ describe("Small Business Fridge", () => {
         it("should get 400 bad request", (done) => {
             chai.request(app)
                 .get('/api/customerName?customer=1')
-                .set('Accept', 'application/problem+json')
                 .end((err, res) => {
                     res.should.have.status(400);
-                    res.should.contain.header('content-type', /application\/problem+json/);
+                    res.should.contain.header('content-type', /application\/problem\+json/);
                     done();
                 });
         });
