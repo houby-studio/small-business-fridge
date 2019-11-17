@@ -6,11 +6,35 @@ var User = require('../../models/user');
 // GET /api/customerName - accepts customer's keypadId and returns customer's display name
 router.get('/', function (req, res, next) {
 
-    // Check if request contains 'customer' parameter and header with API secret key
-    if (!req.query.customer || req.get('sbf-API-secret') != config.config.api_secret) {
+    // Check if request header contains API secret key
+    if (req.get('sbf-API-secret') != config.config.api_secret) {
         res.status(400);
-        res.set('Content-Type', 'text/html');
-        res.send('<h1>400 Bad request.</h1><p>For proper API usage refer to documentation <a href="https://github.com/houby-studio/small-business-fridge/wiki/API-documentation#customerName">https://github.com/houby-studio/small-business-fridge/wiki/API-documentation#customerName</a></p>');
+        res.set('Content-Type', 'application/problem+json');
+        var responseJson = {
+            "type": "https://github.com/houby-studio/small-business-fridge/wiki/API-documentation#api-protection",
+            "title": "Your request does not contain secret key.",
+            "status": 400,
+            "detail:": "This is not a public function. To use this API, you need to supply secret key in the header. More details can be found in documentation https://git.io/Jeodr"
+        };
+        res.json(responseJson);
+        return;
+    }
+
+    // Check if request contains 'customer' parameter
+    if (!req.query.customer) {
+        res.status(400);
+        res.set('Content-Type', 'application/problem+json');
+        var responseJson = {
+            "type": "https://github.com/houby-studio/small-business-fridge/wiki/API-documentation#customerName",
+            "title": "Your request does not contain parameter 'customer'.",
+            "status": 400,
+            "detail:": "This function requires parameter 'customer'. More details can be found in documentation https://git.io/JeodS",
+            "invalid-params": [{
+                "name": "customer",
+                "reason": "must be specified"
+            }]
+        };
+        res.json(responseJson);
         return;
     }
 
@@ -19,10 +43,19 @@ router.get('/', function (req, res, next) {
         keypadId: req.query.customer
     }, function (err, user) {
         if (err) {
-            console.log(err);
             res.status(400);
-            res.set('Content-Type', 'text/html');
-            res.send('<h1>400 Bad request.</h1><p>For proper API usage refer to documentation https://github.com/houby-studio/small-business-fridge/wiki/API-documentation#customerName</p>');
+            res.set('Content-Type', 'application/problem+json');
+            var responseJson = {
+                "type": "https://github.com/houby-studio/small-business-fridge/wiki/API-documentation#customerName",
+                "title": "Your parameter 'customer' is wrong type.",
+                "status": 400,
+                "detail:": "Parameter 'customer' must be a 'Number'. More details can be found in documentation https://git.io/JeodS",
+                "invalid-params": [{
+                    "name": "customer",
+                    "reason": "must be natural number"
+                }]
+            };
+            res.json(responseJson);
             return;
         }
 
@@ -34,7 +67,6 @@ router.get('/', function (req, res, next) {
         } else {
             res.status(200);
             res.json(user.displayName);
-            console.log(user.displayName);
         }
     });
 });
