@@ -8,7 +8,7 @@ exports.config = {
 
     db: {
 
-        connstr: 'mongodb+srv://url'
+        connstr: 'mongodb://testusr:testpwd@localhost:27017/smallbusinessfridge'
 
     },
 
