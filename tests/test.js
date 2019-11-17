@@ -37,7 +37,7 @@ describe("Small Business Fridge", () => {
                 .set('Accept', 'application/problem+json')
                 .end((err, res) => {
                     res.should.have.status(400);
-                    res.should.contain.header('content-type', '/application/problem+json/');
+                    expect(res).to.have.header('content-type', '/^application/problem+json/');
                     done();
                 });
         });
