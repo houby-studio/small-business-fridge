@@ -128,8 +128,8 @@ exports.creds = {
     cookieEncryptionKeys: [
 
         {
-            'key': 'verysecretkey',
-            'iv': 'verysecretiv'
+            'key': 'thiskeyhastobethirtytwobyteslong',
+            'iv': 'disbeshorter'
         }
 
     ],
