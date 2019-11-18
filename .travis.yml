@@ -1,4 +1,5 @@
 language: node_js
+os: linux
 node_js:
   - node
   - lts/*
@@ -7,14 +8,13 @@ node_js:
   - 8
   - 10
   - 12
-matrix:
+jobs:
   include:
     - node_js: "13"
       env: "NVM_NODEJS_ORG_MIRROR=https://nodejs.org/download/nightly"
   allow_failures:
     # Allow the nightly installs to fail
     - env: "NVM_NODEJS_ORG_MIRROR=https://nodejs.org/download/nightly"
-sudo: false
 cache:
   directories:
     - node_modules
@@ -24,26 +24,18 @@ before_script:
   - sleep 15
   - mongo smallbusinessfridge --eval 'db.createUser({user:"testusr",pwd:"testpwd",roles:["readWrite"]});'
 before_install:
-  # Configure npm
-  - |
-    # Skip updating shrinkwrap / lock
-    npm config set shrinkwrap false
-  # Remove all non-test dependencies
-  - |
-    # Remove example dependencies
-    npm rm --silent --save-dev connect-redis
   # Setup Node.js version-specific dependencies
   - |
     # mocha for testing
     # - use 3.x for Node.js < 6
     if [[ "$(cut -d. -f1 <<< "$TRAVIS_NODE_VERSION")" -lt 6 ]]; then
-      npm install --silent --save-dev mocha@3.5.3 eslint
+      npm install --silent --save-dev mocha@3.5.3 eslint@5.16.0
     fi
   - |
     # supertest for http calls
     # - use 2.0.0 for Node.js < 4
     if [[ "$(cut -d. -f1 <<< "$TRAVIS_NODE_VERSION")" -lt 4 ]]; then
-      npm install --silent --save-dev supertest@2.0.0 eslint
+      npm install --silent --save-dev supertest@2.0.0 eslint@2.13.1
     fi
   # Update Node.js modules
   - |
