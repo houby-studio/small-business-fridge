@@ -8,13 +8,13 @@ exports.config = {
 
     db: {
 
-        connstr: 'mongodb+srv://url'
+        connstr: 'mongodb://testusr:testpwd@localhost:27017/smallbusinessfridge'
 
     },
 
-    cookie_secret: 'somethingverysecret',
-    parser_secret: 'alsosomethingverysecret',
-    api_secret: 'anothersomethingverysecret',
+    cookie_secret: 'verysecretverysecretverysecretverysecretverysecretoh',
+    parser_secret: 'ohverysecretverysecretverysecretverysecretverysecret',
+    api_secret: 'veryveryverysecretapikey',
     debug: false
 };
 
@@ -37,7 +37,7 @@ exports.creds = {
 
     // Required
 
-    identityMetadata: 'https://login.microsoftonline.com/<tenant-guid>/v2.0/.well-known/openid-configuration',
+    identityMetadata: 'https://login.microsoftonline.com/v2.0/.well-known/openid-configuration',
 
     // or you can use the common endpoint
 
@@ -71,7 +71,7 @@ exports.creds = {
 
     // Required, the reply URL registered in AAD for your app
 
-    redirectUrl: 'https://lednice.example.com/auth/openid/return',
+    redirectUrl: 'https://example.com/auth/openid/return',
 
 
 
@@ -128,8 +128,8 @@ exports.creds = {
     cookieEncryptionKeys: [
 
         {
-            'key': 'verysecretkey',
-            'iv': 'verysecretiv'
+            'key': 'thiskeyhastobethirtytwobyteslong',
+            'iv': 'disbeshorter'
         }
 
     ],
