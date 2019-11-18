@@ -50,9 +50,6 @@ var authOpenIdReturnPost = require('./routes/auth_openid_return_post');
 var keypadOrderRouter = require('./routes/api/keypadorder');
 var customerName = require('./routes/api/customerName');
 
-// Database models
-var User = require('./models/user');
-
 // Express app and database connection
 var app = express();
 mongoose.connect(config.config.db.connstr, {
