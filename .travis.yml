@@ -1,8 +1,12 @@
 language: node_js
 node_js:
-  - "3.5.2"
+  - node
+  - lts/*
+  - "3.3"
   - "6.13"
-  - "12.3"
+  - 8
+  - 10
+  - 12
 matrix:
   include:
     - node_js: "13"
