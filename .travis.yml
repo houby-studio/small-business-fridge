@@ -26,12 +26,6 @@ before_script:
 before_install:
   # Setup Node.js version-specific dependencies
   - |
-    # eslint for syntax
-    # - use 2.x for Node.js < 7
-    if [[ "$(cut -d. -f1 <<< "$TRAVIS_NODE_VERSION")" -lt 7 ]]; then
-      npm install --silent --save-dev eslint@2.13.1
-    fi
-  - |
     # mocha for testing
     # - use 3.x for Node.js < 6
     if [[ "$(cut -d. -f1 <<< "$TRAVIS_NODE_VERSION")" -lt 6 ]]; then
