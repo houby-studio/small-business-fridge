@@ -1,0 +1,11 @@
+{
+  "files": {
+    "included": [
+      "functions/*.js",
+      "models/*.js",
+      "routes/*.js"
+    ],
+    "excluded": [
+    ]
+  }
+}
