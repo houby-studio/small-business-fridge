@@ -6,7 +6,7 @@
     "start": "node ./bin/www",
     "lint": "eslint .",
     "make-env": "cp ./config/example.config.js ./config/config.js && bash ./test/setup_env.sh",
-    "test": "mocha test/ --check-leaks --exit",
+    "test": "mocha test/api.js --check-leaks --exit",
     "test-coverage": "nyc npm test && nyc report --reporter=text-lcov | coveralls"
   },
   "dependencies": {
