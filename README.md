@@ -1,9 +1,9 @@
 # Small Business Fridge [![HitCount](http://hits.dwyl.io/houby-studio/small-business-fridge.svg)](http://hits.dwyl.io/houby-studio/small-business-fridge)
 
 [![GitHub version](https://badge.fury.io/gh/houby-studio%2Fsmall-business-fridge.svg)](https://badge.fury.io/gh/houby-studio%2Fsmall-business-fridge)
+[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/houby-studio/small-business-fridge/issues)
 [![GitHub license](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/houby-studio/small-business-fridge/blob/master/LICENSE)
-[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/houby-studio/small-business-fridge/issues) 
-[![Open Source Love png2](https://badges.frapsoft.com/os/v2/open-source.png?v=103)](https://github.com/ellerbrock/open-source-badges/)
+[![Mergify Status](https://img.shields.io/endpoint.svg?url=https://gh.mergify.io/badges/houby-studio/small-business-fridge&style=flat)](https://github.com/houby-studio/small-business-fridge/pulls)
 
 [![Build Status](https://travis-ci.com/houby-studio/small-business-fridge.svg?branch=master)](https://travis-ci.com/houby-studio/small-business-fridge)
 [![Known Vulnerabilities](https://snyk.io/test/github/houby-studio/small-business-fridge/badge.svg)](https://snyk.io/test/github/houby-studio/small-business-fridge)
@@ -12,9 +12,6 @@
 [![Maintainability](https://api.codeclimate.com/v1/badges/65ee38e7c21e47a0fc76/maintainability)](https://codeclimate.com/github/houby-studio/small-business-fridge/maintainability)
 [![Coverage Status](https://coveralls.io/repos/github/houby-studio/small-business-fridge/badge.svg?branch=master)](https://coveralls.io/github/houby-studio/small-business-fridge?branch=master)
 [![Inline docs](http://inch-ci.org/github/houby-studio/small-business-fridge.svg?branch=master&style=shields)](http://inch-ci.org/github/houby-studio/small-business-fridge)
-
-[![Mergify Status](https://img.shields.io/endpoint.svg?url=https://gh.mergify.io/badges/houby-studio/small-business-fridge&style=flat)](https://github.com/houby-studio/small-business-fridge/pulls)
-
 
 ## Super simple e-shop for colleagues
 
