@@ -38,7 +38,7 @@ before_install:
     fi
   - |
     # Mocha lcov reporter for coverage
-    npm install --save-dev mocha-lcov-reporter
+    npm install --save-dev mocha-lcov-reporter coveralls
   # Update Node.js modules
   - |
     # Prune and rebuild node_modules
@@ -51,11 +51,7 @@ script:
   - npm run test
   # Run linting
   - |
-    if [[ "$(cut -d. -f1 <<< "$TRAVIS_NODE_VERSION")" -eq "12.13.0" ]]; then
+    echo "$TRAVIS_NODE_VERSION"
+    if [[ "$(cut -d. -f1 <<< "$TRAVIS_NODE_VERSION")" -gt "12" ]]; then
       npm run lint
     fi
-after_script:
-  - |
-    # Upload coverage to coveralls
-    npm install --save-dev coveralls
-    coveralls < ./coverage/lcov.info
