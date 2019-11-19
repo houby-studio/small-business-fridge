@@ -5,7 +5,8 @@
 [![GitHub version](https://david-dm.org/houby-studio/small-business-fridge.svg)](https://david-dm.org/)
 [![Known Vulnerabilities](https://snyk.io/test/github/houby-studio/small-business-fridge/badge.svg)](https://snyk.io/test/github/houby-studio/small-business-fridge)
 [![Coverage Status](https://coveralls.io/repos/github/houby-studio/small-business-fridge/badge.svg?branch=master)](https://coveralls.io/github/houby-studio/small-business-fridge?branch=master)
-[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/dwyl/esta/issues)
+[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/houby-studio/small-business-fridge/issues)  
+[![Mergify Status](https://img.shields.io/endpoint.svg?url=https://gh.mergify.io/badges/houby-studio/small-business-fridge&style=flat)](https://github.com/houby-studio/small-business-fridge/pulls)
 
 ## Super simple e-shop for colleagues
 
