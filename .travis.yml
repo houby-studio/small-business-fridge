@@ -53,7 +53,6 @@ script:
   - npm run test-coverage
   # Run linting
   - |
-    echo "$TRAVIS_NODE_VERSION"
-    if [[ "$(cut -d. -f1 <<< "$TRAVIS_NODE_VERSION")" -gt "12" ]]; then
+    if [[ "$(cut -d. -f1 <<< "$TRAVIS_NODE_VERSION")" -eq "lts/*" ]]; then
       npm run lint
     fi
