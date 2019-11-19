@@ -7,6 +7,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/houby-studio/small-business-fridge/badge.svg?branch=master)](https://coveralls.io/github/houby-studio/small-business-fridge?branch=master)
 [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/houby-studio/small-business-fridge/issues)  
 [![Mergify Status](https://img.shields.io/endpoint.svg?url=https://gh.mergify.io/badges/houby-studio/small-business-fridge&style=flat)](https://github.com/houby-studio/small-business-fridge/pulls)
+[![GitHub license](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/houby-studio/small-business-fridge/blob/master/LICENSE)
 
 ## Super simple e-shop for colleagues
 
