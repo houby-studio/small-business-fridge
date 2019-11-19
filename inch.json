@@ -1,9 +1,9 @@
 {
   "files": {
     "included": [
-      "functions/*.js",
-      "models/*.js",
-      "routes/*.js"
+      "functions/*",
+      "models/*",
+      "routes/*"
     ],
     "excluded": [
     ]
