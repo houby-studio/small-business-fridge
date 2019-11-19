@@ -3,7 +3,6 @@ os: linux
 node_js:
   - node
   - lts/*
-  - 3
   - 6
   - 8
   - 10
