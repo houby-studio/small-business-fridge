@@ -37,8 +37,8 @@ before_install:
       npm install --silent --save-dev supertest@2.0.0
     fi
   - |
-    # Mocha lcov reporter for coverage
-    npm install --save-dev mocha-lcov-reporter coveralls
+    # coverage
+    npm install --save-dev mocha-lcov-reporter coveralls nyc
   # Update Node.js modules
   - |
     # Prune and rebuild node_modules
@@ -49,6 +49,8 @@ before_install:
 script:
   # Run test script
   - npm run test
+  # Run test with coverage
+  - npm run test-coverage
   # Run linting
   - |
     echo "$TRAVIS_NODE_VERSION"
