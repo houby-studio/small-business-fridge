@@ -4,28 +4,17 @@ var chaiHttp = require('chai-http')
 var app = require('../app')
 chai.use(chaiHttp)
 chai.should()
-describe('Small Business Fridge', () => {
-  describe('GET /', () => {
-    // Test to load index page
-    it('should get index page', (done) => {
-      chai.request(app)
-        .get('/')
-        .end((err, res) => {
-          res.should.have.status(200)
-          res.body.should.be.a('object')
-          done()
-        })
-    })
-
+describe('API', () => {
+  describe('customerName', () => {
     // Test API to load user display name
     it('should get user display name', (done) => {
       chai.request(app)
         .get('/api/customerName?customer=1')
         .set('sbf-API-secret', 'veryveryverysecretapikey')
-        .end((err, res) => {
+        .end((_err, res) => {
           res.should.have.status(200)
           res.should.be.json
-          res.body.should.eql('James Jameson')
+          res.body.should.eql('Sindelar Jakub')
           done()
         })
     })
@@ -34,7 +23,7 @@ describe('Small Business Fridge', () => {
     it('should get 400 bad request', (done) => {
       chai.request(app)
         .get('/api/customerName?customer=1')
-        .end((err, res) => {
+        .end((_err, res) => {
           res.should.have.status(400)
           res.should.contain.header('content-type', /application\/problem\+json/)
           done()

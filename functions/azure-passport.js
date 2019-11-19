@@ -64,7 +64,6 @@ function (iss, sub, profile, accessToken, refreshToken, done) {
       }
       if (!user) {
         // Auto-registration
-        // users.push(profile); Original placement of users push to array
         User.findOne({
           oid: profile.oid
         }, function (err, user) {

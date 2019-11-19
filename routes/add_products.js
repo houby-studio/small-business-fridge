@@ -7,7 +7,16 @@ var csrf = require('csurf')
 var csrfProtection = csrf()
 router.use(csrfProtection)
 
-function renderPage (req, res, alert) {
+/* GET add product page. */
+router.get('/', ensureAuthenticated, function (req, res) {
+  if (!req.user.supplier) {
+    res.redirect('/')
+    return
+  }
+  if (req.session.alert) {
+    var alert = req.session.alert
+    delete req.session.alert
+  }
   Product.find(function (err, docs) {
     if (err) {
       res.status(err.status || 500)
@@ -27,19 +36,6 @@ function renderPage (req, res, alert) {
       csrfToken: req.csrfToken()
     })
   })
-};
-
-/* GET add product page. */
-router.get('/', ensureAuthenticated, function (req, res) {
-  if (!req.user.supplier) {
-    res.redirect('/')
-    return
-  }
-  if (req.session.alert) {
-    var alert = req.session.alert
-    delete req.session.alert
-  }
-  renderPage(req, res, alert)
 })
 
 /* POST add product form handle. */

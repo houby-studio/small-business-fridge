@@ -5,15 +5,6 @@ var csrf = require('csurf')
 var csrfProtection = csrf()
 router.use(csrfProtection)
 
-function renderPage (req, res, alert) {
-  res.render('admin/admin_dashboard', {
-    title: 'Dashboard | Lednice IT',
-    user: req.user,
-    alert: alert,
-    csrfToken: req.csrfToken()
-  })
-};
-
 /* GET admin dashboard page. */
 router.get('/', ensureAuthenticated, function (req, res) {
   if (!req.user.admin) {
@@ -24,7 +15,12 @@ router.get('/', ensureAuthenticated, function (req, res) {
     var alert = req.session.alert
     delete req.session.alert
   }
-  renderPage(req, res, alert)
+  res.render('admin/admin_dashboard', {
+    title: 'Dashboard | Lednice IT',
+    user: req.user,
+    alert: alert,
+    csrfToken: req.csrfToken()
+  })
 })
 
 module.exports = router

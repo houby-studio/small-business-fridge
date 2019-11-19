@@ -444,9 +444,8 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
       }
       newInvoice.save()
       bulk.execute(function (_err, _items) {
-        // newInvoice.save();
         // Send e-mail
-        qrPayment(req.user.IBAN, docs[i].total_user_sum_orders_notinvoiced, moment().format('YYYYMMDD'), docs[i].user.displayName, req.user.displayName, function (qrcode) {
+        qrPayment.generateQR(req.user.IBAN, docs[i].total_user_sum_orders_notinvoiced, docs[i].user.displayName, req.user.displayName, function (qrcode) {
           var subject = 'Fakturace!'
           var body = `<h1>Přišel čas zúčtování!</h1><p>Váš nejoblíbenější dodavatel ${req.user.displayName} Vám zaslal fakturu.</p><h2>Fakturační údaje</h2><p>Částka k úhradě: ${docs[i].total_user_sum_orders_notinvoiced}Kč<br>Počet zakoupených produktů: ${docs[i].total_user_num_orders_notinvoiced}ks<br>Datum fakturace: ${moment().format('LLLL')}<br><a href="https://lednice.prdelka.eu/invoices">Více na webu Lednice IT</a></p><p>Platbu je možné provést hotově nebo převodem.<br>Po platbě si zkontrolujte, zda dodavatel označil Vaši platbu jako zaplacenou.</p>`
           if (req.user.IBAN) {

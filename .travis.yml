@@ -22,6 +22,7 @@ services:
 before_script:
   - sleep 15
   - mongo smallbusinessfridge --eval 'db.createUser({user:"testusr",pwd:"testpwd",roles:["readWrite"]});'
+  - npm run make-env
 before_install:
   # Setup Node.js version-specific dependencies
   - |

@@ -9,8 +9,8 @@ mongoose.connect(config.config.db.connstr, {
 var users = [
   new User({
     oid: 'unique_string_01',
-    displayName: 'James Jameson',
-    email: 'James.Jameson@example.com',
+    displayName: 'Sindelar Jakub',
+    email: 'Sindelar.Jakub@example.com',
     IBAN: 'CZ0123456789012345678900',
     keypadId: 1
   }),
