@@ -37,8 +37,8 @@ exports.creds = {
   // 'https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration'
   // To use the common endpoint, you have to either turn `validateIssuer` off, or provide the `issuer` value.
 
-  // Required, the client ID of your app in AAD
-  clientID: 'client-id',
+  // Required, the client ID of your app in AAD - dummy application with no permissions for testing purposes
+  clientID: 'replacewithclientid',
 
   // Required, must be 'code', 'code id_token', 'id_token code' or 'id_token'
   // If you want to get access_token, you must use 'code', 'code id_token' or 'id_token code'
@@ -48,17 +48,17 @@ exports.creds = {
   responseMode: 'form_post',
 
   // Required, the reply URL registered in AAD for your app
-  redirectUrl: 'https://example.com/auth/openid/return',
+  redirectUrl: 'https://localhost/auth/openid/return',
 
   // Required if we use http for redirectUrl
   allowHttpForRedirectUrl: false,
 
   // Required if `responseType` is 'code', 'id_token code' or 'code id_token'.
   // If app key contains '\', replace it with '\\'.
-  clientSecret: 'rtdo:@-what-even-is-this-secret',
+  clientSecret: 'rtdo:@-required-if-code-is-needed',
 
   // Required to set to false if you don't want to validate issuer
-  validateIssuer: true,
+  validateIssuer: false,
 
   // Required if you want to provide the issuer(s) you want to validate instead of using the issuer from metadata
   // issuer could be a string or an array of strings of the following form: 'https://sts.windows.net/<tenant_guid>/v2.0'
