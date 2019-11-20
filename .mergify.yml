@@ -3,7 +3,7 @@ pull_request_rules:
     conditions:
       - status-success=continuous-integration/travis-ci/pr
       - author=snyk-bot
-      - conflict=false
+      - -conflict
     actions:
       merge:
         method: merge
