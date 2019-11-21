@@ -32,7 +32,7 @@ exports.mail = {
 exports.creds = {
 
   // Required
-  identityMetadata: 'https://login.microsoftonline.com/v2.0/.well-known/openid-configuration',
+  identityMetadata: 'https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration',
   // or you can use the common endpoint
   // 'https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration'
   // To use the common endpoint, you have to either turn `validateIssuer` off, or provide the `issuer` value.
