@@ -61,7 +61,7 @@ router.get('/', function (req, res, next) {
 
     // If database doesn't contain user with supplied keypadId, database returns empty object, which doesn't contain parameter displayName.
     res.set('Content-Type', 'application/json')
-    if (user.displayName === 'undefined') {
+    if (!user) {
       res.status(404)
       res.json('NOT_FOUND')
     } else {
