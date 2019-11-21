@@ -29,6 +29,7 @@
   "devDependencies": {
     "chai": "*",
     "chai-http": "*",
+    "chaos-monkey": "^0.7.2",
     "eslint": "^6.6.0",
     "eslint-config-standard": "^14.1.0",
     "eslint-plugin-import": "^2.18.2",
