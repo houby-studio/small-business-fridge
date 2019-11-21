@@ -6,7 +6,7 @@ chai.should()
 var app = require('../app')
 var agent = chai.request(app)
 var monkeyConfig = { name: 'uncaught-exception', file: 'uncaught-exception', active: true, properties: { message: 'Uncaught exception was thrown by the chaos monkey' }, schedule: { type: 'one-time-schedule', delay: 2000 } }
-chaosMonkey.initialize(agent, monkeyConfig)
+chaosMonkey.initialize(app, monkeyConfig)
 
 describe('Chaos monkey', () => {
   describe('invoke POST request and trigger chaos', () => {
