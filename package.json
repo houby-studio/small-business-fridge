@@ -23,7 +23,7 @@
     "mongoose": "^5.7.11",
     "nodemailer": "^6.3.1",
     "passport": "^0.4.0",
-    "passport-azure-ad": "^4.1.0",
+    "passport-azure-ad": "^4.2.0",
     "qrcode": "^1.4.4"
   },
   "devDependencies": {
