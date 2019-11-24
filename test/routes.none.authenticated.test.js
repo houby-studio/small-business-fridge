@@ -1,21 +1,44 @@
+// This test file tries all possible routes
+// Protected routes should redirect to /login
+// Public routes should load without problem
+
 // Import the dependencies for testing
+var nock = require('nock')
+var sinon = require('sinon')
 var chai = require('chai')
 var chaiHttp = require('chai-http')
-var app = require('../app')
 chai.use(chaiHttp)
 chai.should()
 
-// Attempt to login, logout
-describe('Routes access', () => {
+// Import required app files
+var app
+var login = require('../routes/login')
+
+describe('Routes access with no user logged in', () => {
+  beforeEach(function () {
+    nock(/login.microsoftonline.com/)
+      .persist()
+      .get(/.*?/)
+      // .replyWithError('Redirect to login.microsoftonline.com successfully mocked.')
+      // .reply(301, undefined, { Location: 'https://login.microsoftonline.com/', 'Max-Forwards': 0 })
+      .reply(500, null, { Why: 'whynot' })
+
+    app = require('../app')
+  })
+
+  afterEach(function () {
+    nock.cleanAll()
+  })
+
   describe('Should require authentication', () => {
   // Test if pages are protected by authentication mechanism
     it('/shop should redirect to /login then microsoft', (done) => {
       chai.request(app)
         .get('/shop')
         .end((_err, res) => {
-        // res.should.have.header('test-url', '/shop')
-          res.should.have.redirect
-          res.should.have.redirectTo(/login.microsoftonline.com/)
+          res.should.have.status(200)
+          console.log(res)
+          res.should.have.header('why', 'whynot')
           done()
         })
     })
@@ -24,7 +47,7 @@ describe('Routes access', () => {
         .get('/profile')
         .end((_err, res) => {
           res.should.have.redirect
-          res.should.have.redirectTo(/login.microsoftonline.com/)
+          res.should.have.redirectTo(/127\.0\.0\.1/)
           done()
         })
     })
