@@ -8,7 +8,6 @@ router.get('/',
     failureRedirect: '/login'
   }),
   function (req, res) {
-    console.log('Authentication was called in the Sample')
     res.redirect('/')
   }
 )

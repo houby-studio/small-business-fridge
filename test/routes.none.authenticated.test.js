@@ -1,10 +1,9 @@
-// This test file tries all possible routes
+// This test file tries all possible routes without authenticated user
 // Protected routes should redirect to /login
 // Public routes should load without problem
 
 // Import the dependencies for testing
 var nock = require('nock')
-var sinon = require('sinon')
 var chai = require('chai')
 var chaiHttp = require('chai-http')
 chai.use(chaiHttp)
@@ -29,7 +28,7 @@ describe('Routes access with no user logged in', () => {
     nock.cleanAll()
   })
 
-  describe('Should require authentication', () => {
+  describe('Should require authenticated user', () => {
   // Test if pages are protected by authentication mechanism
     it('/shop should redirect to /login then microsoft', (done) => {
       chai.request(app)
