@@ -20,7 +20,7 @@
     "http-errors": "~1.7.3",
     "method-override": "^3.0.0",
     "moment": "^2.24.0",
-    "mongoose": "^5.7.12",
+    "mongoose": "^5.7.11",
     "nodemailer": "^6.3.1",
     "passport": "^0.4.0",
     "passport-azure-ad": "^4.2.0",
