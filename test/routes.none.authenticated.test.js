@@ -12,7 +12,6 @@ chai.should()
 
 // Import required app files
 var app
-var login = require('../routes/login')
 
 describe('Routes access with no user logged in', () => {
   beforeEach(function () {
@@ -21,7 +20,7 @@ describe('Routes access with no user logged in', () => {
       .get(/.*?/)
       // .replyWithError('Redirect to login.microsoftonline.com successfully mocked.')
       // .reply(301, undefined, { Location: 'https://login.microsoftonline.com/', 'Max-Forwards': 0 })
-      .reply(500, null, { Why: 'whynot' })
+      .reply(200, null)
 
     app = require('../app')
   })
@@ -36,9 +35,8 @@ describe('Routes access with no user logged in', () => {
       chai.request(app)
         .get('/shop')
         .end((_err, res) => {
-          res.should.have.status(200)
-          console.log(res)
-          res.should.have.header('why', 'whynot')
+          res.should.have.redirect
+          res.should.have.redirectTo(/login.microsoftonline.com/)
           done()
         })
     })
@@ -47,7 +45,7 @@ describe('Routes access with no user logged in', () => {
         .get('/profile')
         .end((_err, res) => {
           res.should.have.redirect
-          res.should.have.redirectTo(/127\.0\.0\.1/)
+          res.should.have.redirectTo(/login.microsoftonline.com/)
           done()
         })
     })
