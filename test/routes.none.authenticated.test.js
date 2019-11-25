@@ -4,6 +4,7 @@
 
 // Import the dependencies for testing
 var nock = require('nock')
+var sinon = require('sinon')
 var chai = require('chai')
 var chaiHttp = require('chai-http')
 chai.use(chaiHttp)
@@ -13,12 +14,12 @@ chai.should()
 var app
 
 describe('Routes access with no user logged in', () => {
+
   beforeEach(function () {
+    this.consoleStub = sinon.stub(console, 'log')
     nock(/login.microsoftonline.com/)
       .persist()
       .get(/.*?/)
-      // .replyWithError('Redirect to login.microsoftonline.com successfully mocked.')
-      // .reply(301, undefined, { Location: 'https://login.microsoftonline.com/', 'Max-Forwards': 0 })
       .reply(200, null)
 
     app = require('../app')
@@ -26,6 +27,7 @@ describe('Routes access with no user logged in', () => {
 
   afterEach(function () {
     nock.cleanAll()
+    this.consoleStub.restore()
   })
 
   describe('Should require authenticated user', () => {

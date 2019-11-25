@@ -17,23 +17,20 @@ describe('Routes access with customer user logged in', () => {
       ensureAuthenticated = require('../functions/ensureAuthenticated')
       sinon.stub(ensureAuthenticated, 'ensureAuthenticated')
         .callsFake(function (req, res, next) {
-          console.log('lmao')
           return next()
         })
       app = require('../app')
     })
 
     afterEach(function () {
-      //sinon.restore()
-    // restore original method
-    // ensureAuthenticated.ensureAuthenticated.restore()
+      sinon.restore()
     })
 
-    it('/shop should load shop page', (done) => {
+    it('/shop should load shop page without redirect', (done) => {
       chai.request(app)
         .get('/shop')
         .end(function (_err, res) {
-          res.should.have.header('ay', 'lmao')
+          res.should.not.redirect
           done()
         })
     })
