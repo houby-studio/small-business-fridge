@@ -20,7 +20,7 @@ describe('Routes access with no user logged in', () => {
     nock(/login.microsoftonline.com/)
       .persist()
       .get(/.*?/)
-      .reply(200, null)
+      .reply(500, null)
 
     app = require('../app')
   })
