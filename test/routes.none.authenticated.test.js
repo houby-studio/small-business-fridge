@@ -1,155 +1,177 @@
-// This test file tries all possible routes without authenticated user
-// Protected routes should redirect to /login
-// Public routes should load without problem
+/*
+ * Tests all routes with no user authenticated
+ *
+ * All protected routes should redirect to /login
+ * /login redirects to login.microsoftonline.com
+ *
+ * All public routes should load without problem
+ *
+ */
 
 // Import the dependencies for testing
 var nock = require('nock')
-var sinon = require('sinon')
+var sandbox = require('sinon').createSandbox()
 var chai = require('chai')
 var chaiHttp = require('chai-http')
 chai.use(chaiHttp)
 chai.should()
 
-// Import required app files
+// Import app files
 var app
+var passport = require('passport')
+
+// Spies
+var passportSpy
+var errorStub
 
 describe('Routes access with no user logged in', () => {
-
-  beforeEach(function () {
-    this.consoleStub = sinon.stub(console, 'log')
+  before(function () {
+    // mock login.microsoftonline.com to prevent hitting real website
     nock(/login.microsoftonline.com/)
       .persist()
       .get(/.*?/)
-      .reply(500, null)
-
+      .reply(400, null)
+  })  
+  beforeEach(function () {
+    // main app to load express server
     app = require('../app')
+    // spy on authenticate() function to validate whether or not it's being called
+    passportSpy = sandbox.spy(passport, 'authenticate')
+  })
+
+  after(function () {
+    nock.restore()
   })
 
   afterEach(function () {
-    nock.cleanAll()
-    this.consoleStub.restore()
+    sandbox.restore()
   })
 
-  describe('Should require authenticated user', () => {
+  describe('Should redirect to /login then login.microsoftonline.com', () => {
   // Test if pages are protected by authentication mechanism
-    it('/shop should redirect to /login then microsoft', (done) => {
+    it('/shop', (done) => {
       chai.request(app)
         .get('/shop')
-        .end((_err, res) => {
+        .end(function (_err, res) {
+          sandbox.assert.calledOnce(passportSpy)
           res.should.have.redirect
-          res.should.have.redirectTo(/login.microsoftonline.com/)
           done()
         })
     })
-    it('/profile redirect to /login then microsoft', (done) => {
+    it('/profile', (done) => {
       chai.request(app)
         .get('/profile')
         .end((_err, res) => {
+          sandbox.assert.calledOnce(passportSpy)
           res.should.have.redirect
-          res.should.have.redirectTo(/login.microsoftonline.com/)
           done()
         })
     })
-    it('/orders redirect to /login then microsoft', (done) => {
+    it('/orders', (done) => {
       chai.request(app)
         .get('/orders')
         .end((_err, res) => {
+          sandbox.assert.calledOnce(passportSpy)
           res.should.have.redirect
-          res.should.have.redirectTo(/login.microsoftonline.com/)
           done()
         })
     })
-    it('/invoices redirect to /login then microsoft', (done) => {
+    it('/invoices', (done) => {
       chai.request(app)
         .get('/invoices')
         .end((_err, res) => {
+          sandbox.assert.calledOnce(passportSpy)
           res.should.have.redirect
-          res.should.have.redirectTo(/login.microsoftonline.com/)
           done()
         })
     })
-    it('/add_products redirect to /login then microsoft', (done) => {
+    it('/add_products', (done) => {
       chai.request(app)
         .get('/add_products')
         .end((_err, res) => {
+          sandbox.assert.calledOnce(passportSpy)
           res.should.have.redirect
-          res.should.have.redirectTo(/login.microsoftonline.com/)
           done()
         })
     })
-    it('/invoice redirect to /login then microsoft', (done) => {
+    it('/invoice', (done) => {
       chai.request(app)
         .get('/invoice')
         .end((_err, res) => {
+          sandbox.assert.calledOnce(passportSpy)
           res.should.have.redirect
-          res.should.have.redirectTo(/login.microsoftonline.com/)
           done()
         })
     })
-    it('/payments redirect to /login then microsoft', (done) => {
+    it('/payments', (done) => {
       chai.request(app)
         .get('/payments')
         .end((_err, res) => {
+          sandbox.assert.calledOnce(passportSpy)
           res.should.have.redirect
-          res.should.have.redirectTo(/login.microsoftonline.com/)
           done()
         })
     })
-    it('/stock redirect to /login then microsoft', (done) => {
+    it('/stock', (done) => {
       chai.request(app)
         .get('/stock')
         .end((_err, res) => {
+          sandbox.assert.calledOnce(passportSpy)
           res.should.have.redirect
-          res.should.have.redirectTo(/login.microsoftonline.com/)
           done()
         })
     })
-    it('/dashboard redirect to /login then microsoft', (done) => {
+    it('/dashboard', (done) => {
       chai.request(app)
         .get('/dashboard')
         .end((_err, res) => {
+          sandbox.assert.calledOnce(passportSpy)
           res.should.have.redirect
-          res.should.have.redirectTo(/login.microsoftonline.com/)
           done()
         })
     })
   })
-  describe('Should NOT require authentication', () => {
-    it('/ should not require authentication', (done) => {
+  // Test if pages are NOT protected by authentication mechanism and anyone can access them
+  describe('Should NOT require authentication and load properly', () => {
+    it('/', (done) => {
       chai.request(app)
         .get('/')
         .end((_err, res) => {
+          sandbox.assert.notCalled(passportSpy)
           res.should.have.not.redirect
           res.should.be.html
           done()
         })
     })
-    it('/about should not require authentication', (done) => {
+    it('/about', (done) => {
       chai.request(app)
         .get('/about')
         .end((_err, res) => {
+          sandbox.assert.notCalled(passportSpy)
           res.should.have.not.redirect
           res.should.be.html
           done()
         })
     })
-    it('/changelog should not require authentication', (done) => {
+    it('/changelog', (done) => {
       chai.request(app)
         .get('/changelog')
         .end((_err, res) => {
+          sandbox.assert.notCalled(passportSpy)
           res.should.have.not.redirect
           res.should.be.html
           done()
         })
     })
   })
+  // Test if login redirects to login.microsoftonline.com and logout destroys session
   describe('Should handle login and logout', () => {
     it('/login should redirect to login.microsoftonline.com', (done) => {
       chai.request(app)
         .get('/login')
         .end((_err, res) => {
+          sandbox.assert.calledOnce(passportSpy)
           res.should.have.redirect
-          res.should.have.redirectTo(/login.microsoftonline.com/)
           done()
         })
     })
@@ -157,6 +179,7 @@ describe('Routes access with no user logged in', () => {
       chai.request(app)
         .get('/logout')
         .end((_err, res) => {
+          res.should.have.not.cookie()
           res.should.have.redirect
           res.should.have.redirectTo(/127\.0\.0\.1:\d+\//)
           done()
