@@ -18,6 +18,7 @@ describe('Routes access with no user logged in', () => {
   var chaiHttp = require('chai-http')
   chai.use(chaiHttp)
   chai.should()
+  var passportSpy
 
   before(function () {
     restore()

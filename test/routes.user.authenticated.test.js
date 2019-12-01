@@ -4,6 +4,8 @@
 
 describe('Routes access with customer user logged in', () => {
   // Import the dependencies for testing
+  const resnap = require('resnap')
+  const restore = resnap()
   var nock = require('nock')
   var sandbox = require('sinon').createSandbox()
   var decache = require('decache')
@@ -30,6 +32,10 @@ describe('Routes access with customer user logged in', () => {
         })
     })
 
+    after(function () {
+      restore()
+    })
+
     afterEach(function () {
       sandbox.restore()
     })
@@ -41,9 +47,7 @@ describe('Routes access with customer user logged in', () => {
         .end(function (_err, res) {
           // console.log(res)
           // sandbox.assert.calledOnce(spyAuth)
-          setTimeout(50000)
           res.should.not.redirect
-          
           done()
         })
     })
