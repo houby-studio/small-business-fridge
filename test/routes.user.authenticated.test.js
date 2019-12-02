@@ -1,52 +1,56 @@
-// This test file tries all possible routes with regular user logged in
-// Supplier and admin routes should redirect to /login
-// Customer and public routes should load without problem
+/*
+ * Tests all routes with user authenticated
+ *
+ * All supplier and admin routes should redirect to /login
+ * /login redirects to login.microsoftonline.com
+ *
+ * All customer and public routes should load without problem
+ *
+ */
 
 describe('Routes access with customer user logged in', () => {
-  // Import the dependencies for testing
+  // Capture cache state before tests
   const resnap = require('resnap')
   const restore = resnap()
-  var nock = require('nock')
+  // Import the dependencies for testing
   var sandbox = require('sinon').createSandbox()
-  var decache = require('decache')
   var chai = require('chai')
   var chaiHttp = require('chai-http')
   chai.use(chaiHttp)
   chai.should()
+  // Variables for test
+  var passportSpy
+  var app
 
   describe('Should load with logged in customer', () => {
     before(function () {
-      // delete module.cache[require.resolve('ensureAuthenticated')]
-      // delete require.cache[require.resolve('../app')]
-      // delete require.cache[require.resolve('../functions/ensureAuthenticated')]
-      // restore()
-      decache('../functions/ensureAuthenticated')
+      // Require express app
+      app = require('../app')
     })
 
     beforeEach(function () {
-      // spyAuth = sandbox.spy(require('../functions/ensureAuthenticated'), 'ensureAuthenticated')
+      // Fake ensureAuthenticated function to skip checking whether user is or isn't logged in.
       sandbox = require('sinon').createSandbox().stub(require('../functions/ensureAuthenticated'), 'ensureAuthenticated')
         .callsFake(function (req, res, next) {
-          console.log('eee')
           return next()
         })
     })
 
     after(function () {
+      // Restore cache state
       restore()
     })
 
     afterEach(function () {
+      // restore sinon stubs and spies
       sandbox.restore()
     })
 
     it('/shop should load shop page without redirect', (done) => {
-      delete require.cache[require.resolve('../app')]
-      chai.request(require('../app'))
+      // TODO, add object to req and load full page without error
+      chai.request(app)
         .get('/shop')
         .end(function (_err, res) {
-          // console.log(res)
-          // sandbox.assert.calledOnce(spyAuth)
           res.should.not.redirect
           done()
         })

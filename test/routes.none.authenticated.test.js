@@ -9,6 +9,7 @@
  */
 
 describe('Routes access with no user logged in', () => {
+  // Capture cache state before tests
   const resnap = require('resnap')
   const restore = resnap()
   // Import the dependencies for testing
@@ -18,29 +19,34 @@ describe('Routes access with no user logged in', () => {
   var chaiHttp = require('chai-http')
   chai.use(chaiHttp)
   chai.should()
+  // Variables for test
   var passportSpy
   var app
 
   before(function () {
-    restore()
     // mock login.microsoftonline.com to prevent hitting real website
     nock(/login.microsoftonline.com/)
       .persist()
       .get(/.*?/)
       .reply(400, null)
-  })
-  beforeEach(function () {
-    // spy on authenticate() function to validate whether or not it's being called
-    passportSpy = sandbox.spy(require('passport'), 'authenticate')
+    // Require express app
     app = require('../app')
   })
 
+  beforeEach(function () {
+    // spy on authenticate() function to validate whether or not it's being called
+    passportSpy = sandbox.spy(require('passport'), 'authenticate')
+  })
+
   after(function () {
+    // Restore url mock
     nock.restore()
+    // Restore cache state
     restore()
   })
 
   afterEach(function () {
+    // restore sinon stubs and spies
     sandbox.restore()
   })
 
