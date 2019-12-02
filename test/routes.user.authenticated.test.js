@@ -19,21 +19,17 @@ describe('Routes access with customer user logged in', () => {
   chai.use(chaiHttp)
   chai.should()
   // Variables for test
-  var passportSpy
   var app
 
   describe('Should load with logged in customer', () => {
-    before(function () {
-      // Require express app
-      app = require('../app')
-    })
-
     beforeEach(function () {
       // Fake ensureAuthenticated function to skip checking whether user is or isn't logged in.
       sandbox = require('sinon').createSandbox().stub(require('../functions/ensureAuthenticated'), 'ensureAuthenticated')
         .callsFake(function (req, res, next) {
           return next()
         })
+      // Require express app
+      app = require('../app')
     })
 
     after(function () {
