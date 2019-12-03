@@ -6,11 +6,11 @@
     "start": "node ./bin/www",
     "lint": "eslint .",
     "make-env": "cp ./config/example.config.js ./config/config.js && bash ./test/setup_env.sh",
-    "test": "mocha test --check-leaks --exit --globals __coverage__",
+    "test": "mocha test --check-leaks --exit --timeout 5000 --globals __coverage__",
     "test-coverage": "nyc npm test && nyc report --reporter=text-lcov | coveralls"
   },
   "dependencies": {
-    "connect-mongo": "^3.1.2",
+    "connect-mongo": "^3.2.0",
     "cookie-parser": "~1.4.4",
     "csurf": "^1.10.0",
     "express": "~4.17.1",
@@ -20,7 +20,7 @@
     "http-errors": "~1.7.3",
     "method-override": "^3.0.0",
     "moment": "^2.24.0",
-    "mongoose": "^5.7.12",
+    "mongoose": "^5.7.13",
     "nodemailer": "^6.3.1",
     "passport": "^0.4.0",
     "passport-azure-ad": "^4.2.0",
@@ -29,7 +29,7 @@
   "devDependencies": {
     "chai": "*",
     "chai-http": "*",
-    "eslint": "^6.7.0",
+    "eslint": "^6.7.2",
     "eslint-config-standard": "^14.1.0",
     "eslint-plugin-import": "^2.18.2",
     "eslint-plugin-node": "^10.0.0",
