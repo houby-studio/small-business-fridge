@@ -10,7 +10,7 @@
     "test-coverage": "nyc npm test && nyc report --reporter=text-lcov | coveralls"
   },
   "dependencies": {
-    "connect-mongo": "^3.2.0",
+    "connect-mongo": "^3.1.2",
     "cookie-parser": "~1.4.4",
     "csurf": "^1.10.0",
     "express": "~4.17.1",
