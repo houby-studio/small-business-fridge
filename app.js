@@ -46,7 +46,7 @@ var authOpenId = require('./routes/auth_openid')
 var authOpenIdReturnGet = require('./routes/auth_openid_return')
 var authOpenIdReturnPost = require('./routes/auth_openid_return_post')
 // API routes
-var keypadOrderRouter = require('./routes/api/keypadorder')
+var keypadOrderRouter = require('./routes/api/keypadOrder')
 var customerName = require('./routes/api/customerName')
 
 // Express app and database connection
@@ -114,7 +114,7 @@ app.use('/auth/openid', authOpenId)
 app.use('/auth/openid/return', authOpenIdReturnGet)
 app.use('/auth/openid/return', authOpenIdReturnPost)
 // API routes
-app.use('/api/keypadorder', keypadOrderRouter)
+app.use('/api/keypadOrder', keypadOrderRouter)
 app.use('/api/customerName', customerName)
 
 // catch 404 and forward to error handler
