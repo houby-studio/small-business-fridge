@@ -90,7 +90,7 @@ router.get('/', ensureAuthenticated, function (req, res, _next) {
 router.post('/', ensureAuthenticated, function (req, res, _next) {
   // Check if customer changes invoice which belongs to him
   Invoice.findById(req.body.invoice_id, function (_err, check) {
-    if (!check.supplierId.equals(req.user.id)) {
+    if (!check.buyerId.equals(req.user.id)) {
       var alert
       var subject = 'Neoprávněná akce?!'
       var body = `<h1>Jak se toto podařilo?!</h1><p>Zákazník ${req.body.displayName} se pokouší manipulovat s fakturou ID ${check._id}, přestože ji nevlastní.</p>Jeho akce byla revertována. Prověřte celou situaci!</p>`
