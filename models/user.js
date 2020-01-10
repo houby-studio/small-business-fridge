@@ -38,6 +38,10 @@ var schema = new Schema({
   sendMailOnEshopPurchase: {
     type: Boolean,
     default: true
+  },
+  sendDailyReport: {
+    type: Boolean,
+    default: true
   }
 })
 

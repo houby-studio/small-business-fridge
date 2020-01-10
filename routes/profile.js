@@ -26,6 +26,12 @@ router.post('/', ensureAuthenticated, function (req, res, next) {
     }, function (err, docs) {
       if (err) console.log(err)
     })
+  } else if (req.body.name === 'checkSendDailyReport') {
+    User.findByIdAndUpdate(req.user.id, {
+      sendDailyReport: newValue
+    }, function (err, docs) {
+      if (err) console.log(err)
+    })
   } else if (req.body.name === 'realtime-iban') {
     if (/^CZ\d{22}$/.test(req.body.value)) {
       User.findByIdAndUpdate(req.user.id, {
