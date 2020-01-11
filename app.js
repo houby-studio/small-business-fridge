@@ -22,6 +22,9 @@ if (config.config.debug) {
 // Functions
 require('./functions/azure-passport')
 
+// Import scheduled tasks
+require('./tasks/daily-report')
+
 // Load routes from routes folder to later app.use them.
 // Access for all
 var indexRouter = require('./routes/index')
@@ -134,7 +137,7 @@ app.use(function (err, req, res, next) {
 })
 
 if (config.config.debug) {
-  // When testing, we want to use self sign for localhost website. In producktion we rely on reverse proxy (nginx/apache etc.)
+  // When testing, we want to use self sign for localhost website. In production we rely on reverse proxy (nginx/apache etc.)
   var options = {
     key: fs.readFileSync('./config/key.pem'),
     cert: fs.readFileSync('./config/cert.pem')

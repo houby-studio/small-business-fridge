@@ -27,6 +27,22 @@ exports.mail = {
 
 }
 
+exports.tasks = {
+
+  dailyReport: {
+    enabled: true,
+    weekDayStart: 1,
+    weekDayEnd: 4,
+    sendHour: 17,
+    sendMinute: 0
+  },
+  weeklyReport: {
+    enabled: true
+
+  }
+
+}
+
 // Creds object containing passport openID configuration
 
 exports.creds = {
