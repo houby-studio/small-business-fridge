@@ -24,6 +24,7 @@ require('./functions/azure-passport')
 
 // Import scheduled tasks
 require('./tasks/daily-report')
+require('./tasks/daily-backup')
 
 // Load routes from routes folder to later app.use them.
 // Access for all

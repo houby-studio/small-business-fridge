@@ -4,6 +4,9 @@ config/config.js
 # API
 api.php
 
+# Database Backup
+database-backup/*.tar.gz
+
 # Logs
 logs
 *.log

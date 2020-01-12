@@ -6,7 +6,7 @@ var User = require('../models/user')
 
 // Schedule rule - should read weekday start and end day + report send hour and minute from config file
 var rule = new schedule.RecurrenceRule()
-rule.dayOfWeek = [0, new schedule.Range(config.tasks.dailyReport.weekDayStart, config.tasks.dailyReport.weekDayEnd)]
+rule.dayOfWeek = new schedule.Range(config.tasks.dailyReport.weekDayStart, config.tasks.dailyReport.weekDayEnd)
 rule.hour = config.tasks.dailyReport.sendHour
 rule.minute = config.tasks.dailyReport.sendMinute
 
