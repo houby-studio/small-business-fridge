@@ -8,6 +8,7 @@ $(document).ready(function () {
       [10, 25, 50, -1],
       [10, 25, 50, 'Vše']
     ],
+    order: [[0, 'desc']],
     stateSave: true
   })
   $('.dataTables_length').addClass('bs-select')

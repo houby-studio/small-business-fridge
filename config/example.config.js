@@ -32,13 +32,18 @@ exports.tasks = {
   dailyReport: {
     enabled: true,
     weekDayStart: 1,
-    weekDayEnd: 4,
+    weekDayEnd: 5,
     sendHour: 17,
-    sendMinute: 0
+    sendMinute: 30
   },
   weeklyReport: {
     enabled: true
-
+  },
+  dailyBackup: {
+    enabled: true,
+    daysToKeep: 14,
+    backupHour: 23,
+    backupMinute: 30
   }
 
 }
