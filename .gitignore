@@ -1,10 +1,11 @@
 # Config
 config/config.js
+config/*.pem
 
 # API
 api.php
 
-# Database Backup
+# Database Backups
 database-backup/*.tar.gz
 
 # Logs
