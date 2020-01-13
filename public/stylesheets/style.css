@@ -35,6 +35,24 @@ body {
     max-height: 13rem !important;
 }
 
+.link-no-style {
+    text-decoration: none;
+    color: inherit;
+}
+
+.link-no-style:hover {
+    text-decoration: none;
+    color: inherit;
+}
+
+.text-button {
+    color: white;
+}
+
+.text-button:hover {
+    text-decoration: none;
+}
+
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button {
     -webkit-appearance: none;
@@ -47,10 +65,6 @@ input[type=number] {
 }
 
 @media screen and (max-width: 991px) {
-    .btn {
-        width: 100% !important;
-    }
-
     .float-right {
         float: none !important;
     }
@@ -59,6 +73,13 @@ input[type=number] {
         width: 100% !important;
     }
 }
+
+@media screen and (max-width: 1199px) {
+    .btn {
+        width: 100% !important;
+    }
+}
+
 
 @media screen and (min-width: 1200px) {
     .hide-xl {
