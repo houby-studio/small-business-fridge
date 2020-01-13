@@ -73,7 +73,7 @@ exports.dbAutoBackUp = () => {
     }
 
     // Command for mongodb dump process
-    const cmd = 'mongodump --uri ' + config.config.db.connstr + ' --archive=' + newBackupPath
+    const cmd = 'mongodump --forceTableScan --uri ' + config.config.db.connstr + ' --archive=' + newBackupPath
 
     exec(cmd, (error, stdout, stderr) => {
       if (this.empty(error)) {
