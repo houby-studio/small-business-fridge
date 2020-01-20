@@ -2,9 +2,6 @@
 config/config.js
 config/*.pem
 
-# API
-api.php
-
 # Database Backups
 database-backup/*.tar.gz
 
