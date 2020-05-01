@@ -7,7 +7,9 @@
     "lint": "eslint .",
     "make-env": "cp ./config/example.config.js ./config/config.js && bash ./test/setup_env.sh",
     "test": "mocha test --check-leaks --exit --timeout 5000 --globals __coverage__",
-    "test-coverage": "nyc npm test && nyc report --reporter=text-lcov | coveralls"
+    "test-coverage": "nyc npm test && nyc report --reporter=text-lcov | coveralls",
+    "snyk-protect": "snyk protect",
+    "prepare": "npm run snyk-protect"
   },
   "dependencies": {
     "connect-mongo": "^3.2.0",
@@ -25,7 +27,8 @@
     "nodemailer": "^6.4.1",
     "passport": "^0.4.1",
     "passport-azure-ad": "^4.2.1",
-    "qrcode": "^1.4.4"
+    "qrcode": "^1.4.4",
+    "snyk": "^1.316.1"
   },
   "devDependencies": {
     "chai": "*",
@@ -44,5 +47,6 @@
     "resnap": "^1.0.1",
     "sinon": "^7.5.0",
     "supertest": "^4.0.2"
-  }
+  },
+  "snyk": true
 }
