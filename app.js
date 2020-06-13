@@ -5,7 +5,9 @@ var methodOverride = require('method-override')
 var path = require('path') // used for handling paths which held express files
 var cookieParser = require('cookie-parser')
 var expressSession = require('express-session')
+var handlebars = require('handlebars')
 var expressHbs = require('express-handlebars') // extended handlebars functionality
+const { allowInsecurePrototypeAccess } = require('@handlebars/allow-prototype-access')
 var mongoose = require('mongoose') // database
 mongoose.set('useNewUrlParser', true)
 mongoose.set('useFindAndModify', false)
@@ -43,6 +45,9 @@ var paymentsRouter = require('./routes/payments')
 var stockRouter = require('./routes/stock')
 // Access for admins
 var dashboardRouter = require('./routes/admin/admin_dashboard')
+// Access for kiosk
+var kioskKeypadRouter = require('./routes/kiosk_keypad')
+var kioskShopRouter = require('./routes/kiosk_shop')
 // Passport routes
 var loginRouter = require('./routes/login')
 var logoutRouter = require('./routes/logout')
@@ -62,10 +67,12 @@ mongoose.connect(config.config.db.connstr, {
 // View engine setup
 app.engine('.hbs', expressHbs({
   defaultLayout: 'layout',
-  extname: '.hbs'
+  extname: '.hbs',
+  handlebars: allowInsecurePrototypeAccess(handlebars)
 }))
 app.enable('trust proxy')
 app.set('view engine', '.hbs')
+app.enable('view cache')
 app.use(methodOverride())
 app.use(express.json())
 app.use(express.static(path.join(__dirname, 'public')))
@@ -111,6 +118,9 @@ app.use('/dashboard', dashboardRouter)
 app.use('/admin_orders', ordersRouter)
 app.use('/admin_invoice', invoiceRouter)
 app.use('/admin_payments', paymentsRouter)
+// Access for kiosk
+app.use('/kiosk_keypad', kioskKeypadRouter)
+app.use('/kiosk_shop', kioskShopRouter)
 // Passport routes
 app.use('/login', loginRouter)
 app.use('/logout', logoutRouter)

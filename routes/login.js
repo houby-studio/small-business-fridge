@@ -2,7 +2,7 @@ var express = require('express')
 var router = express.Router()
 var passport = require('passport')
 
-/* GET account page. */
+/* GET login page. */
 router.get('/',
   function (req, res, next) {
     passport.authenticate('azuread-openidconnect', {

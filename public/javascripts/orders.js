@@ -1,6 +1,9 @@
 // Bootstrap table customization
 $(document).ready(function () {
   $('#table-orders').DataTable({
+    columnDefs: [
+      { type: 'natural', targets: 2 }
+    ],
     language: {
       url: '//cdn.datatables.net/plug-ins/1.10.19/i18n/Czech.json'
     },

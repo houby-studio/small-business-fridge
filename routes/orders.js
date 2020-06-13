@@ -4,9 +4,10 @@ var moment = require('moment')
 moment.locale('cs')
 var Order = require('../models/order')
 var ensureAuthenticated = require('../functions/ensureAuthenticated').ensureAuthenticated
+var checkKiosk = require('../functions/checkKiosk').checkKiosk
 
-/* GET home page. */
-router.get('/', ensureAuthenticated, function (req, res) {
+/* GET orders page. */
+router.get('/', ensureAuthenticated, checkKiosk, function (req, res) {
   if (req.baseUrl === '/admin_orders') {
     var filter
     if (!req.user.admin) {

@@ -5,12 +5,13 @@ moment.locale('cs')
 var mailer = require('../functions/sendMail')
 var Invoice = require('../models/invoice')
 var ensureAuthenticated = require('../functions/ensureAuthenticated').ensureAuthenticated
+var checkKiosk = require('../functions/checkKiosk').checkKiosk
 var csrf = require('csurf')
 var csrfProtection = csrf()
 router.use(csrfProtection)
 
 // GET invoices page.
-router.get('/', ensureAuthenticated, function (req, res, _next) {
+router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
   var filter = {
     buyerId: req.user._id
   }

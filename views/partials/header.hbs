@@ -1,50 +1,52 @@
-<nav class="navbar sticky-top navbar-expand-lg navbar-dark bg-light">
-  <a class="navbar-brand" href="/">Lednice IT</a>
-  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-    <span class="navbar-toggler-icon"></span>
-  </button>
+{{#unless user.kiosk}}
+  <nav class="navbar sticky-top navbar-expand-lg navbar-dark bg-light">
+    <a class="navbar-brand" href="/">Lednice IT</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
 
-  <div class="collapse navbar-collapse" id="navbarSupportedContent">
-    <ul class="navbar-nav mr-auto">
-      {{#if user}}
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav mr-auto">
+        {{#if user}}
+          <li class="nav-item active">
+            <a class="nav-link" href="/shop"><i class="fas fa-shopping-basket"></i> Nakupovat <span class="sr-only"></span></a>
+          </li>
+        {{/if}}
         <li class="nav-item active">
-          <a class="nav-link" href="/shop"><i class="fas fa-shopping-basket"></i> Nakupovat <span class="sr-only"></span></a>
+          <a class="nav-link" href="/about"><i class="fas fa-question-circle"></i> O aplikaci <span class="sr-only"></span></a>
         </li>
-      {{/if}}
-      <li class="nav-item active">
-        <a class="nav-link" href="/about"><i class="fas fa-question-circle"></i> O aplikaci <span class="sr-only"></span></a>
-      </li>
-      <li class="nav-item active">
-        <a class="nav-link" href="/changelog"><i class="fas fa-clipboard-list"></i> Changelog <span class="sr-only"></span></a>
-      </li>
-    </ul>
-    <ul class="navbar-nav">
-      {{#if user}}
-        <div class="dropdown">
-          <button class="btn btn-secondary dropdown-toggle w-100 nav-link" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{#if user.admin}}<i class="fas fa-user-cog"></i>{{else}}<i class="fas fa-user">{{/if}}</i> {{user.displayName}}</button>
-          <div class="dropdown-menu">
-            {{#if user.admin }}
-              <a class="dropdown-item" href="/dashboard"><i class="fas fa-columns"></i> Dashboard</a>
-              <div role="separator" class="dropdown-divider"></div>
-            {{/if}}
-            <a class="dropdown-item" href="/profile"><i class="fas fa-id-card"></i> Profil</a>
-            <a class="dropdown-item" href="/orders"><i class="fas fa-shopping-cart"></i> Objednávky</a>
-            <a class="dropdown-item" href="/invoices"><i class="fas fa-file-invoice-dollar"></i> Faktury</a>
-            {{#if user.supplier }}
-              <div role="separator" class="dropdown-divider"></div>
-              <a class="dropdown-item" href="/add_products"><i class="fas fa-dolly"></i> Naskladnit</a>
-              <a class="dropdown-item" href="/invoice"><i class="fas fa-cash-register"></i> Fakturace</a>
-              <a class="dropdown-item" href="/payments"><i class="fas fa-file-invoice"></i> Platby</a>
-              <a class="dropdown-item" href="/stock"><i class="fas fa-boxes"></i> Stav skladu</a>
-            {{/if}}
+        <li class="nav-item active">
+          <a class="nav-link" href="/changelog"><i class="fas fa-clipboard-list"></i> Changelog <span class="sr-only"></span></a>
+        </li>
+      </ul>
+      <ul class="navbar-nav">
+        {{#if user}}
+          <div class="dropdown">
+            <button class="btn btn-secondary dropdown-toggle w-100 nav-link" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{#if user.admin}}<i class="fas fa-user-cog"></i>{{else}}<i class="fas fa-user">{{/if}}</i> {{user.displayName}}</button>
+            <div class="dropdown-menu">
+              {{#if user.admin }}
+                <a class="dropdown-item" href="/dashboard"><i class="fas fa-columns"></i> Dashboard</a>
+                <div role="separator" class="dropdown-divider"></div>
+              {{/if}}
+              <a class="dropdown-item" href="/profile"><i class="fas fa-id-card"></i> Profil</a>
+              <a class="dropdown-item" href="/orders"><i class="fas fa-shopping-cart"></i> Objednávky</a>
+              <a class="dropdown-item" href="/invoices"><i class="fas fa-file-invoice-dollar"></i> Faktury</a>
+              {{#if user.supplier }}
+                <div role="separator" class="dropdown-divider"></div>
+                <a class="dropdown-item" href="/add_products"><i class="fas fa-dolly"></i> Naskladnit</a>
+                <a class="dropdown-item" href="/invoice"><i class="fas fa-cash-register"></i> Fakturace</a>
+                <a class="dropdown-item" href="/payments"><i class="fas fa-file-invoice"></i> Platby</a>
+                <a class="dropdown-item" href="/stock"><i class="fas fa-boxes"></i> Stav skladu</a>
+              {{/if}}
+            </div>
           </div>
-        </div>
-        <a class="btn btn-danger nav-link" href="/logout"><i class="fas fa-sign-out-alt"></i> Odhlásit</a>
-      {{else}}
-        <li class="nav-item">
-          <a class="btn btn-success nav-link" href="/login"><i class="fas fa-sign-in-alt"></i> Přihlásit</a>
-        </li>
-      {{/if}}
-    </ul>
-  </div>
-</nav>
+          <a class="btn btn-danger nav-link" href="/logout"><i class="fas fa-sign-out-alt"></i> Odhlásit</a>
+        {{else}}
+          <li class="nav-item">
+            <a class="btn btn-success nav-link" href="/login"><i class="fas fa-sign-in-alt"></i> Přihlásit</a>
+          </li>
+        {{/if}}
+      </ul>
+    </div>
+  </nav>
+{{/unless}}

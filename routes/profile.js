@@ -2,8 +2,10 @@ var express = require('express')
 var router = express.Router()
 var User = require('../models/user')
 var ensureAuthenticated = require('../functions/ensureAuthenticated').ensureAuthenticated
+var checkKiosk = require('../functions/checkKiosk').checkKiosk
 
-router.get('/', ensureAuthenticated, function (req, res, next) {
+/* GET profile page. */
+router.get('/', ensureAuthenticated, checkKiosk, function (req, res, next) {
   res.render('shop/profile', {
     title: 'Profil | Lednice IT',
     user: req.user

@@ -9,7 +9,7 @@ var csrf = require('csurf')
 var csrfProtection = csrf()
 router.use(csrfProtection)
 
-// GET supplier payments page.
+/* GET supplier payments page. */
 router.get('/', ensureAuthenticated, function (req, res, _next) {
   if (!req.user.supplier) {
     res.redirect('/')

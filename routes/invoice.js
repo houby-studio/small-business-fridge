@@ -9,9 +9,10 @@ var Delivery = require('../models/delivery')
 var Order = require('../models/order')
 var Invoice = require('../models/invoice')
 var ensureAuthenticated = require('../functions/ensureAuthenticated').ensureAuthenticated
+var checkKiosk = require('../functions/checkKiosk').checkKiosk
 
 // GET supplier invoice page.
-router.get('/', ensureAuthenticated, function (req, res, _next) {
+router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
   if (!req.user.supplier) {
     res.redirect('/')
     return

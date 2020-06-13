@@ -31,6 +31,10 @@ var schema = new Schema({
     type: Boolean,
     default: false
   },
+  kiosk: {
+    type: Boolean,
+    default: false
+  },
   showAllProducts: {
     type: Boolean,
     default: false

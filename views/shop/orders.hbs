@@ -1,21 +1,3 @@
-{{!-- <div class="row my-3">
-    <div class="col">
-        <div class="card text-center mx-auto h-100">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table-sm">
-                        <tbody>
-                            <tr>
-                                <td class="font-weight-bold">{{ productview.total_num_orders_notinvoiced }}ks</td>
-                                <td class="font-weight-bold">{{ productview.total_sum_orders_notinvoiced }}Kč</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div> --}}
 <div class="row my-3">
     <div class="col">
         <div class="card text-center mx-auto h-100">
@@ -60,7 +42,7 @@
                                 {{ this.productInfo.displayName}}
                             </td>
                             <td>
-                                {{ this.deliveryInfo.price}}Kč
+                               {{ this.deliveryInfo.price}}Kč
                             </td>
                             {{#unless ../admin.buyerId}}
                                 <td>
@@ -100,3 +82,4 @@
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
 <script type="text/javascript" src="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.18/b-1.5.6/b-html5-1.5.6/fh-3.1.4/r-2.2.2/sc-2.0.0/datatables.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/plug-ins/1.10.21/sorting/natural.js"></script>

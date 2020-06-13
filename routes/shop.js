@@ -5,7 +5,8 @@ var Product = require('../models/product')
 var Order = require('../models/order')
 var Delivery = require('../models/delivery')
 var mailer = require('../functions/sendMail')
-var ensureAuthenticated = require('../functions/ensureAuthenticated')
+var ensureAuthenticated = require('../functions/ensureAuthenticated').ensureAuthenticated
+var checkKiosk = require('../functions/checkKiosk').checkKiosk
 var csrf = require('csurf')
 var csrfProtection = csrf()
 router.use(csrfProtection)
@@ -74,18 +75,17 @@ function renderPage (req, res, alert) {
   })
 }
 
-/* GET home page. */
-router.get('/', ensureAuthenticated.ensureAuthenticated, function (req, res) {
+/* GET shop page. */
+router.get('/', ensureAuthenticated, checkKiosk, function (req, res) {
   var alert
   if (req.session.alert) {
     alert = req.session.alert
     delete req.session.alert
   };
-  res.setHeader('ay', 'lmao')
   renderPage(req, res, alert)
 })
 
-router.post('/', ensureAuthenticated.ensureAuthenticated, function (req, res) {
+router.post('/', ensureAuthenticated, checkKiosk, function (req, res) {
   if (req.user.id !== req.body.user_id) {
     var alert = {
       type: 'danger',
