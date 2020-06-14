@@ -1,4 +1,25 @@
 <section>
+    <div class="row my-3">
+        <div class="col">
+            <div class="card text-center mx-auto h-100">
+                <div class="card-body py-1">
+                    <div class="row">
+                        <div class="col-lg">
+                            <input type="button" value="ID: {{customer.keypadId}}" name="customerName" id="customerName" class="btn btn-outline disabled btn-block btn-lg" />
+                        </div>
+                        <div class="col-lg">
+                            <input type="button" value="{{customer.displayName}}" name="customerName" id="customerName" class="btn btn-outline disabled btn-block btn-lg" />
+                        </div>
+                        <div class="col-lg">
+                            <form action="/kiosk_keypad" method="get">
+                                <input type="submit" value="Zpět" name="Submit" id="Submit" class="btn btn-primary btn-block btn-lg waves-effect" />
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>  
+        </div>
+    </div>
     {{# each products }}
         <div class="row">
             {{# each this }}
@@ -10,8 +31,6 @@
                             </div>
                             <img src="{{ this.imagePath }}" class="mx-auto my-2 img-fluid shop-image-thumbnail" alt="{{ this.description }}">
                             <div class="card-body">
-                                {{!-- TODO: hide description https://getbootstrap.com/docs/4.0/components/collapse/#accordion-example --}}
-                                <p class="card-text">{{ this.description }}</p>
                             </div>
                             <div class="card-footer">
                                 <div class="row">
@@ -23,28 +42,16 @@
                                             <i class="fas fa-boxes"></i> <span class="text-danger">0</span>
                                         {{/if }}
                                     </div>
-                                    {{#if this.keypadId}}
-                                        <div class="col-6 text-right text-muted">
-                                            <i class="fas fa-keyboard"></i> {{ this.keypadId }}
-                                        </div>
+                                    <div class="col-6 text-right">
+                                    {{#if this.stock.0.price }}
+                                        <div class="btn btn-link btn-lg link-no-style py-0">{{ this.stock.0.price }} Kč</div>
+                                        <input type="hidden" name="product_price" class="btn btn-link float-right" value="{{ this.stock.0.price }}" readonly>
                                     {{/if}}
-                                </div>
-                            </div>
-                            <div class="card-footer">
-                                <div class="row">
-                                    <div class="col-xl text-left px-0">
-                                        {{#if this.stock.0.price }}
-                                            <div class="btn btn-link btn-lg link-no-style py-0">{{ this.stock.0.price }} Kč</div>
-                                            <input type="hidden" name="product_price" class="btn btn-link float-left" value="{{ this.stock.0.price }}" readonly>
-                                        {{/if}}
-                                    </div>
-                                    <div class="col-xl text-right px-0">
-                                        <input type="submit" class="btn btn-link btn-lg text-button float-right py-0" value="Koupit" {{#unless this.stock.0.amount_left}} disabled {{/unless}}>
                                     </div>
                                 </div>
                                 <input type="hidden" id="product_id" name="product_id" value="{{ this.stock.0._id }}">
                                 <input type="hidden" id="user_id" name="user_id" value="{{ ../../user.id }}">
-                                <input type="hidden" id="customer_id" name="customer_id" value="{{ ../../customer }}">
+                                <input type="hidden" id="customer_id" name="customer_id" value="{{ ../../customer.keypadId }}">
                                 <input type="hidden" id="display_name" name="display_name" value="{{ this.displayName }}">
                                 <input type="hidden" id="image_path" name="image_path" value="{{ this.imagePath }}">
                                 <input type="hidden" name="_csrf" value="{{ ../../csrfToken }}">
@@ -57,3 +64,4 @@
     {{/each}}
 </section>
 <script type="text/javascript" src="/javascripts/form_validate.js"></script>
+<script type="text/javascript" src="/javascripts/kiosk_shop.js"></script>

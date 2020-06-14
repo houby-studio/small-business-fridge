@@ -12,7 +12,7 @@ var csrfProtection = csrf()
 router.use(csrfProtection)
 moment.locale('cs')
 
-function renderPage (req, res, alert) {
+function renderPage (req, res, alert, customer) {
   var filter
   if (req.user.showAllProducts) {
     filter = {}
@@ -64,12 +64,12 @@ function renderPage (req, res, alert) {
     for (var i = 0; i < docs.length; i += chunkSize) {
       productChunks.push(docs.slice(i, i + chunkSize))
     }
-
+    console.log(customer)
     res.render('shop/kiosk_shop', {
       title: 'Kiosek | Lednice IT',
       products: productChunks,
       user: req.user,
-      customer: req.query.customer_id,
+      customer: customer,
       alert: alert,
       csrfToken: req.csrfToken()
     })
@@ -99,11 +99,36 @@ router.get('/', ensureAuthenticated, function (req, res) {
     res.redirect('/logout')
     return
   }
-  if (req.session.alert) {
-    alert = req.session.alert
-    delete req.session.alert
-  }
-  renderPage(req, res, alert)
+  // Find user by keypadId
+  User.findOne({
+    keypadId: req.query.customer_id
+  }, function (err, customer) {
+    if (err) {
+      req.session.alert = {
+        type: 'danger',
+        component: 'web',
+        message: 'Došlo k chybě při komunikaci s databází. Zkuste to prosím znovu.',
+        danger: 1
+      }
+      res.redirect('/kiosk_keypad')
+      return
+    }
+    if (!customer) {
+      req.session.alert = {
+        type: 'danger',
+        component: 'web',
+        message: `Nepodařilo se dohledat zákazníka s ID ${req.query.customer_id}.`,
+        danger: 1
+      }
+      res.redirect('/kiosk_keypad')
+      return
+    }
+    if (req.session.alert) {
+      alert = req.session.alert
+      delete req.session.alert
+    }
+    renderPage(req, res, alert, customer)
+  })
 })
 
 router.post('/', ensureAuthenticated, function (req, res) {
@@ -153,8 +178,6 @@ router.post('/', ensureAuthenticated, function (req, res) {
     newOrder.buyerId = user._id
     newOrder.keypadOrder = true
 
-    /// /////////////////////////////////////////////
-
     Delivery.findOne({
       _id: req.body.product_id
     }, function (err, obj) {
@@ -201,7 +224,7 @@ router.post('/', ensureAuthenticated, function (req, res) {
           }
           req.session.alert = {
             type: 'success',
-            message: `Zakoupili jste ${req.body.display_name} za ${req.body.product_price}Kč.`,
+            message: `Zákazník ${user.displayName} zakoupil ${req.body.display_name} za ${req.body.product_price}Kč.`,
             success: 1
           }
           res.redirect('/kiosk_keypad')
