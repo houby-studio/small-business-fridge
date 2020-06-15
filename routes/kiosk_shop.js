@@ -64,7 +64,6 @@ function renderPage (req, res, alert, customer) {
     for (var i = 0; i < docs.length; i += chunkSize) {
       productChunks.push(docs.slice(i, i + chunkSize))
     }
-    console.log(customer)
     res.render('shop/kiosk_shop', {
       title: 'Kiosek | Lednice IT',
       products: productChunks,
@@ -143,7 +142,6 @@ router.post('/', ensureAuthenticated, function (req, res) {
     return
   }
 
-  console.log('creating new order')
   var newOrder = new Order({
     deliveryId: req.body.product_id
   })
@@ -173,8 +171,6 @@ router.post('/', ensureAuthenticated, function (req, res) {
       return
     }
 
-    console.log('Found user with id ')
-    console.log(user._id)
     newOrder.buyerId = user._id
     newOrder.keypadOrder = true
 
@@ -191,7 +187,6 @@ router.post('/', ensureAuthenticated, function (req, res) {
         res.redirect('/kiosk_keypad')
         return
       }
-      console.log('Found delivery ')
       obj.amount_left--
       obj.save(function (err) {
         if (err) {
@@ -227,12 +222,10 @@ router.post('/', ensureAuthenticated, function (req, res) {
             message: `Zákazník ${user.displayName} zakoupil ${req.body.display_name} za ${req.body.product_price}Kč.`,
             success: 1
           }
+          subject = 'Děkujeme za nákup!'
+          body = `<h1>Výborná volba!</h1><p>Tímto jste si udělali radost:</p><img width="135" height="240" style="width: auto; height: 10rem;" alt="Obrázek zakoupeného produktu" src="cid:image@prdelka.eu"/><p>Název: ${product[0].displayName}<br>Cena: ${product[0].stock[0].price}Kč<br>Kdy: ${moment().format('LLLL')}</p><p>Přijďte zas!</p>`
+          mailer.sendMail(user.email, subject, body, product[0].imagePath)
           res.redirect('/kiosk_keypad')
-          if (req.user.sendMailOnEshopPurchase) {
-            subject = 'Děkujeme za nákup!'
-            body = `<h1>Výborná volba!</h1><p>Tímto jste si udělali radost:</p><img width="135" height="240" style="width: auto; height: 10rem;" alt="Obrázek zakoupeného produktu" src="cid:image@prdelka.eu"/><p>Název: ${req.body.display_name}<br>Cena: ${req.body.product_price}Kč<br>Kdy: ${moment().format('LLLL')}</p><p>Přijďte zas!</p>`
-            mailer.sendMail(req.user.email, subject, body, req.body.image_path)
-          }
         })
       })
     })
