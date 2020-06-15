@@ -223,7 +223,7 @@ router.post('/', ensureAuthenticated, function (req, res) {
             success: 1
           }
           subject = 'Děkujeme za nákup!'
-          body = `<h1>Výborná volba!</h1><p>Tímto jste si udělali radost:</p><img width="135" height="240" style="width: auto; height: 10rem;" alt="Obrázek zakoupeného produktu" src="cid:image@prdelka.eu"/><p>Název: ${product[0].displayName}<br>Cena: ${product[0].stock[0].price}Kč<br>Kdy: ${moment().format('LLLL')}</p><p>Přijďte zas!</p>`
+          body = `<h1>Výborná volba!</h1><p>Tímto jste si udělali radost:</p><img width="135" height="240" style="width: auto; height: 10rem;" alt="Obrázek zakoupeného produktu" src="cid:image@prdelka.eu"/><p>Název: ${req.body.display_name}<br>Cena: ${req.body.product_price}Kč<br>Kdy: ${moment().format('LLLL')}</p><p>Přijďte zas!</p>`
           mailer.sendMail(user.email, subject, body, req.body.image_path)
           res.redirect('/kiosk_keypad')
         })
