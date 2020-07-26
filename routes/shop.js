@@ -52,36 +52,35 @@ function renderPage (req, res, alert) {
         }
       },
       stockSum: {
-        $filter: { // Change to sum
-          input: '$stock',
-          as: 'stock',
-          cond: {
-            $gt: ['$$stock.amount_left', 0]
-          }
-        }
+        $sum: '$stock.amount_left'
       }
+    }
+  },
+  {
+    $sort: {
+      displayName: 1
     }
   }
   ],
-    function (err, docs) {
-      if (err) {
-        res.status(err.status || 500)
-        res.render('error')
-      }
-      var productChunks = []
-      var chunkSize = 4
-      for (var i = 0; i < docs.length; i += chunkSize) {
-        productChunks.push(docs.slice(i, i + chunkSize))
-      }
+  function (err, docs) {
+    if (err) {
+      res.status(err.status || 500)
+      res.render('error')
+    }
+    var productChunks = []
+    var chunkSize = 4
+    for (var i = 0; i < docs.length; i += chunkSize) {
+      productChunks.push(docs.slice(i, i + chunkSize))
+    }
 
-      res.render('shop/shop', {
-        title: 'E-shop | Lednice IT',
-        products: productChunks,
-        user: req.user,
-        alert: alert,
-        csrfToken: req.csrfToken()
-      })
+    res.render('shop/shop', {
+      title: 'E-shop | Lednice IT',
+      products: productChunks,
+      user: req.user,
+      alert: alert,
+      csrfToken: req.csrfToken()
     })
+  })
 }
 
 /* GET shop page. */

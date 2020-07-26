@@ -3,6 +3,8 @@ var config = require('../config/config')
 var mailer = require('./sendMail')
 var passport = require('passport')
 var OIDCStrategy = require('passport-azure-ad').OIDCStrategy
+var express = require('express')
+var router = express.Router()
 
 // Mongoose Data object
 var User = require('../models/user')
@@ -50,6 +52,7 @@ passport.use(new OIDCStrategy({
   nonceMaxAmount: config.creds.nonceMaxAmount,
   useCookieInsteadOfSession: config.creds.useCookieInsteadOfSession,
   cookieEncryptionKeys: config.creds.cookieEncryptionKeys,
+  cookieSameSite: config.creds.cookieSameSite,
   clockSkew: config.creds.clockSkew
 },
 function (iss, sub, profile, accessToken, refreshToken, done) {
@@ -72,6 +75,9 @@ function (iss, sub, profile, accessToken, refreshToken, done) {
           }
           // If user does not exist in database, automatically register as customer (not admin, not supplier, auto increment keypad ID)
           if (!user) {
+            if (!profile._json.email) {
+              return done(1)
+            }
             console.log('Triggered no user, creating new.')
             var newUser = new User()
             newUser.oid = profile.oid
@@ -109,11 +115,6 @@ function (iss, sub, profile, accessToken, refreshToken, done) {
               })
             })
           }
-          /* else {
-                         console.log('Profile found in database.');
-                         profile.admin = user.admin;
-                         profile.supplier = user.supplier;
-                       } */
         })
         // users.push(profile); in case you want to use in-memory array instead of querying database
         return done(null, profile)

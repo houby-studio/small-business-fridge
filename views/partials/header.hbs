@@ -1,5 +1,5 @@
 {{#unless user.kiosk}}
-  <nav class="navbar sticky-top navbar-expand-lg navbar-dark bg-light">
+  <nav class="navbar sticky-top navbar-expand-lg navbar-dark bg-dark">
     <a class="navbar-brand" href="/">Lednice IT</a>
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
@@ -22,7 +22,7 @@
       <ul class="navbar-nav">
         {{#if user}}
           <div class="dropdown">
-            <button class="btn btn-secondary dropdown-toggle w-100 nav-link" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{#if user.admin}}<i class="fas fa-user-cog"></i>{{else}}<i class="fas fa-user">{{/if}}</i> {{user.displayName}}</button>
+            <button class="btn btn-secondary dropdown-toggle w-100 nav-link text-white" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{#if user.admin}}<i class="fas fa-user-cog"></i>{{else}}<i class="fas fa-user">{{/if}}</i> {{user.displayName}}</button>
             <div class="dropdown-menu">
               {{#if user.admin }}
                 <a class="dropdown-item" href="/dashboard"><i class="fas fa-columns"></i> Dashboard</a>
@@ -40,10 +40,10 @@
               {{/if}}
             </div>
           </div>
-          <a class="btn btn-danger nav-link" href="/logout"><i class="fas fa-sign-out-alt"></i> Odhlásit</a>
+          <a class="btn btn-danger nav-link text-white" href="/logout"><i class="fas fa-sign-out-alt"></i> Odhlásit</a>
         {{else}}
           <li class="nav-item">
-            <a class="btn btn-success nav-link" href="/login"><i class="fas fa-sign-in-alt"></i> Přihlásit</a>
+            <a class="btn btn-success nav-link text-white" href="/login"><i class="fas fa-sign-in-alt"></i> Přihlásit</a>
           </li>
         {{/if}}
       </ul>

@@ -60,10 +60,6 @@ Go checkout [Wiki](https://github.com/houby-studio/small-bussiness-fridge/wiki) 
 ### Deliver
 ![image4](https://raw.githubusercontent.com/wiki/houby-studio/small-bussiness-fridge/images/sbf_deliver.png)  
 
-## Changelog
-
-2019-10-10 - 1.0.0 - Released first full version which offers basic functionality and is pretty much usable. Some operations like changing user roles (admin or supplier) or adding new product types require direct database access as it doesn't currently have any form on website to handle it.
-
 ## License
 
 ### MIT
@@ -75,3 +71,9 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+## Development
+
+For linux users, you may want to allow node to bind to system protected ports
+
+`sudo setcap 'cap_net_bind_service=+ep' $(readlink -f $(which node))`

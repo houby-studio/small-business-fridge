@@ -28,7 +28,7 @@ router.get('/', ensureAuthenticated, function (req, res) {
       product_image: docs.map(a => a.imagePath)
     })
 
-    res.render('shop/add_products', {
+    res.render('shop/new_product', {
       title: 'Naskladnit | Lednice IT',
       products: docs,
       user: req.user,
@@ -54,7 +54,7 @@ router.post('/', ensureAuthenticated, function (req, res) {
         danger: 1
       }
       req.session.alert = alert
-      res.redirect('/add_products')
+      res.redirect('/new_product')
       return
     }
     var newDelivery = new Delivery({
@@ -75,7 +75,7 @@ router.post('/', ensureAuthenticated, function (req, res) {
           danger: 1
         }
         req.session.alert = alert
-        res.redirect('/add_products')
+        res.redirect('/new_product')
       }
       alert = {
         type: 'success',
@@ -83,7 +83,7 @@ router.post('/', ensureAuthenticated, function (req, res) {
         success: 1
       }
       req.session.alert = alert
-      res.redirect('/add_products')
+      res.redirect('/new_product')
     })
   })
 })

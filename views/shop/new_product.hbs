@@ -1,7 +1,7 @@
 <form id="supplier_add_products" class="needs-validation" method="POST" action="/add_products" novalidate>
     <div class="card w-50 mx-auto w-100-lg">
         <div class="card-header h4 text-center">
-            Naskladnit
+            Nový produkt
         </div>
         <div class="card-body">
             <div class="form-row">
@@ -12,32 +12,25 @@
                     <div class="form-row">
                         <div class="form-group col">
                             <label for="product_id">Název produktu</label>
-                            <select name="product_id" id="product_id" class="custom-select" onchange="loadProductImage()" required>
-                                <option value="" selected>Vyberte ze seznamu..</option>
-                                {{# each products }}
-                                <option value="{{ this.id }}">{{ this.displayName }}</option>
-                                {{/each}}
-                            </select>
+                            <input type="text" name="product_name" class="form-control" placeholder="Název" required>
                         </div>
                     </div>
-                    <div class="form-row mb-3">
-                        <div class="col">
-                            <div class="input-group">
-                                <input type="number" min="1" step="1" pattern="\d+" name="product_amount" class="form-control" placeholder="Počet" required>
-                                <div class="input-group-append">
-                                    <div class="input-group-text">Ks</div>
-                                </div>
-                            </div>
+                    <div class="form-row">
+                        <div class="form-group col">
+                            <label for="product_id">Popis produktu</label>
+                            <input type="text" name="product_description" class="form-control" placeholder="Popis" required>
                         </div>
                     </div>
-                    <div class="form-row mb-3">
-                        <div class="col">
-                            <div class="input-group">
-                                <input type="number" min="1" step="1" pattern="\d+" name="product_price" class="form-control" placeholder="Cena" required>
-                                <div class="input-group-append">
-                                    <div class="input-group-text">Kč</div>
-                                </div>
-                            </div>
+                    <div class="form-row">
+                        <div class="form-group col">
+                            <label for="product_id">ID klávesnice</label>
+                            <input type="number" min="1" step="1" pattern="\d+" name="product_keypadid" class="form-control" placeholder="ID">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col">
+                            <label for="product_id">Obrázek</label>
+                            <input type="file" class="form-control-file" name="product_image">
                         </div>
                     </div>
                 </div>

@@ -43,6 +43,7 @@ var addProductsRouter = require('./routes/add_products')
 var invoiceRouter = require('./routes/invoice')
 var paymentsRouter = require('./routes/payments')
 var stockRouter = require('./routes/stock')
+var newProductRouter = require('./routes/new_product')
 // Access for admins
 var dashboardRouter = require('./routes/admin/admin_dashboard')
 // Access for kiosk
@@ -87,6 +88,7 @@ app.use(expressSession({
   secret: config.config.cookie_secret,
   httpOnly: true,
   secure: true,
+  sameSite: 'None',
   resave: false,
   saveUninitialized: false,
   store: new MongoStore({
@@ -113,6 +115,7 @@ app.use('/add_products', addProductsRouter)
 app.use('/invoice', invoiceRouter)
 app.use('/payments', paymentsRouter)
 app.use('/stock', stockRouter)
+app.use('/new_product', newProductRouter)
 // Access for admins
 app.use('/dashboard', dashboardRouter)
 app.use('/admin_orders', ordersRouter)
@@ -154,7 +157,7 @@ if (config.config.debug) {
     cert: fs.readFileSync('./config/cert.pem')
   }
   // Create an HTTPS service identical to the HTTP service.
-  https.createServer(options, app).listen(443)
+  https.createServer(options, app).listen(config.config.app.portSsl || 443)
 }
 
 module.exports = app
