@@ -33,9 +33,9 @@ function renderPage (req, res, alert) {
       as: 'stock'
     }
   },
-  {
+  { // Depending on user preferences, get either all products or only ones in stock
     $match: filter
-  }, // Depending on user preferences, get either all products or only ones in stock
+  },
   {
     $project: {
       keypadId: '$keypadId',
@@ -50,29 +50,38 @@ function renderPage (req, res, alert) {
             $gt: ['$$stock.amount_left', 0]
           }
         }
+      },
+      stockSum: {
+        $filter: { // Change to sum
+          input: '$stock',
+          as: 'stock',
+          cond: {
+            $gt: ['$$stock.amount_left', 0]
+          }
+        }
       }
     }
   }
   ],
-  function (err, docs) {
-    if (err) {
-      res.status(err.status || 500)
-      res.render('error')
-    }
-    var productChunks = []
-    var chunkSize = 4
-    for (var i = 0; i < docs.length; i += chunkSize) {
-      productChunks.push(docs.slice(i, i + chunkSize))
-    }
+    function (err, docs) {
+      if (err) {
+        res.status(err.status || 500)
+        res.render('error')
+      }
+      var productChunks = []
+      var chunkSize = 4
+      for (var i = 0; i < docs.length; i += chunkSize) {
+        productChunks.push(docs.slice(i, i + chunkSize))
+      }
 
-    res.render('shop/shop', {
-      title: 'E-shop | Lednice IT',
-      products: productChunks,
-      user: req.user,
-      alert: alert,
-      csrfToken: req.csrfToken()
+      res.render('shop/shop', {
+        title: 'E-shop | Lednice IT',
+        products: productChunks,
+        user: req.user,
+        alert: alert,
+        csrfToken: req.csrfToken()
+      })
     })
-  })
 }
 
 /* GET shop page. */
@@ -85,6 +94,7 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res) {
   renderPage(req, res, alert)
 })
 
+/* POST shop page. */
 router.post('/', ensureAuthenticated, checkKiosk, function (req, res) {
   if (req.user.id !== req.body.user_id) {
     var alert = {
