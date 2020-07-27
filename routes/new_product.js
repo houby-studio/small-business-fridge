@@ -2,12 +2,23 @@ var express = require('express')
 var router = express.Router()
 var ensureAuthenticated = require('../functions/ensureAuthenticated').ensureAuthenticated
 var Product = require('../models/product')
-var Delivery = require('../models/delivery')
+var multer = require('multer')
 var csrf = require('csurf')
 var csrfProtection = csrf()
 router.use(csrfProtection)
 
-/* GET add product page. */
+// Multer options - Save to public/images and keep original name
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'public/images/')
+  },
+  filename: function (req, file, cb) {
+    cb(null, file.originalname)
+  }
+})
+const upload = multer({ storage: storage })
+
+/* GET new product page. */
 router.get('/', ensureAuthenticated, function (req, res) {
   if (!req.user.supplier) {
     res.redirect('/')
@@ -17,36 +28,35 @@ router.get('/', ensureAuthenticated, function (req, res) {
     var alert = req.session.alert
     delete req.session.alert
   }
-  Product.find().sort([['displayName', 1]]).exec(function (err, docs) {
-    if (err) {
-      res.status(err.status || 500)
-      res.render('error')
-    }
-
-    docs.client_data = JSON.stringify({
-      product_id: docs.map(a => a.id, b => b.imagePath),
-      product_image: docs.map(a => a.imagePath)
-    })
-
-    res.render('shop/new_product', {
-      title: 'Naskladnit | Lednice IT',
-      products: docs,
-      user: req.user,
-      alert: alert,
-      csrfToken: req.csrfToken()
-    })
+  res.render('shop/new_product', {
+    title: 'Nový produkt | Lednice IT',
+    user: req.user,
+    alert: alert,
+    csrfToken: req.csrfToken()
   })
 })
 
-/* POST add product form handle. */
-router.post('/', ensureAuthenticated, function (req, res) {
+/* POST new product form handle. */
+router.post('/', ensureAuthenticated, upload.single('product_image'), function (req, res) {
   if (!req.user.supplier) {
     res.redirect('/')
     return
   }
 
-  Product.findById(req.body.product_id, function (err, prod) {
+  // If image was not uploaded, use preview dummy image
+  if (!req.file) {
+    req.file = { filename: 'preview.png' }
+  }
+
+  var newProduct = new Product({
+    keypadId: req.body.product_keypadid,
+    displayName: req.body.product_name,
+    description: req.body.product_description,
+    imagePath: './images/' + req.file.filename
+  })
+  newProduct.save(function (err) {
     if (err) {
+      console.log(err)
       var alert = {
         type: 'danger',
         component: 'db',
@@ -57,34 +67,13 @@ router.post('/', ensureAuthenticated, function (req, res) {
       res.redirect('/new_product')
       return
     }
-    var newDelivery = new Delivery({
-      supplierId: req.user.id,
-      productId: req.body.product_id,
-      amount_supplied: req.body.product_amount,
-      amount_left: req.body.product_amount,
-      price: req.body.product_price
-    })
-
-    newDelivery.save(function (err) {
-      var alert
-      if (err) {
-        alert = {
-          type: 'danger',
-          component: 'db',
-          message: err.message,
-          danger: 1
-        }
-        req.session.alert = alert
-        res.redirect('/new_product')
-      }
-      alert = {
-        type: 'success',
-        message: `${prod.displayName} přidán v počtu ${req.body.product_amount}ks za ${req.body.product_price}Kč.`,
-        success: 1
-      }
-      req.session.alert = alert
-      res.redirect('/new_product')
-    })
+    alert = {
+      type: 'success',
+      message: `Produkt ${req.body.product_name} přidán do databáze.`,
+      success: 1
+    }
+    req.session.alert = alert
+    res.redirect('/new_product')
   })
 })
 

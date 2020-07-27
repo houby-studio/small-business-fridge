@@ -126,6 +126,6 @@ exports.creds = {
   // Optional. The clock skew allowed in token validation, the default value is 300 seconds.
   clockSkew: null,
 
-  destroySessionUrl: '/'
+  destroySessionUrl: 'https://localhost/'
 
 }

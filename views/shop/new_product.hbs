@@ -1,4 +1,4 @@
-<form id="supplier_add_products" class="needs-validation" method="POST" action="/add_products" novalidate>
+<form id="admin_new_product" class="needs-validation" method="POST" action="/new_product?_csrf={{ csrfToken }}" enctype="multipart/form-data" novalidate>
     <div class="card w-50 mx-auto w-100-lg">
         <div class="card-header h4 text-center">
             Nový produkt
@@ -6,7 +6,13 @@
         <div class="card-body">
             <div class="form-row">
                 <div class="col-lg-2 text-center px-0">
-                    <img src="" alt="" id="product_img" class="img-fluid form-image-thumbnail">
+                    <div class="form-row">
+                        <img src="/images/preview.png" alt="Preview" id="product_img" class="img-fluid form-image-thumbnail">
+                    </div>
+                    <div class="form-row text-left">
+                        <p>Doporučená velikost:</p>
+                        <p>800x450px</p>
+                    </div>
                 </div> 
                 <div class="col-lg-10">
                     <div class="form-row">
@@ -30,7 +36,7 @@
                     <div class="form-row">
                         <div class="form-group col">
                             <label for="product_id">Obrázek</label>
-                            <input type="file" class="form-control-file" name="product_image">
+                            <input type="file" class="form-control-file" name="product_image" accept="image/png" onchange="readURL(this);">
                         </div>
                     </div>
                 </div>
@@ -47,12 +53,7 @@
             </div>
         </div>
     </div>
-    <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+    {{!-- <input type="hidden" name="_csrf" value="{{ csrfToken }}"> --}}
 </form>
-<script type="text/javascript">
-
-   var json_data = {{{ products.client_data }}}
-
-</script>
-<script type="text/javascript" src="/javascripts/add_products_imageLoad.js"></script>
+<script type="text/javascript" src="/javascripts/new_product_imageLoad.js"></script>
 <script type="text/javascript" src="/javascripts/form_validate.js"></script>
