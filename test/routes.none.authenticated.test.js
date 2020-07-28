@@ -184,7 +184,7 @@ describe('Routes access with no user logged in', () => {
         .end((_err, res) => {
           res.should.have.not.cookie()
           res.should.have.redirect
-          res.should.have.redirectTo(/127\.0\.0\.1:\d+\//)
+          res.should.have.redirectTo('https://login.microsoftonline.com/common/oauth2/logout?post_logout_redirect_uri=https://localhost/')
           done()
         })
     })
