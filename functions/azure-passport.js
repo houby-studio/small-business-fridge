@@ -3,8 +3,6 @@ var config = require('../config/config')
 var mailer = require('./sendMail')
 var passport = require('passport')
 var OIDCStrategy = require('passport-azure-ad').OIDCStrategy
-var express = require('express')
-var router = express.Router()
 
 // Mongoose Data object
 var User = require('../models/user')
