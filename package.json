@@ -20,7 +20,7 @@
     "google-palette": "^1.1.0",
     "http-errors": "~1.7.3",
     "method-override": "^3.0.0",
-    "moment": "^2.27.0",
+    "moment": "^2.28.0",
     "mongoose": "^5.9.25",
     "mongoose-unique-validator": "^2.0.3",
     "multer": "^1.4.2",
