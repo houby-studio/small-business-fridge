@@ -1,26 +1,25 @@
 var nodemailer = require('nodemailer')
-var config = require('../config/config')
 
 module.exports = {
 
-  // Sends e-mail. Most parameters taken from config. Function takes recipient, subject, body and optional one image.
+  // Sends e-mail. Most parameters taken from ENV. Function takes recipient, subject, body and optional one image.
   // Example: sendMail('james.jameson@example.com', 'Hello there', '<p>Some lengthy message</p>', './images/logo.png')
   sendMail: function (mailto, mailsubject, mailbody, image) {
     // In case system error occurs, send warning to mail obtained from config.
     if (mailto === 'system') {
-      mailto = config.mail.systemMail
+      mailto = process.env.MAIL_SYSTEM
     }
 
     var transporter = nodemailer.createTransport({
-      port: config.mail.port,
-      host: config.mail.host,
+      port: process.env.MAIL_PORT,
+      host: process.env.MAIL_HOST,
       tls: {
         rejectUnauthorized: false
       }
     })
 
     var mailOptions = {
-      from: config.mail.from,
+      from: process.env.MAIL_FROM,
       to: mailto,
       subject: mailsubject,
       html: mailbody

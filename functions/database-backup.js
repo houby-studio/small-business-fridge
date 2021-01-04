@@ -3,15 +3,13 @@ const _ = require('lodash')
 const exec = require('child_process').exec
 const path = require('path')
 
-var config = require('../config/config.js') // configuration file
-
 // Concatenate root directory path with our backup folder.
 const backupDirPath = path.join(__dirname, '../database-backup/backup')
 
 const dbOptions = {
   autoBackup: true,
   removeOldBackup: true,
-  keepLastDaysBackup: config.tasks.dailyBackup.daysToKeep,
+  keepLastDaysBackup: process.env.TASKS_DAILY_BACKUP_DAYS_TO_KEEP,
   autoBackupPath: backupDirPath
 }
 
@@ -57,7 +55,7 @@ exports.dbAutoBackUp = () => {
 
     // New backup path for current backup process
     const newBackupPath = dbOptions.autoBackupPath + '-mongodump-' + newBackupDir + '.tar.gz'
-    // check for remove old backup after keeping # of days given in configuration
+    // check for remove old backup after keeping # of days given in ENV
     if (dbOptions.removeOldBackup === true) {
       beforeDate = _.clone(currentDate)
       // Substract number of days to keep backup and remove old backup
@@ -73,14 +71,14 @@ exports.dbAutoBackUp = () => {
     }
 
     // Command for mongodb dump process
-    const cmd = 'mongodump --forceTableScan --uri="' + config.config.db.connstr + '" --archive=' + newBackupPath
+    const cmd = 'mongodump --forceTableScan --uri="' + process.env.DB_CONNECTION_STRING + '" --archive=' + newBackupPath
 
     exec(cmd, (error, stdout, stderr) => {
       if (this.empty(error)) {
-        // check for remove old backup after keeping # of days given in configuration.
+        // check for remove old backup after keeping # of days given in ENV.
         if (dbOptions.removeOldBackup === true) {
           if (fs.existsSync(oldBackupPath)) {
-            exec('rm -rf ' + oldBackupPath, _err => {})
+            exec('rm -rf ' + oldBackupPath, _err => { })
           }
         }
       } else {

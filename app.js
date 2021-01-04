@@ -15,8 +15,22 @@ mongoose.set('useCreateIndex', true)
 mongoose.set('useUnifiedTopology', true)
 var MongoStore = require('connect-mongo')(expressSession)
 var passport = require('passport') // authentication method
-var config = require('./config/config.js') // configuration file
-if (config.config.debug) {
+
+const dotenv = require('dotenv');
+const dotenvParseVariables = require('dotenv-parse-variables');
+let env = dotenv.config({})
+if (env.error) throw env.error;
+env = dotenvParseVariables(env.parsed);
+
+if (process.env.DEBUG) {
+  console.log(process.env.DEBUG)
+}
+
+if (env.DEBUG) {
+  console.log(env.DEBUG)
+}
+
+if (process.env.DEBUG) {
   var https = require('https') // Using HTTPS for debug
   var fs = require('fs') // Loading certificate from file for debug
 }
@@ -61,7 +75,7 @@ var customerName = require('./routes/api/customerName')
 
 // Express app and database connection
 var app = express()
-mongoose.connect(config.config.db.connstr, {
+mongoose.connect(process.env.DB_CONNECTION_STRING, {
   useNewUrlParser: true
 })
 
@@ -80,12 +94,12 @@ app.use(express.static(path.join(__dirname, 'public')))
 app.use(express.urlencoded({
   extended: true
 }))
-app.use(cookieParser(config.config.parser_secret))
+app.use(cookieParser(process.env.PARSER_SECRET))
 app.use(expressSession({
   cookie: {
     maxAge: 30 * 24 * 60 * 60 * 1000
   },
-  secret: config.config.cookie_secret,
+  secret: process.env.COOKIE_SECRET,
   httpOnly: true,
   secure: true,
   sameSite: 'None',
@@ -150,14 +164,14 @@ app.use(function (err, req, res, next) {
   res.render('error')
 })
 
-if (config.config.debug) {
+if (process.env.DEBUG) {
   // When testing, we want to use self sign for localhost website. In production we rely on reverse proxy (nginx/apache etc.)
   var options = {
     key: fs.readFileSync('./config/key.pem'),
     cert: fs.readFileSync('./config/cert.pem')
   }
   // Create an HTTPS service identical to the HTTP service.
-  https.createServer(options, app).listen(config.config.app.portSsl || 443)
+  https.createServer(options, app).listen(process.env.APP_PORT_SSL || 443)
 }
 
 module.exports = app

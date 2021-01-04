@@ -1,10 +1,9 @@
 var Product = require('../models/product')
 var User = require('../models/user')
 var Delivery = require('../models/delivery')
-var config = require('../config/config')
 var mongoose = require('mongoose')
 
-mongoose.connect(config.config.db.connstr, {
+mongoose.connect(process.env.DB_CONNECTION_STRING, {
   useNewUrlParser: true
 })
 

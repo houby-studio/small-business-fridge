@@ -1,4 +1,3 @@
-var config = require('../config/config')
 var responseJson
 
 module.exports = {
@@ -6,7 +5,7 @@ module.exports = {
   // Checks if request contains expected API secret. If it does, proceed without problem, otherwise respond with error JSON.
   ensureAuthenticatedAPI: function (req, res, next) {
     // Check if request header contains API secret key
-    if (req.get('sbf-API-secret') !== config.config.api_secret) {
+    if (req.get('sbf-API-secret') !== process.env.API_SECRET) {
       res.status(401)
       res.set('Content-Type', 'application/problem+json')
       responseJson = {
