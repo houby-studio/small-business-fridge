@@ -422,10 +422,12 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
       res.redirect('/')
       return
     }
-
+    console.log('Gettin there')
     // Loop through array for each user
     for (let i = 0; i < docs.length; i++) {
       // Create new invoice to be sent to user
+      console.log('Creatin invoice')
+      console.log(docs[i])
       var newInvoice = new Invoice({
         buyerId: docs[i].user._id,
         supplierId: req.user.id,

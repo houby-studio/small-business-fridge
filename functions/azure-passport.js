@@ -3,11 +3,12 @@ var mailer = require('./sendMail')
 var passport = require('passport')
 var OIDCStrategy = require('passport-azure-ad').OIDCStrategy
 
-// For each 
-var cookieEncryptionKeys = {
-  key: process.env.CREDS_COOKIE_ENCRYPTION_KEY,
-  iv: process.env.CREDS_COOKIE_ENCRYPTION_VALUE
-}
+var cookieEncryptionKeys = [
+  {
+    key: process.env.CREDS_COOKIE_ENCRYPTION_KEY,
+    iv: process.env.CREDS_COOKIE_ENCRYPTION_VALUE
+  }
+]
 
 // Mongoose Data object
 var User = require('../models/user')
@@ -43,20 +44,18 @@ passport.use(new OIDCStrategy({
   responseType: process.env.CREDS_RESPONSE_TYPE,
   responseMode: process.env.CREDS_RESPONSE_MODE,
   redirectUrl: process.env.CREDS_REDIRECT_URL,
-  allowHttpForRedirectUrl: process.env.CREDS_ALLOW_HTTP_FOR_REDIRECT_URL,
+  allowHttpForRedirectUrl: process.env.CREDS_ALLOW_HTTP_FOR_REDIRECT_URL.toLowerCase() === 'true' || false,
   clientSecret: process.env.CREDS_CLIENT_SECRET,
-  validateIssuer: process.env.CREDS_VALIDATE_ISSUER,
-  isB2C: process.env.CREDS_ISB2C,
+  validateIssuer: process.env.CREDS_VALIDATE_ISSUER.toLowerCase() === 'true' || false,
+  isB2C: process.env.CREDS_ISB2C.toLowerCase() === 'true' || false,
   issuer: process.env.CREDS_ISSUER,
-  passReqToCallback: process.env.CREDS_PASS_REQ_TO_CALLBACK,
+  passReqToCallback: process.env.CREDS_PASS_REQ_TO_CALLBACK.toLowerCase() === 'true' || false,
   scope: ['profile', 'offline_access', 'email'],
   loggingLevel: process.env.CREDS_LOGGING_LEVEL,
-  nonceLifetime: process.env.CREDS_NONCE_LIFETIME,
   nonceMaxAmount: parseInt(process.env.CREDS_NONCE_MAX_AMOUNT),
-  useCookieInsteadOfSession: process.env.CREDS_USE_COOKIE_INSTEAD_OF_SESSION,
+  useCookieInsteadOfSession: process.env.CREDS_USE_COOKIE_INSTEAD_OF_SESSION.toLowerCase() === 'true' || false,
   cookieEncryptionKeys: cookieEncryptionKeys,
-  cookieSameSite: process.env.CREDS_COOKIE_SAME_SITE,
-  clockSkew: process.env.CREDS_CLOCK_SKEW
+  cookieSameSite: process.env.CREDS_COOKIE_SAME_SITE.toLowerCase() === 'true' || false
 },
   function (iss, sub, profile, accessToken, refreshToken, done) {
     if (!profile.oid) {

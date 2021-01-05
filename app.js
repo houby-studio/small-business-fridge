@@ -15,22 +15,9 @@ mongoose.set('useCreateIndex', true)
 mongoose.set('useUnifiedTopology', true)
 var MongoStore = require('connect-mongo')(expressSession)
 var passport = require('passport') // authentication method
+const dotenv = require('dotenv').config()
 
-const dotenv = require('dotenv');
-const dotenvParseVariables = require('dotenv-parse-variables');
-let env = dotenv.config({})
-if (env.error) throw env.error;
-env = dotenvParseVariables(env.parsed);
-
-if (process.env.DEBUG) {
-  console.log(process.env.DEBUG)
-}
-
-if (env.DEBUG) {
-  console.log(env.DEBUG)
-}
-
-if (process.env.DEBUG) {
+if (process.env.DEBUG.toLowerCase() === 'true') {
   var https = require('https') // Using HTTPS for debug
   var fs = require('fs') // Loading certificate from file for debug
 }
@@ -164,7 +151,7 @@ app.use(function (err, req, res, next) {
   res.render('error')
 })
 
-if (process.env.DEBUG) {
+if (process.env.DEBUG.toLowerCase() === 'true') {
   // When testing, we want to use self sign for localhost website. In production we rely on reverse proxy (nginx/apache etc.)
   var options = {
     key: fs.readFileSync('./config/key.pem'),
