@@ -1,7 +1,7 @@
 FROM node:alpine
 
 # Install mongodump for database backups
-RUN apk add --no-cache mongodb-tools tini
+RUN apk add --no-cache mongodb-tools tini tzdata
 
 # Create app directory
 WORKDIR /usr/src/app
