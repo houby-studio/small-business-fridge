@@ -16,6 +16,10 @@ RUN npm ci --only=production
 # Bundle app source
 COPY . .
 
+# Change ownership for writeable folders to node user
+RUN chown -R node:node /usr/src/app/public/images
+RUN chown -R node:node /usr/src/app/database-backup
+
 # Set default ENV variables
 ENV NODE_ENV=production
 ENV DEBUG=false
