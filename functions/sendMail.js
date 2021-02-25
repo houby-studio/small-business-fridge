@@ -23,7 +23,10 @@ module.exports = {
     })
 
     var mailOptions = {
-      from: process.env.MAIL_FROM,
+      from: {
+        name: process.env.MAIL_FROM,
+        address: process.env.MAIL_USERNAME
+      },
       to: mailto,
       subject: mailsubject,
       html: mailbody
