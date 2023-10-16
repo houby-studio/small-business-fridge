@@ -24,7 +24,12 @@ describe('Routes access with customer user logged in', () => {
   describe('Should load with logged in customer', () => {
     beforeEach(function () {
       // Fake ensureAuthenticated function to skip checking whether user is or isn't logged in.
-      sandbox = require('sinon').createSandbox().stub(require('../functions/ensureAuthenticated'), 'ensureAuthenticated')
+      sandbox = require('sinon')
+        .createSandbox()
+        .stub(
+          require('../functions/ensureAuthenticated'),
+          'ensureAuthenticated'
+        )
         .callsFake(function (req, res, next) {
           return next()
         })
@@ -44,7 +49,8 @@ describe('Routes access with customer user logged in', () => {
 
     it('/shop should load shop page without redirect', (done) => {
       // TODO, add object to req and load full page without error
-      chai.request(app)
+      chai
+        .request(app)
         .get('/shop')
         .end(function (_err, res) {
           res.should.not.redirect

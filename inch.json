@@ -5,7 +5,6 @@
       "models/*",
       "routes/*"
     ],
-    "excluded": [
-    ]
+    "excluded": []
   }
 }

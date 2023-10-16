@@ -51,9 +51,10 @@ describe('Routes access with no user logged in', () => {
   })
 
   describe('Should redirect to /login then login.microsoftonline.com', () => {
-  // Test if pages are protected by authentication mechanism
+    // Test if pages are protected by authentication mechanism
     it('/shop', (done) => {
-      chai.request(app)
+      chai
+        .request(app)
         .get('/shop')
         .end(function (_err, res) {
           sandbox.assert.calledOnce(passportSpy)
@@ -62,7 +63,8 @@ describe('Routes access with no user logged in', () => {
         })
     })
     it('/profile', (done) => {
-      chai.request(app)
+      chai
+        .request(app)
         .get('/profile')
         .end((_err, res) => {
           sandbox.assert.calledOnce(passportSpy)
@@ -71,7 +73,8 @@ describe('Routes access with no user logged in', () => {
         })
     })
     it('/orders', (done) => {
-      chai.request(app)
+      chai
+        .request(app)
         .get('/orders')
         .end((_err, res) => {
           sandbox.assert.calledOnce(passportSpy)
@@ -80,7 +83,8 @@ describe('Routes access with no user logged in', () => {
         })
     })
     it('/invoices', (done) => {
-      chai.request(app)
+      chai
+        .request(app)
         .get('/invoices')
         .end((_err, res) => {
           sandbox.assert.calledOnce(passportSpy)
@@ -89,7 +93,8 @@ describe('Routes access with no user logged in', () => {
         })
     })
     it('/add_products', (done) => {
-      chai.request(app)
+      chai
+        .request(app)
         .get('/add_products')
         .end((_err, res) => {
           sandbox.assert.calledOnce(passportSpy)
@@ -98,7 +103,8 @@ describe('Routes access with no user logged in', () => {
         })
     })
     it('/invoice', (done) => {
-      chai.request(app)
+      chai
+        .request(app)
         .get('/invoice')
         .end((_err, res) => {
           sandbox.assert.calledOnce(passportSpy)
@@ -107,7 +113,8 @@ describe('Routes access with no user logged in', () => {
         })
     })
     it('/payments', (done) => {
-      chai.request(app)
+      chai
+        .request(app)
         .get('/payments')
         .end((_err, res) => {
           sandbox.assert.calledOnce(passportSpy)
@@ -116,7 +123,8 @@ describe('Routes access with no user logged in', () => {
         })
     })
     it('/stock', (done) => {
-      chai.request(app)
+      chai
+        .request(app)
         .get('/stock')
         .end((_err, res) => {
           sandbox.assert.calledOnce(passportSpy)
@@ -125,7 +133,8 @@ describe('Routes access with no user logged in', () => {
         })
     })
     it('/dashboard', (done) => {
-      chai.request(app)
+      chai
+        .request(app)
         .get('/dashboard')
         .end((_err, res) => {
           sandbox.assert.calledOnce(passportSpy)
@@ -137,7 +146,8 @@ describe('Routes access with no user logged in', () => {
   // Test if pages are NOT protected by authentication mechanism and anyone can access them
   describe('Should NOT require authentication and load properly', () => {
     it('/', (done) => {
-      chai.request(app)
+      chai
+        .request(app)
         .get('/')
         .end((_err, res) => {
           sandbox.assert.notCalled(passportSpy)
@@ -147,7 +157,8 @@ describe('Routes access with no user logged in', () => {
         })
     })
     it('/about', (done) => {
-      chai.request(app)
+      chai
+        .request(app)
         .get('/about')
         .end((_err, res) => {
           sandbox.assert.notCalled(passportSpy)
@@ -157,7 +168,8 @@ describe('Routes access with no user logged in', () => {
         })
     })
     it('/changelog', (done) => {
-      chai.request(app)
+      chai
+        .request(app)
         .get('/changelog')
         .end((_err, res) => {
           sandbox.assert.notCalled(passportSpy)
@@ -170,7 +182,8 @@ describe('Routes access with no user logged in', () => {
   // Test if login redirects to login.microsoftonline.com and logout destroys session
   describe('Should handle login and logout', () => {
     it('/login should redirect to login.microsoftonline.com', (done) => {
-      chai.request(app)
+      chai
+        .request(app)
         .get('/login')
         .end((_err, res) => {
           sandbox.assert.calledOnce(passportSpy)
@@ -179,12 +192,15 @@ describe('Routes access with no user logged in', () => {
         })
     })
     it('/logout should redirect to /', (done) => {
-      chai.request(app)
+      chai
+        .request(app)
         .get('/logout')
         .end((_err, res) => {
           res.should.have.not.cookie()
           res.should.have.redirect
-          res.should.have.redirectTo('https://login.microsoftonline.com/common/oauth2/logout?post_logout_redirect_uri=https://localhost/')
+          res.should.have.redirectTo(
+            'https://login.microsoftonline.com/common/oauth2/logout?post_logout_redirect_uri=https://localhost/'
+          )
           done()
         })
     })

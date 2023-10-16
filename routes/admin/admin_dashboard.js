@@ -1,6 +1,7 @@
 var express = require('express')
 var router = express.Router()
-var ensureAuthenticated = require('../../functions/ensureAuthenticated').ensureAuthenticated
+var ensureAuthenticated =
+  require('../../functions/ensureAuthenticated').ensureAuthenticated
 var csrf = require('csurf')
 var csrfProtection = csrf()
 router.use(csrfProtection)

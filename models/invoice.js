@@ -12,10 +12,12 @@ var schema = new Schema({
     ref: 'User',
     required: true
   },
-  ordersId: [{
-    type: Schema.Types.ObjectId,
-    ref: 'Order'
-  }],
+  ordersId: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: 'Order'
+    }
+  ],
   totalCost: {
     type: Number,
     required: true

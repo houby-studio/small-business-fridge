@@ -1,7 +1,6 @@
 var nodemailer = require('nodemailer')
 
 module.exports = {
-
   // Sends e-mail. Most parameters taken from ENV. Function takes recipient, subject, body and optional one image.
   // Example: sendMail('james.jameson@example.com', 'Hello there', '<p>Some lengthy message</p>', './images/logo.png')
   sendMail: function (mailto, mailsubject, mailbody, image) {
@@ -33,15 +32,16 @@ module.exports = {
     }
 
     if (image) {
-      mailOptions.attachments = [{
-        path: `./public/${image}`,
-        cid: 'image@prdelka.eu'
-      }]
+      mailOptions.attachments = [
+        {
+          path: `./public/${image}`,
+          cid: 'image@prdelka.eu'
+        }
+      ]
     }
 
     transporter.sendMail(mailOptions, function (error, info) {
       if (error) console.log(error)
     })
   }
-
 }

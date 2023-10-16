@@ -33,7 +33,8 @@ describe('customerName API', () => {
     })
 
     it('request with id 1 should return user display name', (done) => {
-      chai.request(app)
+      chai
+        .request(app)
         .get('/api/customerName?customer=1')
         .set('sbf-API-secret', 'veryveryverysecretapikey')
         .end((_err, res) => {
@@ -45,7 +46,8 @@ describe('customerName API', () => {
     })
 
     it('request with id 420 should return 404 NOT FOUND', (done) => {
-      chai.request(app)
+      chai
+        .request(app)
         .get('/api/customerName?customer=420')
         .set('sbf-API-secret', 'veryveryverysecretapikey')
         .end((_err, res) => {
@@ -57,22 +59,30 @@ describe('customerName API', () => {
     })
 
     it('request without customer should return 400 BAD REQUEST', (done) => {
-      chai.request(app)
+      chai
+        .request(app)
         .get('/api/customerName')
         .set('sbf-API-secret', 'veryveryverysecretapikey')
         .end((_err, res) => {
           res.should.have.status(400)
-          res.should.contain.header('content-type', /application\/problem\+json/)
+          res.should.contain.header(
+            'content-type',
+            /application\/problem\+json/
+          )
           done()
         })
     })
 
     it('request without API key should return 401 UNAUTHORIZED', (done) => {
-      chai.request(app)
+      chai
+        .request(app)
         .get('/api/customerName?customer=1')
         .end((_err, res) => {
           res.should.have.status(401)
-          res.should.contain.header('content-type', /application\/problem\+json/)
+          res.should.contain.header(
+            'content-type',
+            /application\/problem\+json/
+          )
           done()
         })
     })

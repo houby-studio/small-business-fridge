@@ -1,63 +1,63 @@
 /* Whole css serves one purose, to spin icon upon button click */
 .spin {
-    -webkit-animation-name: spin;
-    -webkit-animation-duration: 300ms;
-    -webkit-animation-iteration-count: 1;
-    -webkit-animation-timing-function: linear;
-    -moz-animation-name: spin;
-    -moz-animation-duration: 300ms;
-    -moz-animation-iteration-count: 1;
-    -moz-animation-timing-function: linear;
-    -ms-animation-name: spin;
-    -ms-animation-duration: 300ms;
-    -ms-animation-iteration-count: 1;
-    -ms-animation-timing-function: linear;
-    animation-name: spin;
-    animation-duration: 300ms;
-    animation-iteration-count: 1;
-    animation-timing-function: linear;
+  -webkit-animation-name: spin;
+  -webkit-animation-duration: 300ms;
+  -webkit-animation-iteration-count: 1;
+  -webkit-animation-timing-function: linear;
+  -moz-animation-name: spin;
+  -moz-animation-duration: 300ms;
+  -moz-animation-iteration-count: 1;
+  -moz-animation-timing-function: linear;
+  -ms-animation-name: spin;
+  -ms-animation-duration: 300ms;
+  -ms-animation-iteration-count: 1;
+  -ms-animation-timing-function: linear;
+  animation-name: spin;
+  animation-duration: 300ms;
+  animation-iteration-count: 1;
+  animation-timing-function: linear;
 }
 
 @-ms-keyframes spin {
-    from {
-        -ms-transform: rotate(0deg);
-    }
+  from {
+    -ms-transform: rotate(0deg);
+  }
 
-    to {
-        -ms-transform: rotate(180deg);
-    }
+  to {
+    -ms-transform: rotate(180deg);
+  }
 }
 
 @-moz-keyframes spin {
-    from {
-        -moz-transform: rotate(0deg);
-    }
+  from {
+    -moz-transform: rotate(0deg);
+  }
 
-    to {
-        -moz-transform: rotate(180deg);
-    }
+  to {
+    -moz-transform: rotate(180deg);
+  }
 }
 
 @-webkit-keyframes spin {
-    from {
-        -webkit-transform: rotate(0deg);
-    }
+  from {
+    -webkit-transform: rotate(0deg);
+  }
 
-    to {
-        -webkit-transform: rotate(180deg);
-    }
+  to {
+    -webkit-transform: rotate(180deg);
+  }
 }
 
 @keyframes spin {
-    from {
-        transform: rotate(0deg);
-    }
+  from {
+    transform: rotate(0deg);
+  }
 
-    to {
-        transform: rotate(180deg);
-    }
+  to {
+    transform: rotate(180deg);
+  }
 }
 
 .fixedHeader-floating {
-    background-color: #303030 !important;
+  background-color: #303030 !important;
 }
