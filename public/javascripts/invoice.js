@@ -1,7 +1,7 @@
 // If nothing to invoice, replace non-existing or useless graph with text
 Chart.plugins.register({
   afterDraw: function (chart) {
-    const someIsNotZero = chart.data.datasets[0].data.some(item => item !== 0)
+    const someIsNotZero = chart.data.datasets[0].data.some((item) => item !== 0)
     if (!someIsNotZero) {
       // No data is present
       $('#invoice_submit').attr('disabled', true)
@@ -55,10 +55,12 @@ var perUserSpent = new Chart(ctx, {
   type: 'pie',
   data: {
     labels: userLabelUsernames,
-    datasets: [{
-      data: userDatasetPriceSpent,
-      backgroundColor: userColorPalette
-    }]
+    datasets: [
+      {
+        data: userDatasetPriceSpent,
+        backgroundColor: userColorPalette
+      }
+    ]
   },
   options: {
     legend: {
@@ -112,10 +114,12 @@ var perProductSpent = new Chart(ctx, {
   type: 'pie',
   data: {
     labels: productLabelUsernames,
-    datasets: [{
-      data: productDatasetPriceSpent,
-      backgroundColor: productColorPalette
-    }]
+    datasets: [
+      {
+        data: productDatasetPriceSpent,
+        backgroundColor: productColorPalette
+      }
+    ]
   },
   options: {
     legend: {
@@ -140,9 +144,7 @@ $(function () {
 // Bootstrap table customization
 $(document).ready(function () {
   $('#table-orders').DataTable({
-    columnDefs: [
-      { type: 'natural', targets: 3 }
-    ],
+    columnDefs: [{ type: 'natural', targets: 3 }],
     language: {
       url: '//cdn.datatables.net/plug-ins/1.10.19/i18n/Czech.json'
     },
