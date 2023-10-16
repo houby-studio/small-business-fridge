@@ -64,7 +64,7 @@ var perUserSpent = new Chart(ctx, {
   },
   options: {
     legend: {
-      display: true
+      display: false
     },
     plugins: {
       labels: {
@@ -123,7 +123,7 @@ var perProductSpent = new Chart(ctx, {
   },
   options: {
     legend: {
-      display: true
+      display: false
     },
     plugins: {
       labels: {
