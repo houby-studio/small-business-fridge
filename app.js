@@ -1,25 +1,29 @@
 // Require all neccesary modules
-var createError = require('http-errors') // Generating errors
-var express = require('express') // Express
-var methodOverride = require('method-override')
-var path = require('path') // used for handling paths which held express files
-var cookieParser = require('cookie-parser')
-var expressSession = require('express-session')
-var handlebars = require('handlebars')
-var expressHbs = require('express-handlebars') // extended handlebars functionality
-const { allowInsecurePrototypeAccess } = require('@handlebars/allow-prototype-access')
-var mongoose = require('mongoose') // database
-mongoose.set('useNewUrlParser', true)
-mongoose.set('useFindAndModify', false)
-mongoose.set('useCreateIndex', true)
-mongoose.set('useUnifiedTopology', true)
-var MongoStore = require('connect-mongo')(expressSession)
-var passport = require('passport') // authentication method
-const dotenv = require('dotenv').config()
+const createError = require('http-errors') // Generating errors
+const express = require('express') // Express
+const methodOverride = require('method-override')
+const path = require('path') // used for handling paths which held express files
+const cookieParser = require('cookie-parser')
+const expressSession = require('express-session')
+const handlebars = require('handlebars')
+const expressHbs = require('express-handlebars') // extended handlebars functionality
+const {
+  allowInsecurePrototypeAccess
+} = require('@handlebars/allow-prototype-access')
+const mongoose = require('mongoose') // database
+// mongoose.set('useNewUrlParser', true)
+// mongoose.set('useFindAndModify', false)
+// mongoose.set('useCreateIndex', true)
+// mongoose.set('useUnifiedTopology', true)
+const MongoStore = require('connect-mongo') // (expressSession)
+const passport = require('passport') // authentication method
+require('dotenv').config()
 
+let https
+let fs
 if (process.env.DEBUG.toLowerCase() === 'true') {
-  var https = require('https') // Using HTTPS for debug
-  var fs = require('fs') // Loading certificate from file for debug
+  https = require('https') // Using HTTPS for debug
+  fs = require('fs') // Loading certificate from file for debug
 }
 
 // Functions
@@ -31,73 +35,79 @@ require('./tasks/daily-backup')
 
 // Load routes from routes folder to later app.use them.
 // Access for all
-var indexRouter = require('./routes/index')
-var aboutRouter = require('./routes/about')
-var changelogRouter = require('./routes/changelog')
+const indexRouter = require('./routes/index')
+const aboutRouter = require('./routes/about')
+const changelogRouter = require('./routes/changelog')
 // Access for logged in users
-var shopRouter = require('./routes/shop')
-var profileRouter = require('./routes/profile')
-var ordersRouter = require('./routes/orders')
-var invoicesRouter = require('./routes/invoices')
+const shopRouter = require('./routes/shop')
+const profileRouter = require('./routes/profile')
+const ordersRouter = require('./routes/orders')
+const invoicesRouter = require('./routes/invoices')
 // Access for suppliers
-var addProductsRouter = require('./routes/add_products')
-var invoiceRouter = require('./routes/invoice')
-var paymentsRouter = require('./routes/payments')
-var stockRouter = require('./routes/stock')
-var newProductRouter = require('./routes/new_product')
+const addProductsRouter = require('./routes/add_products')
+const invoiceRouter = require('./routes/invoice')
+const paymentsRouter = require('./routes/payments')
+const stockRouter = require('./routes/stock')
+const newProductRouter = require('./routes/new_product')
 // Access for admins
-var dashboardRouter = require('./routes/admin/admin_dashboard')
+const dashboardRouter = require('./routes/admin/admin_dashboard')
 // Access for kiosk
-var kioskKeypadRouter = require('./routes/kiosk_keypad')
-var kioskShopRouter = require('./routes/kiosk_shop')
+const kioskKeypadRouter = require('./routes/kiosk_keypad')
+const kioskShopRouter = require('./routes/kiosk_shop')
 // Passport routes
-var loginRouter = require('./routes/login')
-var logoutRouter = require('./routes/logout')
-var authOpenId = require('./routes/auth_openid')
-var authOpenIdReturnGet = require('./routes/auth_openid_return')
-var authOpenIdReturnPost = require('./routes/auth_openid_return_post')
+const loginRouter = require('./routes/login')
+const logoutRouter = require('./routes/logout')
+const authOpenId = require('./routes/auth_openid')
+const authOpenIdReturnGet = require('./routes/auth_openid_return')
+const authOpenIdReturnPost = require('./routes/auth_openid_return_post')
 // API routes
-var keypadOrderRouter = require('./routes/api/keypadOrder')
-var customerName = require('./routes/api/customerName')
+const keypadOrderRouter = require('./routes/api/keypadOrder')
+const customerName = require('./routes/api/customerName')
 
 // Express app and database connection
-var app = express()
-mongoose.connect(process.env.DB_CONNECTION_STRING, {
-  useNewUrlParser: true
-})
+const app = express()
+mongoose.connect(process.env.DB_CONNECTION_STRING)
 
 // View engine setup
-app.engine('.hbs', expressHbs({
-  defaultLayout: 'layout',
-  extname: '.hbs',
-  handlebars: allowInsecurePrototypeAccess(handlebars)
-}))
+app.engine(
+  '.hbs',
+  expressHbs.engine({
+    defaultLayout: 'layout',
+    extname: '.hbs',
+    handlebars: allowInsecurePrototypeAccess(handlebars)
+  })
+)
 app.enable('trust proxy')
 app.set('view engine', '.hbs')
 app.enable('view cache')
 app.use(methodOverride())
 app.use(express.json())
 app.use(express.static(path.join(__dirname, 'public')))
-app.use(express.urlencoded({
-  extended: true
-}))
-app.use(cookieParser(process.env.PARSER_SECRET))
-app.use(expressSession({
-  cookie: {
-    maxAge: 30 * 24 * 60 * 60 * 1000
-  },
-  secret: process.env.COOKIE_SECRET,
-  httpOnly: true,
-  secure: true,
-  sameSite: 'None',
-  resave: false,
-  saveUninitialized: false,
-  store: new MongoStore({
-    mongooseConnection: mongoose.connection,
-    ttl: 14 * 24 * 60 * 60,
-    autoRemove: 'native'
+app.use(
+  express.urlencoded({
+    extended: true
   })
-}))
+)
+app.use(cookieParser(process.env.PARSER_SECRET))
+app.use(
+  expressSession({
+    cookie: {
+      maxAge: 30 * 24 * 60 * 60 * 1000
+    },
+    secret: process.env.COOKIE_SECRET,
+    httpOnly: true,
+    secure: true,
+    sameSite: 'None',
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({
+      mongoUrl: process.env.DB_CONNECTION_STRING,
+      mongooseConnection: mongoose.connection,
+      ttl: 14 * 24 * 60 * 60,
+      autoRemove: 'native'
+    })
+  })
+)
 app.use(passport.initialize())
 app.use(passport.session())
 
@@ -153,7 +163,7 @@ app.use(function (err, req, res, next) {
 
 if (process.env.DEBUG.toLowerCase() === 'true') {
   // When testing, we want to use self sign for localhost website. In production we rely on reverse proxy (nginx/apache etc.)
-  var options = {
+  const options = {
     key: fs.readFileSync('./config/key.pem'),
     cert: fs.readFileSync('./config/cert.pem')
   }

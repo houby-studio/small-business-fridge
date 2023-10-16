@@ -21,13 +21,15 @@ var products = [
   new Product({
     keypadId: 3,
     displayName: 'Monster Rossi',
-    description: 'S Valentinem, nebo-li „The Doctor®“, jsme vytvořili tým, který stvořil náš nejrychlejší Monster v historii. Díky své lehké, intenzivní, osvěžující citrusové příchutě a plné dávce naší legendátní směsi Monster Energy váís dostaneme zpátky do nejvyšší rychlosti!.',
+    description:
+      'S Valentinem, nebo-li „The Doctor®“, jsme vytvořili tým, který stvořil náš nejrychlejší Monster v historii. Díky své lehké, intenzivní, osvěžující citrusové příchutě a plné dávce naší legendátní směsi Monster Energy váís dostaneme zpátky do nejvyšší rychlosti!.',
     imagePath: './images/monster_rossi.png'
   }),
   new Product({
     keypadId: 4,
     displayName: 'Monster Energy',
-    description: 'Otevři si plechovku toho nejkrutějšího energetického nápoje na planetě, MONSTER energy.',
+    description:
+      'Otevři si plechovku toho nejkrutějšího energetického nápoje na planetě, MONSTER energy.',
     imagePath: './images/monster_energy.png'
   }),
   new Product({
@@ -46,20 +48,21 @@ var products = [
     keypadId: 7,
     displayName: 'Coca-Cola plech',
     imagePath: './images/coca-cola.png',
-    description: 'Coca-Cola je nejoblíbenějším a nejprodávanějším nealkoholickým nápojem v dějinách a zároveň nejznámější značkou světa.'
+    description:
+      'Coca-Cola je nejoblíbenějším a nejprodávanějším nealkoholickým nápojem v dějinách a zároveň nejznámější značkou světa.'
   }),
   new Product({
     keypadId: 8,
     displayName: 'Rockstar Twister Wacked',
     imagePath: './images/rockstar_twister_wacked.png',
-    description: 'Pokud čekáš pořádnou dávku energie a kofeinu v neobvyklých příchutích, Rockstar Twister je tou pravou volbou!'
+    description:
+      'Pokud čekáš pořádnou dávku energie a kofeinu v neobvyklých příchutích, Rockstar Twister je tou pravou volbou!'
   })
-
 ]
 
 var done = 0
 for (var i = 0; i < products.length; i++) {
-  products[i].save(function (_err, _result) {
+  products[i].save().then(() => {
     done++
     if (done === products.length) {
       exit()
@@ -67,6 +70,6 @@ for (var i = 0; i < products.length; i++) {
   })
 }
 
-function exit () {
+function exit() {
   mongoose.disconnect()
 }

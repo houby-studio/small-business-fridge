@@ -1,7 +1,8 @@
 var express = require('express')
 var router = express.Router()
 var Delivery = require('../models/delivery')
-var ensureAuthenticated = require('../functions/ensureAuthenticated').ensureAuthenticated
+var ensureAuthenticated =
+  require('../functions/ensureAuthenticated').ensureAuthenticated
 
 /* GET about page. */
 router.get('/', ensureAuthenticated, function (req, res, next) {
@@ -10,69 +11,79 @@ router.get('/', ensureAuthenticated, function (req, res, next) {
     return
   }
 
-  Delivery.aggregate([{
-    $match: {
-      supplierId: req.user._id
-    }
-  },
-  {
-    $lookup: {
-      from: 'products',
-      localField: 'productId',
-      foreignField: '_id',
-      as: 'product'
-    }
-  },
-  {
-    $unwind: '$product'
-  },
-  {
-    $lookup: {
-      from: 'orders',
-      localField: '_id',
-      foreignField: 'deliveryId',
-      as: 'bought'
-    }
-  },
-  // { $unwind: { path: '$bought', preserveNullAndEmptyArrays: true } },
-  {
-    $group: {
-      _id: '$productId',
-      product: {
-        $first: '$product'
-      },
-      amount_left: {
-        $sum: '$amount_left'
-      },
-      // amount_supplied: { $sum: '$amount_supplied' },
-      bought: {
-        $push: {
-          $size: {
-            $filter: {
-              input: '$bought',
-              as: 'orders',
-              cond: {
-                $gte: ['$$orders.order_date', new Date(new Date() - 14 * 60 * 60 * 24 * 1000)]
-              } // X = 14 days right now
+  Delivery.aggregate([
+    {
+      $match: {
+        supplierId: req.user._id
+      }
+    },
+    {
+      $lookup: {
+        from: 'products',
+        localField: 'productId',
+        foreignField: '_id',
+        as: 'product'
+      }
+    },
+    {
+      $unwind: '$product'
+    },
+    {
+      $lookup: {
+        from: 'orders',
+        localField: '_id',
+        foreignField: 'deliveryId',
+        as: 'bought'
+      }
+    },
+    // { $unwind: { path: '$bought', preserveNullAndEmptyArrays: true } },
+    {
+      $group: {
+        _id: '$productId',
+        product: {
+          $first: '$product'
+        },
+        amount_left: {
+          $sum: '$amount_left'
+        },
+        // amount_supplied: { $sum: '$amount_supplied' },
+        bought: {
+          $push: {
+            $size: {
+              $filter: {
+                input: '$bought',
+                as: 'orders',
+                cond: {
+                  $gte: [
+                    '$$orders.order_date',
+                    new Date(new Date() - 14 * 60 * 60 * 24 * 1000)
+                  ]
+                } // X = 14 days right now
+              }
             }
           }
         }
       }
-    }
-  },
-  {
-    $project: {
-      amount_left: 1,
-      display_name: '$product.displayName',
-      last_Xdays: {
-        $sum: '$bought'
+    },
+    {
+      $project: {
+        amount_left: 1,
+        display_name: '$product.displayName',
+        last_Xdays: {
+          $sum: '$bought'
+        }
       }
-
     }
-  }
-  ], function (err, docs) {
-    if (err) {
-      var alert = {
+  ])
+    .then((docs) => {
+      res.render('shop/stock', {
+        title: 'Stav skladu | Lednice IT',
+        user: req.user,
+        stock: docs
+      })
+    })
+    .catch((err) => {
+      const alert = {
         type: 'danger',
         component: 'db',
         message: err.message,
@@ -81,13 +92,7 @@ router.get('/', ensureAuthenticated, function (req, res, next) {
       req.session.alert = alert
       res.redirect('/')
       return
-    }
-    res.render('shop/stock', {
-      title: 'Stav skladu | Lednice IT',
-      user: req.user,
-      stock: docs
     })
-  })
 })
 
 module.exports = router

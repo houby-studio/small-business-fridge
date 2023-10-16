@@ -1,6 +1,7 @@
 var express = require('express')
 var router = express.Router()
-var ensureAuthenticated = require('../functions/ensureAuthenticated').ensureAuthenticated
+var ensureAuthenticated =
+  require('../functions/ensureAuthenticated').ensureAuthenticated
 var Product = require('../models/product')
 var multer = require('multer')
 var csrf = require('csurf')
@@ -37,44 +38,51 @@ router.get('/', ensureAuthenticated, function (req, res) {
 })
 
 /* POST new product form handle. */
-router.post('/', ensureAuthenticated, upload.single('product_image'), function (req, res) {
-  if (!req.user.supplier) {
-    res.redirect('/')
-    return
-  }
-
-  // If image was not uploaded, use preview dummy image
-  if (!req.file) {
-    req.file = { filename: 'preview.png' }
-  }
-
-  var newProduct = new Product({
-    keypadId: req.body.product_keypadid,
-    displayName: req.body.product_name,
-    description: req.body.product_description,
-    imagePath: './images/' + req.file.filename
-  })
-  newProduct.save(function (err) {
-    if (err) {
-      console.log(err)
-      var alert = {
-        type: 'danger',
-        component: 'db',
-        message: err.message,
-        danger: 1
-      }
-      req.session.alert = alert
-      res.redirect('/new_product')
+router.post(
+  '/',
+  ensureAuthenticated,
+  upload.single('product_image'),
+  function (req, res) {
+    if (!req.user.supplier) {
+      res.redirect('/')
       return
     }
-    alert = {
-      type: 'success',
-      message: `Produkt ${req.body.product_name} přidán do databáze.`,
-      success: 1
+
+    // If image was not uploaded, use preview dummy image
+    if (!req.file) {
+      req.file = { filename: 'preview.png' }
     }
-    req.session.alert = alert
-    res.redirect('/new_product')
-  })
-})
+
+    var newProduct = new Product({
+      keypadId: req.body.product_keypadid,
+      displayName: req.body.product_name,
+      description: req.body.product_description,
+      imagePath: './images/' + req.file.filename
+    })
+    newProduct
+      .save()
+      .then(() => {
+        alert = {
+          type: 'success',
+          message: `Produkt ${req.body.product_name} přidán do databáze.`,
+          success: 1
+        }
+        req.session.alert = alert
+        res.redirect('/new_product')
+      })
+      .catch((err) => {
+        console.log(err)
+        var alert = {
+          type: 'danger',
+          component: 'db',
+          message: err.message,
+          danger: 1
+        }
+        req.session.alert = alert
+        res.redirect('/new_product')
+        return
+      })
+  }
+)
 
 module.exports = router

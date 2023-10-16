@@ -1,19 +1,20 @@
-var express = require('express')
-var router = express.Router()
-var moment = require('moment')
-var Product = require('../models/product')
-var Order = require('../models/order')
-var Delivery = require('../models/delivery')
-var User = require('../models/user')
-var mailer = require('../functions/sendMail')
-var ensureAuthenticated = require('../functions/ensureAuthenticated').ensureAuthenticated
-var csrf = require('csurf')
-var csrfProtection = csrf()
+const express = require('express')
+const router = express.Router()
+const moment = require('moment')
+const Product = require('../models/product')
+const Order = require('../models/order')
+const Delivery = require('../models/delivery')
+const User = require('../models/user')
+const mailer = require('../functions/sendMail')
+const ensureAuthenticated =
+  require('../functions/ensureAuthenticated').ensureAuthenticated
+const csrf = require('csurf')
+const csrfProtection = csrf()
 router.use(csrfProtection)
 moment.locale('cs')
 
-function renderPage (req, res, alert, customer) {
-  var filter
+function renderPage(req, res, alert, customer) {
+  let filter
   if (req.user.showAllProducts) {
     filter = {}
   } else {
@@ -25,54 +26,56 @@ function renderPage (req, res, alert, customer) {
   }
 
   // This crazy query which can be roughly translated for SQL people to "SELECT * FROM Product WHERE Stock.ammount_left > 0"
-  Product.aggregate([{
-    $lookup: {
-      from: 'deliveries',
-      localField: '_id',
-      foreignField: 'productId',
-      as: 'stock'
-    }
-  },
-  {
-    $match: filter
-  }, // Depending on user preferences, get either all products or only ones in stock
-  {
-    $project: {
-      keypadId: '$keypadId',
-      displayName: '$displayName',
-      description: '$description',
-      imagePath: '$imagePath',
-      stock: {
-        $filter: { // We filter only the stock object from array where ammount left is greater than 0
-          input: '$stock',
-          as: 'stock',
-          cond: {
-            $gt: ['$$stock.amount_left', 0]
+  Product.aggregate([
+    {
+      $lookup: {
+        from: 'deliveries',
+        localField: '_id',
+        foreignField: 'productId',
+        as: 'stock'
+      }
+    },
+    {
+      $match: filter
+    }, // Depending on user preferences, get either all products or only ones in stock
+    {
+      $project: {
+        keypadId: '$keypadId',
+        displayName: '$displayName',
+        description: '$description',
+        imagePath: '$imagePath',
+        stock: {
+          $filter: {
+            // We filter only the stock object from array where ammount left is greater than 0
+            input: '$stock',
+            as: 'stock',
+            cond: {
+              $gt: ['$$stock.amount_left', 0]
+            }
           }
         }
       }
     }
-  }
-  ],
-  function (err, docs) {
-    if (err) {
+  ])
+    .then((docs) => {
+      const productChunks = []
+      const chunkSize = 4
+      for (let i = 0; i < docs.length; i += chunkSize) {
+        productChunks.push(docs.slice(i, i + chunkSize))
+      }
+      res.render('shop/kiosk_shop', {
+        title: 'Kiosek | Lednice IT',
+        products: productChunks,
+        user: req.user,
+        customer,
+        alert,
+        csrfToken: req.csrfToken()
+      })
+    })
+    .catch((err) => {
       res.status(err.status || 500)
       res.render('error')
-    }
-    var productChunks = []
-    var chunkSize = 4
-    for (var i = 0; i < docs.length; i += chunkSize) {
-      productChunks.push(docs.slice(i, i + chunkSize))
-    }
-    res.render('shop/kiosk_shop', {
-      title: 'Kiosek | Lednice IT',
-      products: productChunks,
-      user: req.user,
-      customer: customer,
-      alert: alert,
-      csrfToken: req.csrfToken()
     })
-  })
 }
 
 /* GET kiosk shop page. */
@@ -83,7 +86,7 @@ router.get('/', ensureAuthenticated, function (req, res) {
     return
   }
   // If customer id is not defined, alert and route back to keypad
-  var alert
+  let alert
   if (!req.query.customer_id) {
     req.session.alert = {
       type: 'danger',
@@ -101,33 +104,35 @@ router.get('/', ensureAuthenticated, function (req, res) {
   // Find user by keypadId
   User.findOne({
     keypadId: req.query.customer_id
-  }, function (err, customer) {
-    if (err) {
-      req.session.alert = {
-        type: 'danger',
-        component: 'web',
-        message: 'Došlo k chybě při komunikaci s databází. Zkuste to prosím znovu.',
-        danger: 1
-      }
-      res.redirect('/kiosk_keypad')
-      return
-    }
-    if (!customer) {
-      req.session.alert = {
-        type: 'danger',
-        component: 'web',
-        message: `Nepodařilo se dohledat zákazníka s ID ${req.query.customer_id}.`,
-        danger: 1
-      }
-      res.redirect('/kiosk_keypad')
-      return
-    }
-    if (req.session.alert) {
-      alert = req.session.alert
-      delete req.session.alert
-    }
-    renderPage(req, res, alert, customer)
   })
+    .then((customer) => {
+      if (!customer) {
+        req.session.alert = {
+          type: 'danger',
+          component: 'web',
+          message: `Nepodařilo se dohledat zákazníka s ID ${req.query.customer_id}.`,
+          danger: 1
+        }
+        res.redirect('/kiosk_keypad')
+        return
+      }
+      if (req.session.alert) {
+        alert = req.session.alert
+        delete req.session.alert
+      }
+      renderPage(req, res, alert, customer)
+    })
+    .catch((err) => {
+      req.session.alert = {
+        type: 'danger',
+        component: 'web',
+        message:
+          'Došlo k chybě při komunikaci s databází. Zkuste to prosím znovu.',
+        danger: 1
+      }
+      res.redirect('/kiosk_keypad')
+      return
+    })
 })
 
 router.post('/', ensureAuthenticated, function (req, res) {
@@ -135,61 +140,96 @@ router.post('/', ensureAuthenticated, function (req, res) {
     req.session.alert = {
       type: 'danger',
       component: 'web',
-      message: 'Při zpracování objednávky došlo k chybě. Zkuste to prosím znovu.',
+      message:
+        'Při zpracování objednávky došlo k chybě. Zkuste to prosím znovu.',
       danger: 1
     }
     res.redirect('/kiosk_keypad')
     return
   }
 
-  var newOrder = new Order({
+  const newOrder = new Order({
     deliveryId: req.body.product_id
   })
 
   // Find user by keypadId
   User.findOne({
     keypadId: req.body.customer_id
-  }, function (err, user) {
-    if (err) {
-      req.session.alert = {
-        type: 'danger',
-        component: 'web',
-        message: 'Došlo k chybě při komunikaci s databází. Zkuste to prosím znovu.',
-        danger: 1
-      }
-      res.redirect('/kiosk_keypad')
-      return
-    }
-    if (!user) {
-      req.session.alert = {
-        type: 'danger',
-        component: 'web',
-        message: `Nepodařilo se dohledat zákazníka s ID ${req.body.customer_id}.`,
-        danger: 1
-      }
-      res.redirect('/kiosk_keypad')
-      return
-    }
-
-    newOrder.buyerId = user._id
-    newOrder.keypadOrder = true
-
-    Delivery.findOne({
-      _id: req.body.product_id
-    }, function (err, obj) {
-      if (err) {
+  })
+    .then((user) => {
+      if (!user) {
         req.session.alert = {
           type: 'danger',
-          component: 'db',
-          message: err.message,
+          component: 'web',
+          message: `Nepodařilo se dohledat zákazníka s ID ${req.body.customer_id}.`,
           danger: 1
         }
         res.redirect('/kiosk_keypad')
         return
       }
-      obj.amount_left--
-      obj.save(function (err) {
-        if (err) {
+
+      newOrder.buyerId = user._id
+      newOrder.keypadOrder = true
+
+      Delivery.findOne({
+        _id: req.body.product_id
+      })
+        .then((obj) => {
+          obj.amount_left--
+          obj
+            .save()
+            .then(() => {
+              newOrder
+                .save()
+                .then(() => {
+                  req.session.alert = {
+                    type: 'success',
+                    message: `Zákazník ${user.displayName} zakoupil ${req.body.display_name} za ${req.body.product_price}Kč.`,
+                    success: 1
+                  }
+                  const subject = 'Děkujeme za nákup!'
+                  const body = `<h1>Výborná volba!</h1><p>Tímto jste si udělali radost:</p><img width="135" height="240" style="width: auto; height: 10rem;" alt="Obrázek zakoupeného produktu" src="cid:image@prdelka.eu"/><p>Název: ${
+                    req.body.display_name
+                  }<br>Cena: ${
+                    req.body.product_price
+                  }Kč<br>Kdy: ${moment().format('LLLL')}</p><p>Přijďte zas!</p>`
+                  mailer.sendMail(
+                    user.email,
+                    subject,
+                    body,
+                    req.body.image_path
+                  )
+                  res.redirect('/kiosk_keypad')
+                })
+                .catch((err) => {
+                  req.session.alert = {
+                    type: 'danger',
+                    component: 'db',
+                    message: err.message,
+                    danger: 1
+                  }
+                  res.redirect('/kiosk_keypad')
+                  const subject = 'Nepodařilo se zapsat změny do databáze!'
+                  const body = `<h1>Chyba při zapisování do databáze při nákupu!</h1><p>Pokus o vytvoření záznamu nákupu skončil chybou. Zkontrolujte konzistenci databáze!</p><p>Chyba: ${err.message}</p>`
+                  mailer.sendMail('system', subject, body)
+                  return
+                })
+            })
+            .catch((err) => {
+              req.session.alert = {
+                type: 'danger',
+                component: 'db',
+                message: err.message,
+                danger: 1
+              }
+              res.redirect('/kiosk_keypad')
+              const subject = 'Nepodařilo se zapsat změny do databáze!'
+              const body = `<h1>Chyba při zapisování do databáze při nákupu!</h1><p>Pokus o snížení skladové zásoby skončil chybou. Zkontrolujte konzistenci databáze!</p><p>Chyba: ${err.message}</p>`
+              mailer.sendMail('system', subject, body)
+              return
+            })
+        })
+        .catch((err) => {
           req.session.alert = {
             type: 'danger',
             component: 'db',
@@ -197,39 +237,20 @@ router.post('/', ensureAuthenticated, function (req, res) {
             danger: 1
           }
           res.redirect('/kiosk_keypad')
-          var subject = 'Nepodařilo se zapsat změny do databáze!'
-          var body = `<h1>Chyba při zapisování do databáze při nákupu!</h1><p>Pokus o snížení skladové zásoby skončil chybou. Zkontrolujte konzistenci databáze!</p><p>Chyba: ${err.message}</p>`
-          mailer.sendMail('system', subject, body)
           return
-        }
-        newOrder.save(function (err) {
-          var subject, body
-          if (err) {
-            req.session.alert = {
-              type: 'danger',
-              component: 'db',
-              message: err.message,
-              danger: 1
-            }
-            res.redirect('/kiosk_keypad')
-            subject = 'Nepodařilo se zapsat změny do databáze!'
-            body = `<h1>Chyba při zapisování do databáze při nákupu!</h1><p>Pokus o vytvoření záznamu nákupu skončil chybou. Zkontrolujte konzistenci databáze!</p><p>Chyba: ${err.message}</p>`
-            mailer.sendMail('system', subject, body)
-            return
-          }
-          req.session.alert = {
-            type: 'success',
-            message: `Zákazník ${user.displayName} zakoupil ${req.body.display_name} za ${req.body.product_price}Kč.`,
-            success: 1
-          }
-          subject = 'Děkujeme za nákup!'
-          body = `<h1>Výborná volba!</h1><p>Tímto jste si udělali radost:</p><img width="135" height="240" style="width: auto; height: 10rem;" alt="Obrázek zakoupeného produktu" src="cid:image@prdelka.eu"/><p>Název: ${req.body.display_name}<br>Cena: ${req.body.product_price}Kč<br>Kdy: ${moment().format('LLLL')}</p><p>Přijďte zas!</p>`
-          mailer.sendMail(user.email, subject, body, req.body.image_path)
-          res.redirect('/kiosk_keypad')
         })
-      })
     })
-  })
+    .catch((err) => {
+      req.session.alert = {
+        type: 'danger',
+        component: 'web',
+        message:
+          'Došlo k chybě při komunikaci s databází. Zkuste to prosím znovu.',
+        danger: 1
+      }
+      res.redirect('/kiosk_keypad')
+      return
+    })
 })
 
 module.exports = router

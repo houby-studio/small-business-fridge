@@ -10,3 +10,10 @@ globals:
 parserOptions:
   ecmaVersion: 2018
 rules: {}
+overrides:
+  [
+    {
+      files: ['*.js'],
+      rules: { 'space-before-function-paren': ['warn', 'ignore'] }
+    }
+  ]

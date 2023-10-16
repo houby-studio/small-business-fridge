@@ -23,7 +23,7 @@ var users = [
 
 var done = 0
 for (var i = 0; i < users.length; i++) {
-  users[i].save(function (_err, _result) {
+  users[i].save().then(() => {
     done++
     if (done === users.length) {
       exit()
@@ -31,6 +31,6 @@ for (var i = 0; i < users.length; i++) {
   })
 }
 
-function exit () {
+function exit() {
   mongoose.disconnect()
 }

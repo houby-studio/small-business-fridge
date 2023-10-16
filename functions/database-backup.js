@@ -14,12 +14,12 @@ const dbOptions = {
 }
 
 // return stringDate as a date object.
-exports.stringToDate = dateString => {
+exports.stringToDate = (dateString) => {
   return new Date(dateString)
 }
 
 // Check if variable is empty or not.
-exports.empty = mixedVar => {
+exports.empty = (mixedVar) => {
   let undef, key, i, len
   const emptyValues = [undef, null, false, 0, '', '0']
   for (i = 0, len = emptyValues.length; i < len; i++) {
@@ -54,7 +54,8 @@ exports.dbAutoBackUp = () => {
       currentDate.getDate()
 
     // New backup path for current backup process
-    const newBackupPath = dbOptions.autoBackupPath + '-mongodump-' + newBackupDir + '.tar.gz'
+    const newBackupPath =
+      dbOptions.autoBackupPath + '-mongodump-' + newBackupDir + '.tar.gz'
     // check for remove old backup after keeping # of days given in ENV
     if (dbOptions.removeOldBackup === true) {
       beforeDate = _.clone(currentDate)
@@ -67,18 +68,23 @@ exports.dbAutoBackUp = () => {
         '-' +
         beforeDate.getDate()
       // old backup(after keeping # of days)
-      oldBackupPath = dbOptions.autoBackupPath + 'mongodump-' + oldBackupDir + '.tar.gz'
+      oldBackupPath =
+        dbOptions.autoBackupPath + 'mongodump-' + oldBackupDir + '.tar.gz'
     }
 
     // Command for mongodb dump process
-    const cmd = 'mongodump --forceTableScan --uri="' + process.env.DB_CONNECTION_STRING + '" --archive=' + newBackupPath
+    const cmd =
+      'mongodump --forceTableScan --uri="' +
+      process.env.DB_CONNECTION_STRING +
+      '" --archive=' +
+      newBackupPath
 
     exec(cmd, (error, stdout, stderr) => {
       if (this.empty(error)) {
         // check for remove old backup after keeping # of days given in ENV.
         if (dbOptions.removeOldBackup === true) {
           if (fs.existsSync(oldBackupPath)) {
-            exec('rm -rf ' + oldBackupPath, _err => { })
+            exec('rm -rf ' + oldBackupPath, (_err) => {})
           }
         }
       } else {

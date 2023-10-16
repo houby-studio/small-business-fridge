@@ -3,7 +3,8 @@ var router = express.Router()
 var passport = require('passport')
 
 // Who knows why it's there. Seems to be working without this file. Whatever.
-router.get('/',
+router.get(
+  '/',
   passport.authenticate('azuread-openidconnect', {
     failureRedirect: '/login'
   }),
