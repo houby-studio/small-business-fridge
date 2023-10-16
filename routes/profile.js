@@ -24,28 +24,58 @@ router.post('/', ensureAuthenticated, function (req, res, next) {
       {
         upsert: true
       }
-    ).catch((err) => {
-      console.log(err)
-    })
+    )
+      .then(() => {
+        res.status(200).send()
+        return
+      })
+      .catch((err) => {
+        console.log(err)
+        res.status(400).send()
+      })
   } else if (req.body.name === 'checkSendEmailEshop') {
     User.findByIdAndUpdate(req.user.id, {
       sendMailOnEshopPurchase: newValue
-    }).catch((err) => {
-      console.log(err)
     })
+      .then(() => {
+        res.status(200).send()
+        return
+      })
+      .catch((err) => {
+        console.log(err)
+        res.status(400).send()
+        return
+      })
   } else if (req.body.name === 'checkSendDailyReport') {
     User.findByIdAndUpdate(req.user.id, {
       sendDailyReport: newValue
-    }).catch((err) => {
-      console.log(err)
     })
+      .then(() => {
+        res.status(200).send()
+        return
+      })
+      .catch((err) => {
+        console.log(err)
+        res.status(400).send()
+        return
+      })
   } else if (req.body.name === 'realtime-iban') {
     if (/^CZ\d{22}$/.test(req.body.value)) {
       User.findByIdAndUpdate(req.user.id, {
         IBAN: req.body.value
-      }).catch((err) => {
-        console.log(err)
       })
+        .then(() => {
+          res.status(200).send()
+          return
+        })
+        .catch((err) => {
+          console.log(err)
+          res.status(400).send()
+          return
+        })
+    } else {
+      res.status(400).send()
+      return
     }
   }
 })
