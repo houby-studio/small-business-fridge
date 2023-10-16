@@ -1,60 +1,62 @@
 <div class="row my-3">
-    <div class="col">
-        <div class="table-responsive">
-            <table id="table-invoices" class="table">
-                <thead>
-                    <th scope="col">Datum</th>
-                    <th scope="col">Zákazník</th>
-                    <th scope="col">Počet kusů</th>
-                    <th scope="col">Cena celkem</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Akce</th>
-                </thead>
-                <tbody>
-                    {{# each invoices }}
-                        <tr>
-                            <td>
-                                <span class="d-none">{{ this.invoiceDate }}</span>{{ this.invoiceDate_format }}
-                            </td>
-                            <td>
-                                {{ this.buyer.displayName }}
-                            </td>
-                            <td>
-                                {{ this.orders_sum }}ks
-                            </td>
-                            <td>
-                                {{ this.totalCost }}Kč
-                            </td>
-                            <td>
-                                {{ this.status }}
-                            </td>
-                            <td>
-                                {{#if ../supplier.supplierId}}
-                                    <form id="payments" class="needs-validation h-100" method="POST" action="/payments" novalidate>
-                                        {{#if this.paid}}
-                                            <input type="submit" class="btn btn-danger float-right w-100" value="Storno">
-                                            <input type="hidden" id="action" name="action" value="storno">
-                                        {{else}}
-                                            <input type="submit" class="btn btn-success float-right w-100" value="Zaplaceno">
-                                            <input type="hidden" id="action" name="action" value="approve">
-                                        {{/if}}
-                                        <input type="hidden" id="invoice_id" name="invoice_id" value="{{ this._id }}">
-                                        <input type="hidden" name="_csrf" value="{{ ../csrfToken }}">
-                                    </form>
-                                {{/if}}
-                            </td>
-                        </tr>
-                    {{/each}}
-                </tbody>
-            </table>
-        </div>
+  <div class="col">
+    <div class="table-responsive">
+      <table id="table-invoices" class="table">
+        <thead>
+          <th scope="col">Datum</th>
+          <th scope="col">Zákazník</th>
+          <th scope="col">Počet kusů</th>
+          <th scope="col">Cena celkem</th>
+          <th scope="col">Status</th>
+          <th scope="col">Akce</th>
+        </thead>
+        <tbody>
+          {{# each invoices }}
+          <tr>
+            <td>
+              <span class="d-none">{{ this.invoiceDate }}</span>{{ this.invoiceDate_format }}
+            </td>
+            <td>
+              {{ this.buyer.displayName }}
+            </td>
+            <td>
+              {{ this.orders_sum }}ks
+            </td>
+            <td>
+              {{ this.totalCost }}Kč
+            </td>
+            <td>
+              {{ this.status }}
+            </td>
+            <td>
+              {{#if ../supplier.supplierId}}
+              <form id="payments" class="needs-validation h-100" method="POST" action="/payments" novalidate>
+                {{#if this.paid}}
+                <input type="submit" class="btn btn-danger float-right w-100" value="Storno">
+                <input type="hidden" id="action" name="action" value="storno">
+                {{else}}
+                <input type="submit" class="btn btn-success float-right w-100" value="Zaplaceno">
+                <input type="hidden" id="action" name="action" value="approve">
+                {{/if}}
+                <input type="hidden" id="invoice_id" name="invoice_id" value="{{ this._id }}">
+                <input type="hidden" name="_csrf" value="{{ ../csrfToken }}">
+              </form>
+              {{/if}}
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
     </div>
+  </div>
 </div>
 <script src="/javascripts/payments.js"></script>
 
 {{!-- Generated in https://datatables.net/download/ --}}
-<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.18/b-1.5.6/b-html5-1.5.6/fh-3.1.4/r-2.2.2/sc-2.0.0/datatables.min.css"/>
+<link rel="stylesheet" type="text/css"
+  href="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.18/b-1.5.6/b-html5-1.5.6/fh-3.1.4/r-2.2.2/sc-2.0.0/datatables.min.css" />
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
-<script type="text/javascript" src="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.18/b-1.5.6/b-html5-1.5.6/fh-3.1.4/r-2.2.2/sc-2.0.0/datatables.min.js"></script>
+<script type="text/javascript"
+  src="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.18/b-1.5.6/b-html5-1.5.6/fh-3.1.4/r-2.2.2/sc-2.0.0/datatables.min.js"></script>
 <script type="text/javascript" src="https://cdn.datatables.net/plug-ins/1.10.21/sorting/natural.js"></script>

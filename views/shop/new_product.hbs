@@ -1,59 +1,105 @@
-<form id="admin_new_product" class="needs-validation" method="POST" action="/new_product?_csrf={{ csrfToken }}" enctype="multipart/form-data" novalidate>
-    <div class="card w-50 mx-auto w-100-lg">
-        <div class="card-header h4 text-center">
-            Nový produkt
-        </div>
-        <div class="card-body">
-            <div class="form-row">
-                <div class="col-lg-2 text-center px-0">
-                    <div class="form-row">
-                        <img src="/images/preview.png" alt="Preview" id="product_img" class="img-fluid form-image-thumbnail">
-                    </div>
-                    <div class="form-row text-left">
-                        <p>Doporučená velikost:</p>
-                        <p>450x800px</p>
-                    </div>
-                </div>
-                <div class="col-lg-10">
-                    <div class="form-row">
-                        <div class="form-group col">
-                            <label for="product_id">Název produktu</label>
-                            <input type="text" name="product_name" class="form-control" placeholder="Název" required>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group col">
-                            <label for="product_id">Popis produktu</label>
-                            <input type="text" name="product_description" class="form-control" placeholder="Popis" required>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group col">
-                            <label for="product_id">ID klávesnice</label>
-                            <input type="number" min="1" step="1" pattern="\d+" name="product_keypadid" class="form-control" placeholder="ID">
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group col">
-                            <label for="product_id">Obrázek</label>
-                            <input type="file" class="form-control-file" name="product_image" accept="image/png" onchange="readURL(this);">
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div> <!-- End of card-body -->
-        <div class="card-footer text-muted">
-            <div class="form-row">
-                <div class="col-lg-6">
-                    <a href="/" class="btn btn-danger">Storno</a>
-                </div>
-                <div class="col-lg-6">
-                    <input type="submit" class="btn btn-success float-right" value="Naskladnit">
-                </div>
-            </div>
-        </div>
+<form
+  id='admin_new_product'
+  class='needs-validation'
+  method='POST'
+  action='/new_product?_csrf={{csrfToken}}'
+  enctype='multipart/form-data'
+  novalidate
+>
+  <div class='card w-50 mx-auto w-100-lg'>
+    <div class='card-header h4 text-center'>
+      Nový produkt
     </div>
-    {{!-- <input type="hidden" name="_csrf" value="{{ csrfToken }}"> --}}
+    <div class='card-body'>
+      <div class='form-row'>
+        <div class='col-lg-2 text-center px-0'>
+          <div class='form-row'>
+            <img
+              src='/images/preview.png'
+              alt='Preview'
+              id='product_img'
+              class='img-fluid form-image-thumbnail'
+            />
+          </div>
+          <div class='form-row text-left'>
+            <p>Doporučená velikost:</p>
+            <p>450x800px</p>
+          </div>
+        </div>
+        <div class='col-lg-10'>
+          <div class='form-row'>
+            <div class='form-group col'>
+              <label for='product_id'>Název produktu</label>
+              <input
+                type='text'
+                name='product_name'
+                class='form-control'
+                placeholder='Název'
+                required
+              />
+            </div>
+          </div>
+          <div class='form-row'>
+            <div class='form-group col'>
+              <label for='product_id'>Popis produktu</label>
+              <input
+                type='text'
+                name='product_description'
+                class='form-control'
+                placeholder='Popis'
+                required
+              />
+            </div>
+          </div>
+          <div class='form-row'>
+            <div class='form-group col'>
+              <label for='product_id'>ID klávesnice</label>
+              <input
+                type='number'
+                min='1'
+                step='1'
+                pattern='\d+'
+                name='product_keypadid'
+                class='form-control'
+                placeholder='ID'
+              />
+            </div>
+          </div>
+          <div class='form-row'>
+            <div class='form-group col'>
+              <label for='product_id'>Obrázek</label>
+              <input
+                type='file'
+                class='form-control-file'
+                name='product_image'
+                accept='image/png'
+                onchange='readURL(this);'
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- End of card-body -->
+    <div class='card-footer text-muted'>
+      <div class='form-row'>
+        <div class='col-lg-6'>
+          <a href='/' class='btn btn-danger'>Storno</a>
+        </div>
+        <div class='col-lg-6'>
+          <input
+            type='submit'
+            class='btn btn-success float-right'
+            value='Vytvořit'
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+  {{!-- <input type="hidden" name="_csrf" value="{{ csrfToken }}"> --}}
 </form>
-<script type="text/javascript" src="/javascripts/new_product_imageLoad.js"></script>
-<script type="text/javascript" src="/javascripts/form_validate.js"></script>
+<script
+  type='text/javascript'
+  src='/javascripts/new_product_imageLoad.js'
+></script>
+<script type='text/javascript' src='/javascripts/form_validate.js'></script>

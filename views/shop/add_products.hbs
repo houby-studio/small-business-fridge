@@ -1,65 +1,109 @@
-<form id="supplier_add_products" class="needs-validation" method="POST" action="/add_products" novalidate>
-    <div class="card w-50 mx-auto w-100-lg">
-        <div class="card-header h4 text-center">
-            Naskladnit
-        </div>
-        <div class="card-body">
-            <div class="form-row">
-                <div class="col-lg-2 text-center px-0">
-                    <img src="/images/preview.png" alt="Preview" id="product_img" class="img-fluid form-image-thumbnail">
-                </div>
-                <div class="col-lg-10">
-                    <div class="form-row">
-                        <div class="form-group col">
-                            <label for="product_id">Název produktu</label>
-                            <select name="product_id" id="product_id" class="custom-select" onchange="loadProductImage()" required>
-                                <option value="" selected>Vyberte ze seznamu..</option>
-                                {{# each products }}
-                                <option value="{{ this.id }}">{{ this.displayName }}</option>
-                                {{/each}}
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-row mb-3">
-                        <div class="col">
-                            <div class="input-group">
-                                <input type="number" min="1" step="1" pattern="\d+" name="product_amount" class="form-control" placeholder="Počet" required>
-                                <div class="input-group-append">
-                                    <div class="input-group-text">Ks</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-row mb-3">
-                        <div class="col">
-                            <div class="input-group">
-                                <input type="number" min="1" step="1" pattern="\d+" name="product_price" class="form-control" placeholder="Cena" required>
-                                <div class="input-group-append">
-                                    <div class="input-group-text">Kč</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div> <!-- End of card-body -->
-        <div class="card-footer text-muted">
-            <div class="form-row">
-                <div class="col-lg-6">
-                    <a href="/" class="btn btn-danger">Storno</a>
-                </div>
-                <div class="col-lg-6">
-                    <input type="submit" class="btn btn-success float-right" value="Naskladnit">
-                </div>
-            </div>
-        </div>
+<form
+  id='supplier_add_products'
+  class='needs-validation'
+  method='POST'
+  action='/add_products'
+  novalidate
+>
+  <div class='card w-50 mx-auto w-100-lg'>
+    <div class='card-header h4 text-center'>
+      Naskladnit
     </div>
-    <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+    <div class='card-body'>
+      <div class='form-row'>
+        <div class='col-lg-2 text-center px-0'>
+          <img
+            src='/images/preview.png'
+            alt='Preview'
+            id='product_img'
+            class='img-fluid form-image-thumbnail'
+          />
+        </div>
+        <div class='col-lg-8'>
+          <div class='form-row'>
+            <div class='form-group col'>
+              <label for='product_id'>Název produktu</label>
+              <select
+                name='product_id'
+                id='product_id'
+                class='form-select'
+                onchange='loadProductImage()'
+                required
+              >
+                <option value='' selected>Vyberte ze seznamu..</option>
+                {{#each products}}
+                  <option value='{{this.id}}'>{{this.displayName}}</option>
+                {{/each}}
+              </select>
+            </div>
+          </div>
+          <div class='form-row mb-3'>
+            <div class='col'>
+              <div class='input-group'>
+                <input
+                  type='number'
+                  min='1'
+                  step='1'
+                  pattern='\d+'
+                  name='product_amount'
+                  class='form-control'
+                  placeholder='Počet'
+                  required
+                />
+                <div class='input-group-append'>
+                  <div class='input-group-text'>Ks</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class='form-row mb-3'>
+            <div class='col'>
+              <div class='input-group'>
+                <input
+                  type='number'
+                  min='1'
+                  step='1'
+                  pattern='\d+'
+                  name='product_price'
+                  class='form-control'
+                  placeholder='Cena'
+                  required
+                />
+                <div class='input-group-append'>
+                  <div class='input-group-text'>Kč</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- End of card-body -->
+    <div class='card-footer text-muted'>
+      <div class='form-row'>
+        <div class='col-lg-6'>
+          <a href='/' class='btn btn-danger'>Storno</a>
+        </div>
+        <div class='col-lg-6'>
+          <input
+            type='submit'
+            class='btn btn-success float-right'
+            value='Naskladnit'
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+  <input type='hidden' name='_csrf' value='{{csrfToken}}' />
 </form>
-<script type="text/javascript">
+<script type='text/javascript'>
 
-   var json_data = {{{ products.client_data }}}
+  var json_data =
+  {{{products.client_data}}}
 
 </script>
-<script type="text/javascript" src="/javascripts/add_products_imageLoad.js"></script>
-<script type="text/javascript" src="/javascripts/form_validate.js"></script>
+<script
+  type='text/javascript'
+  src='/javascripts/add_products_imageLoad.js'
+></script>
+<script type='text/javascript' src='/javascripts/form_validate.js'></script>

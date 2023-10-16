@@ -11,10 +11,6 @@ const {
   allowInsecurePrototypeAccess
 } = require('@handlebars/allow-prototype-access')
 const mongoose = require('mongoose') // database
-// mongoose.set('useNewUrlParser', true)
-// mongoose.set('useFindAndModify', false)
-// mongoose.set('useCreateIndex', true)
-// mongoose.set('useUnifiedTopology', true)
 const MongoStore = require('connect-mongo') // (expressSession)
 const passport = require('passport') // authentication method
 require('dotenv').config()

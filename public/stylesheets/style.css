@@ -1,96 +1,96 @@
 html {
-    height: 100%;
+  height: 100%;
 }
 
 body {
-    height: 100%;
+  height: 100%;
 }
 
 body {
-    font-family: 'Muli', sans-serif;
+  font-family: 'Muli', sans-serif;
 }
 
 .container-fluid {
-    max-height: 100%;
-    padding-left: 0px;
-    padding-right: 0px;
+  max-height: 100%;
+  padding-left: 0px;
+  padding-right: 0px;
 }
 
 .row {
-    margin-left: 0px;
-    margin-right: 0px;
+  margin-left: 0px;
+  margin-right: 0px;
 }
 
 .cover {
-    object-fit: cover;
-    height: 25rem;
-    width: 100%;
+  object-fit: cover;
+  height: 25rem;
+  width: 100%;
 }
 
 .form-image-thumbnail {
-    max-height: 11rem !important;
+  max-height: 11rem !important;
 }
 
 .shop-image-thumbnail {
-    max-height: 13rem !important;
+  max-height: 13rem !important;
 }
 
 .link-no-style {
-    text-decoration: none;
-    color: inherit;
+  text-decoration: none;
+  color: inherit;
 }
 
 .link-no-style:hover {
-    text-decoration: none;
-    color: inherit;
+  text-decoration: none;
+  color: inherit;
 }
 
 .text-button {
-    color: white;
+  color: white;
 }
 
 .text-button:hover {
-    text-decoration: none;
+  text-decoration: none;
 }
 
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 input[type=number] {
-    -moz-appearance: textfield;
-    /* Firefox */
+  -moz-appearance: textfield;
+  /* Firefox */
 }
 
 @media screen and (max-width: 991px) {
-    .float-right {
-        float: none !important;
-    }
+  .float-right {
+    float: none !important;
+  }
 
-    .w-100-lg {
-        width: 100% !important;
-    }
+  .w-100-lg {
+    width: 100% !important;
+  }
 }
 
 @media screen and (max-width: 1199px) {
-    .btn {
-        width: 100% !important;
-    }
+  .btn {
+    width: 100% !important;
+  }
 }
 
 
 @media screen and (min-width: 1200px) {
-    .hide-xl {
-        display: none;
-    }
+  .hide-xl {
+    display: none;
+  }
 
-    .pr-xl-none {
-        padding-right: 0;
-    }
+  .pr-xl-none {
+    padding-right: 0;
+  }
 
-    .pl-xl-none {
-        padding-left: 0;
-    }
+  .pl-xl-none {
+    padding-left: 0;
+  }
 }
