@@ -40,7 +40,6 @@
     "eslint-plugin-import": "^2.22.1",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-promise": "^6.1.1",
-    "eslint-plugin-standard": "^5.0.0",
     "handlebars": "^4.7.7",
     "mocha": "^10.2.0",
     "nock": "^13.3.4",
