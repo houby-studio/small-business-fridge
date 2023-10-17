@@ -1,22 +1,22 @@
 // If nothing to invoice, replace non-existing or useless graph with text
-Chart.plugins.register({
-  afterDraw: function (chart) {
-    const someIsNotZero = chart.data.datasets[0].data.some((item) => item !== 0)
-    if (!someIsNotZero) {
-      // No data is present
-      $('#invoice_submit').attr('disabled', true)
-      var ctx = chart.chart.ctx
-      var width = chart.chart.width
-      var height = chart.chart.height
-      chart.clear()
-      ctx.save()
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-      ctx.fillText('Žádné produkty k fakturaci', width / 2, height / 2)
-      ctx.restore()
-    }
-  }
-})
+// Chart.plugins.register({
+//   afterDraw: function (chart) {
+//     const someIsNotZero = chart.data.datasets[0].data.some((item) => item !== 0)
+//     if (!someIsNotZero) {
+//       // No data is present
+//       $('#invoice_submit').attr('disabled', true)
+//       var ctx = chart.chart.ctx
+//       var width = chart.chart.width
+//       var height = chart.chart.height
+//       chart.clear()
+//       ctx.save()
+//       ctx.textAlign = 'center'
+//       ctx.textBaseline = 'middle'
+//       ctx.fillText('Žádné produkty k fakturaci', width / 2, height / 2)
+//       ctx.restore()
+//     }
+//   }
+// })
 
 // User graph swapper - changes between 'Spent amount in Kč and bought amount'
 $('#user-swap').click(function () {
@@ -63,10 +63,10 @@ var perUserSpent = new Chart(ctx, {
     ]
   },
   options: {
-    legend: {
-      display: false
-    },
     plugins: {
+      legend: {
+        display: false
+      },
       labels: {
         render: function (args) {
           return args.value + 'Kč'
@@ -122,10 +122,10 @@ var perProductSpent = new Chart(ctx, {
     ]
   },
   options: {
-    legend: {
-      display: false
-    },
     plugins: {
+      legend: {
+        display: false
+      },
       labels: {
         render: function (args) {
           return args.value + 'Kč'
