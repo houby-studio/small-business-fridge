@@ -1,14 +1,13 @@
-const express = require('express')
-const router = express.Router()
-const moment = require('moment')
-const Product = require('../models/product')
-const Order = require('../models/order')
-const Delivery = require('../models/delivery')
-const mailer = require('../functions/sendMail')
-const ensureAuthenticated =
-  require('../functions/ensureAuthenticated').ensureAuthenticated
-const checkKiosk = require('../functions/checkKiosk').checkKiosk
-const csrf = require('csurf')
+import { Router } from 'express'
+const router = Router()
+import moment from 'moment'
+import Product from '../models/product.js'
+import Order from '../models/order.js'
+import Delivery from '../models/delivery.js'
+import { sendMail } from '../functions/sendMail.js'
+import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
+import { checkKiosk } from '../functions/checkKiosk.js'
+import csrf from 'csurf'
 const csrfProtection = csrf()
 router.use(csrfProtection)
 moment.locale('cs')
@@ -142,12 +141,7 @@ router.post('/', ensureAuthenticated, checkKiosk, function (req, res) {
                 }<br>Cena: ${
                   req.body.product_price
                 }Kč<br>Kdy: ${moment().format('LLLL')}</p><p>Přijďte zas!</p>`
-                mailer.sendMail(
-                  req.user.email,
-                  subject,
-                  body,
-                  req.body.image_path
-                )
+                sendMail(req.user.email, subject, body, req.body.image_path)
               }
             })
             .catch((err) => {
@@ -161,7 +155,7 @@ router.post('/', ensureAuthenticated, checkKiosk, function (req, res) {
               res.redirect('/shop')
               const subject = 'Nepodařilo se zapsat změny do databáze!'
               const body = `<h1>Chyba při zapisování do databáze při nákupu!</h1><p>Pokus o vytvoření záznamu nákupu skončil chybou. Zkontrolujte konzistenci databáze!</p><p>Chyba: ${err.message}</p>`
-              mailer.sendMail('system', subject, body)
+              sendMail('system', subject, body)
               return
             })
         })
@@ -176,7 +170,7 @@ router.post('/', ensureAuthenticated, checkKiosk, function (req, res) {
           res.redirect('/shop')
           const subject = 'Nepodařilo se zapsat změny do databáze!'
           const body = `<h1>Chyba při zapisování do databáze při nákupu!</h1><p>Pokus o snížení skladové zásoby skončil chybou. Zkontrolujte konzistenci databáze!</p><p>Chyba: ${err.message}</p>`
-          mailer.sendMail('system', subject, body)
+          sendMail('system', subject, body)
           return
         })
     })
@@ -193,4 +187,4 @@ router.post('/', ensureAuthenticated, checkKiosk, function (req, res) {
     })
 })
 
-module.exports = router
+export default router

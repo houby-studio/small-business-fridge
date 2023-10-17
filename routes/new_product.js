@@ -1,15 +1,14 @@
-var express = require('express')
-var router = express.Router()
-var ensureAuthenticated =
-  require('../functions/ensureAuthenticated').ensureAuthenticated
-var Product = require('../models/product')
-var multer = require('multer')
-var csrf = require('csurf')
+import { Router } from 'express'
+var router = Router()
+import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
+import Product from '../models/product.js'
+import multer, { diskStorage } from 'multer'
+import csrf from 'csurf'
 var csrfProtection = csrf()
 router.use(csrfProtection)
 
 // Multer options - Save to public/images and keep original name
-const storage = multer.diskStorage({
+const storage = diskStorage({
   destination: function (req, file, cb) {
     cb(null, 'public/images/')
   },
@@ -85,4 +84,4 @@ router.post(
   }
 )
 
-module.exports = router
+export default router

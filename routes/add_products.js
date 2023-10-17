@@ -1,10 +1,9 @@
-var express = require('express')
-var router = express.Router()
-var ensureAuthenticated =
-  require('../functions/ensureAuthenticated').ensureAuthenticated
-var Product = require('../models/product')
-var Delivery = require('../models/delivery')
-var csrf = require('csurf')
+import { Router } from 'express'
+var router = Router()
+import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
+import Product from '../models/product.js'
+import Delivery from '../models/delivery.js'
+import csrf from 'csurf'
 var csrfProtection = csrf()
 router.use(csrfProtection)
 
@@ -95,4 +94,4 @@ router.post('/', ensureAuthenticated, function (req, res) {
     })
 })
 
-module.exports = router
+export default router

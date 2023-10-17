@@ -1,13 +1,12 @@
-var express = require('express')
-var router = express.Router()
-var moment = require('moment')
+import { Router } from 'express'
+var router = Router()
+import moment from 'moment'
 moment.locale('cs')
-var mailer = require('../functions/sendMail')
-var Invoice = require('../models/invoice')
-var ensureAuthenticated =
-  require('../functions/ensureAuthenticated').ensureAuthenticated
-var checkKiosk = require('../functions/checkKiosk').checkKiosk
-var csrf = require('csurf')
+import { sendMail } from '../functions/sendMail.js'
+import Invoice from '../models/invoice.js'
+import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
+import { checkKiosk } from '../functions/checkKiosk.js'
+import csrf from 'csurf'
 var csrfProtection = csrf()
 router.use(csrfProtection)
 
@@ -17,7 +16,7 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
     buyerId: req.user._id
   }
 
-  // Aggregate invoices, lookup supplier display name and sum number of orders in invoice
+  // Invoice.aggregate invoices, lookup supplier display name and sum number of orders in invoice
   Invoice.aggregate([
     {
       $match: filter
@@ -97,7 +96,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
     if (!check.buyerId.equals(req.user.id)) {
       const subject = 'Neoprávněná akce?!'
       const body = `<h1>Jak se toto podařilo?!</h1><p>Zákazník ${req.body.displayName} se pokouší manipulovat s fakturou ID ${check._id}, přestože ji nevlastní.</p>Jeho akce byla revertována. Prověřte celou situaci!</p>`
-      mailer.sendMail('system', subject, body)
+      sendMail('system', subject, body)
       const alert = {
         type: 'danger',
         message: 'Nemáte oprávnění měnit status faktury, která Vám nepatří!',
@@ -140,7 +139,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           ).format('LLLL')} a celkovou částkou k úhradě ${
             docs.totalCost
           } za zaplacenou.</p><p>Zkontrolujte zda se tak stalo a následně potvrďte na webu přes tento odkaz</p>`
-          mailer.sendMail(docs.supplierId.email, subject, body)
+          sendMail(docs.supplierId.email, subject, body)
           const alert = {
             type: 'success',
             message:
@@ -182,7 +181,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           ).format('LLLL')} a celkovou částkou k úhradě ${
             docs.totalCost
           } za nezaplacenou. Nezbývá než čekat, až skutečně zaplatí.</p>`
-          mailer.sendMail(docs.supplierId.email, subject, body)
+          sendMail(docs.supplierId.email, subject, body)
           const alert = {
             type: 'success',
             message:
@@ -216,4 +215,4 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
   })
 })
 
-module.exports = router
+export default router

@@ -1,6 +1,6 @@
-var express = require('express')
-var router = express.Router()
-var passport = require('passport')
+import { Router } from 'express'
+var router = Router()
+import passport from 'passport'
 
 /* GET login page. */
 router.get(
@@ -16,4 +16,4 @@ router.get(
   }
 )
 
-module.exports = router
+export default router

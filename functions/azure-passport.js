@@ -1,7 +1,7 @@
 // modules and functions require
-const mailer = require('./sendMail')
-const passport = require('passport')
-const OIDCStrategy = require('passport-azure-ad').OIDCStrategy
+import { sendMail } from './sendMail.js'
+import passport from 'passport'
+import { OIDCStrategy } from 'passport-azure-ad'
 
 const cookieEncryptionKeys = [
   {
@@ -11,13 +11,15 @@ const cookieEncryptionKeys = [
 ]
 
 // Mongoose Data object
-const User = require('../models/user')
+// import module as User from '../Users/user.js'
+import model from '../models/user.js'
 
 // Helper function to find user in database
 const findByOid = function (oid, fn) {
-  User.findOne({
-    oid
-  })
+  model
+    .findOne({
+      oid
+    })
     .then((user) => {
       return fn(null, user)
     })
@@ -48,8 +50,7 @@ passport.use(
       responseMode: process.env.CREDS_RESPONSE_MODE,
       redirectUrl: process.env.CREDS_REDIRECT_URL,
       allowHttpForRedirectUrl:
-        process.env.CREDS_ALLOW_HTTP_FOR_REDIRECT_URL.toLowerCase() ===
-          'true' || false,
+        process.env.CREDS_ALLOW_HTTP_FOR_REDIRECT_URL === 'true' || false,
       clientSecret: process.env.CREDS_CLIENT_SECRET,
       validateIssuer:
         process.env.CREDS_VALIDATE_ISSUER.toLowerCase() === 'true' || false,
@@ -81,9 +82,10 @@ passport.use(
           }
           if (!user) {
             // Auto-registration
-            User.findOne({
-              oid: profile.oid
-            })
+            user
+              .findOne({
+                oid: profile.oid
+              })
               .then((user) => {
                 // If user does not exist in database, automatically register as customer (not admin, not supplier, auto increment keypad ID)
                 if (!user) {
@@ -99,7 +101,8 @@ passport.use(
                   profile.supplier = false
                   // Async function to find highest keypad ID and increment it by one.
                   const latestUser = function (callback) {
-                    User.find()
+                    model
+                      .find()
                       .sort({
                         keypadId: -1
                       })
@@ -125,9 +128,9 @@ passport.use(
                       .save()
                       .then((res) => {
                         // console.log(`New User ${newUser.displayName} inserted into database.`);
-                        const subject = `Welcome to our fridge ${newUser.displayName}`
-                        const body = `<h1>Welcome abord!</h1><p>Hope you will like it here</p><p>Your keypad ID is: ${newUser.keypadID}</p>`
-                        mailer.sendMail(newUser.email, subject, body)
+                        const subject = `Lednice IT je pyšná, že ji navštívila osoba jménem ${newUser.displayName}`
+                        const body = `<h1>Lednice IT Vás vítá!</h1><p>Snad se Vám zde bude líbit.</p><p>Vaše ID pro objednávání skrze kiosek: ${newUser.keypadID}</p><h2>Jak to funguje</h2><p>Do Lednice IT dodává produkty více dodavatelů. Zákazník si přes e-shop či přes kiosek zakoupí vybraný produkt. Až se dodavateli nashromáždí dostatek prodaného zboží, vytvoří hromadnou fakturaci. Každý zákazník, který si u daného dodavatele něco zakoupil obdrží e-mail s QR kódem, který uhradí. Platbu obě strany potvrdí v rozhraní e-shopu.</p><p>Pokud se budete chtít stát dodavatelem, kontaktujte správce Lednice IT.</p>`
+                        sendMail(newUser.email, subject, body)
                       })
                       .catch((err) => {
                         console.log(err)

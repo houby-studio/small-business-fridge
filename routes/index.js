@@ -1,6 +1,6 @@
-var express = require('express')
-var router = express.Router()
-var checkKiosk = require('../functions/checkKiosk').checkKiosk
+import { Router } from 'express'
+var router = Router()
+import { checkKiosk } from '../functions/checkKiosk.js'
 
 /* GET home page. */
 router.get('/', checkKiosk, function (req, res, next) {
@@ -15,4 +15,4 @@ router.get('/', checkKiosk, function (req, res, next) {
   })
 })
 
-module.exports = router
+export default router

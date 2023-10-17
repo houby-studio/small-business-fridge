@@ -1,11 +1,10 @@
-var express = require('express')
-var router = express.Router()
-var moment = require('moment')
+import { Router } from 'express'
+var router = Router()
+import moment from 'moment'
 moment.locale('cs')
-var Order = require('../models/order')
-var ensureAuthenticated =
-  require('../functions/ensureAuthenticated').ensureAuthenticated
-var checkKiosk = require('../functions/checkKiosk').checkKiosk
+import Order from '../models/order.js'
+import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
+import { checkKiosk } from '../functions/checkKiosk.js'
 
 /* GET orders page. */
 router.get('/', ensureAuthenticated, checkKiosk, function (req, res) {
@@ -143,4 +142,4 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res) {
     .catch((_err) => {})
 })
 
-module.exports = router
+export default router

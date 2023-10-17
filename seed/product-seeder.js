@@ -1,7 +1,7 @@
-var Product = require('../models/product')
-var mongoose = require('mongoose')
+import Product from '../models/product.js'
+import { connect, disconnect } from 'mongoose'
 
-mongoose.connect(process.env.DB_CONNECTION_STRING, {
+connect(process.env.DB_CONNECTION_STRING, {
   useNewUrlParser: true
 })
 
@@ -71,5 +71,5 @@ for (var i = 0; i < products.length; i++) {
 }
 
 function exit() {
-  mongoose.disconnect()
+  disconnect()
 }

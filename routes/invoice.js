@@ -1,16 +1,15 @@
-var express = require('express')
-var router = express.Router()
-var palette = require('google-palette')
-var moment = require('moment')
+import { Router } from 'express'
+var router = Router()
+import palette from 'google-palette'
+import moment from 'moment'
 moment.locale('cs')
-var mailer = require('../functions/sendMail')
-var qrPayment = require('../functions/qrPayment')
-var Delivery = require('../models/delivery')
-var Order = require('../models/order')
-var Invoice = require('../models/invoice')
-var ensureAuthenticated =
-  require('../functions/ensureAuthenticated').ensureAuthenticated
-var checkKiosk = require('../functions/checkKiosk').checkKiosk
+import { sendMail } from '../functions/sendMail.js'
+import { generateQR } from '../functions/qrPayment.js'
+import Delivery from '../models/delivery.js'
+import Order from '../models/order.js'
+import Invoice from '../models/invoice.js'
+import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
+import { checkKiosk } from '../functions/checkKiosk.js'
 
 // GET supplier invoice page.
 router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
@@ -464,7 +463,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
         newInvoice.save()
         bulk.execute(function (_err, _items) {
           // Send e-mail
-          qrPayment.generateQR(
+          generateQR(
             req.user.IBAN,
             docs[i].total_user_sum_orders_notinvoiced,
             docs[i].user.displayName,
@@ -483,7 +482,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
               if (req.user.IBAN) {
                 body += `<h2>QR platba</h2><img width="480" height="480" style="width: 20rem; height: 20rem;" alt="QR kód pro mobilní platbu se Vám nezobrazuje správně." src="${qrcode}"/><p>IBAN: ${req.user.IBAN}</p><p>Předem díky za včasnou platbu!</p>`
               }
-              mailer.sendMail(docs[i].user.email, subject, body)
+              sendMail(docs[i].user.email, subject, body)
             }
           )
         })
@@ -510,4 +509,4 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
     })
 })
 
-module.exports = router
+export default router

@@ -1,8 +1,7 @@
-var express = require('express')
-var router = express.Router()
-var Delivery = require('../models/delivery')
-var ensureAuthenticated =
-  require('../functions/ensureAuthenticated').ensureAuthenticated
+import { Router } from 'express'
+var router = Router()
+import c from '../models/delivery.js'
+import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
 
 /* GET about page. */
 router.get('/', ensureAuthenticated, function (req, res, next) {
@@ -11,7 +10,7 @@ router.get('/', ensureAuthenticated, function (req, res, next) {
     return
   }
 
-  Delivery.aggregate([
+  Product.aggregate([
     {
       $match: {
         supplierId: req.user._id
@@ -95,4 +94,4 @@ router.get('/', ensureAuthenticated, function (req, res, next) {
     })
 })
 
-module.exports = router
+export default router

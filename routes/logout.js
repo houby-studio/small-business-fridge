@@ -1,5 +1,5 @@
-var express = require('express')
-var router = express.Router()
+import { Router } from 'express'
+var router = Router()
 
 // 'logout' route, logout from passport, and destroy the session with AAD.
 router.get('/', function (req, res) {
@@ -13,4 +13,4 @@ router.get('/', function (req, res) {
   })
 })
 
-module.exports = router
+export default router

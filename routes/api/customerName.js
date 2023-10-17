@@ -1,8 +1,7 @@
-const express = require('express')
-const router = express.Router()
-const ensureAuthenticatedAPI =
-  require('../../functions/ensureAuthenticatedAPI').ensureAuthenticatedAPI
-const User = require('../../models/user')
+import { Router } from 'express'
+const router = Router()
+import { ensureAuthenticatedAPI } from '../../functions/ensureAuthenticatedAPI.js'
+import User from '../../models/user.js'
 let responseJson
 
 // GET /api/customerName - accepts customer's keypadId and returns customer's display name
@@ -67,4 +66,4 @@ router.get('/', ensureAuthenticatedAPI, function (req, res, next) {
     })
 })
 
-module.exports = router
+export default router

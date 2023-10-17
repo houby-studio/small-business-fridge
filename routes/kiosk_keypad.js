@@ -1,7 +1,6 @@
-var express = require('express')
-var router = express.Router()
-var ensureAuthenticated =
-  require('../functions/ensureAuthenticated').ensureAuthenticated
+import { Router } from 'express'
+var router = Router()
+import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
 
 /* GET kiosk shop page. */
 router.get('/', ensureAuthenticated, function (req, res, next) {
@@ -20,4 +19,4 @@ router.get('/', ensureAuthenticated, function (req, res, next) {
   })
 })
 
-module.exports = router
+export default router

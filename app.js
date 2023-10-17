@@ -1,64 +1,60 @@
 // Require all neccesary modules
-const createError = require('http-errors') // Generating errors
-const express = require('express') // Express
-const methodOverride = require('method-override')
-const path = require('path') // used for handling paths which held express files
-const cookieParser = require('cookie-parser')
-const expressSession = require('express-session')
-const handlebars = require('handlebars')
-const expressHbs = require('express-handlebars') // extended handlebars functionality
-const {
-  allowInsecurePrototypeAccess
-} = require('@handlebars/allow-prototype-access')
-const mongoose = require('mongoose') // database
-const MongoStore = require('connect-mongo') // (expressSession)
-const passport = require('passport') // authentication method
-require('dotenv').config()
+import createError from 'http-errors' // Generating errors
+import express, { json, urlencoded } from 'express' // Express
+import methodOverride from 'method-override'
+import path, { join } from 'path' // used for handling paths which held express files
+import cookieParser from 'cookie-parser'
+import expressSession from 'express-session'
+import handlebars from 'handlebars'
+import { engine } from 'express-handlebars' // extended handlebars functionality
+import { allowInsecurePrototypeAccess } from '@handlebars/allow-prototype-access'
+import mongoose from 'mongoose' // database
+import connectMongo from 'connect-mongo' // (expressSession)
+import passport from 'passport' // authentication method
+import 'dotenv/config'
 
-let https
-let fs
-if (process.env.DEBUG.toLowerCase() === 'true') {
-  https = require('https') // Using HTTPS for debug
-  fs = require('fs') // Loading certificate from file for debug
-}
+import https from 'https' // Using HTTPS for debug
+import fs from 'fs' // Loading certificate from file for debug
+import { fileURLToPath } from 'url'
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // Functions
-require('./functions/azure-passport')
+import './functions/azure-passport.js'
 
 // Import scheduled tasks
-require('./tasks/daily-report')
-require('./tasks/daily-backup')
+import './tasks/daily-report.js'
+import './tasks/daily-backup.js'
 
 // Load routes from routes folder to later app.use them.
 // Access for all
-const indexRouter = require('./routes/index')
-const aboutRouter = require('./routes/about')
-const changelogRouter = require('./routes/changelog')
+import indexRouter from './routes/index.js'
+import aboutRouter from './routes/about.js'
+import changelogRouter from './routes/changelog.js'
 // Access for logged in users
-const shopRouter = require('./routes/shop')
-const profileRouter = require('./routes/profile')
-const ordersRouter = require('./routes/orders')
-const invoicesRouter = require('./routes/invoices')
+import shopRouter from './routes/shop.js'
+import profileRouter from './routes/profile.js'
+import ordersRouter from './routes/orders.js'
+import invoicesRouter from './routes/invoices.js'
 // Access for suppliers
-const addProductsRouter = require('./routes/add_products')
-const invoiceRouter = require('./routes/invoice')
-const paymentsRouter = require('./routes/payments')
-const stockRouter = require('./routes/stock')
-const newProductRouter = require('./routes/new_product')
+import addProductsRouter from './routes/add_products.js'
+import invoiceRouter from './routes/invoice.js'
+import paymentsRouter from './routes/payments.js'
+import stockRouter from './routes/stock.js'
+import newProductRouter from './routes/new_product.js'
 // Access for admins
-const dashboardRouter = require('./routes/admin/admin_dashboard')
+import dashboardRouter from './routes/admin/admin_dashboard.js'
 // Access for kiosk
-const kioskKeypadRouter = require('./routes/kiosk_keypad')
-const kioskShopRouter = require('./routes/kiosk_shop')
+import kioskKeypadRouter from './routes/kiosk_keypad.js'
+import kioskShopRouter from './routes/kiosk_shop.js'
 // Passport routes
-const loginRouter = require('./routes/login')
-const logoutRouter = require('./routes/logout')
-const authOpenId = require('./routes/auth_openid')
-const authOpenIdReturnGet = require('./routes/auth_openid_return')
-const authOpenIdReturnPost = require('./routes/auth_openid_return_post')
+import loginRouter from './routes/login.js'
+import logoutRouter from './routes/logout.js'
+import authOpenId from './routes/auth_openid.js'
+import authOpenIdReturnGet from './routes/auth_openid_return.js'
+import authOpenIdReturnPost from './routes/auth_openid_return_post.js'
 // API routes
-const keypadOrderRouter = require('./routes/api/keypadOrder')
-const customerName = require('./routes/api/customerName')
+import keypadOrderRouter from './routes/api/keypadOrder.js'
+import customerName from './routes/api/customerName.js'
 
 // Express app and database connection
 const app = express()
@@ -67,7 +63,7 @@ mongoose.connect(process.env.DB_CONNECTION_STRING)
 // View engine setup
 app.engine(
   '.hbs',
-  expressHbs.engine({
+  engine({
     defaultLayout: 'layout',
     extname: '.hbs',
     handlebars: allowInsecurePrototypeAccess(handlebars)
@@ -77,10 +73,10 @@ app.enable('trust proxy')
 app.set('view engine', '.hbs')
 app.enable('view cache')
 app.use(methodOverride())
-app.use(express.json())
-app.use(express.static(path.join(__dirname, 'public')))
+app.use(json())
+app.use(express.static(join(__dirname, 'public')))
 app.use(
-  express.urlencoded({
+  urlencoded({
     extended: true
   })
 )
@@ -96,7 +92,7 @@ app.use(
     sameSite: 'None',
     resave: false,
     saveUninitialized: false,
-    store: MongoStore.create({
+    store: connectMongo.create({
       mongoUrl: process.env.DB_CONNECTION_STRING,
       mongooseConnection: mongoose.connection,
       ttl: 14 * 24 * 60 * 60,
@@ -167,4 +163,4 @@ if (process.env.DEBUG.toLowerCase() === 'true') {
   https.createServer(options, app).listen(process.env.APP_PORT_SSL || 443)
 }
 
-module.exports = app
+export default app

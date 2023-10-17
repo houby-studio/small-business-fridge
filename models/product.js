@@ -1,6 +1,6 @@
-var mongoose = require('mongoose')
-var Schema = mongoose.Schema
-var uniqueValidator = require('mongoose-unique-validator')
+import { Schema as _Schema, model } from 'mongoose'
+var Schema = _Schema
+import uniqueValidator from 'mongoose-unique-validator'
 
 var schema = new Schema({
   keypadId: {
@@ -25,4 +25,4 @@ var schema = new Schema({
 
 schema.plugin(uniqueValidator)
 
-module.exports = mongoose.model('Product', schema)
+export default model('Product', schema)

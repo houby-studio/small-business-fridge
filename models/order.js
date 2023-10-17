@@ -1,5 +1,5 @@
-var mongoose = require('mongoose')
-var Schema = mongoose.Schema
+import { Schema as _Schema, model } from 'mongoose'
+var Schema = _Schema
 
 var schema = new Schema({
   buyerId: {
@@ -31,4 +31,4 @@ var schema = new Schema({
   }
 })
 
-module.exports = mongoose.model('Order', schema)
+export default model('Order', schema)

@@ -1,9 +1,8 @@
-var express = require('express')
-var router = express.Router()
-var User = require('../models/user')
-var ensureAuthenticated =
-  require('../functions/ensureAuthenticated').ensureAuthenticated
-var checkKiosk = require('../functions/checkKiosk').checkKiosk
+import { Router } from 'express'
+var router = Router()
+import User from '../models/user.js'
+import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
+import { checkKiosk } from '../functions/checkKiosk.js'
 
 /* GET profile page. */
 router.get('/', ensureAuthenticated, checkKiosk, function (req, res, next) {
@@ -80,4 +79,4 @@ router.post('/', ensureAuthenticated, function (req, res, next) {
   }
 })
 
-module.exports = router
+export default router

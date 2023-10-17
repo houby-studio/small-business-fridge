@@ -1,5 +1,5 @@
-var mongoose = require('mongoose')
-var Schema = mongoose.Schema
+import { Schema as _Schema, model } from 'mongoose'
+var Schema = _Schema
 
 var schema = new Schema({
   supplierId: {
@@ -33,4 +33,4 @@ var schema = new Schema({
   }
 })
 
-module.exports = mongoose.model('Delivery', schema)
+export default model('Delivery', schema)

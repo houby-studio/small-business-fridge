@@ -1,7 +1,10 @@
-const fs = require('fs')
-const _ = require('lodash')
-const exec = require('child_process').exec
-const path = require('path')
+import fs from 'fs'
+import _ from 'lodash'
+import { exec } from 'child_process'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // Concatenate root directory path with our backup folder.
 const backupDirPath = path.join(__dirname, '../database-backup/backup')
@@ -14,12 +17,12 @@ const dbOptions = {
 }
 
 // return stringDate as a date object.
-exports.stringToDate = (dateString) => {
+function stringToDate(dateString) {
   return new Date(dateString)
 }
 
 // Check if variable is empty or not.
-exports.empty = (mixedVar) => {
+function empty(mixedVar) {
   let undef, key, i, len
   const emptyValues = [undef, null, false, 0, '', '0']
   for (i = 0, len = emptyValues.length; i < len; i++) {
@@ -37,7 +40,7 @@ exports.empty = (mixedVar) => {
 }
 
 // Auto backup function
-exports.dbAutoBackUp = () => {
+export default function dbAutoBackUp() {
   // check for auto backup is enabled or disabled
   if (dbOptions.autoBackup === true) {
     console.log(backupDirPath)
@@ -45,7 +48,7 @@ exports.dbAutoBackUp = () => {
     let beforeDate, oldBackupDir, oldBackupPath
 
     // Current date
-    var currentDate = this.stringToDate(date)
+    var currentDate = stringToDate(date)
     const newBackupDir =
       currentDate.getFullYear() +
       '-' +
@@ -80,7 +83,7 @@ exports.dbAutoBackUp = () => {
       newBackupPath
 
     exec(cmd, (error, stdout, stderr) => {
-      if (this.empty(error)) {
+      if (empty(error)) {
         // check for remove old backup after keeping # of days given in ENV.
         if (dbOptions.removeOldBackup === true) {
           if (fs.existsSync(oldBackupPath)) {

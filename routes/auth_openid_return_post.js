@@ -1,6 +1,6 @@
-var express = require('express')
-var router = express.Router()
-var passport = require('passport')
+import { Router } from 'express'
+var router = Router()
+import passport from 'passport'
 
 // 'POST returnURL'
 // `passport.authenticate` will try to authenticate the content returned in
@@ -21,4 +21,4 @@ router.post(
   }
 )
 
-module.exports = router
+export default router

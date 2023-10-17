@@ -1,13 +1,12 @@
-const express = require('express')
-const router = express.Router()
-const moment = require('moment')
-const mailer = require('../../functions/sendMail')
-const User = require('../../models/user')
-const Order = require('../../models/order')
-const Product = require('../../models/product')
-const Delivery = require('../../models/delivery')
-const ensureAuthenticatedAPI =
-  require('../../functions/ensureAuthenticatedAPI').ensureAuthenticatedAPI
+import { Router } from 'express'
+const router = Router()
+import moment from 'moment'
+import { sendMail } from '../../functions/sendMail.js'
+import User from '../../models/user.js'
+import Order from '../../models/order.js'
+import Product from '../../models/product.js'
+import Delivery from '../../models/delivery.js'
+import { ensureAuthenticatedAPI } from '../../functions/ensureAuthenticatedAPI.js'
 let responseJson
 
 /* API to order via keypad */
@@ -139,12 +138,7 @@ router.post('/', ensureAuthenticatedAPI, function (req, res, next) {
                   }<br>Cena: ${
                     product[0].stock[0].price
                   }Kč<br>Kdy: ${moment().format('LLLL')}</p><p>Přijďte zas!</p>`
-                  mailer.sendMail(
-                    user.email,
-                    subject,
-                    body,
-                    product[0].imagePath
-                  )
+                  sendMail(user.email, subject, body, product[0].imagePath)
                   res.status(200)
                   res.set('Content-Type', 'application/json')
                   responseJson = {
@@ -159,7 +153,7 @@ router.post('/', ensureAuthenticatedAPI, function (req, res, next) {
                 .catch((err) => {
                   const subject = 'Nepodařilo se zapsat změny do databáze!'
                   const body = `<h1>Chyba při zapisování do databáze při nákupu!</h1><p>Pokus o vytvoření záznamu nákupu skončil chybou. Zkontrolujte konzistenci databáze!</p><p>Chyba: ${err.message}</p>`
-                  mailer.sendMail('system', subject, body)
+                  sendMail('system', subject, body)
                   return
                 })
             }
@@ -192,4 +186,4 @@ router.post('/', ensureAuthenticatedAPI, function (req, res, next) {
     })
 })
 
-module.exports = router
+export default router

@@ -1,7 +1,7 @@
-var User = require('../models/user')
-var mongoose = require('mongoose')
+import User from '../models/user.js'
+import { connect, disconnect } from 'mongoose'
 
-mongoose.connect(process.env.DB_CONNECTION_STRING, {
+connect(process.env.DB_CONNECTION_STRING, {
   useNewUrlParser: true
 })
 
@@ -32,5 +32,5 @@ for (var i = 0; i < users.length; i++) {
 }
 
 function exit() {
-  mongoose.disconnect()
+  disconnect()
 }

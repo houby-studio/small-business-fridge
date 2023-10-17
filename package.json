@@ -2,8 +2,9 @@
   "name": "small-bussiness-fridge",
   "version": "1.0.4",
   "private": true,
+  "type": "module",
   "scripts": {
-    "start": "node ./bin/www",
+    "start": "node ./bin/www.js",
     "lint": "eslint .",
     "make-env": "cp ./config/example.config.js ./config/config.js && bash ./test/setup_env.sh",
     "test": "mocha test --check-leaks --exit --timeout 5000 --globals __coverage__",

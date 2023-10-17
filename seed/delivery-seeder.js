@@ -1,19 +1,19 @@
-const Product = require('../models/product')
-const User = require('../models/user')
-const Delivery = require('../models/delivery')
-const mongoose = require('mongoose')
+import { findOne } from '../models/product.js'
+import { findOne as _findOne } from '../models/user.js'
+import Delivery from '../models/delivery.js'
+import { connect, disconnect } from 'mongoose'
 
-mongoose.connect(process.env.DB_CONNECTION_STRING, {
+connect(process.env.DB_CONNECTION_STRING, {
   useNewUrlParser: true
 })
 
 function exit() {
-  mongoose.disconnect()
+  disconnect()
 }
 
-User.findOne({})
+_findOne({})
   .then((dbuser) => {
-    Product.findOne({})
+    findOne({})
       .then((dbproduct) => {
         const deliveries = [
           new Delivery({

@@ -1,12 +1,11 @@
-var express = require('express')
-var router = express.Router()
-var moment = require('moment')
+import { Router } from 'express'
+var router = Router()
+import moment from 'moment'
 moment.locale('cs')
-var mailer = require('../functions/sendMail')
-var Invoice = require('../models/invoice')
-var ensureAuthenticated =
-  require('../functions/ensureAuthenticated').ensureAuthenticated
-var csrf = require('csurf')
+import { sendMail } from '../functions/sendMail.js'
+import Invoice from '../models/invoice.js'
+import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
+import csrf from 'csurf'
 var csrfProtection = csrf()
 router.use(csrfProtection)
 
@@ -30,7 +29,7 @@ router.get('/', ensureAuthenticated, function (req, res, _next) {
     }
   }
 
-  // Aggregate invoices, lookup buyer display name and sum number of orders in invoice
+  // Invoice.aggregate invoices, lookup buyer display name and sum number of orders in invoice
   Invoice.aggregate([
     {
       $match: filter
@@ -116,7 +115,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
     if (!check.supplierId.equals(req.user.id)) {
       var subject = 'Neoprávněná akce?!'
       var body = `<h1>Jak se toto podařilo?!</h1><p>Dodavatel ${req.body.displayName} se pokouší manipulovat s fakturou ID ${check._id}, přestože ji nevytvořil.</p>Jeho akce byla revertována. Prověřte celou situaci!</p>`
-      mailer.sendMail('system', subject, body)
+      sendMail('system', subject, body)
       const alert = {
         type: 'danger',
         message:
@@ -147,7 +146,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           } potvrdil, že jste fakturu uhradil!</p><p>Podrobnosti k faktuře:<br>Datum fakturace: ${moment(
             docs.invoiceDate
           ).format('LLLL')}<br>Celková částka k úhradě: ${docs.totalCost}Kč</p>`
-          mailer.sendMail(docs.buyerId.email, subject, body)
+          sendMail(docs.buyerId.email, subject, body)
           const alert = {
             type: 'success',
             message: 'Faktura byla označena jako uhrazená.',
@@ -188,7 +187,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           ).format('LLLL')} a celkovou částkou k úhradě ${
             docs.totalCost
           }Kč za nezaplacenou. Vyřiďte si s ním kde nastala chyba.</p>`
-          mailer.sendMail(docs.buyerId.email, subject, body)
+          sendMail(docs.buyerId.email, subject, body)
           const alert = {
             type: 'success',
             message:
@@ -222,4 +221,4 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
   })
 })
 
-module.exports = router
+export default router
