@@ -7,14 +7,14 @@
 import app from '../app.js'
 import debug from 'debug'
 import { createServer } from 'http'
-
-const logger = debug('small-bussiness-fridge:server')
+import logger from '../functions/logger.js'
+const defaultLogger = debug('small-bussiness-fridge:server')
 
 /**
  * Get port from environment and store in Express.
  */
 
-var port = normalizePort(process.env.PORT || '3000')
+var port = normalizePort(process.env.APP_PORT || '3000')
 app.set('port', port)
 
 /**
@@ -66,9 +66,13 @@ function onError(error) {
   switch (error.code) {
     case 'EACCES':
       console.error(bind + ' requires elevated privileges')
+      logger.error(
+        `server.www.startup__Specified port requires elevated privileges.`
+      )
       process.exit(1)
     case 'EADDRINUSE':
       console.error(bind + ' is already in use')
+      logger.error(`server.www.startup__Specified port is already in use.`)
       process.exit(1)
     default:
       throw error
@@ -82,5 +86,6 @@ function onError(error) {
 function onListening() {
   var addr = server.address()
   var bind = typeof addr === 'string' ? 'pipe ' + addr : 'port ' + addr.port
-  logger('Listening on ' + bind)
+  defaultLogger('Listening on ' + bind)
+  logger.info(`server.www.startup__HTTP server listening on port ${port}`)
 }

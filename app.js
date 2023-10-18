@@ -1,4 +1,7 @@
 // Require all neccesary modules
+import logger from './functions/logger.js'
+logger.info('server.app.startup__Importing root modules.')
+import morgan from 'morgan'
 import createError from 'http-errors' // Generating errors
 import express, { json, urlencoded } from 'express' // Express
 import methodOverride from 'method-override'
@@ -11,22 +14,26 @@ import { allowInsecurePrototypeAccess } from '@handlebars/allow-prototype-access
 import mongoose from 'mongoose' // database
 import connectMongo from 'connect-mongo' // (expressSession)
 import passport from 'passport' // authentication method
-import 'dotenv/config'
-
 import https from 'https' // Using HTTPS for debug
 import fs from 'fs' // Loading certificate from file for debug
 import { fileURLToPath } from 'url'
+import 'dotenv/config'
+
+// Emulate CommonJS variable
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // Functions
+logger.info('server.app.startup__Importing functions.')
 import './functions/azure-passport.js'
 
 // Import scheduled tasks
+logger.info('server.app.startup__Importing scheduled tasks.')
 import './tasks/daily-report.js'
 import './tasks/daily-backup.js'
 
 // Load routes from routes folder to later app.use them.
 // Access for all
+logger.info('server.app.startup__Importing routes.')
 import indexRouter from './routes/index.js'
 import aboutRouter from './routes/about.js'
 import changelogRouter from './routes/changelog.js'
@@ -57,8 +64,10 @@ import keypadOrderRouter from './routes/api/keypadOrder.js'
 import customerName from './routes/api/customerName.js'
 
 // Express app and database connection
-const app = express()
+logger.info('server.app.startup__Connecting to MongoDB server.')
 mongoose.connect(process.env.DB_CONNECTION_STRING)
+logger.info('server.app.startup__Creating and configuring Express.js server.')
+const app = express()
 
 // View engine setup
 app.engine(
@@ -72,6 +81,13 @@ app.engine(
 app.enable('trust proxy')
 app.set('view engine', '.hbs')
 app.enable('view cache')
+// Stream logs to winston
+app.use(
+  morgan(
+    'server.app.middleware__:remote-addr :remote-user :method :url :status :res[content-length] :referrer',
+    { stream: logger.stream }
+  )
+)
 app.use(methodOverride())
 app.use(json())
 app.use(express.static(join(__dirname, 'public')))
@@ -105,6 +121,7 @@ app.use(passport.session())
 
 // Application routes
 // Access for all
+logger.info('server.app.startup__Registering routes.')
 app.use('/', indexRouter)
 app.use('/about', aboutRouter)
 app.use('/changelog', changelogRouter)
@@ -153,14 +170,24 @@ app.use(function (err, req, res, next) {
   res.render('error')
 })
 
-if (process.env.DEBUG.toLowerCase() === 'true') {
-  // When testing, we want to use self sign for localhost website. In production we rely on reverse proxy (nginx/apache etc.)
+if (process.env.NODE_ENV.toLowerCase() === 'development') {
+  // When testing, we want to use self signed certificates for localhost website. In production we rely on reverse proxy (nginx/apache etc.)
   const options = {
     key: fs.readFileSync('./config/key.pem'),
     cert: fs.readFileSync('./config/cert.pem')
   }
   // Create an HTTPS service identical to the HTTP service.
+  logger.warn(
+    'server.app.startup__Creating HTTPS server for development - DO NOT use in PRODUCTION, use reverse proxy instead!'
+  )
   https.createServer(options, app).listen(process.env.APP_PORT_SSL || 443)
+  logger.info(
+    `server.app.startup__HTTPS server listening on port ${
+      process.env.APP_PORT_SSL || 443
+    }`
+  )
 }
+
+logger.info('server.app.startup__Application started!')
 
 export default app

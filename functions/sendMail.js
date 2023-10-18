@@ -3,7 +3,7 @@ import { createTransport } from 'nodemailer'
 export function sendMail(mailto, mailsubject, mailbody, image) {
   // In case mail is destined for system administrator or we run in development environment, send all e-mails to system address obtained from config.
   if (process.env.NODE_ENV === 'development' || mailto === 'system@system') {
-    mailto = process.env.MAIL_SYSTEM
+    mailto = process.env.MAIL_SYSTEM || 'root@localhost'
   }
 
   var transporter = createTransport({
