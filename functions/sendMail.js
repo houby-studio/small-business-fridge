@@ -5,7 +5,7 @@ export function sendMail(mailto, mailsubject, mailbody, image) {
   // In case mail is destined for system administrator or we run in development environment, send all e-mails to system address obtained from config.
   if (process.env.NODE_ENV === 'development' || mailto === 'system@system') {
     logger.warn(
-      `server.functions.sendmail__Sending e-mail [${mailsubject}] to administrator address.`
+      `server.functions.sendmail__Sending e-mail [${mailsubject}] to system administrator.`
     )
     mailto = process.env.MAIL_SYSTEM || 'root@localhost'
   }
