@@ -21,6 +21,7 @@ COPY . .
 # Change ownership for writeable folders to node user
 RUN chown -R node:node /usr/src/app/public/images
 RUN chown -R node:node /usr/src/app/database-backup
+RUN chown -R node:node /usr/src/app/logs
 
 # Do not run under root
 USER node
