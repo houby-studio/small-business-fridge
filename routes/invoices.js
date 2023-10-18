@@ -96,7 +96,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
     if (!check.buyerId.equals(req.user.id)) {
       const subject = 'Neoprávněná akce?!'
       const body = `<h1>Jak se toto podařilo?!</h1><p>Zákazník ${req.body.displayName} se pokouší manipulovat s fakturou ID ${check._id}, přestože ji nevlastní.</p>Jeho akce byla revertována. Prověřte celou situaci!</p>`
-      sendMail('system', subject, body)
+      sendMail('system@system', subject, body)
       const alert = {
         type: 'danger',
         message: 'Nemáte oprávnění měnit status faktury, která Vám nepatří!',

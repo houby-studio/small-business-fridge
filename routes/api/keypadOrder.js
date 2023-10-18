@@ -153,7 +153,7 @@ router.post('/', ensureAuthenticatedAPI, function (req, res, next) {
                 .catch((err) => {
                   const subject = 'Nepodařilo se zapsat změny do databáze!'
                   const body = `<h1>Chyba při zapisování do databáze při nákupu!</h1><p>Pokus o vytvoření záznamu nákupu skončil chybou. Zkontrolujte konzistenci databáze!</p><p>Chyba: ${err.message}</p>`
-                  sendMail('system', subject, body)
+                  sendMail('system@system', subject, body)
                   return
                 })
             }

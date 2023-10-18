@@ -67,12 +67,12 @@ function onError(error) {
     case 'EACCES':
       console.error(bind + ' requires elevated privileges')
       logger.error(
-        `server.www.startup__Specified port requires elevated privileges.`
+        'server.www.startup__Specified port requires elevated privileges.'
       )
       process.exit(1)
     case 'EADDRINUSE':
       console.error(bind + ' is already in use')
-      logger.error(`server.www.startup__Specified port is already in use.`)
+      logger.error('server.www.startup__Specified port is already in use.')
       process.exit(1)
     default:
       throw error

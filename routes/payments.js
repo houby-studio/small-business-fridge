@@ -115,7 +115,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
     if (!check.supplierId.equals(req.user.id)) {
       var subject = 'Neoprávněná akce?!'
       var body = `<h1>Jak se toto podařilo?!</h1><p>Dodavatel ${req.body.displayName} se pokouší manipulovat s fakturou ID ${check._id}, přestože ji nevytvořil.</p>Jeho akce byla revertována. Prověřte celou situaci!</p>`
-      sendMail('system', subject, body)
+      sendMail('system@system', subject, body)
       const alert = {
         type: 'danger',
         message:
