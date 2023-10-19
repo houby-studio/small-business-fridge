@@ -4,13 +4,13 @@
       <div class="card-body pb-0">
         <div class="row">
           <div class="col-lg">
-            <p>Celkem zakoupeno: {{orders.totalOrders}}ks</p>
+            <p>Celkem zakoupeno: {{#if orders.totalOrders}}{{orders.totalOrders}}{{else}}0{{/if}}ks</p>
           </div>
           <div class="col-lg">
-            <p>Celkem utraceno: {{orders.totalSpend}}Kč</p>
+            <p>Celkem utraceno: {{#if orders.totalSpend}}{{orders.totalSpend}}{{else}}0{{/if}}Kč</p>
           </div>
           <div class="col-lg">
-            <p>Nefakturováno: {{orders.totalUnpaid}}Kč</p>
+            <p>Nefakturováno: {{#if orders.totalUnpaid}}{{orders.totalUnpaid}}{{else}}0{{/if}}Kč</p>
           </div>
         </div>
       </div>
