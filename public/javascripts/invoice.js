@@ -137,4 +137,11 @@ $(document).ready(function () {
     ]
   })
   $('.dataTables_length').addClass('bs-select')
+  const someIsNotZero = perUserSpent.data.datasets[0].data.some(
+    (item) => item !== 0
+  )
+  if (!someIsNotZero) {
+    // No data is present
+    $('#invoice_submit').attr('disabled', true)
+  }
 })
