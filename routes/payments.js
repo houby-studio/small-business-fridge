@@ -68,9 +68,9 @@ router.get('/', ensureAuthenticated, function (req, res, _next) {
           )
           element.invoiceDate = moment(element.invoiceDate).format()
           if (element.paid) {
-            element.status = 'Uhrazeno'
+            element.status = 'Zaplaceno'
           } else if (element.requestPaid) {
-            element.status = 'Čeká na potvrzení'
+            element.status = 'Kontrola platby'
           } else {
             element.status = 'Neuhrazeno'
           }
