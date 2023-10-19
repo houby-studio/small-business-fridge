@@ -64,6 +64,14 @@ input[type=number] {
   /* Firefox */
 }
 
+.old-record {
+  filter: brightness(50%);
+}
+
+.keypad {
+  margin-top: 0.5em;
+}
+
 @media screen and (max-width: 991px) {
   .float-right {
     float: none !important;

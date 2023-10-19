@@ -6,97 +6,104 @@
   novalidate
 >
   <div class='card w-75 mx-auto w-100-lg'>
-    <div class='card-header h4 text-center'>
+    <div class='card-header h2 text-center'>
       Zadejte ID zákazníka
+      <input
+        type='button'
+        value='⏱️'
+        name='timer'
+        id='timer'
+        class='float-end btn disabled btn-block'
+      />
     </div>
     <div class='card-body'>
-      <div class='form-row'>
+      <div class='row'>
         <div class='col-lg-12'>
-          <div class='form-row'>
-            <div class='form-group col'>
+          <div class='row'>
+            <div class='col'>
               <input
                 type='text'
                 name='customer_id'
-                class='form-control-lg customer-screen z-depth-1 w-100 btn-lg text-center'
+                class='form-control customer-screen z-depth-1 w-100 btn-lg text-center'
                 value=''
                 readonly
               />
             </div>
           </div>
-          <div class='form-row'>
-            <div class='form-group col'>
+          <div class='row'>
+            <div class='col'>
               <button
                 type='button'
-                class='numberBtn btn btn-primary btn-block btn-lg waves-effect'
+                class='form-control numberBtn btn keypad btn-primary btn-block btn-lg waves-effect'
                 value='1'
               >1</button>
             </div>
-            <div class='form-group col'>
+            <div class='col'>
               <button
                 type='button'
-                class='numberBtn btn btn-primary btn-block btn-lg waves-effect'
+                class='form-control numberBtn btn keypad btn-primary btn-block btn-lg waves-effect'
                 value='2'
               >2</button>
             </div>
-            <div class='form-group col'>
+            <div class='col'>
               <button
                 type='button'
-                class='numberBtn btn btn-primary btn-block btn-lg waves-effect'
+                class='form-control numberBtn btn keypad btn-primary btn-block btn-lg waves-effect'
                 value='3'
               >3</button>
             </div>
           </div>
-          <div class='form-row'>
-            <div class='form-group col'>
+          <div class='row'>
+            <div class='col'>
               <button
                 type='button'
-                class='numberBtn btn btn-primary btn-block btn-lg waves-effect'
+                class='form-control numberBtn btn keypad btn-primary btn-block btn-lg waves-effect'
                 value='4'
               >4</button>
             </div>
-            <div class='form-group col'>
+            <div class='col'>
               <button
                 type='button'
-                class='numberBtn btn btn-primary btn-block btn-lg waves-effect'
+                class='form-control numberBtn btn keypad btn-primary btn-block btn-lg waves-effect'
                 value='5'
               >5</button>
             </div>
-            <div class='form-group col'>
+            <div class='col'>
               <button
                 type='button'
-                class='numberBtn btn btn-primary btn-block btn-lg waves-effect'
+                class='form-control numberBtn btn keypad btn-primary btn-block btn-lg waves-effect'
                 value='6'
               >6</button>
             </div>
           </div>
-          <div class='form-row'>
-            <div class='form-group col'>
+          <div class='row'>
+            <div class='col'>
               <button
                 type='button'
-                class='numberBtn btn btn-primary btn-block btn-lg waves-effect'
+                class='form-control numberBtn btn keypad btn-primary btn-block btn-lg waves-effect'
                 value='7'
               >7</button>
             </div>
-            <div class='form-group col'>
+            <div class='col'>
               <button
                 type='button'
-                class='numberBtn btn btn-primary btn-block btn-lg waves-effect'
+                class='form-control numberBtn btn keypad btn-primary btn-block btn-lg waves-effect'
                 value='8'
               >8</button>
             </div>
-            <div class='form-group col'>
+            <div class='col'>
               <button
                 type='button'
-                class='numberBtn btn btn-primary btn-block btn-lg waves-effect'
+                class='form-control numberBtn btn keypad btn-primary btn-block btn-lg waves-effect'
                 value='9'
               >9</button>
             </div>
           </div>
-          <div class='form-row'>
-            <div class='form-group col'>
+          <div class='row'>
+            <div class='col'>
               <button
                 type='button'
-                class='numberBtn btn btn-primary btn-block btn-lg waves-effect'
+                class='form-control numberBtn btn keypad btn-primary btn-block btn-lg waves-effect'
                 value='0'
               >0</button>
             </div>
@@ -106,18 +113,19 @@
     </div>
     <!-- End of card-body -->
     <div class='card-footer text-muted'>
-      <div class='form-row'>
+      <div class='row'>
         <div class='col-lg-6'>
           <input
+            id='reset'
             type='reset'
-            class='btn btn-danger btn-lg btn-block'
+            class='form-control btn btn-danger btn-lg btn-block'
             value='Reset'
           />
         </div>
         <div class='col-lg-6'>
           <input
             type='submit'
-            class='btn btn-success btn-lg btn-block'
+            class='form-control btn btn-success btn-lg btn-block'
             value='Pokračovat'
           />
         </div>
@@ -126,6 +134,7 @@
   </div>
 </form>
 <style>
-  .btn-lg { height: 12vh; font-size: 2rem; }
+  .btn-lg { height: 12vh; font-size: 2rem; } html, body {margin: 0; height:
+  100%; overflow: hidden};
 </style>
 <script type='text/javascript' src='/javascripts/kiosk_keypad.js'></script>

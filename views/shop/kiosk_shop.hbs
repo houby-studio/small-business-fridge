@@ -5,18 +5,49 @@
         <div class="card-body py-1">
           <div class="row">
             <div class="col-lg">
-              <input type="button" value="ID: {{customer.keypadId}}" name="customerName" id="customerName"
-                class="btn btn-outline disabled btn-block btn-lg" />
+              <form action="/kiosk_keypad" method="get">
+                <input type="submit" value="Zpět" name="Submit" id="Submit"
+                  class="form-control btn btn-primary btn-block waves-effect" />
+                </form>
             </div>
             <div class="col-lg">
               <input type="button" value="{{customer.displayName}}" name="customerName" id="customerName"
-                class="btn btn-outline disabled btn-block btn-lg" />
+                class="form-control btn btn-outline disabled btn-block" />
             </div>
             <div class="col-lg">
-              <form action="/kiosk_keypad" method="get">
-                <input type="submit" value="Zpět" name="Submit" id="Submit"
-                  class="btn btn-primary btn-block btn-lg waves-effect" />
-              </form>
+              <input
+                type='button'
+                value='3m 00s'
+                name='timer'
+                id='timer'
+                class='form-control float-end btn btn-outline disabled btn-block'
+              />
+            </div>
+          </div>
+          <div class="row keypad">
+            <div class="col-lg">
+              <input type="radio" class="btn-check" name="product-filter" id="all" autocomplete="off" checked>
+              <label class="form-control btn btn-outline-primary" for="all">Vše</label>
+            </div>
+            <div class="col-lg">
+              <input type="radio" class="btn-check" name="product-filter" id="drinks" autocomplete="off">
+              <label class="form-control btn btn-outline-primary" for="drinks">Nápoje</label>
+            </div>
+            <div class="col-lg">
+              <input type="radio" class="btn-check" name="product-filter" id="sweets" autocomplete="off">
+              <label class="form-control btn btn-outline-primary" for="sweets">Sladkosti</label>
+            </div>
+            <div class="col-lg">
+              <input type="radio" class="btn-check" name="product-filter" id="salts" autocomplete="off">
+              <label class="form-control btn btn-outline-primary" for="salts">Slanosti</label>
+            </div>
+            <div class="col-lg">
+              <input type="radio" class="btn-check" name="product-filter" id="frozen" autocomplete="off">
+              <label class="form-control btn btn-outline-primary" for="frozen">Mražené</label>
+            </div>
+            <div class="col-lg">
+              <input type="radio" class="btn-check" name="product-filter" id="fastfood" autocomplete="off">
+              <label class="form-control btn btn-outline-primary" for="fastfood">Minutky</label>
             </div>
           </div>
         </div>
@@ -68,5 +99,4 @@
   </div>
   {{/each}}
 </section>
-<script type="text/javascript" src="/javascripts/form_validate.js"></script>
 <script type="text/javascript" src="/javascripts/kiosk_shop.js"></script>
