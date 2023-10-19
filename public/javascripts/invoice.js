@@ -1,23 +1,3 @@
-// If nothing to invoice, replace non-existing or useless graph with text
-// Chart.plugins.register({
-//   afterDraw: function (chart) {
-//     const someIsNotZero = chart.data.datasets[0].data.some((item) => item !== 0)
-//     if (!someIsNotZero) {
-//       // No data is present
-//       $('#invoice_submit').attr('disabled', true)
-//       var ctx = chart.chart.ctx
-//       var width = chart.chart.width
-//       var height = chart.chart.height
-//       chart.clear()
-//       ctx.save()
-//       ctx.textAlign = 'center'
-//       ctx.textBaseline = 'middle'
-//       ctx.fillText('Žádné produkty k fakturaci', width / 2, height / 2)
-//       ctx.restore()
-//     }
-//   }
-// })
-
 // User graph swapper - changes between 'Spent amount in Kč and bought amount'
 $('#user-swap').click(function () {
   var clicks = $(this).data('clicks')
@@ -146,9 +126,11 @@ $(document).ready(function () {
   $('#table-orders').DataTable({
     columnDefs: [{ type: 'natural', targets: 3 }],
     language: {
-      url: '//cdn.datatables.net/plug-ins/1.10.19/i18n/Czech.json'
+      url: '//cdn.datatables.net/plug-ins/1.10.19/i18n/Czech.json',
+      searchPlaceholder: 'Hledaný výraz'
     },
     fixedHeader: true,
+    order: [[0, 'desc']],
     lengthMenu: [
       [10, 25, 50, -1],
       [10, 25, 50, 'Vše']
