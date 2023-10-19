@@ -1,0 +1,74 @@
+version: "3.8"
+services:
+  dev-small-business-fridge:
+    image: houbystudio/small-business-fridge:latest
+    container_name: dev-small-business-fridge
+    environment:
+      - NODE_ENV=development
+      - DB_CONNECTION_STRING=mongodb://sbf-app:password@dev-mongo:27017/sbf-dev?retryWrites=true&w=majority&tls=false&directConnection=true&authSource=admin
+      - COOKIE_SECRET=d73c6d69-7393-495f-8bec-6e60f7579eecd73c6d69-7393-49
+      - PARSER_SECRET=ffbbcb61-0000-4184-b7e2-bd5720cadc44ffbbcb61-0000-41
+      - API_SECRET=ffbbcb61-0000-4184-b7e2-
+      - MAIL_PORT=1025
+      - MAIL_HOST=dev-maildev
+      - MAIL_FROM=[DEV] Small Business Fridge
+      - MAIL_SYSTEM=system@example.com
+      - MAIL_USERNAME=noreply@example.com
+      - MAIL_PASSWORD=
+      - CREDS_IDENTITY_METADATA=https://login.microsoftonline.com/{tenant}/v2.0/.well-known/openid-configuration
+      - CREDS_CLIENT_ID=26ea4641-db92-4cd4-a080-8027970bd7e5
+      - CREDS_REDIRECT_URL=https://sbf-dev.example.com/auth/openid/return
+      - CREDS_CLIENT_SECRET=26ea4641db924cd4a0808027970bd7e5
+      - CREDS_COOKIE_ENCRYPTION_KEY=926a06e9-a39c-48ef-a56a-0ed1dbbd
+      - CREDS_COOKIE_ENCRYPTION_VALUE=9be3b6ec2dc4
+      - CREDS_DESTROY_SESSION_URL=https://sbf-dev.example.com/
+      - TZ=Europe/Prague
+    ports:
+      - 3000:3000
+    volumes:
+      - dev-images:/usr/src/app/public/images
+      - dev-backup:/usr/src/app/database-backup
+      - dev-logs:/usr/src/app/logs
+    restart: unless-stopped
+
+  dev-mongo:
+    image: mongo
+    restart: always
+    ports:
+      - 27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: sbf-app
+      MONGO_INITDB_ROOT_PASSWORD: password
+    volumes:
+      - dev-database:/data/db
+
+  dev-mongo-express:
+    image: mongo-express
+    restart: always
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: sbf-app
+      ME_CONFIG_MONGODB_ADMINPASSWORD: password
+      ME_CONFIG_MONGODB_URL: mongodb://sbf-app:password@dev-mongo:27017/
+
+  dev-maildev:
+    image: maildev/maildev
+    restart: always
+    environment:
+      - TZ=Europe/Prague
+      - MAILDEV_WEB_PORT=1080
+      - MAILDEV_SMTP_PORT=1025
+    ports:
+      - "8080:1080"
+      - "8025:1025"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+
+volumes:
+  dev-images:
+  dev-backup:
+  dev-database:
+  dev-logs:
