@@ -12,7 +12,7 @@
         </thead>
         <tbody>
           {{# each invoices }}
-          <tr>
+          <tr {{#if this.paid}} class="old-record" {{/if}}>
             <td>
               <span class="d-none">{{ this.invoiceDate }}</span>{{ this.invoiceDate_format }}
             </td>
