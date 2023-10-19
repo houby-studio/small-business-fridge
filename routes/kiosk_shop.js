@@ -52,7 +52,15 @@ function renderPage(req, res, alert, customer) {
               $gt: ['$$stock.amount_left', 0]
             }
           }
+        },
+        stockSum: {
+          $sum: '$stock.amount_left'
         }
+      }
+    },
+    {
+      $sort: {
+        displayName: 1
       }
     }
   ])

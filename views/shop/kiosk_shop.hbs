@@ -70,9 +70,8 @@
           <div class="card-footer">
             <div class="row">
               <div class="col-6 text-left">
-                {{!-- TODO: add tooltip to icons https://getbootstrap.com/docs/4.0/components/tooltips/ --}}
                 {{#if this.stock.0.amount_left}}
-                <i class="fas fa-boxes"></i> {{ this.stock.0.amount_left }}
+                <i class="fas fa-boxes"></i> {{ this.stockSum }}
                 {{else}}
                 <i class="fas fa-boxes"></i> <span class="text-danger">0</span>
                 {{/if }}
