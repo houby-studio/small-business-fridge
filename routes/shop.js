@@ -8,11 +8,13 @@ import { sendMail } from '../functions/sendMail.js'
 import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
 import { checkKiosk } from '../functions/checkKiosk.js'
 import csrf from 'csurf'
+import logger from '../functions/logger.js'
 const csrfProtection = csrf()
 router.use(csrfProtection)
 moment.locale('cs')
 
 function renderPage(req, res, alert) {
+  // TODO: Possibly refactor to inline condition directly in query
   let filter
   if (req.user.showAllProducts) {
     filter = {}
@@ -81,6 +83,14 @@ function renderPage(req, res, alert) {
       })
     })
     .catch((err) => {
+      logger.error(
+        'server.routes.shop__Failed to query products from database.',
+        {
+          metadata: {
+            error: err.message
+          }
+        }
+      )
       res.status(err.status || 500)
       res.render('error')
     })
@@ -99,6 +109,15 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res) {
 /* POST shop page. */
 router.post('/', ensureAuthenticated, checkKiosk, function (req, res) {
   if (req.user.id !== req.body.user_id) {
+    logger.warn(
+      'server.routes.shop__User identity does not match with request body. No product has been purchased.',
+      {
+        metadata: {
+          userIdentity: req.user.id,
+          bodyIdentity: req.body.user_id
+        }
+      }
+    )
     const alert = {
       type: 'danger',
       component: 'web',
@@ -119,14 +138,30 @@ router.post('/', ensureAuthenticated, checkKiosk, function (req, res) {
   Delivery.findOne({
     _id: req.body.product_id
   })
-    .then((obj) => {
-      obj.amount_left--
-      obj
+    .then((object) => {
+      object.amount_left--
+      object
         .save()
         .then(() => {
+          logger.debug(
+            `server.routes.shop__Purchased product stock amount decremented from delivery [${object._id}].`,
+            {
+              metadata: {
+                object: object
+              }
+            }
+          )
           newOrder
             .save()
-            .then(() => {
+            .then((order) => {
+              logger.info(
+                `server.routes.shop__User succesfully purchased product [${req.body.display_name}] for [${req.body.product_price}] via e-shop.`,
+                {
+                  metadata: {
+                    order: order
+                  }
+                }
+              )
               const alert = {
                 type: 'success',
                 message: `Zakoupili jste ${req.body.display_name} za ${req.body.product_price}Kč.`,
@@ -143,8 +178,17 @@ router.post('/', ensureAuthenticated, checkKiosk, function (req, res) {
                 }Kč<br>Kdy: ${moment().format('LLLL')}</p><p>Přijďte zas!</p>`
                 sendMail(req.user.email, subject, body, req.body.image_path)
               }
+              return
             })
             .catch((err) => {
+              logger.error(
+                `server.routes.shop__Failed to create order in the database, but stock amount has been already decremented!`,
+                {
+                  metadata: {
+                    error: err.message
+                  }
+                }
+              )
               const alert = {
                 type: 'danger',
                 component: 'db',
@@ -160,6 +204,14 @@ router.post('/', ensureAuthenticated, checkKiosk, function (req, res) {
             })
         })
         .catch((err) => {
+          logger.error(
+            `server.routes.shop__Failed to decrement stock amount from the delivery.`,
+            {
+              metadata: {
+                error: err.message
+              }
+            }
+          )
           const alert = {
             type: 'danger',
             component: 'db',
@@ -175,6 +227,14 @@ router.post('/', ensureAuthenticated, checkKiosk, function (req, res) {
         })
     })
     .catch((err) => {
+      logger.error(
+        'server.routes.shop__Failed to query deliveries from database.',
+        {
+          metadata: {
+            error: err.message
+          }
+        }
+      )
       const alert = {
         type: 'danger',
         component: 'db',

@@ -1,5 +1,5 @@
 import { createLogger, transports, format } from 'winston'
-const { combine, timestamp, json, simple } = format
+const { combine, timestamp, json } = format
 
 var logger = createLogger({
   transports: [
@@ -10,11 +10,27 @@ var logger = createLogger({
       handleExceptions: true,
       json: true,
       maxsize: 5242880, //5MB
-      maxFiles: 14,
+      maxFiles: '14d',
+      colorize: false
+    }),
+    new transports.File({
+      format: combine(timestamp(), json()),
+      level: 'error',
+      filename: './logs/error.json',
+      handleExceptions: true,
+      json: true,
+      maxsize: 5242880, //5MB
+      maxFiles: '14d',
       colorize: false
     }),
     new transports.Console({
-      format: simple(),
+      format: combine(
+        format.colorize({ all: true }),
+        timestamp({ format: 'YY-MM-DD HH:mm:ss' }),
+        format.printf(
+          (info) => `[${info.timestamp}] [${info.level}] : ${info.message}`
+        )
+      ),
       level: 'debug',
       handleExceptions: true,
       json: false,

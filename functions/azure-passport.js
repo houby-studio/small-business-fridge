@@ -67,10 +67,15 @@ passport.use(
       cookieSameSite:
         process.env.CREDS_COOKIE_SAME_SITE.toLowerCase() === 'true' || false
     },
-    function (iss, sub, profile, accessToken, refreshToken, done) {
+    function (_iss, _sub, profile, _accessToken, _refreshToken, done) {
       if (!profile.oid) {
         logger.error(
-          `server.functions.azurepassport__User profile does not contain OID.`
+          `server.functions.azurepassport__User profile does not contain OID.`,
+          {
+            metadata: {
+              profile: profile
+            }
+          }
         )
         return done(new Error('User profile does not contain OID'), null)
       }
@@ -79,8 +84,12 @@ passport.use(
         findByOid(profile.oid, function (err, user) {
           if (err) {
             logger.error(
-              'server.functions.azurepassport__Failed to fetch user from database. Error:',
-              err
+              'server.functions.azurepassport__Failed to fetch user from database.',
+              {
+                metadata: {
+                  error: err.message
+                }
+              }
             )
             return done(err)
           }
@@ -97,7 +106,12 @@ passport.use(
                 // If user does not exist in database, automatically register as customer (not admin, not supplier, auto increment keypad ID)
                 if (!profile._json.email) {
                   logger.error(
-                    `server.functions.azurepassport__User [${profile.oid}] does not contain email parameter. Cannot register user.`
+                    `server.functions.azurepassport__User [${profile.oid}] does not contain email parameter. Cannot register user.`,
+                    {
+                      metadata: {
+                        profile: profile
+                      }
+                    }
                   )
                   return done(1)
                 }
@@ -130,8 +144,12 @@ passport.use(
                 latestUser(function (err, res) {
                   if (err) {
                     logger.error(
-                      'server.functions.azurepassport__Failed to fetch user with highest keypadId. Error:',
-                      err
+                      'server.functions.azurepassport__Failed to fetch user with highest keypadId.',
+                      {
+                        metadata: {
+                          error: err.message
+                        }
+                      }
                     )
                     return done(err)
                   }
@@ -141,10 +159,14 @@ passport.use(
                   )
                   newUser
                     .save()
-                    .then((res) => {
+                    .then((result) => {
                       logger.info(
                         `server.functions.azurepassport__Created user [${profile._json.email}].`,
-                        res
+                        {
+                          metadata: {
+                            result: result
+                          }
+                        }
                       )
                       const subject = `Lednice IT je pyšná, že ji navštívila osoba jménem ${newUser.displayName}`
                       const body = `<h1>Lednice IT Vás vítá!</h1><p>Snad se Vám zde bude líbit.</p><p>Vaše ID pro objednávání skrze kiosek: ${newUser.keypadId}</p><h2>Jak to funguje</h2><p>Do Lednice IT dodává produkty více dodavatelů. Zákazník si přes e-shop či přes kiosek zakoupí vybraný produkt. Až se dodavateli nashromáždí dostatek prodaného zboží, vytvoří hromadnou fakturaci. Každý zákazník, který si u daného dodavatele něco zakoupil obdrží e-mail s QR kódem, který uhradí. Platbu obě strany potvrdí v rozhraní e-shopu.</p><p>Pokud se budete chtít stát dodavatelem, kontaktujte správce Lednice IT.</p>`
@@ -152,8 +174,12 @@ passport.use(
                     })
                     .catch((err) => {
                       logger.error(
-                        'server.functions.azurepassport__Failed to create user. Error:',
-                        err
+                        'server.functions.azurepassport__Failed to create user.',
+                        {
+                          metadata: {
+                            error: err.message
+                          }
+                        }
                       )
                     })
                 })
@@ -161,7 +187,11 @@ passport.use(
               .catch((err) => {
                 logger.error(
                   'server.functions.azurepassport__Failed to query database for user OID. Error:',
-                  err
+                  {
+                    metadata: {
+                      error: err.message
+                    }
+                  }
                 )
                 return done(err)
               })

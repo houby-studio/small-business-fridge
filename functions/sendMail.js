@@ -5,7 +5,13 @@ export function sendMail(mailto, mailsubject, mailbody, image) {
   // In case mail is destined for system administrator or we run in development environment, send all e-mails to system address obtained from config.
   if (process.env.NODE_ENV === 'development' || mailto === 'system@system') {
     logger.warn(
-      `server.functions.sendmail__Sending e-mail [${mailsubject}] to system administrator.`
+      `server.functions.sendmail__Sending e-mail [${mailsubject}] to system administrator.`,
+      {
+        metadata: {
+          nodeEnv: process.env.NODE_ENV,
+          mailto: mailto
+        }
+      }
     )
     mailto = process.env.MAIL_SYSTEM || 'root@localhost'
   }
@@ -43,20 +49,26 @@ export function sendMail(mailto, mailsubject, mailbody, image) {
 
   transporter
     .sendMail(mailOptions)
-    .then((info) => {
+    .then((result) => {
       logger.info(
-        `server.functions.sendmail__Succesfully sent e-mail [${JSON.stringify(
-          mailOptions
-        )}].`,
-        info
+        `server.functions.sendmail__Succesfully sent e-mail [${mailsubject}].`,
+        {
+          metadata: {
+            result: result,
+            mailOptions: mailOptions
+          }
+        }
       )
     })
     .catch((err) => {
       logger.error(
-        `server.functions.sendmail__Failed to send e-mail [${JSON.stringify(
-          mailOptions
-        )}]. Error:`,
-        err
+        `server.functions.sendmail__Failed to send e-mail [${mailsubject}].`,
+        {
+          metadata: {
+            error: err,
+            mailOptions: mailOptions
+          }
+        }
       )
     })
 }
