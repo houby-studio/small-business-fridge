@@ -1,11 +1,14 @@
-var responseJson
+import logger from './logger.js'
 
 export function ensureAuthenticatedAPI(req, res, next) {
   // Check if request header contains API secret key
+  logger.warn(
+    'server.functions.ensureauthenticatedapi__Blocked API request without valid API key.'
+  )
   if (req.get('sbf-API-secret') !== process.env.API_SECRET) {
     res.status(401)
     res.set('Content-Type', 'application/problem+json')
-    responseJson = {
+    const responseJson = {
       type: 'https://github.com/houby-studio/small-business-fridge/wiki/API-documentation#api-protection',
       title: 'Your request does not contain secret key.',
       status: 401,

@@ -2,6 +2,8 @@
 import { sendMail } from './sendMail.js'
 import passport from 'passport'
 import { OIDCStrategy } from 'passport-azure-ad'
+import logger from './logger.js'
+import model from '../models/user.js'
 
 const cookieEncryptionKeys = [
   {
@@ -9,10 +11,6 @@ const cookieEncryptionKeys = [
     iv: process.env.CREDS_COOKIE_ENCRYPTION_VALUE
   }
 ]
-
-// Mongoose Data object
-// import module as User from '../Users/user.js'
-import model from '../models/user.js'
 
 // Helper function to find user in database
 const findByOid = function (oid, fn) {
@@ -71,77 +69,102 @@ passport.use(
     },
     function (iss, sub, profile, accessToken, refreshToken, done) {
       if (!profile.oid) {
-        return done(new Error('No oid found'), null)
+        logger.error(
+          `server.functions.azurepassport__User profile does not contain OID.`
+        )
+        return done(new Error('User profile does not contain OID'), null)
       }
       // asynchronous verification
       process.nextTick(function () {
         findByOid(profile.oid, function (err, user) {
           if (err) {
-            console.log('Error user.', err)
+            logger.error(
+              'server.functions.azurepassport__Failed to fetch user from database. Error:',
+              err
+            )
             return done(err)
           }
           if (!user) {
             // Auto-registration
-            user
+            logger.info(
+              `server.functions.azurepassport__User [${profile._json.email}] not found in database. Starting automatic registration.`
+            )
+            model
               .findOne({
                 oid: profile.oid
               })
-              .then((user) => {
+              .then(() => {
                 // If user does not exist in database, automatically register as customer (not admin, not supplier, auto increment keypad ID)
-                if (!user) {
-                  if (!profile._json.email) {
-                    return done(1)
-                  }
-                  console.log('Triggered no user, creating new.')
-                  const newUser = new User()
-                  newUser.oid = profile.oid
-                  newUser.displayName = profile.displayName
-                  newUser.email = profile._json.email
-                  profile.admin = false
-                  profile.supplier = false
-                  // Async function to find highest keypad ID and increment it by one.
-                  const latestUser = function (callback) {
-                    model
-                      .find()
-                      .sort({
-                        keypadId: -1
-                      })
-                      .limit(1)
-                      .then((res) => {
-                        if (!res[0]) {
-                          callback(err, 1)
-                        } else {
-                          callback(null, res[0].keypadId + 1)
-                        }
-                      })
-                      .catch((err) => {
-                        callback(err, 1)
-                      })
-                  }
-                  // Call function from above and handle user creation in callback
-                  latestUser(function (err, res) {
-                    if (err) {
-                      return done(err)
-                    }
-                    newUser.keypadId = res
-                    newUser
-                      .save()
-                      .then((res) => {
-                        // console.log(`New User ${newUser.displayName} inserted into database.`);
-                        const subject = `Lednice IT je pyšná, že ji navštívila osoba jménem ${newUser.displayName}`
-                        const body = `<h1>Lednice IT Vás vítá!</h1><p>Snad se Vám zde bude líbit.</p><p>Vaše ID pro objednávání skrze kiosek: ${newUser.keypadID}</p><h2>Jak to funguje</h2><p>Do Lednice IT dodává produkty více dodavatelů. Zákazník si přes e-shop či přes kiosek zakoupí vybraný produkt. Až se dodavateli nashromáždí dostatek prodaného zboží, vytvoří hromadnou fakturaci. Každý zákazník, který si u daného dodavatele něco zakoupil obdrží e-mail s QR kódem, který uhradí. Platbu obě strany potvrdí v rozhraní e-shopu.</p><p>Pokud se budete chtít stát dodavatelem, kontaktujte správce Lednice IT.</p>`
-                        sendMail(newUser.email, subject, body)
-                      })
-                      .catch((err) => {
-                        console.log(err)
-                      })
-                  })
+                if (!profile._json.email) {
+                  logger.error(
+                    `server.functions.azurepassport__User [${profile.oid}] does not contain email parameter. Cannot register user.`
+                  )
+                  return done(1)
                 }
+                const newUser = new model()
+                newUser.oid = profile.oid
+                newUser.displayName = profile.displayName
+                newUser.email = profile._json.email
+                profile.admin = false
+                profile.supplier = false
+                // Async function to find highest keypad ID and increment it by one.
+                const latestUser = function (callback) {
+                  model
+                    .find()
+                    .sort({
+                      keypadId: -1
+                    })
+                    .limit(1)
+                    .then((res) => {
+                      if (!res[0]) {
+                        callback(err, 1)
+                      } else {
+                        callback(null, res[0].keypadId + 1)
+                      }
+                    })
+                    .catch((err) => {
+                      callback(err, 1)
+                    })
+                }
+                // Call function from above and handle user creation in callback
+                latestUser(function (err, res) {
+                  if (err) {
+                    logger.error(
+                      'server.functions.azurepassport__Failed to fetch user with highest keypadId. Error:',
+                      err
+                    )
+                    return done(err)
+                  }
+                  newUser.keypadId = res
+                  logger.info(
+                    `server.functions.azurepassport__Assigned keypadId [${res}] to user [${profile._json.email}]`
+                  )
+                  newUser
+                    .save()
+                    .then((res) => {
+                      logger.info(
+                        `server.functions.azurepassport__Created user [${profile._json.email}].`,
+                        res
+                      )
+                      const subject = `Lednice IT je pyšná, že ji navštívila osoba jménem ${newUser.displayName}`
+                      const body = `<h1>Lednice IT Vás vítá!</h1><p>Snad se Vám zde bude líbit.</p><p>Vaše ID pro objednávání skrze kiosek: ${newUser.keypadId}</p><h2>Jak to funguje</h2><p>Do Lednice IT dodává produkty více dodavatelů. Zákazník si přes e-shop či přes kiosek zakoupí vybraný produkt. Až se dodavateli nashromáždí dostatek prodaného zboží, vytvoří hromadnou fakturaci. Každý zákazník, který si u daného dodavatele něco zakoupil obdrží e-mail s QR kódem, který uhradí. Platbu obě strany potvrdí v rozhraní e-shopu.</p><p>Pokud se budete chtít stát dodavatelem, kontaktujte správce Lednice IT.</p>`
+                      sendMail(newUser.email, subject, body)
+                    })
+                    .catch((err) => {
+                      logger.error(
+                        'server.functions.azurepassport__Failed to create user. Error:',
+                        err
+                      )
+                    })
+                })
               })
               .catch((err) => {
+                logger.error(
+                  'server.functions.azurepassport__Failed to query database for user OID. Error:',
+                  err
+                )
                 return done(err)
               })
-            // users.push(profile) //in case you want to use in-memory array instead of querying database
             return done(null, profile)
           }
           return done(null, user)

@@ -3,6 +3,7 @@ import _ from 'lodash'
 import { exec } from 'child_process'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import logger from './logger.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -43,6 +44,9 @@ function empty(mixedVar) {
 export default function dbAutoBackUp() {
   // check for auto backup is enabled or disabled
   if (dbOptions.autoBackup === true) {
+    logger.info(
+      `server.functions.databasebackup__Automatic backup is configured to directory ${dbOptions.autoBackupPath}.`
+    )
     console.log(backupDirPath)
     const date = new Date()
     let beforeDate, oldBackupDir, oldBackupPath
@@ -84,14 +88,23 @@ export default function dbAutoBackUp() {
 
     exec(cmd, (error, stdout, stderr) => {
       if (empty(error)) {
+        logger.info(
+          `server.functions.databasebackup__Succesfully created backup ${newBackupPath}.`
+        )
         // check for remove old backup after keeping # of days given in ENV.
         if (dbOptions.removeOldBackup === true) {
           if (fs.existsSync(oldBackupPath)) {
+            logger.info(
+              `server.functions.databasebackup__Deleting old backup ${oldBackupPath}.`
+            )
             exec('rm -rf ' + oldBackupPath, (_err) => {})
           }
         }
       } else {
-        console.log(error)
+        logger.error(
+          'server.functions.databasebackup__Failed to create backup. Error:',
+          error
+        )
       }
     })
   }
