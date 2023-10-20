@@ -3,13 +3,18 @@ import logger from './logger.js'
 
 export function sendMail(mailto, mailsubject, mailbody, image) {
   // In case mail is destined for system administrator or we run in development environment, send all e-mails to system address obtained from config.
-  if (process.env.NODE_ENV === 'development' || mailto === 'system@system') {
+  if (
+    mailto === 'system@system' ||
+    (process.env.NODE_ENV === 'development' &&
+      process.env.MAIL_DEV_SYSTEM === 'true')
+  ) {
     logger.warn(
       `server.functions.sendmail__Sending e-mail [${mailsubject}] to system administrator.`,
       {
         metadata: {
+          mailto: mailto,
           nodeEnv: process.env.NODE_ENV,
-          mailto: mailto
+          mailDevSystem: process.env.MAIL_DEV_SYSTEM
         }
       }
     )
