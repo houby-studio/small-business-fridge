@@ -11,7 +11,7 @@ var dailyBackup = scheduleJob(rule, function () {
   if (!process.env.TASKS_DAILY_BACKUP_ENABLED) {
     return
   }
-  dbAutoBackUp.dbAutoBackUp()
+  dbAutoBackUp()
 })
 
 export default dailyBackup
