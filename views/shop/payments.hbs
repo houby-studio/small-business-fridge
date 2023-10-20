@@ -8,7 +8,7 @@
           <th scope="col">Počet kusů</th>
           <th scope="col">Cena celkem</th>
           <th scope="col">Status</th>
-          <th scope="col">Akce</th>
+          {{#if ../supplier.supplierId}}<th scope="col">Akce</th>{{/if}}
         </thead>
         <tbody>
           {{# each invoices }}
@@ -28,8 +28,8 @@
             <td>
               {{ this.status }}
             </td>
+            {{#if ../supplier.supplierId}}
             <td>
-              {{#if ../supplier.supplierId}}
               <form id="payments" class="needs-validation h-100" method="POST" action="/payments" novalidate>
                 {{#if this.paid}}
                 <input type="submit" class="btn btn-danger float-right w-100" value="Storno">
@@ -41,8 +41,8 @@
                 <input type="hidden" id="invoice_id" name="invoice_id" value="{{ this._id }}">
                 <input type="hidden" name="_csrf" value="{{ ../csrfToken }}">
               </form>
-              {{/if}}
             </td>
+            {{/if}}
           </tr>
           {{/each}}
         </tbody>
