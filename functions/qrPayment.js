@@ -12,14 +12,14 @@ export function generateQR(IBAN, amount, payer, receiver, callback) {
   var msgTemplate = 'LEDNICE IT - '
   // MSG max length is 60 characters
   if (payer.length + msgTemplate.length > 60) {
-    logger.warn(
+    logger.info(
       `server.functions.qrpayment__Message for customer [${payer}] exceeds 60 characters, trimming.`
     )
     payer.substring(0, 60)
   }
 
   logger.info(
-    `server.functions.qrpayment__Generating a code from the customer [${payer}] to the supplier [${receiver}] for the amount of [${amount}].`
+    `server.functions.qrpayment__Generating a QR code customer:[${payer}]>supplier:[${receiver}]=amount:[${amount}].`
   )
   // Put together QRCode payment string, remove special characters and convert to uppercase to make QRCode ALPHANUMERIC only to reduce size
   var code = `SPD*1.0*ACC:${IBAN}*AM:${amount}*CC:CZK*RN:${receiver}*MSG:${msgTemplate}${payer}`
@@ -30,7 +30,7 @@ export function generateQR(IBAN, amount, payer, receiver, callback) {
   toDataURL(code)
     .then((url) => {
       logger.info(
-        `server.functions.qrpayment__Succesfully generated QR code [${payer}]>[${receiver}]:[${amount}].`
+        `server.functions.qrpayment__Succesfully generated QR code customer:[${payer}]>supplier:[${receiver}]=amount:[${amount}].`
       )
       return callback(url)
     })
