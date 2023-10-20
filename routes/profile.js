@@ -1,8 +1,8 @@
 import { Router } from 'express'
-var router = Router()
 import User from '../models/user.js'
 import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
 import { checkKiosk } from '../functions/checkKiosk.js'
+var router = Router()
 
 /* GET profile page. */
 router.get('/', ensureAuthenticated, checkKiosk, function (req, res, next) {

@@ -1,16 +1,25 @@
 import { Router } from 'express'
-var router = Router()
 import moment from 'moment'
-moment.locale('cs')
 import Order from '../models/order.js'
 import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
 import { checkKiosk } from '../functions/checkKiosk.js'
+import logger from '../functions/logger.js'
+var router = Router()
+moment.locale('cs')
 
 /* GET orders page. */
 router.get('/', ensureAuthenticated, checkKiosk, function (req, res) {
   if (req.baseUrl === '/admin_orders') {
     var filter
     if (!req.user.admin) {
+      logger.warn(
+        `server.routes.orders.get__User tried to access admin page without permission.`,
+        {
+          metadata: {
+            result: req.user
+          }
+        }
+      )
       res.redirect('/')
       return
     }
@@ -125,6 +134,14 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res) {
         }
       }
       if (docs[0]) {
+        logger.debug(
+          `server.routes.orders.get__Successfully loaded ${docs[0].length} orders.`,
+          {
+            metadata: {
+              result: docs
+            }
+          }
+        )
         docs[0].results.forEach(function (element) {
           element.order_date_format = moment(element.order_date).format('LLLL')
           element.order_date = moment(element.order_date).format()
@@ -139,7 +156,13 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res) {
         alert: alert
       })
     })
-    .catch((_err) => {})
+    .catch((err) => {
+      logger.error(`server.routes.orders.get__Failed to load orders.`, {
+        metadata: {
+          error: err.message
+        }
+      })
+    })
 })
 
 export default router

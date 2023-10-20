@@ -1,7 +1,7 @@
 import { Router } from 'express'
-const router = Router()
 import { ensureAuthenticatedAPI } from '../../functions/ensureAuthenticatedAPI.js'
 import User from '../../models/user.js'
+var router = Router()
 let responseJson
 
 // GET /api/customerName - accepts customer's keypadId and returns customer's display name

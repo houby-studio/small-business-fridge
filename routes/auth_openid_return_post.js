@@ -1,6 +1,6 @@
 import { Router } from 'express'
-var router = Router()
 import passport from 'passport'
+var router = Router()
 
 // 'POST returnURL'
 // `passport.authenticate` will try to authenticate the content returned in

@@ -1,13 +1,21 @@
 import { Router } from 'express'
-var router = Router()
 import { ensureAuthenticated } from '../../functions/ensureAuthenticated.js'
 import csrf from 'csurf'
+var router = Router()
 var csrfProtection = csrf()
 router.use(csrfProtection)
 
 /* GET admin dashboard page. */
 router.get('/', ensureAuthenticated, function (req, res) {
   if (!req.user.admin) {
+    logger.warn(
+      `server.routes.admindashboard.get__User tried to access admin page without permission.`,
+      {
+        metadata: {
+          result: req.user
+        }
+      }
+    )
     res.redirect('/')
     return
   }

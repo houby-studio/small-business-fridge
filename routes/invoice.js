@@ -1,8 +1,6 @@
 import { Router } from 'express'
-var router = Router()
 import palette from 'google-palette'
 import moment from 'moment'
-moment.locale('cs')
 import { sendMail } from '../functions/sendMail.js'
 import { generateQR } from '../functions/qrPayment.js'
 import Delivery from '../models/delivery.js'
@@ -11,10 +9,21 @@ import Invoice from '../models/invoice.js'
 import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
 import { checkKiosk } from '../functions/checkKiosk.js'
 import logger from '../functions/logger.js'
+var router = Router()
+moment.locale('cs')
+// TODO: where is csrf
 
 // GET supplier invoice page.
 router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
   if (!req.user.supplier) {
+    logger.warn(
+      `server.routes.invoice.get__User tried to access supplier page without permission.`,
+      {
+        metadata: {
+          result: req.user
+        }
+      }
+    )
     res.redirect('/')
     return
   }
@@ -22,6 +31,14 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
   if (req.baseUrl === '/admin_invoice') {
     var filter
     if (!req.user.admin) {
+      logger.warn(
+        `server.routes.invoice.get__User tried to access admin page without permission.`,
+        {
+          metadata: {
+            result: req.user
+          }
+        }
+      )
       res.redirect('/')
       return
     }
@@ -378,7 +395,46 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
 
 router.post('/', ensureAuthenticated, function (req, res, _next) {
   if (!req.user.supplier) {
+    logger.warn(
+      `server.routes.invoice.post__User tried to access supplier page without permission.`,
+      {
+        metadata: {
+          result: req.user
+        }
+      }
+    )
     res.redirect('/')
+    return
+  }
+
+  if (req.baseUrl === '/admin_invoice') {
+    if (!req.user.admin) {
+      logger.warn(
+        `server.routes.invoice.post__User tried to access admin page without permission.`,
+        {
+          metadata: {
+            result: req.user
+          }
+        }
+      )
+      res.redirect('/')
+      return
+    }
+    logger.warn(
+      `server.routes.invoice.post__Admin tried to create invoice from admin dashboard.`,
+      {
+        metadata: {
+          result: req.user
+        }
+      }
+    )
+    const alert = {
+      type: 'danger',
+      message: 'Fakturace z administrátorského pohledu je zakázána!',
+      danger: 1
+    }
+    req.session.alert = alert
+    res.redirect('/admin_invoice')
     return
   }
 

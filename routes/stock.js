@@ -1,11 +1,20 @@
 import { Router } from 'express'
-var router = Router()
 import Delivery from '../models/delivery.js'
 import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
+import logger from '../functions/logger.js'
+var router = Router()
 
 /* GET about page. */
 router.get('/', ensureAuthenticated, function (req, res, next) {
   if (!req.user.supplier) {
+    logger.warn(
+      `server.routes.stock.get__User tried to access supplier page without permission.`,
+      {
+        metadata: {
+          result: req.user
+        }
+      }
+    )
     res.redirect('/')
     return
   }

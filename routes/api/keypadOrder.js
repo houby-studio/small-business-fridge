@@ -1,5 +1,4 @@
 import { Router } from 'express'
-const router = Router()
 import moment from 'moment'
 import { sendMail } from '../../functions/sendMail.js'
 import User from '../../models/user.js'
@@ -7,7 +6,9 @@ import Order from '../../models/order.js'
 import Product from '../../models/product.js'
 import Delivery from '../../models/delivery.js'
 import { ensureAuthenticatedAPI } from '../../functions/ensureAuthenticatedAPI.js'
+var router = Router()
 let responseJson
+moment.locale('cs')
 
 /* API to order via keypad */
 router.post('/', ensureAuthenticatedAPI, function (req, res, next) {

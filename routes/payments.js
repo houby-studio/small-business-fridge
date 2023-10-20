@@ -1,17 +1,26 @@
 import { Router } from 'express'
-var router = Router()
 import moment from 'moment'
-moment.locale('cs')
 import { sendMail } from '../functions/sendMail.js'
 import Invoice from '../models/invoice.js'
 import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
 import csrf from 'csurf'
+import logger from '../functions/logger.js'
+var router = Router()
 var csrfProtection = csrf()
 router.use(csrfProtection)
+moment.locale('cs')
 
 /* GET supplier payments page. */
 router.get('/', ensureAuthenticated, function (req, res, _next) {
   if (!req.user.supplier) {
+    logger.warn(
+      `server.routes.payments.get__User tried to access supplier page without permission.`,
+      {
+        metadata: {
+          result: req.user
+        }
+      }
+    )
     res.redirect('/')
     return
   }
@@ -19,6 +28,14 @@ router.get('/', ensureAuthenticated, function (req, res, _next) {
   var filter
   if (req.baseUrl === '/admin_payments') {
     if (!req.user.admin) {
+      logger.warn(
+        `server.routes.payments.get__User tried to access admin page without permission.`,
+        {
+          metadata: {
+            result: req.user
+          }
+        }
+      )
       res.redirect('/')
       return
     }
@@ -62,6 +79,14 @@ router.get('/', ensureAuthenticated, function (req, res, _next) {
   ])
     .then((docs) => {
       if (docs) {
+        logger.debug(
+          `server.routes.payments.get__Successfully loaded ${docs.length} payments.`,
+          {
+            metadata: {
+              result: docs
+            }
+          }
+        )
         docs.forEach(function (element) {
           element.invoiceDate_format = moment(element.invoiceDate).format(
             'LLLL'
@@ -91,6 +116,11 @@ router.get('/', ensureAuthenticated, function (req, res, _next) {
       })
     })
     .catch((err) => {
+      logger.error(`server.routes.payments.get__Failed to load payments.`, {
+        metadata: {
+          error: err.message
+        }
+      })
       const alert = {
         type: 'danger',
         component: 'db',
@@ -106,13 +136,60 @@ router.get('/', ensureAuthenticated, function (req, res, _next) {
 // Form post - Handles Invoice "paid" status changes
 router.post('/', ensureAuthenticated, function (req, res, _next) {
   if (!req.user.supplier) {
+    logger.warn(
+      `server.routes.payments.post__User tried to access supplier page without permission.`,
+      {
+        metadata: {
+          result: req.user
+        }
+      }
+    )
     res.redirect('/')
+    return
+  }
+
+  if (req.baseUrl === '/admin_payments') {
+    if (!req.user.admin) {
+      logger.warn(
+        `server.routes.payments.post__User tried to access admin page without permission.`,
+        {
+          metadata: {
+            result: req.user
+          }
+        }
+      )
+      res.redirect('/')
+      return
+    }
+    logger.warn(
+      `server.routes.payments.post__Admin tried to modify payment from admin dashboard.`,
+      {
+        metadata: {
+          result: req.user
+        }
+      }
+    )
+    const alert = {
+      type: 'danger',
+      message: 'Změna stavu platby z administrátorského pohledu je zakázána!',
+      danger: 1
+    }
+    req.session.alert = alert
+    res.redirect('/admin_payments')
     return
   }
 
   // Check if supplier changes invoice he owns
   Invoice.findById(req.body.invoice_id).then((check) => {
     if (!check.supplierId.equals(req.user.id)) {
+      logger.warn(
+        `server.routes.payments.post__User:[${req.user.id}] tried to manipulate invoice:[${req.body.invoice_id}], which was not created by this user.`,
+        {
+          metadata: {
+            error: err.message
+          }
+        }
+      )
       var subject = 'Neoprávněná akce?!'
       var body = `<h1>Jak se toto podařilo?!</h1><p>Dodavatel ${req.body.displayName} se pokouší manipulovat s fakturou ID ${check._id}, přestože ji nevytvořil.</p>Jeho akce byla revertována. Prověřte celou situaci!</p>`
       sendMail('system@system', subject, body)
@@ -140,6 +217,14 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
       )
         .populate('buyerId')
         .then((docs) => {
+          logger.info(
+            `server.routes.payments.post__Supplier:[${req.user.displayName}] marked invoice:[${req.body.invoice_id}] as paid.`,
+            {
+              metadata: {
+                result: docs
+              }
+            }
+          )
           const subject = 'Vaše platba byla potvrzena!'
           const body = `<h1>Obchod byl dokončen!</h1><p>Váš dodavatel ${
             req.user.displayName
@@ -156,6 +241,14 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           res.redirect('/payments')
         })
         .catch((err) => {
+          logger.error(
+            `server.routes.payments.post__Failed to mark invoice:[${req.body.invoice_id}] as paid.`,
+            {
+              metadata: {
+                error: err.message
+              }
+            }
+          )
           const alert = {
             type: 'danger',
             component: 'db',
@@ -179,6 +272,14 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
       )
         .populate('buyerId')
         .then((docs) => {
+          logger.info(
+            `server.routes.payments.post__Supplier:[${req.user.displayName}] marked invoice:[${req.body.invoice_id}] as unpaid (undo confirmation).`,
+            {
+              metadata: {
+                result: docs
+              }
+            }
+          )
           const subject = 'Vaše platba byla stornována!'
           const body = `<h1>Jak je toto možné?</h1><p>Váš dodavatel ${
             req.user.displayName
@@ -198,6 +299,14 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           res.redirect('/payments')
         })
         .catch((err) => {
+          logger.error(
+            `server.routes.payments.post__Failed to mark invoice:[${req.body.invoice_id}] as unpaid (undo confirmation).`,
+            {
+              metadata: {
+                error: err.message
+              }
+            }
+          )
           const alert = {
             type: 'danger',
             component: 'db',
@@ -209,6 +318,14 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           return
         })
     } else {
+      logger.warn(
+        `server.routes.payments.post__User [${req.user.displayName}] tried to call invalid action.`,
+        {
+          metadata: {
+            result: req.body.action
+          }
+        }
+      )
       alert = {
         type: 'danger',
         component: 'web',

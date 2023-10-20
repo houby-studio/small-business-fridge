@@ -1,14 +1,15 @@
 import { Router } from 'express'
-var router = Router()
 import moment from 'moment'
-moment.locale('cs')
 import { sendMail } from '../functions/sendMail.js'
 import Invoice from '../models/invoice.js'
 import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
 import { checkKiosk } from '../functions/checkKiosk.js'
 import csrf from 'csurf'
+import logger from '../functions/logger.js'
+var router = Router()
 var csrfProtection = csrf()
 router.use(csrfProtection)
+moment.locale('cs')
 
 // GET invoices page.
 router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
@@ -49,6 +50,14 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
   ])
     .then((docs) => {
       if (docs) {
+        logger.debug(
+          `server.routes.invoices.get__Successfully loaded ${docs.length} invoices.`,
+          {
+            metadata: {
+              result: docs
+            }
+          }
+        )
         docs.forEach(function (element) {
           element.invoiceDate_format = moment(element.invoiceDate).format(
             'LLLL'
@@ -77,6 +86,11 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
       })
     })
     .catch((err) => {
+      logger.error('server.routes.invoices.get__Failed to load invoices.', {
+        metadata: {
+          error: err.message
+        }
+      })
       const alert = {
         type: 'danger',
         component: 'db',
@@ -94,8 +108,17 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
   // Check if customer changes invoice which belongs to him
   Invoice.findById(req.body.invoice_id).then((check) => {
     if (!check.buyerId.equals(req.user.id)) {
+      logger.warn(
+        'server.routes.invoices.post__User attempted to change invoice which does not belong to him! Raising alert to system administrator.',
+        {
+          metadata: {
+            user: req.user.id,
+            result: check
+          }
+        }
+      )
       const subject = 'Neoprávněná akce?!'
-      const body = `<h1>Jak se toto podařilo?!</h1><p>Zákazník ${req.body.displayName} se pokouší manipulovat s fakturou ID ${check._id}, přestože ji nevlastní.</p>Jeho akce byla revertována. Prověřte celou situaci!</p>`
+      const body = `<h1>Jak se toto podařilo?!</h1><p>Zákazník ${req.body.displayName} se pokouší manipulovat s fakturou ID ${check._id}, přestože ji nevlastní.</p>Žádná akce nebyla provedena. Prověřte celou situaci!</p>`
       sendMail('system@system', subject, body)
       const alert = {
         type: 'danger',
@@ -107,6 +130,15 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
       return
     }
     if (check.paid === true) {
+      logger.warn(
+        'server.routes.invoices.post__User attempted to change invoice status to paid, although supplier already confirmed on his end.',
+        {
+          metadata: {
+            user: req.user.id,
+            result: check
+          }
+        }
+      )
       const alert = {
         type: 'danger',
         message:
@@ -131,6 +163,14 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
       )
         .populate('supplierId')
         .then((docs) => {
+          logger.info(
+            `server.routes.invoices.post__User [${req.user.displayName}] marked invoice ${req.body.invoice_id} as paid.`,
+            {
+              metadata: {
+                result: docs
+              }
+            }
+          )
           const subject = `Zákazník ${req.user.displayName} uhradil fakturu!`
           const body = `<h1>Penízky už se sypou!</h1><p>Zákazník ${
             req.user.displayName
@@ -150,6 +190,14 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           res.redirect('/invoices')
         })
         .catch((err) => {
+          logger.error(
+            `server.routes.invoices.post__User [${req.user.displayName}] failed to mark invoice ${req.body.invoice_id} as paid.`,
+            {
+              metadata: {
+                error: err.message
+              }
+            }
+          )
           const alert = {
             type: 'danger',
             component: 'db',
@@ -173,6 +221,14 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
       )
         .populate('supplierId')
         .then((docs) => {
+          logger.info(
+            `server.routes.invoices.post__User [${req.user.displayName}] marked invoice ${req.body.invoice_id} as unpaid (undo confirmation).`,
+            {
+              metadata: {
+                result: docs
+              }
+            }
+          )
           var subject = `Zákazník ${req.user.displayName} stornoval platbu faktury!`
           var body = `<h1>Že by se někdo nemohl dopočítat?</h1><p>Zákazník ${
             req.user.displayName
@@ -192,6 +248,14 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           res.redirect('/invoices')
         })
         .catch((err) => {
+          logger.error(
+            `server.routes.invoices.post__User [${req.user.displayName}] failed to mark invoice ${req.body.invoice_id} as unpaid (undo confirmation).`,
+            {
+              metadata: {
+                error: err.message
+              }
+            }
+          )
           const alert = {
             type: 'danger',
             component: 'db',
@@ -203,6 +267,14 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           return
         })
     } else {
+      logger.warn(
+        `server.routes.invoices.post__User [${req.user.displayName}] tried to call invalid action.`,
+        {
+          metadata: {
+            result: req.body.action
+          }
+        }
+      )
       const alert = {
         type: 'danger',
         component: 'web',

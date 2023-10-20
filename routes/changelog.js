@@ -1,6 +1,6 @@
 import { Router } from 'express'
-var router = Router()
 import { checkKiosk } from '../functions/checkKiosk.js'
+var router = Router()
 
 /* GET changelog page. */
 router.get('/', checkKiosk, function (req, res, next) {

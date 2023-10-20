@@ -1,5 +1,4 @@
 import { Router } from 'express'
-const router = Router()
 import moment from 'moment'
 import Product from '../models/product.js'
 import Order from '../models/order.js'
@@ -8,6 +7,8 @@ import User from '../models/user.js'
 import { sendMail } from '../functions/sendMail.js'
 import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
 import csrf from 'csurf'
+import logger from '../functions/logger.js'
+const router = Router()
 const csrfProtection = csrf()
 router.use(csrfProtection)
 moment.locale('cs')
@@ -80,6 +81,14 @@ function renderPage(req, res, alert, customer) {
       })
     })
     .catch((err) => {
+      logger.error(
+        'server.routes.kioskshop.get__Failed to query products from database.',
+        {
+          metadata: {
+            error: err.message
+          }
+        }
+      )
       res.status(err.status || 500)
       res.render('error')
     })
@@ -89,6 +98,14 @@ function renderPage(req, res, alert, customer) {
 router.get('/', ensureAuthenticated, function (req, res) {
   // If user is not kiosk, return to home page
   if (!req.user.kiosk) {
+    logger.warn(
+      'server.routes.kioskshop.get__User does not have kiosk role. Redirecting back to home page.',
+      {
+        metadata: {
+          result: req.user
+        }
+      }
+    )
     res.redirect('/')
     return
   }
@@ -114,6 +131,14 @@ router.get('/', ensureAuthenticated, function (req, res) {
   })
     .then((customer) => {
       if (!customer) {
+        logger.debug(
+          `server.routes.kioskshop.get__Failed to find user by keypadId ${req.query.customer_id}.`,
+          {
+            metadata: {
+              object: req.query.customer_id
+            }
+          }
+        )
         req.session.alert = {
           type: 'danger',
           component: 'web',
@@ -123,6 +148,14 @@ router.get('/', ensureAuthenticated, function (req, res) {
         res.redirect('/kiosk_keypad')
         return
       }
+      logger.debug(
+        `server.routes.kioskshop.get__Found user:[${customer.email}] by keypadId:[${req.query.customer_id}].`,
+        {
+          metadata: {
+            object: customer
+          }
+        }
+      )
       if (req.session.alert) {
         alert = req.session.alert
         delete req.session.alert
@@ -130,6 +163,14 @@ router.get('/', ensureAuthenticated, function (req, res) {
       renderPage(req, res, alert, customer)
     })
     .catch((err) => {
+      logger.error(
+        `server.routes.kioskshop.get__Failed to find user by keypadId:[${req.query.customer_id}].`,
+        {
+          metadata: {
+            error: err.message
+          }
+        }
+      )
       req.session.alert = {
         type: 'danger',
         component: 'web',
@@ -144,6 +185,15 @@ router.get('/', ensureAuthenticated, function (req, res) {
 
 router.post('/', ensureAuthenticated, function (req, res) {
   if (req.user.id !== req.body.user_id) {
+    logger.warn(
+      'server.routes.kioskshop.post__User identity does not match with request body. No product has been purchased.',
+      {
+        metadata: {
+          userIdentity: req.user.id,
+          bodyIdentity: req.body.user_id
+        }
+      }
+    )
     req.session.alert = {
       type: 'danger',
       component: 'web',
@@ -165,6 +215,14 @@ router.post('/', ensureAuthenticated, function (req, res) {
   })
     .then((user) => {
       if (!user) {
+        logger.error(
+          `server.routes.kioskshop.post__Failed to find user by keypadId ${req.body.customer_id}.`,
+          {
+            metadata: {
+              error: req.body.customer_id
+            }
+          }
+        )
         req.session.alert = {
           type: 'danger',
           component: 'web',
@@ -181,11 +239,19 @@ router.post('/', ensureAuthenticated, function (req, res) {
       Delivery.findOne({
         _id: req.body.product_id
       })
-        .then((obj) => {
-          obj.amount_left--
-          obj
+        .then((object) => {
+          object.amount_left--
+          object
             .save()
             .then(() => {
+              logger.debug(
+                `server.routes.kioskshop.post__Purchased product stock amount decremented from delivery [${object._id}].`,
+                {
+                  metadata: {
+                    object: object
+                  }
+                }
+              )
               newOrder
                 .save()
                 .then(() => {
@@ -204,6 +270,15 @@ router.post('/', ensureAuthenticated, function (req, res) {
                   res.redirect('/kiosk_keypad')
                 })
                 .catch((err) => {
+                  logger.error(
+                    'server.routes.kioskshop.post__Failed to create order in the database, but stock amount has been already decremented!',
+                    {
+                      metadata: {
+                        error: err.message,
+                        delivery: object
+                      }
+                    }
+                  )
                   req.session.alert = {
                     type: 'danger',
                     component: 'db',
@@ -218,6 +293,14 @@ router.post('/', ensureAuthenticated, function (req, res) {
                 })
             })
             .catch((err) => {
+              logger.error(
+                'server.routes.kioskshop.post__Failed to decrement stock amount from the delivery.',
+                {
+                  metadata: {
+                    error: err.message
+                  }
+                }
+              )
               req.session.alert = {
                 type: 'danger',
                 component: 'db',
@@ -232,6 +315,14 @@ router.post('/', ensureAuthenticated, function (req, res) {
             })
         })
         .catch((err) => {
+          logger.error(
+            `server.routes.kioskshop.post__Failed to find delivery for product ${req.body.product_id}.`,
+            {
+              metadata: {
+                error: err.message
+              }
+            }
+          )
           req.session.alert = {
             type: 'danger',
             component: 'db',
@@ -243,6 +334,14 @@ router.post('/', ensureAuthenticated, function (req, res) {
         })
     })
     .catch((err) => {
+      logger.error(
+        'server.routes.kioskshop.post__Failed to communicate with database.',
+        {
+          metadata: {
+            error: err.message
+          }
+        }
+      )
       req.session.alert = {
         type: 'danger',
         component: 'web',

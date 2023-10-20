@@ -1,6 +1,6 @@
 import { Router } from 'express'
-var router = Router()
 import passport from 'passport'
+var router = Router()
 
 // Who knows why it's there. Seems to be working without this file. Whatever.
 router.get(

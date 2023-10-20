@@ -1,5 +1,4 @@
 import { Router } from 'express'
-const router = Router()
 import moment from 'moment'
 import Product from '../models/product.js'
 import Order from '../models/order.js'
@@ -9,6 +8,7 @@ import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
 import { checkKiosk } from '../functions/checkKiosk.js'
 import csrf from 'csurf'
 import logger from '../functions/logger.js'
+const router = Router()
 const csrfProtection = csrf()
 router.use(csrfProtection)
 moment.locale('cs')
@@ -84,7 +84,7 @@ function renderPage(req, res, alert) {
     })
     .catch((err) => {
       logger.error(
-        'server.routes.shop__Failed to query products from database.',
+        'server.routes.shop.get__Failed to query products from database.',
         {
           metadata: {
             error: err.message
@@ -110,7 +110,7 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res) {
 router.post('/', ensureAuthenticated, checkKiosk, function (req, res) {
   if (req.user.id !== req.body.user_id) {
     logger.warn(
-      'server.routes.shop__User identity does not match with request body. No product has been purchased.',
+      'server.routes.shop.post__User identity does not match with request body. No product has been purchased.',
       {
         metadata: {
           userIdentity: req.user.id,
@@ -144,7 +144,7 @@ router.post('/', ensureAuthenticated, checkKiosk, function (req, res) {
         .save()
         .then(() => {
           logger.debug(
-            `server.routes.shop__Purchased product stock amount decremented from delivery [${object._id}].`,
+            `server.routes.shop.post__Purchased product stock amount decremented from delivery [${object._id}].`,
             {
               metadata: {
                 object: object
@@ -155,7 +155,7 @@ router.post('/', ensureAuthenticated, checkKiosk, function (req, res) {
             .save()
             .then((order) => {
               logger.info(
-                `server.routes.shop__User [${req.user.id}] succesfully purchased product [${req.body.display_name}] for [${req.body.product_price}] via e-shop.`,
+                `server.routes.shop.post__User [${req.user.id}] succesfully purchased product [${req.body.display_name}] for [${req.body.product_price}] via e-shop.`,
                 {
                   metadata: {
                     order: order
@@ -182,10 +182,11 @@ router.post('/', ensureAuthenticated, checkKiosk, function (req, res) {
             })
             .catch((err) => {
               logger.error(
-                `server.routes.shop__Failed to create order in the database, but stock amount has been already decremented!`,
+                'server.routes.shop.post__Failed to create order in the database, but stock amount has been already decremented!',
                 {
                   metadata: {
-                    error: err.message
+                    error: err.message,
+                    delivery: object
                   }
                 }
               )
@@ -205,7 +206,7 @@ router.post('/', ensureAuthenticated, checkKiosk, function (req, res) {
         })
         .catch((err) => {
           logger.error(
-            `server.routes.shop__Failed to decrement stock amount from the delivery.`,
+            'server.routes.shop.post__Failed to decrement stock amount from the delivery.',
             {
               metadata: {
                 error: err.message
@@ -228,7 +229,7 @@ router.post('/', ensureAuthenticated, checkKiosk, function (req, res) {
     })
     .catch((err) => {
       logger.error(
-        'server.routes.shop__Failed to query deliveries from database.',
+        'server.routes.shop.post__Failed to query deliveries from database.',
         {
           metadata: {
             error: err.message

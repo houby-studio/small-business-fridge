@@ -70,7 +70,7 @@ export function sendMail(mailto, mailsubject, mailbody, image) {
         `server.functions.sendmail__Failed to send e-mail [${mailsubject}].`,
         {
           metadata: {
-            error: err,
+            error: err.message,
             mailOptions: mailOptions
           }
         }

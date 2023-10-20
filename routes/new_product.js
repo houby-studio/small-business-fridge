@@ -1,9 +1,10 @@
 import { Router } from 'express'
-var router = Router()
 import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
 import Product from '../models/product.js'
 import multer, { diskStorage } from 'multer'
 import csrf from 'csurf'
+import logger from '../functions/logger.js'
+var router = Router()
 var csrfProtection = csrf()
 router.use(csrfProtection)
 
@@ -21,6 +22,14 @@ const upload = multer({ storage: storage })
 /* GET new product page. */
 router.get('/', ensureAuthenticated, function (req, res) {
   if (!req.user.supplier) {
+    logger.warn(
+      `server.routes.newproduct.get__User tried to access supplier page without permission.`,
+      {
+        metadata: {
+          result: req.user
+        }
+      }
+    )
     res.redirect('/')
     return
   }
@@ -43,13 +52,28 @@ router.post(
   upload.single('product_image'),
   function (req, res) {
     if (!req.user.supplier) {
+      logger.warn(
+        `server.routes.newproduct.post__User tried to access supplier page without permission.`,
+        {
+          metadata: {
+            result: req.user
+          }
+        }
+      )
       res.redirect('/')
       return
     }
 
     // If image was not uploaded, use preview dummy image
     if (!req.file) {
-      req.file = { filename: 'preview.png' }
+      logger.warn('server.routes.newproduct.post__No product image uploaded.')
+      var alert = {
+        type: 'danger',
+        message: 'Musíte přidat obrázek produktu!',
+        danger: 1
+      }
+      req.session.alert = alert
+      res.redirect('/new_product')
     }
 
     var newProduct = new Product({
@@ -60,7 +84,15 @@ router.post(
     })
     newProduct
       .save()
-      .then(() => {
+      .then((res) => {
+        logger.info(
+          `server.routes.newproduct.post__User:[${req.user.email}] added new product:[${req.body.product_name}] to database.`,
+          {
+            metadata: {
+              result: res
+            }
+          }
+        )
         alert = {
           type: 'success',
           message: `Produkt ${req.body.product_name} přidán do databáze.`,
@@ -70,7 +102,14 @@ router.post(
         res.redirect('/new_product')
       })
       .catch((err) => {
-        console.log(err)
+        logger.error(
+          `server.routes.newproduct.post__Failed to add new product to database.`,
+          {
+            metadata: {
+              error: err.message
+            }
+          }
+        )
         var alert = {
           type: 'danger',
           component: 'db',

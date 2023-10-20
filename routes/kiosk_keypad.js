@@ -1,6 +1,6 @@
 import { Router } from 'express'
-var router = Router()
 import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
+var router = Router()
 
 /* GET kiosk shop page. */
 router.get('/', ensureAuthenticated, function (req, res, next) {
