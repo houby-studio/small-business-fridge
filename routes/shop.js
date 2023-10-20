@@ -155,7 +155,7 @@ router.post('/', ensureAuthenticated, checkKiosk, function (req, res) {
             .save()
             .then((order) => {
               logger.info(
-                `server.routes.shop__User succesfully purchased product [${req.body.display_name}] for [${req.body.product_price}] via e-shop.`,
+                `server.routes.shop__User [${req.user.id}] succesfully purchased product [${req.body.display_name}] for [${req.body.product_price}] via e-shop.`,
                 {
                   metadata: {
                     order: order
