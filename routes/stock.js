@@ -1,6 +1,6 @@
 import { Router } from 'express'
 var router = Router()
-import c from '../models/delivery.js'
+import Delivery from '../models/delivery.js'
 import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
 
 /* GET about page. */
@@ -10,7 +10,7 @@ router.get('/', ensureAuthenticated, function (req, res, next) {
     return
   }
 
-  Product.aggregate([
+  Delivery.aggregate([
     {
       $match: {
         supplierId: req.user._id
