@@ -10,6 +10,7 @@ import Order from '../models/order.js'
 import Invoice from '../models/invoice.js'
 import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
 import { checkKiosk } from '../functions/checkKiosk.js'
+import logger from '../functions/logger.js'
 
 // GET supplier invoice page.
 router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
@@ -169,6 +170,14 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
     }
   ])
     .then((docs) => {
+      logger.debug(
+        `server.routes.invoice.get__Successfully loaded ${docs[0].stock.length} product metrics.`,
+        {
+          metadata: {
+            result: docs
+          }
+        }
+      )
       // Aggregate and group by user for user based info - total amounts and total price 'not invoiced' and all not invoiced orders
       Delivery.aggregate([
         {
@@ -255,9 +264,20 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
         }
       ])
         .then((udocs) => {
+          logger.debug(
+            `server.routes.invoice.get__Successfully loaded ${udocs.length} user metrics.`,
+            {
+              metadata: {
+                result: udocs
+              }
+            }
+          )
           var graphColors
           if (docs[0]) {
             if (docs[0].stock.length > 64) {
+              logger.debug(
+                'server.routes.invoice.get__There is more than 65 products, loading full palette.'
+              )
               graphColors = palette('mpn65', 65)
             } else {
               graphColors = palette('mpn65', docs[0].stock.length)
@@ -267,12 +287,18 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
               docs[0].stock[i].color = graphColors[colorCount]
               colorCount++
               if (colorCount >= graphColors.length) {
+                logger.debug(
+                  'server.routes.invoice.get__Resetting color palette to 0 to prevent array overflow.'
+                )
                 colorCount = 0
               }
             }
           }
           if (udocs[0]) {
             if (udocs.length > 64) {
+              logger.debug(
+                'server.routes.invoice.get__There is more than 65 users, loading full palette.'
+              )
               graphColors = palette('mpn65', 65)
             } else {
               graphColors = palette('mpn65', udocs.length)
@@ -282,6 +308,9 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
               udocs[y].color = graphColors[colorCount]
               colorCount++
               if (colorCount >= graphColors.length) {
+                logger.debug(
+                  'server.routes.invoice.get__Resetting color palette to 0 to prevent array overflow.'
+                )
                 colorCount = 0
               }
               udocs[y].orders.forEach(function (element) {
@@ -307,7 +336,14 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
           })
         })
         .catch((err) => {
-          console.log(err)
+          logger.error(
+            'server.routes.invoice.get__Failed to fetch user metrics.',
+            {
+              metadata: {
+                error: err.message
+              }
+            }
+          )
           const alert = {
             type: 'danger',
             component: 'db',
@@ -320,6 +356,14 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
         })
     })
     .catch((err) => {
+      logger.error(
+        'server.routes.invoice.get__Failed to fetch product metrics.',
+        {
+          metadata: {
+            error: err.message
+          }
+        }
+      )
       const alert = {
         type: 'danger',
         component: 'db',
@@ -435,12 +479,25 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
     }
   ])
     .then((docs) => {
-      console.log('Gettin there')
+      logger.debug(
+        'server.routes.invoice.post__Successfully loaded orders grouped by users to invoice.',
+        {
+          metadata: {
+            result: docs
+          }
+        }
+      )
       // Loop through array for each user
       for (let i = 0; i < docs.length; i++) {
         // Create new invoice to be sent to user
-        console.log('Creatin invoice')
-        console.log(docs[i])
+        logger.debug(
+          `server.routes.invoice.post__Creating invoice for user ${docs[i].user._id} for amount ${docs[i].total_user_sum_orders_notinvoiced}.`,
+          {
+            metadata: {
+              result: docs[i]
+            }
+          }
+        )
         var newInvoice = new Invoice({
           buyerId: docs[i].user._id,
           supplierId: req.user.id,
@@ -449,6 +506,14 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
         var bulk = Order.collection.initializeUnorderedBulkOp()
         // Loop through array for each order for that user
         for (let p = 0; p < docs[i].orders.length; p++) {
+          logger.debug(
+            `server.routes.invoice.post__Pushing order ${docs[i].orders[p]._id} to invoice array.`,
+            {
+              metadata: {
+                result: docs[i].orders[p]._id
+              }
+            }
+          )
           newInvoice.ordersId.push(docs[i].orders[p]._id)
           bulk
             .find({
@@ -460,32 +525,74 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
               }
             })
         }
-        newInvoice.save()
-        bulk.execute(function (_err, _items) {
-          // Send e-mail
-          generateQR(
-            req.user.IBAN,
-            docs[i].total_user_sum_orders_notinvoiced,
-            docs[i].user.displayName,
-            req.user.displayName,
-            function (qrcode) {
-              var subject = 'Fakturace!'
-              var body = `<h1>Přišel čas zúčtování!</h1><p>Váš nejoblíbenější dodavatel ${
-                req.user.displayName
-              } Vám zaslal fakturu.</p><h2>Fakturační údaje</h2><p>Částka k úhradě: ${
-                docs[i].total_user_sum_orders_notinvoiced
-              }Kč<br>Počet zakoupených produktů: ${
-                docs[i].total_user_num_orders_notinvoiced
-              }ks<br>Datum fakturace: ${moment().format(
-                'LLLL'
-              )}<br><a href="https://lednice.prdelka.eu/invoices">Více na webu Lednice IT</a></p><p>Platbu je možné provést hotově nebo převodem.<br>Po platbě si zkontrolujte, zda dodavatel označil Vaši platbu jako zaplacenou.</p>`
-              if (req.user.IBAN) {
-                body += `<h2>QR platba</h2><img width="480" height="480" style="width: 20rem; height: 20rem;" alt="QR kód pro mobilní platbu se Vám nezobrazuje správně." src="${qrcode}"/><p>IBAN: ${req.user.IBAN}</p><p>Předem díky za včasnou platbu!</p>`
+        newInvoice
+          .save()
+          .then((res) => {
+            logger.debug(
+              `server.routes.invoice.post__Successfully saved invoice ${res._id} to database.`,
+              {
+                metadata: {
+                  result: res
+                }
               }
-              sendMail(docs[i].user.email, subject, body)
-            }
-          )
-        })
+            )
+          })
+          .catch((err) => {
+            logger.error(
+              `server.routes.invoice.post__Failed to save invoice to database.`,
+              {
+                metadata: {
+                  error: err.message
+                }
+              }
+            )
+          })
+        bulk
+          .execute()
+          .then((res) => {
+            generateQR(
+              req.user.IBAN,
+              docs[i].total_user_sum_orders_notinvoiced,
+              docs[i].user.displayName,
+              req.user.displayName,
+              function (qrcode) {
+                logger.debug(
+                  `server.routes.invoice.post__QR code generated, sending invioce e-mail to customer.`,
+                  {
+                    metadata: {
+                      result: res
+                    }
+                  }
+                )
+                var subject = 'Fakturace!'
+                var body = `<h1>Přišel čas zúčtování!</h1><p>Váš nejoblíbenější dodavatel ${
+                  req.user.displayName
+                } Vám zaslal fakturu.</p><h2>Fakturační údaje</h2><p>Částka k úhradě: ${
+                  docs[i].total_user_sum_orders_notinvoiced
+                }Kč<br>Počet zakoupených produktů: ${
+                  docs[i].total_user_num_orders_notinvoiced
+                }ks<br>Datum fakturace: ${moment().format(
+                  'LLLL'
+                )}<br><a href="${
+                  req.headers.origin
+                }/invoices">Více na webu Lednice IT</a></p><p>Platbu je možné provést hotově nebo převodem.<br>Po platbě si zkontrolujte, zda dodavatel označil Vaši platbu jako zaplacenou.</p>`
+                if (req.user.IBAN) {
+                  body += `<h2>QR platba</h2><img width="480" height="480" style="width: 20rem; height: 20rem;" alt="QR kód pro mobilní platbu se Vám nezobrazuje správně." src="${qrcode}"/><p>IBAN: ${req.user.IBAN}</p><p>Předem díky za včasnou platbu!</p>`
+                }
+                sendMail(docs[i].user.email, subject, body)
+              }
+            )
+          })
+          .catch((err) => {
+            logger.error(
+              `server.routes.invoice.post__Failed to bulk modify invoiced orders.`,
+              {
+                metadata: {
+                  error: err.message
+                }
+              }
+            )
+          })
       }
       const alert = {
         type: 'success',
@@ -497,6 +604,14 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
       res.redirect('/invoice')
     })
     .catch((err) => {
+      logger.error(
+        `server.routes.invoice.post__Failed to load orders grouped by users to invoice.`,
+        {
+          metadata: {
+            error: err.message
+          }
+        }
+      )
       const alert = {
         type: 'danger',
         component: 'db',
