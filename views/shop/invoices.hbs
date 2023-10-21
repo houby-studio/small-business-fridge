@@ -12,7 +12,7 @@
         </thead>
         <tbody>
           {{# each invoices }}
-          <tr {{#if this.paid}} class="old-record" {{/if}}>
+          <tr {{#if this.paid}} class="subdue-50" {{/if}}>
             <td>
               <span class="d-none">{{ this.invoiceDate }}</span>{{ this.invoiceDate_format }}
             </td>
@@ -30,17 +30,16 @@
             </td>
             <td>
               {{#if this.paid}}
-              <input type="submit" class="btn btn-secondary float-right w-100" value="Uhrazeno" disabled
-                data-toggle="tooltip" title="Faktura již byla označena dodavatelem jako uhrazená.">
+              <span data-bs-toggle="tooltip" data-bs-title="Faktura již byla označena dodavatelem jako uhrazená.">
+              <input type="submit" class="btn btn-secondary float-right w-100" value="Uhrazeno" disabled>
+                </span>
               {{else}}
               <form id="payments" class="needs-validation h-100" method="POST" action="/invoices" novalidate>
                 {{#if this.requestPaid}}
-                <input type="submit" class="btn btn-danger float-right w-100" value="Storno" {{#if this.paid}} disabled
-                  data-toggle="tooltip" title="Faktura již byla označena dodavatelem jako uhrazená." {{/if}}>
+                <input type="submit" class="btn btn-danger float-right w-100" value="Storno">
                 <input type="hidden" id="action" name="action" value="storno">
                 {{else}}
-                <input type="submit" class="btn btn-success float-right w-100" value="Zaplaceno" {{#if this.paid}}
-                  disabled data-toggle="tooltip" title="Faktura již byla označena dodavatelem jako uhrazená." {{/if}}>
+                <input type="submit" class="btn btn-success float-right w-100" value="Zaplaceno">
                 <input type="hidden" id="action" name="action" value="paid">
                 {{/if}}
                 <input type="hidden" id="invoice_id" name="invoice_id" value="{{ this._id }}">

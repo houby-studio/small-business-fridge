@@ -1,6 +1,6 @@
 <div class='row'>
   <div class='col'>
-    <div class='card text-center w-50 mx-auto w-100-lg'>
+    <div class='card text-center mx-3 mx-lg-auto w-lg-75 w-xxl-50'>
       <div class='card-header h4'>
         Stav skladu
       </div>
@@ -8,14 +8,14 @@
         <div class='table-responsive'>
           <table class='table'>
             <thead>
-              <th scope='col' class='text-left'>Produkt</th>
+              <th scope='col' class='text-start'>Produkt</th>
               <th scope='col'>Zakoupeno za posledních 14 dní</th>
               <th scope='col'>Skladem</th>
             </thead>
             <tbody>
               {{#each stock}}
                 <tr>
-                  <th scope='row' class='text-left'>{{this.display_name}}</th>
+                  <th scope='row' class='text-start'>{{this.display_name}}</th>
                   <td>{{this.last_Xdays}}</td>
                   <td>{{this.amount_left}}</td>
                 </tr>

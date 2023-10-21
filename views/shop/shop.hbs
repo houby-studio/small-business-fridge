@@ -16,11 +16,10 @@
           </div>
           <div class="card-footer">
             <div class="row">
-              <div class="col-6 text-left">
+              <div class="col-6 text-start">
                 {{!-- TODO: add tooltip to icons https://getbootstrap.com/docs/4.0/components/tooltips/ --}}
                 {{#if this.stockSum}}
-                <span class="d-inline-block" data-toggle="tooltip" data-html="true"
-                  title="Skladem za tuto cenu: {{ this.stock.0.amount_left }}ks">
+                <span class="d-inline-block">
                   <i class="fas fa-boxes"></i> {{ this.stockSum }}
                 </span>
                 {{else}}
@@ -36,7 +35,7 @@
           </div>
           <div class="card-footer">
             <div class="row">
-              <div class="col-xl text-left px-0">
+              <div class="col-xl text-start px-0">
                 {{#if this.stock.0.price }}
                 <div class="btn btn-lg link-no-style py-0">{{ this.stock.0.price }} Kč</div>
                 <input type="hidden" name="product_price" class="btn float-left" value="{{ this.stock.0.price }}"

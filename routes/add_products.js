@@ -99,18 +99,18 @@ router.post('/', ensureAuthenticated, function (req, res) {
 
       newDelivery
         .save()
-        .then((res) => {
+        .then((result) => {
           logger.info(
             `server.routes.addproducts.post__Successfully added product:[${prod.displayName}] amount:[${req.body.product_amount}] price:${req.body.product_price}.`,
             {
               metadata: {
-                result: res
+                result: result
               }
             }
           )
-          alert = {
+          const alert = {
             type: 'success',
-            message: `${prod.displayName} přidán v počtu ${req.body.product_amount}ks za ${req.body.product_price}Kč.`,
+            message: `Produkt ${prod.displayName} přidán v počtu ${req.body.product_amount}ks za ${req.body.product_price}Kč.`,
             success: 1
           }
           req.session.alert = alert

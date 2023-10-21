@@ -1,3 +1,10 @@
+const tooltipTriggerList = document.querySelectorAll(
+  '[data-bs-toggle="tooltip"]'
+)
+const tooltipList = [...tooltipTriggerList].map(
+  (tooltipTriggerEl) => new bootstrap.Tooltip(tooltipTriggerEl)
+)
+
 // User graph swapper - changes between 'Spent amount in Kč and bought amount'
 $('#user-swap').click(function () {
   var clicks = $(this).data('clicks')
@@ -114,11 +121,6 @@ var perProductSpent = new Chart(ctx, {
       }
     }
   }
-})
-
-// Bootstrap tooltip on hover
-$(function () {
-  $('[data-toggle="tooltip"]').tooltip()
 })
 
 // Bootstrap table customization

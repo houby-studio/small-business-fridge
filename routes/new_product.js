@@ -84,12 +84,12 @@ router.post(
     })
     newProduct
       .save()
-      .then((res) => {
+      .then((result) => {
         logger.info(
           `server.routes.newproduct.post__User:[${req.user.email}] added new product:[${req.body.product_name}] to database.`,
           {
             metadata: {
-              result: res
+              result: result
             }
           }
         )

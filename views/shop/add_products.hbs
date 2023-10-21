@@ -5,13 +5,13 @@
   action='/add_products'
   novalidate
 >
-  <div class='card w-50 mx-auto w-100-lg'>
+  <div class='card mx-3 mx-lg-auto w-lg-75 w-xxl-50'>
     <div class='card-header h4 text-center'>
       Naskladnit
     </div>
     <div class='card-body'>
-      <div class='form-row'>
-        <div class='col-lg-2 text-center px-0'>
+      <div class='row g-0'>
+        <div class='col-md-4 text-center'>
           <img
             src='/images/preview.png'
             alt='Preview'
@@ -19,78 +19,80 @@
             class='img-fluid form-image-thumbnail'
           />
         </div>
-        <div class='col-lg-8'>
-          <div class='form-row'>
-            <div class='form-group col'>
-              <label for='product_id'>Název produktu</label>
-              <select
-                name='product_id'
-                id='product_id'
-                class='form-select'
-                onchange='loadProductImage()'
-                required
-              >
-                <option value='' selected>Vyberte ze seznamu..</option>
-                {{#each products}}
-                  <option value='{{this.id}}'>{{this.displayName}}</option>
-                {{/each}}
-              </select>
-            </div>
+        <div class='col-md-8'>
+
+          <div class='input-group input-group-lg mb-3'>
+            <label for='product_id' class='input-group-text'>Produkt</label>
+            <select
+              name='product_id'
+              id='product_id'
+              class='form-select'
+              onchange='loadProductImage()'
+              required
+            >
+              <option value='' selected>Vyberte ze seznamu..</option>
+              {{#each products}}
+                <option value='{{this.id}}'>{{this.displayName}}</option>
+              {{/each}}
+            </select>
           </div>
-          <div class='form-row mb-3'>
-            <div class='col'>
-              <div class='input-group'>
-                <input
-                  type='number'
-                  min='1'
-                  step='1'
-                  pattern='\d+'
-                  name='product_amount'
-                  class='form-control'
-                  placeholder='Počet'
-                  required
-                />
-                <div class='input-group-append'>
-                  <div class='input-group-text'>Ks</div>
-                </div>
-              </div>
-            </div>
+
+          <div class='input-group input-group-lg mb-3'>
+            <input
+              type='number'
+              min='1'
+              step='1'
+              pattern='\d+'
+              name='product_amount'
+              class='form-control'
+              placeholder='Počet'
+              aria-label='Počet'
+              aria-describedby='product_amount-addon'
+              required
+            />
+            <span class='input-group-text' id='product_amount-addon'>ks</span>
           </div>
-          <div class='form-row mb-3'>
-            <div class='col'>
-              <div class='input-group'>
-                <input
-                  type='number'
-                  min='1'
-                  step='1'
-                  pattern='\d+'
-                  name='product_price'
-                  class='form-control'
-                  placeholder='Cena'
-                  required
-                />
-                <div class='input-group-append'>
-                  <div class='input-group-text'>Kč</div>
-                </div>
-              </div>
-            </div>
+
+          <div class='input-group input-group-lg mb-3'>
+            <input
+              type='number'
+              min='1'
+              step='1'
+              pattern='\d+'
+              name='product_price'
+              class='form-control'
+              placeholder='Cena'
+              aria-label='Cena'
+              aria-describedby='product_price-addon'
+              required
+            />
+            <span class='input-group-text' id='product_price-addon'>Kč</span>
           </div>
+
         </div>
       </div>
     </div>
     <!-- End of card-body -->
     <div class='card-footer text-muted'>
-      <div class='form-row'>
+      <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+        <a href='/' class='btn btn-danger me-md-2'>Storno</a>
+        <input
+            type='submit'
+            class='btn btn-success float-end'
+            value='Naskladnit'
+          />
+      </div>
+      {{!-- <div class='row'>
         <div class='col-lg-6'>
           <a href='/' class='btn btn-danger'>Storno</a>
         </div>
         <div class='col-lg-6'>
           <input
             type='submit'
-            class='btn btn-success float-right'
+            class='btn btn-success float-end'
             value='Naskladnit'
           />
-        </div>
+        </div> --}}
       </div>
     </div>
   </div>

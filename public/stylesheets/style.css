@@ -1,4 +1,4 @@
-html {
+/* html {
   height: 100%;
 }
 
@@ -8,50 +8,53 @@ body {
 
 body {
   font-family: 'Muli', sans-serif;
-}
+} */
 
-.container-fluid {
+/* .container-fluid {
   max-height: 100%;
   padding-left: 0px;
   padding-right: 0px;
-}
+} */
 
+/*
 .row {
   margin-left: 0px;
   margin-right: 0px;
-}
+} */
 
-.cover {
+/* .cover {
   object-fit: cover;
   height: 25rem;
   width: 100%;
-}
+} */
 
+/* Limit image max height in add_product/new_product page */
 .form-image-thumbnail {
-  max-height: 11rem !important;
+  max-height: 15rem !important;
 }
 
+/* Limit image max height in shop page */
 .shop-image-thumbnail {
   max-height: 13rem !important;
 }
 
-.link-no-style {
+/* .link-no-style {
   text-decoration: none;
   color: inherit;
-}
+} */
 
-.link-no-style:hover {
+/* .link-no-style:hover {
   text-decoration: none;
   color: inherit;
-}
+} */
 
-.text-button {
+/* .text-button {
   color: white;
-}
+} */
 
-.text-button:hover {
+/* .text-button:hover {
   text-decoration: none;
-}
+} */
 
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button {
@@ -64,41 +67,123 @@ input[type=number] {
   /* Firefox */
 }
 
-.old-record {
+/* Primarily to darken unimportant table rows */
+.subdue-50 {
   filter: brightness(50%);
 }
 
+/* Might form buttons later with block spacing */
 .keypad {
   margin-top: 0.5em;
 }
 
-@media screen and (max-width: 991px) {
-  .float-right {
-    float: none !important;
+/* Add viewport based width */
+/* sm */
+@media (min-width: 576px) {
+  .w-sm-25 {
+    width: 25% !important;
   }
 
-  .w-100-lg {
+  .w-sm-50 {
+    width: 50% !important;
+  }
+
+  .w-sm-75 {
+    width: 75% !important;
+  }
+
+  .w-sm-100 {
     width: 100% !important;
   }
 }
 
-@media screen and (max-width: 1199px) {
-  .btn {
+/* md */
+@media (min-width: 768px) {
+  .w-md-25 {
+    width: 25% !important;
+  }
+
+  .w-md-50 {
+    width: 50% !important;
+  }
+
+  .w-md-75 {
+    width: 75% !important;
+  }
+
+  .w-md-100 {
     width: 100% !important;
   }
 }
 
+/* lg */
+@media (min-width: 992px) {
+  .w-lg-25 {
+    width: 25% !important;
+  }
 
-@media screen and (min-width: 1200px) {
+  .w-lg-50 {
+    width: 50% !important;
+  }
+
+  .w-lg-75 {
+    width: 75% !important;
+  }
+
+  .w-lg-100 {
+    width: 100% !important;
+  }
+}
+
+/* xl */
+@media (min-width: 1200px) {
+  .w-xl-25 {
+    width: 25% !important;
+  }
+
+  .w-xl-50 {
+    width: 50% !important;
+  }
+
+  .w-xl-75 {
+    width: 75% !important;
+  }
+
+  .w-xl-100 {
+    width: 100% !important;
+  }
+
+  /* TODO: Invoice two tables non-sense, should rework */
   .hide-xl {
     display: none;
   }
 
+  /* TODO: Invoice two tables non-sense, should rework */
   .pr-xl-none {
     padding-right: 0;
   }
 
+  /* TODO: Invoice two tables non-sense, should rework */
   .pl-xl-none {
     padding-left: 0;
+  }
+}
+
+/* xxl */
+@media (min-width: 1400px) {
+  .w-xxl-25 {
+    width: 25% !important;
+  }
+
+  .w-xxl-50 {
+    width: 50% !important;
+  }
+
+  .w-xxl-75 {
+    width: 75% !important;
+  }
+
+  .w-xxl-100 {
+    width: 100% !important;
   }
 }

@@ -583,12 +583,12 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
         }
         newInvoice
           .save()
-          .then((res) => {
+          .then((result) => {
             logger.debug(
               `server.routes.invoice.post__Successfully saved invoice ${res._id} to database.`,
               {
                 metadata: {
-                  result: res
+                  result: result
                 }
               }
             )
@@ -605,7 +605,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           })
         bulk
           .execute()
-          .then((res) => {
+          .then((result) => {
             generateQR(
               req.user.IBAN,
               docs[i].total_user_sum_orders_notinvoiced,
@@ -616,7 +616,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
                   `server.routes.invoice.post__QR code generated, sending invioce e-mail to customer.`,
                   {
                     metadata: {
-                      result: res
+                      result: result
                     }
                   }
                 )

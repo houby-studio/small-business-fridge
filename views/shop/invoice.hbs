@@ -9,17 +9,17 @@
                     <table class="table">
                         <tbody>
                             <tr>
-                                <th scope="row" class="text-left text-nowrap"><i class="far fa-money-bill-alt" alt="Nevyfakturováno"></i> Celkem k fakturaci</th>
+                                <th scope="row" class="text-start text-nowrap"><i class="far fa-money-bill-alt" alt="Nevyfakturováno"></i> Celkem k fakturaci</th>
                                 <td class="font-weight-bold">{{ productview.total_num_orders_notinvoiced }}ks</td>
                                 <td class="font-weight-bold">{{ productview.total_sum_orders_notinvoiced }}Kč</td>
                             </tr>
                             <tr>
-                                <th scope="row" class="text-left text-nowrap"><i class="fas fa-file-invoice-dollar" alt="Vyfakturováno"></i> Celkem fakturováno</th>
+                                <th scope="row" class="text-start text-nowrap"><i class="fas fa-file-invoice-dollar" alt="Vyfakturováno"></i> Celkem fakturováno</th>
                                 <td>{{ productview.total_num_orders_invoiced }}ks</td>
                                 <td>{{ productview.total_sum_orders_invoiced }}Kč</td>
                             </tr>
                             <tr>
-                                <th scope="row" class="text-left text-nowrap"><i class="fas fa-boxes" alt="Sklad"></i> Celkem na skladě</th>
+                                <th scope="row" class="text-start text-nowrap"><i class="fas fa-boxes" alt="Sklad"></i> Celkem na skladě</th>
                                 <td>{{ productview.total_num_stocked }}ks</td>
                                 <td>{{ productview.total_sum_stocked }}Kč</td>
                             </tr>
@@ -36,22 +36,22 @@
         </div>
     </div>
     <div class="col-xl-4 order-xl-1 mt-3">
-        <div class="card text-center mx-auto h-100">
+        <div class="card text-center mx-auto">
             <div class="card-header h4">
                 <button type="button" id="user-swap" class="btn btn-primary py-0"><i class="fas fa-sync-alt" id="user-spin"></i> <span id="user-text">Uživatelé - k fakturaci v Kč</span></button>
             </div>
-            <div class="card-body">
+            <div class="card-body mx-auto">
                 <div class="row"></div>
                 <canvas id="perUserSpent"></canvas>
             </div>
         </div>
     </div>
     <div class="col-xl-4 order-xl-3 mt-3">
-        <div class="card text-center mx-auto h-100">
+        <div class="card text-center mx-auto">
             <div class="card-header h4">
                 <button type="button" id="prod-swap" class="btn btn-primary py-0"><i class="fas fa-sync-alt" id="prod-spin"></i> <span id="prod-text">Produkty - k fakturaci v Kč</span></button>
             </div>
-            <div class="card-body">
+            <div class="card-body mx-auto">
                 <div class="row"></div>
                 <canvas id="perProductSpent"></canvas>
             </div>
@@ -77,15 +77,15 @@
                 <div class="table-responsive">
                     <table class="table">
                         <thead>
-                            <th scope="col" class="text-left">Produkt</th>
-                            <th scope="col" class="font-weight-bold" data-toggle="tooltip" title="Nevyfakturováno"><i class="far fa-money-bill-alt" alt="Nevyfakturováno"></i></th>
-                            <th scope="col" data-toggle="tooltip" title="Vyfakturováno"><i class="fas fa-file-invoice-dollar" alt="Vyfakturováno"></i></th>
-                            <th scope="col" data-toggle="tooltip" title="Sklad"><i class="fas fa-boxes" alt="Sklad"></i></th>
+                            <th scope="col" class="text-start">Produkt</th>
+                            <th scope="col" data-bs-toggle="tooltip" data-bs-title="Nevyfakturováno" class="font-weight-bold"><i class="far fa-money-bill-alt" alt="Nevyfakturováno"></i></th>
+                            <th scope="col" data-bs-toggle="tooltip" data-bs-title="Vyfakturováno"><i class="fas fa-file-invoice-dollar" alt="Vyfakturováno"></i></th>
+                            <th scope="col" data-bs-toggle="tooltip" data-bs-title="Sklad"><i class="fas fa-boxes" alt="Sklad"></i></th>
                         </thead>
                         <tbody>
                             {{#each productview.stock}}
                             <tr>
-                                <th scope="row" class="text-left text-nowrap">{{ this.product.displayName }}</th>
+                                <th scope="row" class="text-start text-nowrap">{{ this.product.displayName }}</th>
                                 <td class="font-weight-bold">{{ this.num_orders_notinvoiced }}ks</td>
                                 <td>{{ this.num_orders_invoiced }}ks</td>
                                 <td>{{ this.amount_left }}ks</td>
@@ -106,15 +106,15 @@
                 <div class="table-responsive">
                     <table class="table">
                         <thead>
-                            <th scope="col" class="text-left hide-xl">Produkt</th>
-                            <th scope="col" class="font-weight-bold" data-toggle="tooltip" title="Nevyfakturováno"><i class="far fa-money-bill-alt" alt="Nevyfakturováno"></i></th>
-                            <th scope="col" data-toggle="tooltip" title="Vyfakturováno"><i class="fas fa-file-invoice-dollar" alt="Vyfakturováno"></i></th>
-                            <th scope="col" data-toggle="tooltip" title="Sklad"><i class="fas fa-boxes" alt="Sklad"></i></th>
+                            <th scope="col" class="text-start hide-xl">Produkt</th>
+                            <th scope="col" data-bs-toggle="tooltip" data-bs-title="Nevyfakturováno" class="font-weight-bold"><i class="far fa-money-bill-alt" alt="Nevyfakturováno"></i></th>
+                            <th scope="col" data-bs-toggle="tooltip" data-bs-title="Vyfakturováno"><i class="fas fa-file-invoice-dollar" alt="Vyfakturováno"></i></th>
+                            <th scope="col" data-bs-toggle="tooltip" data-bs-title="Sklad"><i class="fas fa-boxes" alt="Sklad"></i></th>
                         </thead>
                         <tbody>
                             {{#each productview.stock}}
                             <tr>
-                                <th scope="row" class="text-left hide-xl text-nowrap">{{ this.product.displayName }}</th>
+                                <th scope="row" class="text-start hide-xl text-nowrap">{{ this.product.displayName }}</th>
                                 <td class="font-weight-bold">{{ this.sum_orders_notinvoiced }}Kč</td>
                                 <td>{{ this.sum_orders_invoiced }}Kč</td>
                                 <td>{{ this.sum_stocked }}Kč</td>
@@ -129,12 +129,12 @@
 </div>
 <div class="row mt-3">
     <div class="col">
-        <div class="card text-center mx-auto">
-            <div class="card-header h4">
+        <div class="card mx-auto">
+            <div class="card-header h4 text-center">
                 Uživatelé - Nevyfakturované objednávky
             </div>
             <div class="card-body">
-                <div class="table-responsive text-left">
+                <div class="table-responsive">
                     <table class="table" id="table-orders">
                         <thead>
                             <th scope="col">Datum</th>
