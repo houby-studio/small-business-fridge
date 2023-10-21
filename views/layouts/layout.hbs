@@ -4,25 +4,11 @@
 <head>
   <!-- Meta Tags -->
   <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{title}}</title>
-  <!-- CDN required JS, CSS -->
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js"
-    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"
-    integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r"
-    crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"
-    integrity="sha384-BBtl+eGJRgqQAUMxJ7pMwbEyER4l1g+O15P+16Ep7Q9Q+zqX6gSbd85u4mG4QzX+"
-    crossorigin="anonymous"></script>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
-    integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
-    integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA=="
-    crossorigin="anonymous" referrerpolicy="no-referrer" />
   <!-- Locally hosted JS, CSS -->
-  <script type="text/javascript" src="/javascripts/alert_timeout.js"></script>
+  <link rel="stylesheet" href="/stylesheets/bootstrap.min.css" />
+  <link rel="stylesheet" href="/stylesheets/fontawesome.min.css" />
   <link rel="stylesheet" href="/stylesheets/style.css" />
   {{!-- Favicon --}}
   <link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
@@ -48,8 +34,11 @@
   {{> header}}
   {{> alert}}
   <div class="container-fluid mt-3">
+    <script type="text/javascript" src="/javascripts/bootstrap.bundle.min.js"></script> <!-- Try to move to bottom - dependencies in child items -->
+    <script type="text/javascript" src="/javascripts/jquery-3.7.1.min.js"></script> <!-- Try to eliminate jquery -->
     {{{body}}}
   </div>
+  <script type="text/javascript" src="/javascripts/alert_timeout.js"></script>
 </body>
 
 </html>
