@@ -3,7 +3,9 @@ function readURL(input) {
     var reader = new FileReader()
 
     reader.onload = function (e) {
-      $('#product_img').attr('src', e.target.result)
+      document
+        .getElementById('product_img')
+        .setAttribute('src', e.target.result)
     }
 
     reader.readAsDataURL(input.files[0])

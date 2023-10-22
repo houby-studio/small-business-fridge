@@ -1,3 +1,4 @@
+// Initialize Bootstraps 5 tooltips
 const tooltipTriggerList = document.querySelectorAll(
   '[data-bs-toggle="tooltip"]'
 )
@@ -5,38 +6,55 @@ const tooltipList = [...tooltipTriggerList].map(
   (tooltipTriggerEl) => new bootstrap.Tooltip(tooltipTriggerEl)
 )
 
-$('.realtime-checkbox').change(function () {
-  $.post('/profile', {
-    name: this.id,
-    value: $(`#${this.id}`).is(':checked')
+// Change settings when checkbox state changes
+const checkboxes = document.getElementsByClassName('realtime-checkbox')
+
+const _checkboxesEvent = [...checkboxes].forEach((element) => {
+  element.addEventListener('change', async function () {
+    await fetch('/profile', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name: this.id,
+        value: this.checked
+      })
+    })
   })
 })
 
-$('#realtime-iban').on('paste keyup', function () {
-  this.value = this.value.replace(/\s/g, '')
-  if ($('#realtime-iban')[0].checkValidity()) {
-    $('#iban-status')
-      .css({
-        color: 'green'
+// Change IBAN settings when state changes
+const iban = document.getElementById('realtime-iban')
+const ibanEvents = ['paste', 'keyup']
+
+ibanEvents.forEach(function (event) {
+  iban.addEventListener(event, async function () {
+    const sanitizedValue = this.value.replace(/\s/g, '')
+
+    if (this.checkValidity()) {
+      this.style.color = 'green'
+      const status = document.getElementById('iban-status')
+      status.style.color = 'green'
+      status.classList.remove('fa-times-circle')
+      status.classList.add('fa-check-circle')
+
+      await fetch('/profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: this.id,
+          value: sanitizedValue
+        })
       })
-      .removeClass('fa-times-circle')
-      .addClass('fa-check-circle')
-    $(this).css({
-      color: 'green'
-    })
-    $.post('/profile', {
-      name: this.id,
-      value: $('#realtime-iban').val()
-    })
-  } else {
-    $('#iban-status')
-      .css({
-        color: 'red'
-      })
-      .removeClass('fa-check-circle')
-      .addClass('fa-times-circle')
-    $(this).css({
-      color: 'red'
-    })
-  }
+    } else {
+      this.style.color = 'red'
+      const status = document.getElementById('iban-status')
+      status.style.color = 'red'
+      status.classList.remove('fa-check-circle')
+      status.classList.add('fa-times-circle')
+    }
+  })
 })

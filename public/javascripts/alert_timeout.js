@@ -1,7 +1,7 @@
+const bsAlert = new bootstrap.Alert('#alert')
+
 window.setTimeout(function () {
-  $('.alert')
-    .fadeTo(500, 0)
-    .slideUp(500, function () {
-      $(this).remove()
-    })
+  if (bsAlert._element) {
+    bsAlert.close()
+  }
 }, 5000)

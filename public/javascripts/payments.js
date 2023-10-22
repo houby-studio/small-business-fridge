@@ -1,3 +1,4 @@
+// Initialize Bootstraps 5 tooltips
 const tooltipTriggerList = document.querySelectorAll(
   '[data-bs-toggle="tooltip"]'
 )
@@ -10,7 +11,7 @@ $(document).ready(function () {
   $('#table-invoices').DataTable({
     columnDefs: [{ type: 'natural', targets: [2, 3] }],
     language: {
-      url: '//cdn.datatables.net/plug-ins/1.10.19/i18n/Czech.json',
+      url: '/datatables/cs.json',
       searchPlaceholder: 'Hledaný výraz'
     },
     order: [[4, 'asc']],

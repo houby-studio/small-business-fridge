@@ -1,3 +1,4 @@
+// Initialize Bootstraps 5 tooltips
 const tooltipTriggerList = document.querySelectorAll(
   '[data-bs-toggle="tooltip"]'
 )
@@ -6,6 +7,7 @@ const tooltipList = [...tooltipTriggerList].map(
 )
 
 // User graph swapper - changes between 'Spent amount in Kč and bought amount'
+// TODO: remove jQuery, however this page uses it anyways due to datatables
 $('#user-swap').click(function () {
   var clicks = $(this).data('clicks')
   $('#user-spin').addClass('spin')
@@ -65,6 +67,7 @@ var perUserSpent = new Chart(ctx, {
 })
 
 // Product graph swapper - changes between 'Spent amount in Kč and bought amount'
+// TODO: remove jQuery, however this page uses it anyways due to datatables
 $('#prod-swap').click(function () {
   var clicks = $(this).data('clicks')
   $('#prod-spin').addClass('spin')
@@ -128,7 +131,7 @@ $(document).ready(function () {
   $('#table-orders').DataTable({
     columnDefs: [{ type: 'natural', targets: 3 }],
     language: {
-      url: '//cdn.datatables.net/plug-ins/1.10.19/i18n/Czech.json',
+      url: '/datatables/cs.json',
       searchPlaceholder: 'Hledaný výraz'
     },
     fixedHeader: true,

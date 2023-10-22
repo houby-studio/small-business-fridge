@@ -14,7 +14,7 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
 })
 
 router.post('/', ensureAuthenticated, function (req, res, _next) {
-  var newValue = req.body.value === 'true'
+  var newValue = req.body.value
   if (req.body.name === 'checkAllProducts') {
     User.findByIdAndUpdate(
       req.user.id,

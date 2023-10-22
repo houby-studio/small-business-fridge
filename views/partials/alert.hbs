@@ -2,8 +2,9 @@
   <div
     class='alert alert-{{alert.type}} alert-dismissible fade show'
     role='alert'
+    id='alert'
   >
-    <p class='alert-heading mb-0'>
+    <strong class='alert-heading mb-0'>
       {{#if alert.success}}
         <i class='fas fa-check-circle'></i>
         Úspěch
@@ -17,7 +18,13 @@
         <i class='fas fa-info-circle'></i>
         Info
       {{/if}}
-    </p>
-    <p class='mb-0'>{{alert.message}}</p>
+    </strong>
+    {{alert.message}}
+    <button
+      type='button'
+      class='btn-close'
+      data-bs-dismiss='alert'
+      aria-label='Close'
+    ></button>
   </div>
 {{/if}}

@@ -7,7 +7,7 @@
             <div class="col-lg">
               <form action="/kiosk_keypad" method="get">
                 <input type="submit" value="Zpět" name="Submit" id="Submit"
-                  class="form-control btn btn-primary btn-block waves-effect" />
+                  class="form-control btn btn-danger btn-block waves-effect" />
                 </form>
             </div>
             <div class="col-lg">
@@ -58,7 +58,7 @@
   <div class="row">
     {{# each this }}
     <div class="col-lg-3 py-3">
-      <form id="shop_buy_product" class="needs-validation h-100" method="POST" action="/kiosk_shop" novalidate>
+      <form id="shop_buy_product_{{this.stock.0._id}}" name="shop_buy_product" class="needs-validation h-100" method="POST" action="/kiosk_shop" novalidate>
         <div class="card h-100 text-center">
           <div class="card-header h4">
             <header>{{ this.displayName }}</header>
@@ -78,9 +78,9 @@
               </div>
               <div class="col-6 text-right">
                 {{#if this.stock.0.price }}
-                <div class="btn btn-link btn-lg link-no-style py-0">{{ this.stock.0.price }} Kč</div>
-                <input type="hidden" name="product_price" class="btn btn-link float-right"
-                  value="{{ this.stock.0.price }}" readonly>
+                <div class="btn btn-lg link-no-style py-0">{{ this.stock.0.price }} Kč</div>
+                <input type="hidden" name="product_price" class="btn float-left" value="{{ this.stock.0.price }}"
+                  readonly>
                 {{/if}}
               </div>
             </div>
@@ -98,4 +98,5 @@
   </div>
   {{/each}}
 </section>
+
 <script type="text/javascript" src="/javascripts/kiosk_shop.js"></script>

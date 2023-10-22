@@ -1,11 +1,19 @@
 import logger from './logger.js'
 
 export function ensureAuthenticatedAPI(req, res, next) {
-  // Check if request header contains API secret key
-  logger.warn(
-    'server.functions.ensureauthenticatedapi__Blocked API request without valid API key.'
-  )
+  if (!process.env.API_SECRET) {
+    // Check if request header contains API secret key
+    logger.warn(
+      'server.functions.ensureauthenticatedapi__Blocked API request, because API is disabled, no API key is set.'
+    )
+    res.status(409).send()
+    return
+  }
   if (req.get('sbf-API-secret') !== process.env.API_SECRET) {
+    // Check if request header contains API secret key
+    logger.warn(
+      'server.functions.ensureauthenticatedapi__Blocked API request without valid API key.'
+    )
     res.status(401)
     res.set('Content-Type', 'application/problem+json')
     const responseJson = {

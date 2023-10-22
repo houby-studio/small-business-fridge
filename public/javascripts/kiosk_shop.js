@@ -37,7 +37,11 @@ window.onload = function (event) {
   }, 1000)
 }
 
-$('form').on('click', function (event) {
-  event.preventDefault()
-  $(this).submit()
+const forms = document.getElementsByName('shop_buy_product')
+
+const _formsEvents = [...forms].forEach((element) => {
+  element.addEventListener('click', async function (event) {
+    event.preventDefault()
+    this.submit()
+  })
 })

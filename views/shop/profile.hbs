@@ -46,14 +46,14 @@
         <div class="form-check">
           <input class="form-check-input realtime-checkbox" type="checkbox" id="checkSendEmailEshop" {{#if user.sendMailOnEshopPurchase}} checked {{/if}}>
           <label class="form-check-label" for="checkSendEmailEshop">
-            Zobrazovat produkty, které nejsou skladem.
+            Odesílat e-mail po nákupu v e-shopu.
           </label>
         </div>
 
         <div class="form-check">
           <input class="form-check-input realtime-checkbox" type="checkbox" id="checkSendDailyReport" {{#if user.sendDailyReport}} checked {{/if}}>
           <label class="form-check-label" for="checkSendDailyReport">
-            Zobrazovat produkty, které nejsou skladem.
+            Odebírat denní report nákupů.
           </label>
         </div>
 
@@ -81,5 +81,6 @@
   </div>
 </div>
 {{/if}}
+
 <script type="text/javascript" src="/javascripts/form_validate.js"></script>
 <script type="text/javascript" src="/javascripts/profile.js"></script>

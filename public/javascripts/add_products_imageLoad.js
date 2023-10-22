@@ -1,9 +1,8 @@
 function loadProductImage() {
   var imageId = document.getElementById('product_id').value
-  var _img = document.getElementById('product_img')
   var newImg = new Image()
   newImg.onload = function () {
-    _img.src = this.src
+    document.getElementById('product_img').src = this.src
   }
   if (imageId === '') {
     newImg.src = '/images/preview.png'
