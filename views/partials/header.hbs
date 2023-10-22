@@ -1,77 +1,83 @@
 {{#unless user.kiosk}}
 <nav class='navbar navbar-expand-lg bg-body-tertiary sticky-top'>
   <div class='container-fluid px-2'>
+
+    {{!-- Brand --}}
     <a class='navbar-brand' href='/'>Lednice IT</a>
+
+    {{!-- Collapsible button toggler --}}
     <button class='navbar-toggler' type='button' data-bs-toggle='collapse' data-bs-target='#navbarSupportedContent'
       aria-controls='navbarSupportedContent' aria-expanded='false' aria-label='Toggle navigation'>
       <span class='navbar-toggler-icon'></span>
     </button>
 
+    {{!-- Collapsible in mobile resolution --}}
     <div class='collapse navbar-collapse' id='navbarSupportedContent'>
-      <ul class='navbar-nav me-auto mb-2 lb-lg-0'>
+      <ul class='navbar-nav me-auto'>
         {{#if user}}
-        <li class='nav-item mx-auto'>
-          <a class='nav-link' href='/shop'><i class='fas fa-shopping-basket'></i> Nakupovat <span
-              class='sr-only'></span></a>
-        </li>
+          <li class='nav-item'>
+            <a class='nav-link' href='/shop'><i class='fa-solid fa-shopping-basket'></i> Nakupovat <span
+                class='sr-only'></span></a>
+          </li>
+          <li class='nav-item'>
+            <a class='nav-link' href='/orders'><i class='fa-solid fa-shopping-cart'></i> Objednávky</a>
+          </li>
+          <li class='nav-item'>
+            <a class='nav-link' href='/invoices'><i class='fa-solid fa-file-invoice-dollar'></i> Faktury</a>
+          </li>
         {{/if}}
-        <li class='nav-item mx-auto'>
-          <a class='nav-link' href='/about'><i class='fas fa-question-circle'></i> O aplikaci <span
+        {{#if user.supplier}}
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="fa-solid fa-parachute-box"></i> Dodavatel
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="/add_products"><i class='fa-solid fa-dolly'></i> Naskladnit</a></li>
+              <li><a class="dropdown-item" href="/invoice"><i class='fa-solid fa-cash-register'></i> Fakturace</a></li>
+              <li><a class="dropdown-item" href="/payments"><i class='fa-solid fa-file-invoice'></i> Platby</a></li>
+              <li><a class="dropdown-item" href="/stock"><i class='fa-solid fa-boxes'></i> Stav skladu</a></li>
+            </ul>
+          </li>
+        {{/if}}
+        {{#if user.admin}}
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="fa-solid fa-crown"></i> Administrátor
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="/dashboard"><i class='fa-solid fa-columns'></i> Dashboard</a></li>
+              <li><a class="dropdown-item" href="/admin_orders"><i class='fa-solid fa-shopping-cart'></i> Objednávky</a></li>
+              <li><a class="dropdown-item" href="/admin_invoice"><i class='fa-solid fa-cash-register'></i> Fakturace</a></li>
+              <li><a class="dropdown-item" href="/admin_payments"><i class='fa-solid fa-file-invoice'></i> Platby</a></li>
+              <li><a class="dropdown-item" href="/new_product"><i class="fa-solid fa-cart-plus"></i> Nový produkt</a></li>
+            </ul>
+          </li>
+        {{/if}}
+
+        {{!-- Move somewhere else --}}
+        {{!-- <li class='nav-item mx-auto'>
+          <a class='nav-link' href='/about'><i class='fa-solid fa-question-circle'></i> O aplikaci <span
               class='sr-only'></span></a>
         </li>
         <li class='nav-item mx-auto'>
-          <a class='nav-link' href='/changelog'><i class='fas fa-clipboard-list'></i> Changelog <span
+          <a class='nav-link' href='/changelog'><i class='fa-solid fa-clipboard-list'></i> Changelog <span
               class='sr-only'></span></a>
-        </li>
+        </li> --}}
+
+
       </ul>
       <ul class='navbar-nav'>
         {{#if user}}
-        <li class='nav-item dropdown'>
-          <a class='nav-link dropdown-toggle text-center' href='#' role='button' data-bs-toggle='dropdown'
-            aria-expanded='false'>
-            {{#if user.admin}}<i class="fas fa-user-cog"></i>{{else}}<i class="fas fa-user">{{/if}}</i>
-            {{user.displayName}}
-          </a>
-          <ul class='dropdown-menu'>
-            {{#if user.admin}}
-            <li>
-              <a class='dropdown-item text-center' href='/dashboard'><i class='fas fa-columns'></i> Dashboard</a>
-            </li>
-            <div role='separator' class='dropdown-divider'></div>
-            {{/if}}
-            <li>
-              <a class='dropdown-item text-center' href='/profile'><i class='fas fa-id-card'></i> Profil</a>
-            </li>
-            <li>
-              <a class='dropdown-item text-center' href='/orders'><i class='fas fa-shopping-cart'></i> Objednávky</a>
-            </li>
-            <li>
-              <a class='dropdown-item text-center' href='/invoices'><i class='fas fa-file-invoice-dollar'></i>
-                Faktury</a>
-            </li>
-            {{#if user.supplier}}
-            <div role='separator' class='dropdown-divider'></div>
-            <li>
-              <a class='dropdown-item text-center' href='/add_products'><i class='fas fa-dolly'></i> Naskladnit</a>
-            </li>
-            <li>
-              <a class='dropdown-item text-center' href='/invoice'><i class='fas fa-cash-register'></i> Fakturace</a>
-            </li>
-            <li>
-              <a class='dropdown-item text-center' href='/payments'><i class='fas fa-file-invoice'></i> Platby</a>
-            </li>
-            <li>
-              <a class='dropdown-item text-center' href='/stock'><i class='fas fa-boxes'></i> Stav skladu</a>
-            </li>
-            {{/if}}
-          </ul>
-        </li>
-        <li class='nav-item'>
-          <a class='btn btn-danger' href='/logout'><i class='fas fa-sign-out-alt'></i> Odhlásit</a>
-        </li>
+           <li class='nav-item'>
+            <div class="btn-group">
+              {{!-- <a href="#" class="btn btn-primary"><i class="fa-solid fa-circle-question"></i></a> --}}
+              <a href="/profile" class="btn btn-outline-secondary" title="Profil uživatele">{{#if user.admin}}<i class="fa-solid fa-user-cog"></i>{{else}}<i class="fa-solid fa-user">{{/if}}</i> {{user.displayName}}</a>
+              <a href="/logout" class="btn btn-danger" title="Odhlásit"><i class="fa-solid fa-right-from-bracket"></i></a>
+            </div>
+          </li>
         {{else}}
         <li class='nav-item'>
-          <a class='btn btn-success' href='/login'><i class='fas fa-sign-in-alt'></i> Přihlásit</a>
+          <a class='btn btn-success' href='/login'><i class="fa-solid fa-right-to-bracket"></i> Přihlásit</a>
         </li>
         {{/if}}
       </ul>

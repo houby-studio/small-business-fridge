@@ -75,21 +75,13 @@ input[type=number] {
 /* Might form buttons later with block spacing */
 .keypad {
   margin-top: 0.5em;
-}
-
-/* Kiosk */
-.btn-lg {
   height: 12vh;
   font-size: 2rem;
 }
 
-/* html,
-body {
-  margin: 0;
-  height:
-    100%;
-  overflow: hidden
-} */
+.dataTables_filter {
+  text-align: center !important;
+}
 
 /* Spin icon upon button click in invoice */
 .spin {
@@ -192,6 +184,11 @@ body {
   .w-md-100 {
     width: 100% !important;
   }
+
+  .dt-buttons {
+    float: right !important;
+    text-align: center;
+  }
 }
 
 /* lg */
@@ -263,5 +260,29 @@ body {
 
   .w-xxl-100 {
     width: 100% !important;
+  }
+}
+
+/* xxxl */
+@media (min-width: 1900px) {
+  .w-xxxl-25 {
+    width: 25% !important;
+  }
+
+  .w-xxxl-50 {
+    width: 50% !important;
+  }
+
+  .w-xxxl-75 {
+    width: 75% !important;
+  }
+
+  .w-xxxl-100 {
+    width: 100% !important;
+  }
+
+  .col-xxxl-2 {
+    flex: 0 0 auto;
+    width: 16.6% !important;
   }
 }

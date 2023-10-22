@@ -4,17 +4,17 @@
       <div class="card text-center mx-auto h-100">
         <div class="card-body py-1">
           <div class="row">
-            <div class="col-lg">
+            <div class="col-lg mb-3">
               <form action="/kiosk_keypad" method="get">
                 <input type="submit" value="Zpět" name="Submit" id="Submit"
                   class="form-control btn btn-danger btn-block waves-effect" />
                 </form>
             </div>
-            <div class="col-lg">
+            <div class="col-lg mb-3">
               <input type="button" value="{{customer.displayName}}" name="customerName" id="customerName"
                 class="form-control btn btn-outline disabled btn-block" />
             </div>
-            <div class="col-lg">
+            <div class="col-lg mb-3">
               <input
                 type='button'
                 value='3m 00s'
@@ -24,28 +24,28 @@
               />
             </div>
           </div>
-          <div class="row keypad">
-            <div class="col-lg">
+          <div class="row">
+            <div class="col-lg mb-3">
               <input type="radio" class="btn-check" name="product-filter" id="all" autocomplete="off" checked>
               <label class="form-control btn btn-outline-primary" for="all">Vše</label>
             </div>
-            <div class="col-lg">
+            <div class="col-lg mb-3">
               <input type="radio" class="btn-check" name="product-filter" id="drinks" autocomplete="off">
               <label class="form-control btn btn-outline-primary" for="drinks">Nápoje</label>
             </div>
-            <div class="col-lg">
+            <div class="col-lg mb-3">
               <input type="radio" class="btn-check" name="product-filter" id="sweets" autocomplete="off">
               <label class="form-control btn btn-outline-primary" for="sweets">Sladkosti</label>
             </div>
-            <div class="col-lg">
+            <div class="col-lg mb-3">
               <input type="radio" class="btn-check" name="product-filter" id="salts" autocomplete="off">
               <label class="form-control btn btn-outline-primary" for="salts">Slanosti</label>
             </div>
-            <div class="col-lg">
+            <div class="col-lg mb-3">
               <input type="radio" class="btn-check" name="product-filter" id="frozen" autocomplete="off">
               <label class="form-control btn btn-outline-primary" for="frozen">Mražené</label>
             </div>
-            <div class="col-lg">
+            <div class="col-lg mb-3">
               <input type="radio" class="btn-check" name="product-filter" id="fastfood" autocomplete="off">
               <label class="form-control btn btn-outline-primary" for="fastfood">Minutky</label>
             </div>
@@ -65,8 +65,7 @@
           </div>
           <img src="{{ this.imagePath }}" class="mx-auto my-2 img-fluid shop-image-thumbnail"
             alt="{{ this.description }}">
-          <div class="card-body">
-          </div>
+
           <div class="card-footer">
             <div class="row">
               <div class="col-6 text-start">
@@ -78,8 +77,8 @@
               </div>
               <div class="col-6 text-right">
                 {{#if this.stock.0.price }}
-                <div class="btn btn-lg link-no-style py-0">{{ this.stock.0.price }} Kč</div>
-                <input type="hidden" name="product_price" class="btn float-left" value="{{ this.stock.0.price }}"
+                <div class="btn btn-lg py-0 float-end">{{ this.stock.0.price }} Kč</div>
+                <input type="hidden" name="product_price" class="btn" value="{{ this.stock.0.price }}"
                   readonly>
                 {{/if}}
               </div>

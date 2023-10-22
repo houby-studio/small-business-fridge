@@ -68,15 +68,9 @@ function renderPage(req, res, alert) {
     }
   ])
     .then((docs) => {
-      const productChunks = []
-      const chunkSize = 4
-      for (let i = 0; i < docs.length; i += chunkSize) {
-        productChunks.push(docs.slice(i, i + chunkSize))
-      }
-
       res.render('shop/shop', {
         title: 'E-shop | Lednice IT',
-        products: productChunks,
+        products: docs,
         user: req.user,
         alert,
         csrfToken: req.csrfToken()
