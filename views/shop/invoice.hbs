@@ -10,18 +10,18 @@
                         <tbody>
                             <tr>
                                 <th scope="row" class="text-start text-nowrap"><i class="far fa-money-bill-alt" alt="Nevyfakturováno"></i> Celkem k fakturaci</th>
-                                <td class="font-weight-bold">{{ productview.total_num_orders_notinvoiced }}ks</td>
-                                <td class="font-weight-bold">{{ productview.total_sum_orders_notinvoiced }}Kč</td>
+                                <td class="font-weight-bold">{{#if productview.total_num_orders_notinvoiced}}{{productview.total_num_orders_notinvoiced}}{{else}}0{{/if}}ks</td>
+                                <td class="font-weight-bold">{{#if productview.total_sum_orders_notinvoiced}}{{productview.total_sum_orders_notinvoiced}}{{else}}0{{/if}}Kč</td>
                             </tr>
                             <tr>
                                 <th scope="row" class="text-start text-nowrap"><i class="fas fa-file-invoice-dollar" alt="Vyfakturováno"></i> Celkem fakturováno</th>
-                                <td>{{ productview.total_num_orders_invoiced }}ks</td>
-                                <td>{{ productview.total_sum_orders_invoiced }}Kč</td>
+                                <td>{{#if productview.total_num_orders_invoiced}}{{productview.total_num_orders_invoiced}}{{else}}0{{/if}}ks</td>
+                                <td>{{#if productview.total_sum_orders_invoiced}}{{productview.total_sum_orders_invoiced}}{{else}}0{{/if}}Kč</td>
                             </tr>
                             <tr>
                                 <th scope="row" class="text-start text-nowrap"><i class="fas fa-boxes" alt="Sklad"></i> Celkem na skladě</th>
-                                <td>{{ productview.total_num_stocked }}ks</td>
-                                <td>{{ productview.total_sum_stocked }}Kč</td>
+                                <td>{{#if productview.total_num_stocked}}{{productview.total_num_stocked}}{{else}}0{{/if}}ks</td>
+                                <td>{{#if productview.total_sum_stocked}}{{productview.total_sum_stocked}}{{else}}0{{/if}}Kč</td>
                             </tr>
                         </tbody>
                     </table>
@@ -29,7 +29,7 @@
                 {{#if supplier.supplierId}}
                     <form id="invoice_all" class="needs-validation" method="POST" action="/invoice" novalidate>
                         <input id="invoice_submit" type="submit" class="btn btn-primary w-100" value="Vyfakturovat">
-                        {{#unless user.IBAN}}<a href="/profile" class="btn btn-info w-100"><i class="fas fa-info-circle"></i> Nemáte vyplněný IBAN pro QR platby.</a>{{/unless}}
+                        {{#unless user.IBAN}}<a href="/profile" class="btn btn-info w-100 mt-3"><i class="fas fa-info-circle"></i> Nemáte vyplněný IBAN pro QR platby.</a>{{/unless}}
                     </form>
                 {{/if}}
             </div>

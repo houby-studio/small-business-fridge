@@ -188,7 +188,7 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
   ])
     .then((docs) => {
       logger.debug(
-        `server.routes.invoice.get__Successfully loaded ${docs[0].stock.length} product metrics.`,
+        `server.routes.invoice.get__Successfully loaded ${docs[0]?.stock.length} product metrics.`,
         {
           metadata: {
             result: docs
