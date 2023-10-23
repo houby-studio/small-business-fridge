@@ -1,20 +1,18 @@
 <form
-  id='admin_new_product'
+  id='supplier_edit_product'
   class='needs-validation'
   method='POST'
-  action='/new_product?_csrf={{csrfToken}}'
+  action='/edit_product?_csrf={{csrfToken}}'
   enctype='multipart/form-data'
   novalidate
 >
   <div class='card mx-3 mx-lg-auto w-lg-75 w-xxl-50'>
     <div class='card-header h4 text-center'>
-      <i class='fa-solid fa-cart-plus'></i>
-      Nový produkt
+      <i class='fa-solid fa-cart-arrow-down'></i>
+      Upravit produkt
     </div>
     <div class='card-body'>
       <div class='row g-0'>
-
-        {{! Image preview }}
         <div class='col-md-4 text-center'>
           <img
             src='/images/preview.png'
@@ -22,9 +20,25 @@
             id='product_img'
             class='img-fluid form-image-thumbnail'
           />
-          <p>Doporučená velikost: 450x800px</p>
         </div>
         <div class='col-md-8'>
+
+          {{!  Product selection }}
+          <div class='input-group input-group-lg mb-3'>
+            <label for='product_id' class='input-group-text'>Produkt</label>
+            <select
+              name='product_id'
+              id='product_id'
+              class='form-select'
+              onchange='loadProductInfo()'
+              required
+            >
+              <option value='' selected>Vyberte ze seznamu..</option>
+              {{#each products}}
+                <option value='{{this.id}}'>{{this.displayName}}</option>
+              {{/each}}
+            </select>
+          </div>
 
           {{!  Product name }}
           <div class='input-group input-group-lg mb-3'>
@@ -35,6 +49,7 @@
             <input
               type='text'
               name='product_name'
+              id='product_name'
               class='form-control'
               placeholder='Název'
               aria-label='Název'
@@ -52,6 +67,7 @@
             <input
               type='text'
               name='product_description'
+              id='product_description'
               class='form-control'
               placeholder='Popis'
               aria-label='Popis'
@@ -73,7 +89,6 @@
               name='product_image'
               accept='image/png'
               onchange='readURL(this);'
-              required
             />
           </div>
 
@@ -100,25 +115,29 @@
         </div>
       </div>
     </div>
-    {{! End of card-body }}
+    <!-- End of card-body -->
     <div class='card-footer text-muted'>
-      <div class='card-footer text-muted'>
-        <div class='d-grid gap-2 d-md-flex justify-content-md-end'>
-          <a href='/' class='btn btn-danger me-md-2'>Storno</a>
-          <input
-            type='submit'
-            class='btn btn-success float-end'
-            value='Vytvořit'
-          />
-        </div>
+      <div class='d-grid gap-2 d-md-flex justify-content-md-end'>
+        <a href='/' class='btn btn-danger me-md-2'>Storno</a>
+        <input type='submit' class='btn btn-success float-end' value='Uložit' />
       </div>
     </div>
   </div>
+  <input type='hidden' name='_csrf' value='{{csrfToken}}' />
 </form>
+
+<script type='text/javascript'>
+  var json_data = {
+  {{#each products}}
+    "{{this.id}}": { "product_name": "{{this.displayName}}",
+    "product_description": "{{this.description}}", "product_image": "{{this.imagePath}}"
+    },
+  {{/each}}
+  }
+</script>
 
 <script
   type='text/javascript'
-  src='/javascripts/new_product_imageLoad.js'
+  src='/javascripts/edit_product_infoLoad.js'
 ></script>
-
 <script type='text/javascript' src='/javascripts/form_validate.js'></script>

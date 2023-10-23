@@ -7,8 +7,7 @@ function loadProductImage() {
   if (imageId === '') {
     newImg.src = '/images/preview.png'
   } else {
-    var indexnumber = json_data.product_id.findIndex((id) => id === imageId)
-    newImg.src = json_data.product_image[indexnumber]
+    newImg.src = json_data[imageId].product_image
   }
 }
 

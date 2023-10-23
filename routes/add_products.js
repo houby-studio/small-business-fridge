@@ -30,20 +30,13 @@ router.get('/', ensureAuthenticated, function (req, res) {
     .sort([['displayName', 1]])
     .then((docs) => {
       logger.debug(
-        `server.routes.addproducts.get__Successfully loaded ${docs[0].length} products.`,
+        `server.routes.addproducts.get__Successfully loaded ${docs.length} products.`,
         {
           metadata: {
             result: docs
           }
         }
       )
-      docs.client_data = JSON.stringify({
-        product_id: docs.map(
-          (a) => a.id,
-          (b) => b.imagePath
-        ),
-        product_image: docs.map((a) => a.imagePath)
-      })
 
       res.render('shop/add_products', {
         title: 'Naskladnit | Lednice IT',

@@ -48,6 +48,7 @@ import invoiceRouter from './routes/invoice.js'
 import paymentsRouter from './routes/payments.js'
 import stockRouter from './routes/stock.js'
 import newProductRouter from './routes/new_product.js'
+import editProductRouter from './routes/edit_product.js'
 // Access for admins
 import dashboardRouter from './routes/admin/admin_dashboard.js'
 // Access for kiosk
@@ -140,6 +141,7 @@ app.use('/invoice', invoiceRouter)
 app.use('/payments', paymentsRouter)
 app.use('/stock', stockRouter)
 app.use('/new_product', newProductRouter)
+app.use('/edit_product', editProductRouter)
 // Access for admins
 app.use('/dashboard', dashboardRouter)
 app.use('/admin_orders', ordersRouter)

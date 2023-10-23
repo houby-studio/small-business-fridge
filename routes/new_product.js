@@ -64,7 +64,7 @@ router.post(
       return
     }
 
-    // If image was not uploaded, use preview dummy image
+    // If image was not uploaded, reject request
     if (!req.file) {
       logger.warn('server.routes.newproduct.post__No product image uploaded.')
       var alert = {
@@ -76,34 +76,60 @@ router.post(
       res.redirect('/new_product')
     }
 
-    var newProduct = new Product({
-      keypadId: req.body.product_keypadid,
-      displayName: req.body.product_name,
-      description: req.body.product_description,
-      imagePath: './images/' + req.file.filename
-    })
-    newProduct
-      .save()
-      .then((result) => {
-        logger.info(
-          `server.routes.newproduct.post__User:[${req.user.email}] added new product:[${req.body.product_name}] to database.`,
-          {
-            metadata: {
-              result: result
+    Product.find()
+      .sort({
+        keypadId: -1
+      })
+      .limit(1)
+      .then((product) => {
+        var newProduct = new Product({
+          keypadId: product[0].keypadId + 1,
+          displayName: req.body.product_name,
+          description: req.body.product_description,
+          imagePath: './images/' + req.file.filename
+        })
+        newProduct
+          .save()
+          .then((result) => {
+            logger.info(
+              `server.routes.newproduct.post__User:[${req.user.email}] added new product:[${req.body.product_name}] to database.`,
+              {
+                metadata: {
+                  result: result
+                }
+              }
+            )
+            alert = {
+              type: 'success',
+              message: `Produkt ${req.body.product_name} přidán do databáze.`,
+              success: 1
             }
-          }
-        )
-        alert = {
-          type: 'success',
-          message: `Produkt ${req.body.product_name} přidán do databáze.`,
-          success: 1
-        }
-        req.session.alert = alert
-        res.redirect('/new_product')
+            req.session.alert = alert
+            res.redirect('/new_product')
+          })
+          .catch((err) => {
+            logger.error(
+              `server.routes.newproduct.post__Failed to add new product to database.`,
+              {
+                metadata: {
+                  error: err.message
+                }
+              }
+            )
+            var alert = {
+              type: 'danger',
+              component: 'db',
+              message: err.message,
+              danger: 1
+            }
+            req.session.alert = alert
+            res.redirect('/new_product')
+            return
+          })
       })
       .catch((err) => {
         logger.error(
-          `server.routes.newproduct.post__Failed to add new product to database.`,
+          `server.routes.newproduct.post__Failed to find next keypad ID for new product from database.`,
           {
             metadata: {
               error: err.message

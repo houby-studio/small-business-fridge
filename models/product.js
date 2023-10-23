@@ -5,7 +5,7 @@ import uniqueValidator from 'mongoose-unique-validator'
 var schema = new Schema({
   keypadId: {
     type: Number,
-    required: false,
+    required: true,
     unique: true,
     min: 0
   },

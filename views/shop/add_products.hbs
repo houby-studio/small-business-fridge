@@ -7,6 +7,7 @@
 >
   <div class='card mx-3 mx-lg-auto w-lg-75 w-xxl-50'>
     <div class='card-header h4 text-center'>
+      <i class='fa-solid fa-dolly'></i>
       Naskladnit
     </div>
     <div class='card-body'>
@@ -21,6 +22,7 @@
         </div>
         <div class='col-md-8'>
 
+          {{!  Product selection }}
           <div class='input-group input-group-lg mb-3'>
             <label for='product_id' class='input-group-text'>Produkt</label>
             <select
@@ -37,6 +39,7 @@
             </select>
           </div>
 
+          {{!  Product amount }}
           <div class='input-group input-group-lg mb-3'>
             <input
               type='number'
@@ -53,6 +56,7 @@
             <span class='input-group-text' id='product_amount-addon'>ks</span>
           </div>
 
+          {{!  Product price }}
           <div class='input-group input-group-lg mb-3'>
             <input
               type='number'
@@ -74,36 +78,27 @@
     </div>
     <!-- End of card-body -->
     <div class='card-footer text-muted'>
-      <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+      <div class='d-grid gap-2 d-md-flex justify-content-md-end'>
         <a href='/' class='btn btn-danger me-md-2'>Storno</a>
         <input
-            type='submit'
-            class='btn btn-success float-end'
-            value='Naskladnit'
-          />
-      </div>
-      {{!-- <div class='row'>
-        <div class='col-lg-6'>
-          <a href='/' class='btn btn-danger'>Storno</a>
-        </div>
-        <div class='col-lg-6'>
-          <input
-            type='submit'
-            class='btn btn-success float-end'
-            value='Naskladnit'
-          />
-        </div> --}}
+          type='submit'
+          class='btn btn-success float-end'
+          value='Naskladnit'
+        />
       </div>
     </div>
   </div>
   <input type='hidden' name='_csrf' value='{{csrfToken}}' />
 </form>
+
 <script type='text/javascript'>
-
-  var json_data =
-  {{{products.client_data}}}
-
+  var json_data = {
+  {{#each products}}
+    "{{this.id}}": { "product_image": "{{this.imagePath}}" },
+  {{/each}}
+  }
 </script>
+
 <script
   type='text/javascript'
   src='/javascripts/add_products_imageLoad.js'

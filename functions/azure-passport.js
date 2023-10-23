@@ -3,7 +3,7 @@ import { sendMail } from './sendMail.js'
 import passport from 'passport'
 import { OIDCStrategy } from 'passport-azure-ad'
 import logger from './logger.js'
-import model from '../models/user.js'
+import User from '../models/user.js'
 
 const cookieEncryptionKeys = [
   {
@@ -14,10 +14,9 @@ const cookieEncryptionKeys = [
 
 // Helper function to find user in database
 const findByOid = function (oid, fn) {
-  model
-    .findOne({
-      oid
-    })
+  User.findOne({
+    oid
+  })
     .then((user) => {
       return fn(null, user)
     })
@@ -98,10 +97,9 @@ passport.use(
             logger.info(
               `server.functions.azurepassport__User [${profile._json.email}] not found in database. Starting automatic registration.`
             )
-            model
-              .findOne({
-                oid: profile.oid
-              })
+            User.findOne({
+              oid: profile.oid
+            })
               .then(() => {
                 // If user does not exist in database, automatically register as customer (not admin, not supplier, auto increment keypad ID)
                 if (!profile._json.email) {
@@ -115,7 +113,7 @@ passport.use(
                   )
                   return done(1)
                 }
-                const newUser = new model()
+                const newUser = new User()
                 newUser.oid = profile.oid
                 newUser.displayName = profile.displayName
                 newUser.email = profile._json.email
@@ -123,8 +121,7 @@ passport.use(
                 profile.supplier = false
                 // Async function to find highest keypad ID and increment it by one.
                 const latestUser = function (callback) {
-                  model
-                    .find()
+                  User.find()
                     .sort({
                       keypadId: -1
                     })
