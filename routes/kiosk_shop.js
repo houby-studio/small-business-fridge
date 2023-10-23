@@ -66,14 +66,9 @@ function renderPage(req, res, alert, customer) {
     }
   ])
     .then((docs) => {
-      const productChunks = []
-      const chunkSize = 4
-      for (let i = 0; i < docs.length; i += chunkSize) {
-        productChunks.push(docs.slice(i, i + chunkSize))
-      }
       res.render('shop/kiosk_shop', {
         title: 'Kiosek | Lednice IT',
-        products: productChunks,
+        products: docs,
         user: req.user,
         customer,
         alert,

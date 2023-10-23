@@ -54,18 +54,18 @@
       </div>
     </div>
   </div>
-  {{# each products }}
   <div class="row">
-    {{# each this }}
-    <div class="col-lg-3 py-3">
+  {{# each products }}
+    <div class="col-12 col-md-6 col-xl-3 col-xxxl-2 py-3">
       <form id="shop_buy_product_{{this.stock.0._id}}" name="shop_buy_product" class="needs-validation h-100" method="POST" action="/kiosk_shop" novalidate>
         <div class="card h-100 text-center">
           <div class="card-header h4">
             <header>{{ this.displayName }}</header>
           </div>
-          <img src="{{ this.imagePath }}" class="mx-auto my-2 img-fluid shop-image-thumbnail"
+          <div class="card-body">
+            <img src="{{ this.imagePath }}" class="mx-auto my-2 img-fluid shop-image-thumbnail"
             alt="{{ this.description }}">
-
+          </div>
           <div class="card-footer">
             <div class="row">
               <div class="col-6 text-start">
@@ -84,18 +84,17 @@
               </div>
             </div>
             <input type="hidden" id="product_id" name="product_id" value="{{ this.stock.0._id }}">
-            <input type="hidden" id="user_id" name="user_id" value="{{ ../../user.id }}">
-            <input type="hidden" id="customer_id" name="customer_id" value="{{ ../../customer.keypadId }}">
+            <input type="hidden" id="user_id" name="user_id" value="{{ ../user.id }}">
+            <input type="hidden" id="customer_id" name="customer_id" value="{{ ../customer.keypadId }}">
             <input type="hidden" id="display_name" name="display_name" value="{{ this.displayName }}">
             <input type="hidden" id="image_path" name="image_path" value="{{ this.imagePath }}">
-            <input type="hidden" name="_csrf" value="{{ ../../csrfToken }}">
+            <input type="hidden" name="_csrf" value="{{ ../csrfToken }}">
           </div>
         </div>
       </form>
     </div>
-    {{/each}}
-  </div>
   {{/each}}
+  </div>
 </section>
 
 <script type="text/javascript" src="/javascripts/kiosk_shop.js"></script>
