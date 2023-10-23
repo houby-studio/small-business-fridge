@@ -62,6 +62,8 @@ import authOpenIdReturnPost from './routes/auth_openid_return_post.js'
 // API routes
 import keypadOrderRouter from './routes/api/keypadOrder.js'
 import customerName from './routes/api/customerName.js'
+// Middleware routes
+import rateLimitRouter from './routes/middleware/rate_limit.js'
 
 // Express app and database connection
 logger.info('server.app.startup__Connecting to MongoDB server.')
@@ -79,6 +81,7 @@ app.engine(
   })
 )
 app.enable('trust proxy')
+app.set('trust proxy', 1)
 app.set('view engine', '.hbs')
 app.enable('view cache')
 // Stream logs to winston
@@ -118,6 +121,7 @@ app.use(
 )
 app.use(passport.initialize())
 app.use(passport.session())
+app.use(rateLimitRouter)
 
 // Application routes
 // Access for all

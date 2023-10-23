@@ -5,7 +5,7 @@ var router = Router()
 let responseJson
 
 // GET /api/customerName - accepts customer's keypadId and returns customer's display name
-router.get('/', ensureAuthenticatedAPI, function (req, res, next) {
+router.get('/', ensureAuthenticatedAPI, function (req, res, _next) {
   // Check if request contains 'customer' parameter
   if (!req.query.customer) {
     res.status(400)
@@ -45,7 +45,7 @@ router.get('/', ensureAuthenticatedAPI, function (req, res, next) {
         res.json(normalized)
       }
     })
-    .catch((err) => {
+    .catch((_err) => {
       res.status(400)
       res.set('Content-Type', 'application/problem+json')
       const responseJson = {

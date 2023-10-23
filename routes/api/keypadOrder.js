@@ -11,7 +11,7 @@ let responseJson
 moment.locale('cs')
 
 /* API to order via keypad */
-router.post('/', ensureAuthenticatedAPI, function (req, res, next) {
+router.post('/', ensureAuthenticatedAPI, function (req, res, _next) {
   if (!req.body.customer) {
     // Check if request contains 'customer' parameter
     res.status(400)
@@ -118,18 +118,10 @@ router.post('/', ensureAuthenticatedAPI, function (req, res, next) {
           newOrder.deliveryId = product[0].stock[0]._id
           const newAmount = product[0].stock[0].amount_left - 1
 
-          Delivery.findByIdAndUpdate(
-            product[0].stock[0]._id,
-            {
-              amount_left: newAmount
-            },
-            function (err, delivery) {
-              if (err) {
-                res.status(err.status || 500)
-                res.render('error')
-                return
-              }
-
+          Delivery.findByIdAndUpdate(product[0].stock[0]._id, {
+            amount_left: newAmount
+          })
+            .then(() => {
               newOrder
                 .save()
                 .then(() => {
@@ -157,16 +149,22 @@ router.post('/', ensureAuthenticatedAPI, function (req, res, next) {
                   sendMail('system@system', subject, body)
                   return
                 })
-            }
-          )
+            })
+            .catch((err) => {
+              console.log(err)
+              res.status(err.status || 500)
+              res.render('error')
+              return
+            })
         })
         .catch((err) => {
+          console.log(err)
           res.status(err.status || 500)
           res.render('error')
           return
         })
     })
-    .catch((err) => {
+    .catch((_err) => {
       res.status(400)
       res.set('Content-Type', 'application/problem+json')
       const responseJson = {
