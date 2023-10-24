@@ -15,16 +15,16 @@ moment.locale('cs')
 
 function renderPage(req, res, alert) {
   // TODO: Possibly refactor to inline condition directly in query
-  let filter
-  if (req.user.showAllProducts) {
-    filter = {}
-  } else {
-    filter = {
-      'stock.amount_left': {
-        $gt: 0
-      }
-    }
-  }
+  // let filter
+  // if (req.user.showAllProducts) {
+  //   filter = {}
+  // } else {
+  //   filter = {
+  //     'stock.amount_left': {
+  //       $gt: 0
+  //     }
+  //   }
+  // }
 
   // This crazy query which can be roughly translated for SQL people to "SELECT * FROM Product WHERE Stock.ammount_left > 0"
   Product.aggregate([
@@ -37,8 +37,22 @@ function renderPage(req, res, alert) {
       }
     },
     {
+      $lookup: {
+        from: 'categories',
+        localField: 'category',
+        foreignField: '_id',
+        as: 'category'
+      }
+    },
+    {
       // Depending on user preferences, get either all products or only ones in stock
-      $match: filter
+      $match: req.user.showAllProducts
+        ? {}
+        : {
+            'stock.amount_left': {
+              $gt: 0
+            }
+          }
     },
     {
       $project: {
@@ -46,6 +60,7 @@ function renderPage(req, res, alert) {
         displayName: '$displayName',
         description: '$description',
         imagePath: '$imagePath',
+        category: '$category',
         stock: {
           $filter: {
             // We filter only the stock object from array where ammount left is greater than 0
@@ -68,6 +83,7 @@ function renderPage(req, res, alert) {
     }
   ])
     .then((docs) => {
+      console.log(docs)
       res.render('shop/shop', {
         title: 'E-shop | Lednice IT',
         products: docs,
