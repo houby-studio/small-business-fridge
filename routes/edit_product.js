@@ -88,18 +88,6 @@ router.post(
       return
     }
 
-    // If image was not uploaded, reject request
-    if (!req.file) {
-      logger.warn('server.routes.newproduct.post__No product image uploaded.')
-      var alert = {
-        type: 'danger',
-        message: 'Musíte přidat obrázek produktu!',
-        danger: 1
-      }
-      req.session.alert = alert
-      res.redirect('/new_product')
-    }
-
     Product.findById(req.body.product_id)
       .then((product) => {
         // Handle Product.FindById result
