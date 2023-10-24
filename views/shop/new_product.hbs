@@ -87,13 +87,11 @@
               name='product_category'
               id='product_category'
               class='form-select'
-              onchange='loadProductImage()'
-              {{! required }}
             >
               <option value='' selected>Vyberte ze seznamu..</option>
-              {{!-- {{#each products}}
-                <option value='{{this.id}}'>{{this.displayName}}</option>
-              {{/each}} --}}
+              {{#each categories}}
+                <option value='{{this.id}}'>{{this.name}}</option>
+              {{/each}}
             </select>
           </div>
 

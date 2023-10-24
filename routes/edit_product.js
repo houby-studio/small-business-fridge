@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
 import Product from '../models/product.js'
+import Category from '../models/category.js'
 import multer, { diskStorage } from 'multer'
 import csrf from 'csurf'
 import logger from '../functions/logger.js'
@@ -11,10 +12,10 @@ router.use(csrfProtection)
 
 // Multer options - Save to public/images and keep original name
 const storage = diskStorage({
-  destination: function (req, file, cb) {
+  destination: function (_req, _file, cb) {
     cb(null, 'public/images/')
   },
-  filename: function (req, file, cb) {
+  filename: function (_req, file, cb) {
     cb(null, file.originalname)
   }
 })
@@ -41,7 +42,7 @@ router.get('/', ensureAuthenticated, function (req, res) {
   Product.find()
     .sort([['displayName', 1]])
     .then((docs) => {
-      logger.info(
+      logger.debug(
         `server.routes.editproduct.get__Successfully loaded ${docs.length} products.`,
         {
           metadata: {
@@ -50,13 +51,36 @@ router.get('/', ensureAuthenticated, function (req, res) {
         }
       )
 
-      res.render('shop/edit_product', {
-        title: 'Upravit produkt | Lednice IT',
-        products: docs,
-        user: req.user,
-        alert: alert,
-        csrfToken: req.csrfToken()
-      })
+      Category.find()
+        .then((categories) => {
+          logger.debug(
+            `server.routes.editproduct.get__Successfully loaded ${categories.length} categories.`,
+            {
+              metadata: {
+                result: categories
+              }
+            }
+          )
+
+          res.render('shop/edit_product', {
+            title: 'Upravit produkt | Lednice IT',
+            products: docs,
+            categories: categories,
+            user: req.user,
+            alert: alert,
+            csrfToken: req.csrfToken()
+          })
+        })
+        .catch((err) => {
+          logger.error(
+            `server.routes.editproduct.get__Failed to find categories.`,
+            {
+              metadata: {
+                error: err.message
+              }
+            }
+          )
+        })
     })
     .catch((err) => {
       logger.error(`server.routes.addproduct.get__Failed to load products.`, {
@@ -111,7 +135,19 @@ router.post(
           product.description = req.body.product_description
         }
 
-        // TODO: Handle categories change
+        // Handle categories change
+        if (req.body.product_category === '') {
+          // Make input same type as mongoose scheme
+          req.body.product_category = undefined
+        }
+        if (product.category?.toString() !== req.body.product_category) {
+          logger.info(
+            `server.routes.editproduct.post__Changing product's category:[${product.category}] to new category:[${req.body.product_category}].`
+          )
+          product.category = req.body.product_category
+        } else {
+          logger.debug('server.routes.editproduct.post__Else')
+        }
 
         // If image was not uploaded, we do not change it
         if (req.file) {

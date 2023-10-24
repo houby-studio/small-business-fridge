@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
 import Product from '../models/product.js'
+import Category from '../models/category.js'
 import multer, { diskStorage } from 'multer'
 import csrf from 'csurf'
 import logger from '../functions/logger.js'
@@ -37,12 +38,32 @@ router.get('/', ensureAuthenticated, function (req, res) {
     var alert = req.session.alert
     delete req.session.alert
   }
-  res.render('shop/new_product', {
-    title: 'Nový produkt | Lednice IT',
-    user: req.user,
-    alert: alert,
-    csrfToken: req.csrfToken()
-  })
+  Category.find()
+    .then((categories) => {
+      logger.debug(
+        `server.routes.newproduct.get__Successfully loaded ${categories?.length} categories.`,
+        {
+          metadata: {
+            result: categories
+          }
+        }
+      )
+
+      res.render('shop/new_product', {
+        title: 'Nový produkt | Lednice IT',
+        categories: categories,
+        user: req.user,
+        alert: alert,
+        csrfToken: req.csrfToken()
+      })
+    })
+    .catch((err) => {
+      logger.error(`server.routes.newproduct.get__Failed to find categories.`, {
+        metadata: {
+          error: err.message
+        }
+      })
+    })
 })
 
 /* POST new product form handle. */
@@ -88,6 +109,9 @@ router.post(
           description: req.body.product_description,
           imagePath: './images/' + req.file.filename
         })
+        if (req.body.product_category) {
+          newProduct.category = req.body.product_category
+        }
         newProduct
           .save()
           .then((result) => {

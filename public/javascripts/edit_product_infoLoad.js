@@ -23,9 +23,17 @@ function loadProductInfo() {
   document.getElementById('product_name').value =
     json_data[productId].product_name
 
-  // Description Name
+  // Description
   document.getElementById('product_description').value =
     json_data[productId].product_description
+
+  // Category - optional parameter
+  if (json_data[productId].product_category === '') {
+    document.getElementById('product_category').value = ''
+  } else {
+    document.getElementById('product_category').value =
+      json_data[productId].product_category
+  }
 }
 
 // Handles new image to upload selection
