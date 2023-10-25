@@ -1,33 +1,3 @@
-/* html {
-  height: 100%;
-}
-
-body {
-  height: 100%;
-}
-
-body {
-  font-family: 'Muli', sans-serif;
-} */
-
-/* .container-fluid {
-  max-height: 100%;
-  padding-left: 0px;
-  padding-right: 0px;
-} */
-
-/*
-.row {
-  margin-left: 0px;
-  margin-right: 0px;
-} */
-
-/* .cover {
-  object-fit: cover;
-  height: 25rem;
-  width: 100%;
-} */
-
 /* Limit image max height in add_product/new_product page */
 .form-image-thumbnail {
   max-height: 15rem !important;
@@ -37,24 +7,6 @@ body {
 .shop-image-thumbnail {
   max-height: 13rem !important;
 }
-
-/* .link-no-style {
-  text-decoration: none;
-  color: inherit;
-} */
-
-/* .link-no-style:hover {
-  text-decoration: none;
-  color: inherit;
-} */
-
-/* .text-button {
-  color: white;
-} */
-
-/* .text-button:hover {
-  text-decoration: none;
-} */
 
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button {

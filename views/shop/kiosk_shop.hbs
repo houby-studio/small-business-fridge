@@ -24,32 +24,20 @@
               />
             </div>
           </div>
-          <div class="row">
-            <div class="col-lg mb-3">
-              <input type="radio" class="btn-check" name="product-filter" id="all" autocomplete="off" checked>
-              <label class="form-control btn btn-outline-primary" for="all">Vše</label>
+          {{#if categories}}
+            <div class="row">
+              <div class="col mb-3">
+                <input type="radio" class="btn btn-check" name="product-filter" id="all" autocomplete="off" onclick="show_all_categories()" checked>
+                <label class="form-control btn btn-outline-primary" for="all">Vše</label>
+              </div>
+              {{#each categories}}
+              <div class="col mb-3">
+                <input type="radio" class="btn-check" name="product-filter" id="drinks" autocomplete="off" onclick="filter_categories('{{this._id}}')">
+                <label class="form-control btn btn-outline-primary" for="drinks"><i style="color: {{this.color}}" class="fa-solid fa-circle"></i> {{this.name}}</label>
+              </div>
+              {{/each}}
             </div>
-            <div class="col-lg mb-3">
-              <input type="radio" class="btn-check" name="product-filter" id="drinks" autocomplete="off">
-              <label class="form-control btn btn-outline-primary" for="drinks">Nápoje</label>
-            </div>
-            <div class="col-lg mb-3">
-              <input type="radio" class="btn-check" name="product-filter" id="sweets" autocomplete="off">
-              <label class="form-control btn btn-outline-primary" for="sweets">Sladkosti</label>
-            </div>
-            <div class="col-lg mb-3">
-              <input type="radio" class="btn-check" name="product-filter" id="salts" autocomplete="off">
-              <label class="form-control btn btn-outline-primary" for="salts">Slanosti</label>
-            </div>
-            <div class="col-lg mb-3">
-              <input type="radio" class="btn-check" name="product-filter" id="frozen" autocomplete="off">
-              <label class="form-control btn btn-outline-primary" for="frozen">Mražené</label>
-            </div>
-            <div class="col-lg mb-3">
-              <input type="radio" class="btn-check" name="product-filter" id="fastfood" autocomplete="off">
-              <label class="form-control btn btn-outline-primary" for="fastfood">Minutky</label>
-            </div>
-          </div>
+          {{/if}}
         </div>
       </div>
     </div>

@@ -1,38 +1,27 @@
 <section>
+  {{#if categories}}
   <div class="row">
-    <div class="col-lg mb-3">
-      <input type="radio" class="btn-check" name="product-filter" id="all" autocomplete="off" checked>
+    <div class="col mb-3">
+      <input type="radio" class="btn btn-check" name="product-filter" id="all" autocomplete="off" onclick="show_all_categories()" checked>
       <label class="form-control btn btn-outline-primary" for="all">Vše</label>
     </div>
-    <div class="col-lg mb-3">
-      <input type="radio" class="btn-check" name="product-filter" id="drinks" autocomplete="off" onclick="filter_categories('6538067c17386352a1b4052a')">
-      <label class="form-control btn btn-outline-primary" for="drinks">Nápoje</label>
+    {{#each categories}}
+    <div class="col mb-3">
+      <input type="radio" class="btn-check" name="product-filter" id="drinks" autocomplete="off" onclick="filter_categories('{{this._id}}')">
+      <label class="form-control btn btn-outline-primary" for="drinks"><i style="color: {{this.color}}" class="fa-solid fa-circle"></i> {{this.name}}</label>
     </div>
-    <div class="col-lg mb-3">
-      <input type="radio" class="btn-check" name="product-filter" id="sweets" autocomplete="off">
-      <label class="form-control btn btn-outline-primary" for="sweets">Sladkosti</label>
-    </div>
-    <div class="col-lg mb-3">
-      <input type="radio" class="btn-check" name="product-filter" id="salts" autocomplete="off">
-      <label class="form-control btn btn-outline-primary" for="salts">Slanosti</label>
-    </div>
-    <div class="col-lg mb-3">
-      <input type="radio" class="btn-check" name="product-filter" id="frozen" autocomplete="off">
-      <label class="form-control btn btn-outline-primary" for="frozen">Mražené</label>
-    </div>
-    <div class="col-lg mb-3">
-      <input type="radio" class="btn-check" name="product-filter" id="fastfood" autocomplete="off">
-      <label class="form-control btn btn-outline-primary" for="fastfood">Minutky</label>
-    </div>
+    {{/each}}
   </div>
+  {{/if}}
   <div class="row">
     {{# each products }}
       <div class="col-12 col-md-6 col-xl-3 col-xxxl-2 py-3 collapse show" data-category="{{this.category.0._id}}">
         <form id="shop_buy_product_{{this.stock.0._id}}" class="needs-validation h-100" method="POST" action="/shop" novalidate>
           <div class="card h-100 text-center">
-            <div class="card-header h4" style="background-color: {{this.category.0.color}};">
+            <div class="card-header h4">
               <header>{{this.category.0.name}} {{ this.displayName }}</header>
             </div>
+            <div style="height: 0.3rem; background-color: {{this.category.0.color}};"></div>
             <div class="card-body">
               <img src="{{ this.imagePath }}" class="mx-auto my-2 img-fluid shop-image-thumbnail"
               alt="{{ this.description }}">

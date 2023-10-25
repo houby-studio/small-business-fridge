@@ -66,14 +66,35 @@ function renderPage(req, res, alert, customer) {
     }
   ])
     .then((docs) => {
-      res.render('shop/kiosk_shop', {
-        title: 'Kiosek | Lednice IT',
-        products: docs,
-        user: req.user,
-        customer,
-        alert,
-        csrfToken: req.csrfToken()
-      })
+      Category.find()
+        .then((categories) => {
+          logger.debug(
+            `server.routes.kioskshop.get__Successfully loaded ${categories?.length} categories.`,
+            {
+              metadata: {
+                result: categories
+              }
+            }
+          )
+          res.render('shop/kiosk_shop', {
+            title: 'Kiosek | Lednice IT',
+            products: docs,
+            user: req.user,
+            customer,
+            alert,
+            csrfToken: req.csrfToken()
+          })
+        })
+        .catch((err) => {
+          logger.error(
+            `server.routes.kioskshop.get__Failed to find categories.`,
+            {
+              metadata: {
+                error: err.message
+              }
+            }
+          )
+        })
     })
     .catch((err) => {
       logger.error(

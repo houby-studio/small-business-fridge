@@ -3,6 +3,7 @@ import moment from 'moment'
 import Product from '../models/product.js'
 import Order from '../models/order.js'
 import Delivery from '../models/delivery.js'
+import Category from '../models/category.js'
 import { sendMail } from '../functions/sendMail.js'
 import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
 import { checkKiosk } from '../functions/checkKiosk.js'
@@ -14,19 +15,7 @@ router.use(csrfProtection)
 moment.locale('cs')
 
 function renderPage(req, res, alert) {
-  // TODO: Possibly refactor to inline condition directly in query
-  // let filter
-  // if (req.user.showAllProducts) {
-  //   filter = {}
-  // } else {
-  //   filter = {
-  //     'stock.amount_left': {
-  //       $gt: 0
-  //     }
-  //   }
-  // }
-
-  // This crazy query which can be roughly translated for SQL people to "SELECT * FROM Product WHERE Stock.ammount_left > 0"
+  // Get all products, optionally only products in stock and all categories.
   Product.aggregate([
     {
       $lookup: {
@@ -83,14 +72,33 @@ function renderPage(req, res, alert) {
     }
   ])
     .then((docs) => {
-      console.log(docs)
-      res.render('shop/shop', {
-        title: 'E-shop | Lednice IT',
-        products: docs,
-        user: req.user,
-        alert,
-        csrfToken: req.csrfToken()
-      })
+      Category.find()
+        .then((categories) => {
+          logger.debug(
+            `server.routes.shop.get__Successfully loaded ${categories?.length} categories.`,
+            {
+              metadata: {
+                result: categories
+              }
+            }
+          )
+
+          res.render('shop/shop', {
+            title: 'E-shop | Lednice IT',
+            products: docs,
+            categories: categories,
+            user: req.user,
+            alert,
+            csrfToken: req.csrfToken()
+          })
+        })
+        .catch((err) => {
+          logger.error(`server.routes.shop.get__Failed to find categories.`, {
+            metadata: {
+              error: err.message
+            }
+          })
+        })
     })
     .catch((err) => {
       logger.error(
