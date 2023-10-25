@@ -1,168 +1,186 @@
 <div class="row">
-    <div class="col-xl-4 order-xl-2 mt-3">
-        <div class="card text-center mx-auto h-100">
-            <div class="card-header h4">
-                Celkový přehled
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table">
-                        <tbody>
-                            <tr>
-                                <th scope="row" class="text-start text-nowrap"><i class="far fa-money-bill-alt" alt="Nevyfakturováno"></i> Celkem k fakturaci</th>
-                                <td class="font-weight-bold">{{#if productview.total_num_orders_notinvoiced}}{{productview.total_num_orders_notinvoiced}}{{else}}0{{/if}}ks</td>
-                                <td class="font-weight-bold">{{#if productview.total_sum_orders_notinvoiced}}{{productview.total_sum_orders_notinvoiced}}{{else}}0{{/if}}Kč</td>
-                            </tr>
-                            <tr>
-                                <th scope="row" class="text-start text-nowrap"><i class="fas fa-file-invoice-dollar" alt="Vyfakturováno"></i> Celkem fakturováno</th>
-                                <td>{{#if productview.total_num_orders_invoiced}}{{productview.total_num_orders_invoiced}}{{else}}0{{/if}}ks</td>
-                                <td>{{#if productview.total_sum_orders_invoiced}}{{productview.total_sum_orders_invoiced}}{{else}}0{{/if}}Kč</td>
-                            </tr>
-                            <tr>
-                                <th scope="row" class="text-start text-nowrap"><i class="fas fa-boxes" alt="Sklad"></i> Celkem na skladě</th>
-                                <td>{{#if productview.total_num_stocked}}{{productview.total_num_stocked}}{{else}}0{{/if}}ks</td>
-                                <td>{{#if productview.total_sum_stocked}}{{productview.total_sum_stocked}}{{else}}0{{/if}}Kč</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                {{#if supplier.supplierId}}
-                    <form id="invoice_all" class="needs-validation" method="POST" action="/invoice" novalidate>
-                        <input id="invoice_submit" type="submit" class="btn btn-primary w-100" value="Vyfakturovat">
-                        {{#unless user.IBAN}}<a href="/profile" class="btn btn-info w-100 mt-3"><i class="fas fa-info-circle"></i> Nemáte vyplněný IBAN pro QR platby.</a>{{/unless}}
-                    </form>
-                {{/if}}
-            </div>
+  <div class="col-xl-4 order-xl-2 mt-3">
+    <div class="card text-center mx-auto h-100">
+      <div class="card-header h4">
+        Celkový přehled
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table">
+            <tbody>
+              <tr>
+                <th scope="row" class="text-start text-nowrap"><i class="fa-regular fa-money-bill-alt"></i> Celkem k fakturaci</th>
+                <td class="font-weight-bold">{{#if productview.total_num_orders_notinvoiced}}{{productview.total_num_orders_notinvoiced}}{{else}}0{{/if}}ks
+                </td>
+                <td class="font-weight-bold">{{#if productview.total_sum_orders_notinvoiced}}{{productview.total_sum_orders_notinvoiced}}{{else}}0{{/if}}Kč
+                </td>
+              </tr>
+              <tr>
+                <th scope="row" class="text-start text-nowrap"><i class="fa-solid fa-file-invoice-dollar"></i> Celkem fakturováno</th>
+                <td>{{#if productview.total_num_orders_invoiced}}{{productview.total_num_orders_invoiced}}{{else}}0{{/if}}ks
+                </td>
+                <td>{{#if productview.total_sum_orders_invoiced}}{{productview.total_sum_orders_invoiced}}{{else}}0{{/if}}Kč
+                </td>
+              </tr>
+              <tr>
+                <th scope="row" class="text-start text-nowrap"><i class="fa-solid fa-boxes"></i> Celkem na skladě
+                </th>
+                <td>{{#if productview.total_num_stocked}}{{productview.total_num_stocked}}{{else}}0{{/if}}ks</td>
+                <td>{{#if productview.total_sum_stocked}}{{productview.total_sum_stocked}}{{else}}0{{/if}}Kč</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
+        {{#if supplier.supplierId}}
+        <form id="invoice_all" class="needs-validation" method="POST" action="/invoice" novalidate>
+          <input id="invoice_submit" type="submit" class="btn btn-primary w-100" value="Vyfakturovat">
+          {{#unless user.IBAN}}<a href="/profile" class="btn btn-info w-100 mt-3"><i class="fa-solid fa-info-circle"></i>
+            Nemáte vyplněný IBAN pro QR platby.</a>
+          {{/unless}}
+        </form>
+        {{/if}}
+      </div>
     </div>
-    <div class="col-xl-4 order-xl-1 mt-3">
-        <div class="card text-center mx-auto">
-            <div class="card-header h4">
-                <button type="button" id="user-swap" class="btn btn-primary py-0"><i class="fas fa-sync-alt" id="user-spin"></i> <span id="user-text">Uživatelé - k fakturaci v Kč</span></button>
-            </div>
-            <div class="card-body mx-auto">
-                <div class="row"></div>
-                <canvas id="perUserSpent"></canvas>
-            </div>
-        </div>
+  </div>
+  <div class="col-xl-4 order-xl-1 mt-3">
+    <div class="card text-center mx-auto">
+      <div class="card-header h4">
+        <button type="button" id="user-swap" class="btn btn-primary py-0"><i class="fa-solid fa-sync-alt" id="user-spin"></i>
+          <span id="user-text">Uživatelé - k fakturaci v Kč</span></button>
+      </div>
+      <div class="card-body mx-auto">
+        <div class="row"></div>
+        <canvas id="perUserSpent"></canvas>
+      </div>
     </div>
-    <div class="col-xl-4 order-xl-3 mt-3">
-        <div class="card text-center mx-auto">
-            <div class="card-header h4">
-                <button type="button" id="prod-swap" class="btn btn-primary py-0"><i class="fas fa-sync-alt" id="prod-spin"></i> <span id="prod-text">Produkty - k fakturaci v Kč</span></button>
-            </div>
-            <div class="card-body mx-auto">
-                <div class="row"></div>
-                <canvas id="perProductSpent"></canvas>
-            </div>
-        </div>
+  </div>
+  <div class="col-xl-4 order-xl-3 mt-3">
+    <div class="card text-center mx-auto">
+      <div class="card-header h4">
+        <button type="button" id="prod-swap" class="btn btn-primary py-0"><i class="fa-solid fa-sync-alt" id="prod-spin"></i>
+          <span id="prod-text">Produkty - k fakturaci v Kč</span></button>
+      </div>
+      <div class="card-body mx-auto">
+        <div class="row"></div>
+        <canvas id="perProductSpent"></canvas>
+      </div>
     </div>
+  </div>
 </div>
 <div class="row mt-3">
-    <div class="col">
-        <div class="card text-center mx-auto">
-            <div class="card-header h4">
-                Podrobný přehled
-            </div>
-        </div>
+  <div class="col">
+    <div class="card text-center mx-auto">
+      <div class="card-header h4">
+        Podrobný přehled
+      </div>
     </div>
+  </div>
 </div>
 <div class="row">
-    <div class="col-xl-6 pr-xl-none">
-        <div class="card text-center mx-auto">
-            <div class="card-header h4">
-                Produkty - kusy
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table">
-                        <thead>
-                            <th scope="col" class="text-start">Produkt</th>
-                            <th scope="col" data-bs-toggle="tooltip" data-bs-title="Nevyfakturováno" class="font-weight-bold"><i class="far fa-money-bill-alt" alt="Nevyfakturováno"></i></th>
-                            <th scope="col" data-bs-toggle="tooltip" data-bs-title="Vyfakturováno"><i class="fas fa-file-invoice-dollar" alt="Vyfakturováno"></i></th>
-                            <th scope="col" data-bs-toggle="tooltip" data-bs-title="Sklad"><i class="fas fa-boxes" alt="Sklad"></i></th>
-                        </thead>
-                        <tbody>
-                            {{#each productview.stock}}
-                            <tr>
-                                <th scope="row" class="text-start text-nowrap">{{ this.product.displayName }}</th>
-                                <td class="font-weight-bold">{{ this.num_orders_notinvoiced }}ks</td>
-                                <td>{{ this.num_orders_invoiced }}ks</td>
-                                <td>{{ this.amount_left }}ks</td>
-                            </tr>
-                            {{/each}}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+  <div class="col-xl-6 pr-xl-none">
+    <div class="card text-center mx-auto">
+      <div class="card-header h4">
+        Produkty - kusy
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col" class="text-start">Produkt</th>
+                <th scope="col" data-bs-toggle="tooltip" data-bs-title="Nevyfakturováno" class="font-weight-bold"><i class="fa-regular fa-money-bill-alt"></i></th>
+                <th scope="col" data-bs-toggle="tooltip" data-bs-title="Vyfakturováno"><i class="fa-solid fa-file-invoice-dollar"></i></th>
+                <th scope="col" data-bs-toggle="tooltip" data-bs-title="Sklad"><i class="fa-solid fa-boxes"></i></th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each productview.stock}}
+              <tr>
+                <th scope="row" class="text-start text-nowrap">{{ this.product.displayName }}</th>
+                <td class="font-weight-bold">{{ this.num_orders_notinvoiced }}ks</td>
+                <td>{{ this.num_orders_invoiced }}ks</td>
+                <td>{{ this.amount_left }}ks</td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
         </div>
+      </div>
     </div>
-    <div class="col-xl-6 pl-xl-none">
-        <div class="card text-center mx-auto">
-            <div class="card-header h4">
-                Produkty - částky
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table">
-                        <thead>
-                            <th scope="col" class="text-start hide-xl">Produkt</th>
-                            <th scope="col" data-bs-toggle="tooltip" data-bs-title="Nevyfakturováno" class="font-weight-bold"><i class="far fa-money-bill-alt" alt="Nevyfakturováno"></i></th>
-                            <th scope="col" data-bs-toggle="tooltip" data-bs-title="Vyfakturováno"><i class="fas fa-file-invoice-dollar" alt="Vyfakturováno"></i></th>
-                            <th scope="col" data-bs-toggle="tooltip" data-bs-title="Sklad"><i class="fas fa-boxes" alt="Sklad"></i></th>
-                        </thead>
-                        <tbody>
-                            {{#each productview.stock}}
-                            <tr>
-                                <th scope="row" class="text-start hide-xl text-nowrap">{{ this.product.displayName }}</th>
-                                <td class="font-weight-bold">{{ this.sum_orders_notinvoiced }}Kč</td>
-                                <td>{{ this.sum_orders_invoiced }}Kč</td>
-                                <td>{{ this.sum_stocked }}Kč</td>
-                            </tr>
-                            {{/each}}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+  </div>
+  <div class="col-xl-6 pl-xl-none">
+    <div class="card text-center mx-auto">
+      <div class="card-header h4">
+        Produkty - částky
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col" class="text-start hide-xl">Produkt</th>
+                <th scope="col" data-bs-toggle="tooltip" data-bs-title="Nevyfakturováno" class="font-weight-bold"><i
+                    class="fa-regular fa-money-bill-alt"></i></th>
+                <th scope="col" data-bs-toggle="tooltip" data-bs-title="Vyfakturováno"><i
+                    class="fa-solid fa-file-invoice-dollar"></i></th>
+                <th scope="col" data-bs-toggle="tooltip" data-bs-title="Sklad"><i class="fa-solid fa-boxes"></i>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each productview.stock}}
+              <tr>
+                <th scope="row" class="text-start hide-xl text-nowrap">{{ this.product.displayName }}</th>
+                <td class="font-weight-bold">{{ this.sum_orders_notinvoiced }}Kč</td>
+                <td>{{ this.sum_orders_invoiced }}Kč</td>
+                <td>{{ this.sum_stocked }}Kč</td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
         </div>
+      </div>
     </div>
+  </div>
 </div>
 <div class="row mt-3">
-    <div class="col">
-        <div class="card mx-auto">
-            <div class="card-header h4 text-center">
-                Uživatelé - Nevyfakturované objednávky
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table" id="table-orders">
-                        <thead>
-                            <th scope="col">Datum</th>
-                            <th scope="col">Jméno</th>
-                            <th scope="col">Produkt</th>
-                            <th scope="col">Cena</th>
-                        </thead>
-                        <tbody>
-                            {{#each userview}}
-                                {{#each orders}}
-                                <tr>
-                                    <td><span class="d-none">{{ this.order_date }}</span>{{ this.order_date_format }}</th>
-                                    <td>{{ ../user }}</td>
-                                    <td>{{ this.product.displayName }}</td>
-                                    <td>{{ this.price }}Kč</td>
-                                </tr>
-                                {{/each}}
-                            {{/each}}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+  <div class="col">
+    <div class="card mx-auto">
+      <div class="card-header h4 text-center">
+        Uživatelé - Nevyfakturované objednávky
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table" id="table-orders">
+            <thead>
+              <tr>
+                <th scope="col">Datum</th>
+                <th scope="col">Jméno</th>
+                <th scope="col">Produkt</th>
+                <th scope="col">Cena</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each userview}}
+              {{#each orders}}
+              <tr>
+                <td><span class="d-none">{{ this.order_date }}</span>{{ this.order_date_format }}</td>
+                <td>{{ ../user }}</td>
+                <td>{{ this.product.displayName }}</td>
+                <td>{{ this.price }}Kč</td>
+              </tr>
+              {{/each}}
+              {{/each}}
+            </tbody>
+          </table>
         </div>
+      </div>
     </div>
+  </div>
 </div>
 
 {{!-- Data for graph --}}
-<script type="text/javascript">
+<script>
 // User graph
 // Dataset spent in Kč
 var userDatasetPriceSpent = [

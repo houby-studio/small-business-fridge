@@ -1,79 +1,86 @@
-<section>
-  {{#if categories}}
-  <div class="row">
-    <div class="col mb-3">
-      <input type="radio" class="btn btn-check" name="product-filter" id="all" autocomplete="off" onclick="show_all_categories()" checked>
-      <label class="form-control btn btn-outline-primary" for="all">Vše</label>
-    </div>
-    {{#each categories}}
-    <div class="col mb-3">
-      <input type="radio" class="btn-check" name="product-filter" id="{{this._id}}" autocomplete="off" onclick="filter_categories('{{this._id}}')">
-      <label class="form-control btn btn-outline-primary" for="{{this._id}}"><i style="color: {{this.color}}" class="fa-solid fa-circle"></i> {{this.name}}</label>
-    </div>
-    {{/each}}
+{{#if categories}}
+{{!-- Filter by categories --}}
+<div class="row">
+  <div class="col-lg mb-2">
+    <input type="radio" class="btn btn-check" name="product-filter" id="all" onclick="show_all_categories()" checked>
+    <label class="form-control btn btn-outline-primary" for="all">Vše</label>
   </div>
-  {{/if}}
-  <div class="row">
-    {{# each products }}
-      <div class="col-12 col-md-6 col-xl-3 col-xxxl-2 py-3 collapse show" data-category="{{this.category.0._id}}">
-        <form id="shop_buy_product_{{this.stock.0._id}}" class="needs-validation h-100" method="POST" action="/shop" novalidate>
-          <div class="card h-100 text-center">
-            <div class="card-header h4">
-              <header>{{ this.displayName }}</header>
-            </div>
-            <div style="height: 0.3rem; background-color: {{this.category.0.color}};"></div>
-            <div class="card-body">
-              <img src="{{ this.imagePath }}" class="mx-auto my-2 img-fluid shop-image-thumbnail"
-              alt="{{ this.description }}">
-              {{!-- TODO: hide description https://getbootstrap.com/docs/4.0/components/collapse/#accordion-example --}}
-              <p class="card-text">{{ this.description }}</p>
-            </div>
-            <div class="card-footer">
-              <div class="row">
-                <div class="col-6 text-start">
-                  {{!-- TODO: add tooltip to icons https://getbootstrap.com/docs/4.0/components/tooltips/ --}}
-                  {{#if this.stockSum}}
-                  <span class="d-inline-block">
-                    <i class="fas fa-boxes"></i> {{ this.stockSum }}
-                  </span>
-                  {{else}}
-                  <i class="fas fa-boxes"></i> <span class="text-danger">0</span>
-                  {{/if }}
-                </div>
-                {{#if this.keypadId}}
-                <div class="col-6 text-end text-muted">
-                  <i class="fas fa-keyboard"></i> {{ this.keypadId }}
-                </div>
-                {{/if}}
-              </div>
-            </div>
-            <div class="card-footer">
-              <div class="row">
-                <div class="col-xl text-start px-0">
-                  {{#if this.stock.0.price }}
-                  <div class="btn btn-lg py-0">{{ this.stock.0.price }} Kč</div>
-                  <input type="hidden" name="product_price" class="btn" value="{{ this.stock.0.price }}"
-                    readonly>
-                  {{/if}}
-                </div>
-                <div class="col-xl text-end px-0">
-                  <input type="submit" class="btn btn-lg py-0 float-end" value="Koupit" {{#unless
-                    this.stock.0.amount_left}} disabled {{/unless}}>
+  {{#each categories}}
+  <div class="col-lg mb-2">
+    <input type="radio" class="btn-check" name="product-filter" id="{{this._id}}"
+      onclick="filter_categories('{{this._id}}')">
+    <label style="white-space: nowrap;" class="form-control btn btn-outline-primary" for="{{this._id}}"><i
+        style="color: {{this.color}};" class="fa-solid fa-circle"></i> {{this.name}}</label>
+  </div>
+  {{/each}}
+</div>
+{{/if}}
+<div class="row">
+  {{#each products }}
+  <div class="col-12 col-md-6 col-xl-3 col-xxxl-2 py-3 collapse show" data-category="{{this.category.0._id}}">
+    <form id="shop_buy_product_{{this.stock.0._id}}" class="needs-validation h-100" method="POST" action="/shop"
+      novalidate>
+      <div class="card h-100 text-center">
+        <div class="card-header h4 card-header-h4-min-height d-flex align-items-center justify-content-center">
+          {{ this.displayName }}
+        </div>
+        <div style="height: 0.3rem;{{#if this.category.0.color}}background-color:{{this.category.0.color}};{{/if}}">
+        </div>
+        <div class="card-body">
+          <img src="{{ this.imagePath }}" class="mx-auto my-2 img-fluid shop-image-thumbnail" alt="{{ this.description }}">
+          <!-- <div class="accordion" id="accordion_{{this.stock.0._id}}">
+            <div class="accordion-item">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse_{{this.stock.0._id}}"
+                aria-expanded="true" aria-controls="collapse_{{this.stock.0._id}}">Něco</button>
+              <div id="collapse_{{this.stock.0._id}}" class="accordion-collapse collapse" data-bs-parent="#accordion_{{this.stock.0._id}}">
+                <div class="accordion-body">
+                  {{ this.description }}
                 </div>
               </div>
-              <input type="hidden" id="product_id" name="product_id" value="{{ this.stock.0._id }}">
-              <input type="hidden" id="user_id" name="user_id" value="{{ ../user.id }}">
-              <input type="hidden" id="display_name" name="display_name" value="{{ this.displayName }}">
-              <input type="hidden" id="image_path" name="image_path" value="{{ this.imagePath }}">
-              <input type="hidden" name="_csrf" value="{{ ../csrfToken }}">
+            </div>
+          </div> -->
+          <p class="card-text description">{{ this.description }}</p>
+        </div>
+        <div class="card-footer">
+          <div class="row">
+            <div class="col-6 text-start">
+              {{#if this.stockSum}}
+              <span class="d-inline-block">
+                <i class="fa-solid fa-boxes"></i> {{ this.stockSum }}
+              </span>
+              {{else}}
+              <i class="fa-solid fa-boxes"></i> <span class="text-danger">0</span>
+              {{/if }}
+            </div>
+            <div class="col-6 text-end">
+              <i class="fa-solid fa-star"></i>
             </div>
           </div>
-        </form>
+        </div>
+        <div class="card-footer">
+          <div class="row">
+            <div class="col-6 text-start px-0">
+              {{#if this.stock.0.price }}
+              <div class="btn btn-lg py-0">{{ this.stock.0.price }} Kč</div>
+              <input type="hidden" name="product_price" class="btn" value="{{ this.stock.0.price }}">
+              {{/if}}
+            </div>
+            <div class="col-6 text-end px-0">
+              <input type="submit" class="btn btn-lg py-0 float-end" value="Koupit" {{#unless this.stock.0.amount_left}}
+                disabled {{/unless}}>
+            </div>
+          </div>
+          <input type="hidden" name="product_id" value="{{ this.stock.0._id }}">
+          <input type="hidden" name="user_id" value="{{ ../user.id }}">
+          <input type="hidden" name="display_name" value="{{ this.displayName }}">
+          <input type="hidden" name="image_path" value="{{ this.imagePath }}">
+          <input type="hidden" name="_csrf" value="{{ ../csrfToken }}">
+        </div>
       </div>
-    {{/each}}
+    </form>
   </div>
+  {{/each}}
+</div>
 
-</section>
-
-<script type="text/javascript" src="/javascripts/form_validate.js"></script>
-<script type="text/javascript" src="/javascripts/category_filter.js"></script>
+<script src="/javascripts/form_validate.js"></script>
+<script src="/javascripts/category_filter.js"></script>

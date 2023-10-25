@@ -22,7 +22,7 @@
         </div>
         <div class='col-md-8'>
 
-          {{!  Product selection }}
+          {{! Product selection }}
           <div class='input-group input-group-lg mb-3'>
             <label for='product_id' class='input-group-text'>Produkt</label>
             <select
@@ -39,13 +39,12 @@
             </select>
           </div>
 
-          {{!  Product amount }}
+          {{! Product amount }}
           <div class='input-group input-group-lg mb-3'>
             <input
               type='number'
               min='1'
               step='1'
-              pattern='\d+'
               name='product_amount'
               class='form-control'
               placeholder='Počet'
@@ -56,13 +55,12 @@
             <span class='input-group-text' id='product_amount-addon'>ks</span>
           </div>
 
-          {{!  Product price }}
+          {{! Product price }}
           <div class='input-group input-group-lg mb-3'>
             <input
               type='number'
               min='1'
               step='1'
-              pattern='\d+'
               name='product_price'
               class='form-control'
               placeholder='Cena'
@@ -91,7 +89,7 @@
   <input type='hidden' name='_csrf' value='{{csrfToken}}' />
 </form>
 
-<script type='text/javascript'>
+<script>
   var json_data = {
   {{#each products}}
     "{{this.id}}": { "product_image": "{{this.imagePath}}" },
@@ -99,8 +97,5 @@
   }
 </script>
 
-<script
-  type='text/javascript'
-  src='/javascripts/add_products_imageLoad.js'
-></script>
-<script type='text/javascript' src='/javascripts/form_validate.js'></script>
+<script src='/javascripts/add_products_imageLoad.js'></script>
+<script src='/javascripts/form_validate.js'></script>

@@ -7,9 +7,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{title}}</title>
   <!-- Locally hosted CSS -->
-  <link rel="stylesheet" href="/stylesheets/bootstrap.min.css" />
-  <link rel="stylesheet" href="/stylesheets/fontawesome.min.css" />
-  <link rel="stylesheet" href="/stylesheets/style.css" />
+  <link rel="stylesheet" href="/stylesheets/bootstrap.min.css">
+  <link rel="stylesheet" href="/stylesheets/fontawesome.min.css">
+  <link rel="stylesheet" href="/stylesheets/style.css">
   {{!-- Favicon --}}
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -26,13 +26,12 @@
   {{> header}}
   {{> alert}}
   <div class="container-fluid mt-3">
-    <!-- Locally hosted JS, depended on in child pages -->
-    <script type="text/javascript" src="/javascripts/bootstrap.bundle.min.js"></script> <!-- Try to move to bottom - dependencies in child items -->
-    {{!-- <script type="text/javascript" src="/javascripts/jquery-3.7.1.min.js"></script> <!-- Try to eliminate jquery --> --}}
+    <!-- Locally hosted JS, depended on by child pages -->
+    <script src="/javascripts/bootstrap.bundle.min.js"></script>
     {{{body}}}
   </div>
   <!-- Locally hosted JS -->
-  <script type="text/javascript" src="/javascripts/alert_timeout.js"></script>
+  <script src="/javascripts/alert_timeout.js"></script>
 </body>
 
 </html>

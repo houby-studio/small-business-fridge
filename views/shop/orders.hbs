@@ -22,15 +22,17 @@
     <div class="table-responsive">
       <table id="table-orders" class="table">
         <thead>
-          <th scope="col">Datum</th>
-          <th scope="col">Produkt</th>
-          <th scope="col">Cena</th>
-          {{#unless admin.buyerId}}
-          <th scope="col">Zákazník</th>
-          {{/unless}}
-          <th scope="col">Dodavatel</th>
-          <th scope="col">Způsob</th>
-          <th scope="col">Fakturováno</th>
+          <tr>
+            <th scope="col">Datum</th>
+            <th scope="col">Produkt</th>
+            <th scope="col">Cena</th>
+            {{#unless admin.buyerId}}
+            <th scope="col">Zákazník</th>
+            {{/unless}}
+            <th scope="col">Dodavatel</th>
+            <th scope="col">Způsob</th>
+            <th scope="col">Fakturováno</th>
+          </tr>
         </thead>
         <tbody>
           {{# each orders.results }}

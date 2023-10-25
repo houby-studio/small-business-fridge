@@ -1,126 +1,143 @@
-<div class="row">
-  <div class="col text-center">
-    <img src="./images/fridge-it.svg" class="mx-auto my-2 img-fluid shop-image-thumbnail" alt="Logo lednice IT"></img>
+<div class='row'>
+  <div class='col text-center'>
+    <img
+      src='./images/fridge-it.svg'
+      class='mx-auto my-2 img-fluid shop-image-thumbnail'
+      alt='Logo lednice IT'
+    />
   </div>
 </div>
 {{#if user}}
-<div class="row">
-  <div class="col-lg py-3">
-    <div class="card h-100 text-center">
-      <div class="card-header h4">
-        Mějte přehled!
+  <div class='row'>
+    <div class='col-lg py-3'>
+      <div class='card h-100 text-center'>
+        <div class='card-header h4'>
+          Mějte přehled!
+        </div>
+        <div class='card-body'>
+          <p class='card-text'>Bojíte se, že nebudete mít na zaplacení? Děsí
+            Vás, že nemáte přehled o tom, kolik utrácíte? Už nikdy víc! Kdykoli
+            si na e-shopu zkontrolujte svou historii objednávek.</p>
+        </div>
+        <div class='card-footer text-muted'>
+          <a href='/orders' class='btn btn-primary'>Objednávky</a>
+        </div>
       </div>
-      <div class="card-body">
-        <p class="card-text">Bojíte se, že nebudete mít na zaplacení? Děsí Vás, že nemáte přehled o tom, kolik utrácíte?
-          Už nikdy víc! Kdykoli si na e-shopu zkontrolujte svou historii objednávek.</p>
+    </div>
+    <div class='col-lg py-3'>
+      <div class='card h-100 text-center'>
+        <div class='card-header h4'>
+          Nakupujte!
+        </div>
+        <div class='card-body'>
+          <p class='card-text'>Vstupte do světa vychlazených nápojů! Ceny jsou
+            příznivé, nápoje jsou Vám vždy na dosah a s přehledným e-shopem si
+            můžete vybrat nápoj, který máme skladem a rovnou jej objednat!</p>
+        </div>
+        <div class='card-footer text-muted'>
+          <a href='/shop' class='btn btn-primary'>Nakupovat</a>
+        </div>
       </div>
-      <div class="card-footer text-muted">
-        <a href="/orders" class="btn btn-primary">Objednávky</a>
+    </div>
+    <div class='col-lg py-3'>
+      <div class='card h-100 text-center'>
+        <div class='card-header h4'>
+          Máte vše zaplacené?
+        </div>
+        <div class='card-body'>
+          <p class='card-text'>Nevíte, zda jste již uhradili všechna Vaše
+            vyúčtování? Nechce se Vám chodit osobně za dodavatelem, abyste se
+            jej zeptali? Jednoduše zkontrolujte Vaše faktury a vše si ověřte!</p>
+        </div>
+        <div class='card-footer text-muted'>
+          <a href='/invoices' class='btn btn-primary'>Faktury</a>
+        </div>
       </div>
     </div>
   </div>
-  <div class="col-lg py-3">
-    <div class="card h-100 text-center">
-      <div class="card-header h4">
-        Nakupujte!
+  {{#if user.supplier}}
+    <div class='row'>
+      <div class='col-lg py-3'>
+        <div class='card h-100 text-center'>
+          <div class='card-header h4'>
+            Potřebujete prachy?
+          </div>
+          <div class='card-body'>
+            <p class='card-text'>Kdo by nepotřeboval! Zkontrolujte, jak si
+              vedete a na jedno kliknutí zkasírujte všechny pijany! Vyúčtování
+              se každému odešle na e-mail.</p>
+          </div>
+          <div class='card-footer text-muted'>
+            <a href='/invoice' class='btn btn-primary'>Vyfakturovat</a>
+          </div>
+        </div>
       </div>
-      <div class="card-body">
-        <p class="card-text">Vstupte do světa vychlazených nápojů! Ceny jsou příznivé, nápoje jsou Vám vždy na dosah a s
-          přehledným e-shopem si můžete vybrat nápoj, který máme skladem a rovnou jej objednat!</p>
+      <div class='col-lg py-3'>
+        <div class='card h-100 text-center'>
+          <div class='card-header h4'>
+            Dovezl jste nové zboží?
+          </div>
+          <div class='card-body'>
+            <p class='card-text'>Chvála ti, ó veliký dodavateli. Díky, že jste
+              nás poctil další dodávkou chlazených nápojů, jenž zchladí naši
+              nekonečnou žízeň!</p>
+          </div>
+          <div class='card-footer text-muted'>
+            <a href='/add_products' class='btn btn-primary'>Naskladnit</a>
+          </div>
+        </div>
       </div>
-      <div class="card-footer text-muted">
-        <a href="/shop" class="btn btn-primary">Nakupovat</a>
-      </div>
-    </div>
-  </div>
-  <div class="col-lg py-3">
-    <div class="card h-100 text-center">
-      <div class="card-header h4">
-        Máte vše zaplacené?
-      </div>
-      <div class="card-body">
-        <p class="card-text">Nevíte, zda jste již uhradili všechna Vaše vyúčtování? Nechce se Vám chodit osobně za
-          dodavatelem, abyste se jej zeptali? Jednoduše zkontrolujte Vaše faktury a vše si ověřte!</p>
-      </div>
-      <div class="card-footer text-muted">
-        <a href="/invoices" class="btn btn-primary">Faktury</a>
-      </div>
-    </div>
-  </div>
-</div>
-{{#if user.supplier }}
-<div class="row">
-  <div class="col-lg py-3">
-    <div class="card h-100 text-center">
-      <div class="card-header h4">
-        Potřebujete prachy?
-      </div>
-      <div class="card-body">
-        <p class="card-text">Kdo by nepotřeboval! Zkontrolujte, jak si vedete a na jedno kliknutí zkasírujte všechny
-          pijany! Vyúčtování se každému odešle na e-mail.</p>
-      </div>
-      <div class="card-footer text-muted">
-        <a href="/invoice" class="btn btn-primary">Vyfakturovat</a>
-      </div>
-    </div>
-  </div>
-  <div class="col-lg py-3">
-    <div class="card h-100 text-center">
-      <div class="card-header h4">
-        Dovezl jste nové zboží?
-      </div>
-      <div class="card-body">
-        <p class="card-text">Chvála ti, ó veliký dodavateli. Díky, že jste nás poctil další dodávkou chlazených nápojů,
-          jenž zchladí naši nekonečnou žízeň!</p>
-      </div>
-      <div class="card-footer text-muted">
-        <a href="/add_products" class="btn btn-primary">Naskladnit</a>
+      <div class='col-lg py-3'>
+        <div class='card h-100 text-center'>
+          <div class='card-header h4'>
+            Jak jsou na tom zákazníci s placením?
+          </div>
+          <div class='card-body'>
+            <p class='card-text'>Zkontrolujte, zda jsou Vaše pohledávky
+              zaplacené! Rychle zkontrolujte co zákazník považuje za zaplacené a
+              potvrďte mu to nebo vyvraťte.</p>
+          </div>
+          <div class='card-footer text-muted'>
+            <a href='/payments' class='btn btn-primary'>Platby</a>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-  <div class="col-lg py-3">
-    <div class="card h-100 text-center">
-      <div class="card-header h4">
-        Jak jsou na tom zákazníci s placením?
-      </div>
-      <div class="card-body">
-        <p class="card-text">Zkontrolujte, zda jsou Vaše pohledávky zaplacené! Rychle zkontrolujte co zákazník považuje
-          za zaplacené a potvrďte mu to nebo vyvraťte.</p>
-      </div>
-      <div class="card-footer text-muted">
-        <a href="/payments" class="btn btn-primary">Platby</a>
-      </div>
-    </div>
-  </div>
-</div>
-{{/if}}
+  {{/if}}
 {{else}}
-<div class="row">
-  <div class="col-lg py-3"></div>
-  <div class="col-lg py-3">
-    <div class="card h-100 text-center">
-      <div class="card-header h4">
-        Vítejte v e-shopu!
-      </div>
-      <div class="card-body">
-        <p class="card-text">Předtím, než budete pokračovat, je nutné přihlásit se účtem Azure Active Directory!</p>
-      </div>
-      <div class="card-footer text-muted">
-        <a href="/login" class="btn btn-primary">Přihlásit</a>
+  <div class='row'>
+    <div class='col-lg py-3'></div>
+    <div class='col-lg py-3'>
+      <div class='card h-100 text-center'>
+        <div class='card-header h4'>
+          Vítejte v e-shopu!
+        </div>
+        <div class='card-body'>
+          <p class='card-text'>Předtím, než budete pokračovat, je nutné
+            přihlásit se účtem Azure Active Directory!</p>
+        </div>
+        <div class='card-footer text-muted'>
+          <a href='/login' class='btn btn-primary'>Přihlásit</a>
+        </div>
       </div>
     </div>
+    <div class='col-lg py-3'></div>
   </div>
-  <div class="col-lg py-3"></div>
-</div>
 {{/if}}
-<nav class="navbar navbar-expand-lg bg-body-tertiary fixed-bottom">
-  <div class="container-fluid">
+<nav class='navbar navbar-expand-lg bg-body-tertiary fixed-bottom'>
+  <div class='container-fluid'>
     <ul class='navbar-nav navbar-expand-lg mx-auto'>
       <li class='nav-item'>
-        <a href="/about" class="nav-link"><i class='fa-solid fa-question-circle'></i> O aplikaci</a>
+        <a href='/about' class='nav-link'><i
+            class='fa-solid fa-question-circle'
+          ></i>
+          O aplikaci</a>
       </li>
       <li class='nav-item'>
-        <a href="/changelog" class="nav-link"><i class='fa-solid fa-clipboard-list'></i> Seznam změn</a>
+        <a href='/changelog' class='nav-link'><i
+            class='fa-solid fa-clipboard-list'
+          ></i>
+          Seznam změn</a>
       </li>
     </ul>
   </div>

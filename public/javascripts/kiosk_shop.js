@@ -37,9 +37,7 @@ window.onload = function (event) {
   }, 1000)
 }
 
-const forms = document.getElementsByName('shop_buy_product')
-
-const _formsEvents = [...forms].forEach((element) => {
+const forms = document.querySelectorAll('form').forEach((element) => {
   element.addEventListener('click', async function (event) {
     event.preventDefault()
     this.submit()

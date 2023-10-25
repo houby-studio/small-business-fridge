@@ -73,6 +73,7 @@ function renderPage(req, res, alert) {
   ])
     .then((docs) => {
       Category.find()
+        .sort([['name', 1]])
         .then((categories) => {
           logger.debug(
             `server.routes.shop.get__Successfully loaded ${categories?.length} categories.`,

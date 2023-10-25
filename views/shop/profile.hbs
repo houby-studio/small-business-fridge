@@ -6,23 +6,23 @@
       </div>
       <div class="card-body">
 
-          <div class="input-group mb-3">
-            <span class="input-group-text"><i class="fa-solid fa-keyboard"></i></span>
-            <span class='input-group-text d-none d-sm-block w-25' id='staticKeyPad-addon'>ID</span>
-              <input type="text" readonly class="form-control" id="staticKeyPad" value="{{ user.keypadId }}">
-          </div>
+        <div class="input-group mb-3">
+          <span class="input-group-text"><i class="fa-solid fa-keyboard"></i></span>
+          <span class='input-group-text d-none d-sm-block w-25' id='staticKeyPad-addon'>ID</span>
+          <input type="text" readonly class="form-control" id="staticKeyPad" value="{{ user.keypadId }}">
+        </div>
 
-          <div class="input-group mb-3">
-            <span class="input-group-text"><i class="fa-solid fa-signature"></i></span>
-            <span class='input-group-text d-none d-sm-block w-25' id='staticName-addon'>Jméno</span>
-              <input type="text" readonly class="form-control" id="staticName" value="{{ user.displayName }}">
-          </div>
+        <div class="input-group mb-3">
+          <span class="input-group-text"><i class="fa-solid fa-signature"></i></span>
+          <span class='input-group-text d-none d-sm-block w-25' id='staticName-addon'>Jméno</span>
+          <input type="text" readonly class="form-control" id="staticName" value="{{ user.displayName }}">
+        </div>
 
-          <div class="input-group mb-3">
-            <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
-            <span class='input-group-text d-none d-sm-block w-25' id='staticEmail-addon'>E-mail</span>
-              <input type="text" readonly class="form-control" id="staticEmail" value="{{ user.email }}">
-          </div>
+        <div class="input-group mb-3">
+          <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
+          <span class='input-group-text d-none d-sm-block w-25' id='staticEmail-addon'>E-mail</span>
+          <input type="text" readonly class="form-control" id="staticEmail" value="{{ user.email }}">
+        </div>
 
       </div>
     </div>
@@ -37,21 +37,24 @@
       <div class="card-body">
 
         <div class="form-check">
-          <input class="form-check-input realtime-checkbox" type="checkbox" id="checkAllProducts" {{#if user.showAllProducts}} checked {{/if}}>
+          <input class="form-check-input realtime-checkbox" type="checkbox" id="checkAllProducts" {{#if
+            user.showAllProducts}} checked {{/if}}>
           <label class="form-check-label" for="checkAllProducts">
             Zobrazovat produkty, které nejsou skladem.
           </label>
         </div>
 
         <div class="form-check">
-          <input class="form-check-input realtime-checkbox" type="checkbox" id="checkSendEmailEshop" {{#if user.sendMailOnEshopPurchase}} checked {{/if}}>
+          <input class="form-check-input realtime-checkbox" type="checkbox" id="checkSendEmailEshop" {{#if
+            user.sendMailOnEshopPurchase}} checked {{/if}}>
           <label class="form-check-label" for="checkSendEmailEshop">
             Odesílat e-mail po nákupu v e-shopu.
           </label>
         </div>
 
         <div class="form-check">
-          <input class="form-check-input realtime-checkbox" type="checkbox" id="checkSendDailyReport" {{#if user.sendDailyReport}} checked {{/if}}>
+          <input class="form-check-input realtime-checkbox" type="checkbox" id="checkSendDailyReport" {{#if
+            user.sendDailyReport}} checked {{/if}}>
           <label class="form-check-label" for="checkSendDailyReport">
             Odebírat denní report nákupů.
           </label>
@@ -70,11 +73,15 @@
       </div>
       <div class="card-body">
 
-        <div class="input-group mb-3" data-bs-toggle="tooltip" data-bs-title="IBAN musí začínat na CZ a mít celkovou délku 24 znaků.">
+        <div class="input-group mb-3" data-bs-toggle="tooltip"
+          data-bs-title="IBAN musí začínat na CZ a mít celkovou délku 24 znaků.">
           <span class="input-group-text">IBAN</span>
-          <input type="text" class="form-control" id="realtime-iban" name="realtime-iban" placeholder="CZ1212345678901234567890" pattern="^CZ\d{22}$" minlength="24" maxlength="32" {{#if user.IBAN}} value="{{user.IBAN}}" {{/if}} required>
-          <span class='input-group-text' id='realtime-iban-addon'><i id="iban-status" class="fas {{#if user.IBAN}}fa-check-circle{{else}}fa-times-circle{{/if}}"></i></span>
-          </div>
+          <input type="text" class="form-control" id="realtime-iban" name="realtime-iban"
+            placeholder="CZ1212345678901234567890" pattern="^CZ\d{22}$" minlength="24" maxlength="32" {{#if user.IBAN}}
+            value="{{user.IBAN}}" {{/if}} required>
+          <span class='input-group-text' id='realtime-iban-addon'><i id="iban-status"
+              class="fa-solid {{#if user.IBAN}}fa-check-circle{{else}}fa-times-circle{{/if}}"></i></span>
+        </div>
 
       </div>
     </div>
@@ -82,5 +89,5 @@
 </div>
 {{/if}}
 
-<script type="text/javascript" src="/javascripts/form_validate.js"></script>
-<script type="text/javascript" src="/javascripts/profile.js"></script>
+<script src="/javascripts/form_validate.js"></script>
+<script src="/javascripts/profile.js"></script>

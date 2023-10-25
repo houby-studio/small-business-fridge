@@ -1,3 +1,8 @@
+/* Limit product header min height */
+.card-header-h4-min-height {
+  min-height: calc((1.275rem + .3vw) * 3);
+}
+
 /* Limit image max height in add_product/new_product page */
 .form-image-thumbnail {
   max-height: 15rem !important;
@@ -8,7 +13,19 @@
   max-height: 13rem !important;
 }
 
-input[type=number]::-webkit-inner-spin-button,
+.description {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.description:hover {
+  overflow: unset;
+  text-overflow: unset;
+  white-space: unset;
+}
+
+/* input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
@@ -16,8 +33,8 @@ input[type=number]::-webkit-outer-spin-button {
 
 input[type=number] {
   -moz-appearance: textfield;
-  /* Firefox */
 }
+*/
 
 /* Primarily to darken unimportant table rows */
 .subdue-50 {

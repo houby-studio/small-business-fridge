@@ -23,7 +23,7 @@
         </div>
         <div class='col-md-8'>
 
-          {{!  Product selection }}
+          {{! Product selection }}
           <div class='input-group input-group-lg mb-3'>
             <label
               for='product_id'
@@ -43,7 +43,7 @@
             </select>
           </div>
 
-          {{!  Product name }}
+          {{! Product name }}
           <div class='input-group input-group-lg mb-3'>
             <span
               class='input-group-text w-25'
@@ -61,7 +61,7 @@
             />
           </div>
 
-          {{!  Product description }}
+          {{! Product description }}
           <div class='input-group input-group-lg mb-3'>
             <span
               class='input-group-text w-25'
@@ -95,7 +95,7 @@
             />
           </div>
 
-          {{!  Product selection }}
+          {{! Product selection }}
           <div class='input-group input-group-lg mb-3'>
             <label
               for='product_category'
@@ -127,7 +127,7 @@
   <input type='hidden' name='_csrf' value='{{csrfToken}}' />
 </form>
 
-<script type='text/javascript'>
+<script>
   var json_data = {
   {{#each products}}
     "{{this.id}}": { "product_name": "{{this.displayName}}",
@@ -137,8 +137,5 @@
   }
 </script>
 
-<script
-  type='text/javascript'
-  src='/javascripts/edit_product_infoLoad.js'
-></script>
-<script type='text/javascript' src='/javascripts/form_validate.js'></script>
+<script src='/javascripts/edit_product_infoLoad.js'></script>
+<script src='/javascripts/form_validate.js'></script>

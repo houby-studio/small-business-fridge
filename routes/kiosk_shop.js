@@ -3,6 +3,7 @@ import moment from 'moment'
 import Product from '../models/product.js'
 import Order from '../models/order.js'
 import Delivery from '../models/delivery.js'
+import Category from '../models/category.js'
 import User from '../models/user.js'
 import { sendMail } from '../functions/sendMail.js'
 import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
@@ -14,18 +15,7 @@ router.use(csrfProtection)
 moment.locale('cs')
 
 function renderPage(req, res, alert, customer) {
-  let filter
-  if (req.user.showAllProducts) {
-    filter = {}
-  } else {
-    filter = {
-      'stock.amount_left': {
-        $gt: 0
-      }
-    }
-  }
-
-  // This crazy query which can be roughly translated for SQL people to "SELECT * FROM Product WHERE Stock.ammount_left > 0"
+  // Get products in stock and all categories.
   Product.aggregate([
     {
       $lookup: {
@@ -36,14 +26,27 @@ function renderPage(req, res, alert, customer) {
       }
     },
     {
-      $match: filter
-    }, // Depending on user preferences, get either all products or only ones in stock
+      $lookup: {
+        from: 'categories',
+        localField: 'category',
+        foreignField: '_id',
+        as: 'category'
+      }
+    },
+    {
+      $match: {
+        'stock.amount_left': {
+          $gt: 0
+        }
+      }
+    },
     {
       $project: {
         keypadId: '$keypadId',
         displayName: '$displayName',
         description: '$description',
         imagePath: '$imagePath',
+        category: '$category',
         stock: {
           $filter: {
             // We filter only the stock object from array where ammount left is greater than 0
@@ -79,6 +82,7 @@ function renderPage(req, res, alert, customer) {
           res.render('shop/kiosk_shop', {
             title: 'Kiosek | Lednice IT',
             products: docs,
+            categories: categories,
             user: req.user,
             customer,
             alert,
