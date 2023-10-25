@@ -1,3 +1,38 @@
+/* Favorite button */
+input.favorite {
+  visibility: hidden;
+}
+
+input.favorite:checked:after,
+input.favorite::after {
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  text-rendering: auto;
+  -webkit-font-smoothing: antialiased;
+  font-family: "Font Awesome 6 Free";
+  font-weight: 400;
+  content: "\f005";
+  visibility: visible;
+  top: -0.30em;
+  position: relative;
+}
+
+/* When checked, change color and to fa-solid */
+input.favorite:checked:after {
+  font-weight: 900;
+  color: gold;
+}
+
+/* Kiosk favorite */
+i.favorite {
+  color: gold;
+  position: absolute;
+  right: -0.5em;
+  top: -0.5em;
+  font-size: 2.5em;
+}
+
 /* Limit product header min height */
 .card-header-h4-min-height {
   min-height: calc((1.275rem + .3vw) * 3);

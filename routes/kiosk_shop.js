@@ -70,6 +70,7 @@ function renderPage(req, res, alert, customer) {
   ])
     .then((docs) => {
       Category.find()
+        .sort([['name', 1]])
         .then((categories) => {
           logger.debug(
             `server.routes.kioskshop.get__Successfully loaded ${categories?.length} categories.`,
@@ -79,6 +80,28 @@ function renderPage(req, res, alert, customer) {
               }
             }
           )
+
+          // Populate favorites if user has any
+          if (customer.favorites?.length > 0) {
+            logger.debug(
+              `server.routes.shop.get__User has set favorites, populating products.`,
+              {
+                metadata: {
+                  result: customer.favorites
+                }
+              }
+            )
+
+            // Add favorite parameter to products object
+            customer.favorites.forEach((elFav) => {
+              docs.forEach((elProd) => {
+                if (elFav._id.equals(elProd._id)) {
+                  elProd.favorite = true
+                }
+              })
+            })
+          }
+
           res.render('shop/kiosk_shop', {
             title: 'Kiosek | Lednice IT',
             products: docs,

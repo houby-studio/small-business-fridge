@@ -17,41 +17,41 @@
 {{/if}}
 <div class="row">
   {{#each products }}
-  <div class="col-12 col-md-6 col-xl-3 col-xxxl-2 py-3 collapse show" data-category="{{this.category.0._id}}">
+  <div class="col-12 col-md-6 col-xl-3 col-xxxl-2 py-3 collapse show {{#if this.favorite}}order-first{{/if}}" id="{{this._id}}" data-category="{{this.category.0._id}}">
     <form id="shop_buy_product_{{this.stock.0._id}}" class="needs-validation h-100" method="POST" action="/shop"
       novalidate>
       <div class="card h-100 text-center">
         <div class="card-header h4 card-header-h4-min-height d-flex align-items-center justify-content-center">
-          {{ this.displayName }}
+          {{this.displayName}}
         </div>
         <div style="height: 0.3rem;{{#if this.category.0.color}}background-color:{{this.category.0.color}};{{/if}}">
         </div>
         <div class="card-body">
-          <img src="{{ this.imagePath }}" class="mx-auto my-2 img-fluid shop-image-thumbnail" alt="{{ this.description }}">
-          <p class="card-text description">{{ this.description }}</p>
+          <img src="{{this.imagePath}}" class="mx-auto my-2 img-fluid shop-image-thumbnail" alt="{{this.description}}">
+          <p class="card-text description">{{this.description}}</p>
         </div>
         <div class="card-footer">
           <div class="row">
             <div class="col-6 text-start">
               {{#if this.stockSum}}
               <span class="d-inline-block">
-                <i class="fa-solid fa-boxes"></i> {{ this.stockSum }}
+                <i class="fa-solid fa-boxes"></i> {{this.stockSum}}
               </span>
               {{else}}
               <i class="fa-solid fa-boxes"></i> <span class="text-danger">0</span>
               {{/if }}
             </div>
             <div class="col-6 text-end">
-              <i class="fa-solid fa-star"></i>
+              <input class="form-check-input favorite" {{#if this.favorite}}checked{{/if}} type="checkbox" value="{{this._id}}" onclick="set_favorite(this)">
             </div>
           </div>
         </div>
         <div class="card-footer">
           <div class="row">
             <div class="col-6 text-start px-0">
-              {{#if this.stock.0.price }}
-              <div class="btn btn-lg py-0">{{ this.stock.0.price }} Kč</div>
-              <input type="hidden" name="product_price" class="btn" value="{{ this.stock.0.price }}">
+              {{#if this.stock.0.price}}
+              <div class="btn btn-lg py-0">{{this.stock.0.price}} Kč</div>
+              <input type="hidden" name="product_price" class="btn" value="{{this.stock.0.price}}">
               {{/if}}
             </div>
             <div class="col-6 text-end px-0">
@@ -59,11 +59,11 @@
                 disabled {{/unless}}>
             </div>
           </div>
-          <input type="hidden" name="product_id" value="{{ this.stock.0._id }}">
-          <input type="hidden" name="user_id" value="{{ ../user.id }}">
-          <input type="hidden" name="display_name" value="{{ this.displayName }}">
-          <input type="hidden" name="image_path" value="{{ this.imagePath }}">
-          <input type="hidden" name="_csrf" value="{{ ../csrfToken }}">
+          <input type="hidden" name="product_id" value="{{this.stock.0._id}}">
+          <input type="hidden" name="user_id" value="{{../user.id}}">
+          <input type="hidden" name="display_name" value="{{this.displayName}}">
+          <input type="hidden" name="image_path" value="{{this.imagePath}}">
+          <input type="hidden" name="_csrf" value="{{../csrfToken}}">
         </div>
       </div>
     </form>
@@ -73,3 +73,4 @@
 
 <script src="/javascripts/form_validate.js"></script>
 <script src="/javascripts/category_filter.js"></script>
+<script src="/javascripts/favorite.js"></script>

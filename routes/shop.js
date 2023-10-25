@@ -52,7 +52,7 @@ function renderPage(req, res, alert) {
         category: '$category',
         stock: {
           $filter: {
-            // We filter only the stock object from array where ammount left is greater than 0
+            // We filter only the stock object from array where amount left is greater than 0
             input: '$stock',
             as: 'stock',
             cond: {
@@ -83,6 +83,27 @@ function renderPage(req, res, alert) {
               }
             }
           )
+
+          // Populate favorites if user has any
+          if (req.user.favorites?.length > 0) {
+            logger.debug(
+              `server.routes.shop.get__User has set favorites, populating products.`,
+              {
+                metadata: {
+                  result: req.user.favorites
+                }
+              }
+            )
+
+            // Add favorite parameter to products object
+            req.user.favorites.forEach((elFav) => {
+              docs.forEach((elProd) => {
+                if (elFav._id.equals(elProd._id)) {
+                  elProd.favorite = true
+                }
+              })
+            })
+          }
 
           res.render('shop/shop', {
             title: 'E-shop | Lednice IT',

@@ -14,7 +14,7 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
 })
 
 router.post('/', ensureAuthenticated, function (req, res, _next) {
-  var newValue = req.body.value
+  const newValue = req.body.value
   if (req.body.name === 'checkAllProducts') {
     User.findByIdAndUpdate(
       req.user.id,
@@ -105,13 +105,13 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
         return
       })
   } else if (req.body.name === 'realtime-iban') {
-    if (/^CZ\d{22}$/.test(req.body.value)) {
+    if (/^CZ\d{22}$/.test(newValue)) {
       User.findByIdAndUpdate(req.user.id, {
-        IBAN: req.body.value
+        IBAN: newValue
       })
         .then(() => {
           logger.info(
-            `server.routes.profile.post__User:[${req.user.displayName}] set new IBAN:[${req.body.value}].`,
+            `server.routes.profile.post__User:[${req.user.displayName}] set new IBAN:[${newValue}].`,
             {
               metadata: {
                 result: req.user
@@ -123,7 +123,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
         })
         .catch((err) => {
           logger.error(
-            `server.routes.profile.post__Failed to set IBAN:[${req.body.value}] for user:[${req.user.displayName}].`,
+            `server.routes.profile.post__Failed to set IBAN:[${newValue}] for user:[${req.user.displayName}].`,
             {
               metadata: {
                 error: err.message
@@ -135,7 +135,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
         })
     } else {
       logger.warn(
-        `server.routes.profile.post__User:[${req.user.displayName}] tried to set invalid IBAN:[${req.body.value}].`,
+        `server.routes.profile.post__User:[${req.user.displayName}] tried to set invalid IBAN:[${newValue}].`,
         {
           metadata: {
             result: req.user
@@ -145,6 +145,44 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
       res.status(400).send()
       return
     }
+  } else if (req.body.name === 'favorite') {
+    console.log(newValue?.state)
+    if (newValue?.state) {
+      console.log('adding')
+    }
+    const operation = newValue?.state ? '$push' : '$pull'
+    console.log(operation)
+    User.findByIdAndUpdate(req.user.id, {
+      [operation]: {
+        favorites: newValue?.product
+      }
+    })
+      .then(() => {
+        logger.info(
+          `server.routes.profile.post__User:[${req.user.displayName}] added/removed favorite:[${newValue?.product}].`,
+          {
+            metadata: {
+              result: req.user
+            }
+          }
+        )
+        res.status(200).send()
+        return
+      })
+      .catch((err) => {
+        logger.error(
+          `server.routes.profile.post__Failed to add/remove favorite for user:[${req.user.displayName}].`,
+          {
+            metadata: {
+              error: err.message
+            }
+          }
+        )
+        res.status(400).send()
+        return
+      })
+  } else {
+    res.status(400).send()
   }
 })
 

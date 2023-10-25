@@ -45,7 +45,14 @@ const userSchema = new Schema({
   sendDailyReport: {
     type: Boolean,
     default: true
-  }
+  },
+  favorites: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: 'Product',
+      required: false
+    }
+  ]
 })
 
 const model = mongoose.model('User', userSchema)

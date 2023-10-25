@@ -52,6 +52,7 @@ router.get('/', ensureAuthenticated, function (req, res) {
       )
 
       Category.find()
+        .sort([['name', 1]])
         .then((categories) => {
           logger.debug(
             `server.routes.editproduct.get__Successfully loaded ${categories.length} categories.`,

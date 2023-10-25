@@ -39,6 +39,7 @@ router.get('/', ensureAuthenticated, function (req, res) {
     delete req.session.alert
   }
   Category.find()
+    .sort([['name', 1]])
     .then((categories) => {
       logger.debug(
         `server.routes.newproduct.get__Successfully loaded ${categories?.length} categories.`,

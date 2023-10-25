@@ -34,7 +34,7 @@
 {{/if}}
 <div class="row">
   {{#each products }}
-  <div class="col-12 col-md-6 col-xl-3 col-xxxl-2 py-3 collapse show" data-category="{{this.category.0._id}}">
+  <div class="col-12 col-md-6 col-xl-3 col-xxxl-2 py-3 collapse show {{#if this.favorite}}order-first{{/if}}" id="{{this._id}}" data-category="{{this.category.0._id}}">
     <form id="shop_buy_product_{{this.stock.0._id}}" class="needs-validation h-100"
       method="POST" action="/kiosk_shop" novalidate>
       <div class="card h-100 text-center">
@@ -46,6 +46,7 @@
         <div class="card-body">
           <img src="{{ this.imagePath }}" class="mx-auto my-2 img-fluid shop-image-thumbnail"
             alt="{{ this.description }}">
+          {{#if this.favorite}}<i class="fa-solid fa-star favorite"></i>{{/if}}
         </div>
         <div class="card-footer">
           <div class="row">
