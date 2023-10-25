@@ -7,8 +7,8 @@
     </div>
     {{#each categories}}
     <div class="col mb-3">
-      <input type="radio" class="btn-check" name="product-filter" id="drinks" autocomplete="off" onclick="filter_categories('{{this._id}}')">
-      <label class="form-control btn btn-outline-primary" for="drinks"><i style="color: {{this.color}}" class="fa-solid fa-circle"></i> {{this.name}}</label>
+      <input type="radio" class="btn-check" name="product-filter" id="{{this._id}}" autocomplete="off" onclick="filter_categories('{{this._id}}')">
+      <label class="form-control btn btn-outline-primary" for="{{this._id}}"><i style="color: {{this.color}}" class="fa-solid fa-circle"></i> {{this.name}}</label>
     </div>
     {{/each}}
   </div>

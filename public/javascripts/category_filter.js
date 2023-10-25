@@ -5,7 +5,6 @@ const filterCategories = new Map()
 
 function filter_categories(category) {
   if (!filterCategories.get(category)) {
-    console.log('Adding new category to map')
     const elementsToHide = []
     document
       .querySelectorAll(`[data-category]:not([data-category="${category}"])`)
