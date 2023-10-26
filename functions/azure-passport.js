@@ -113,12 +113,19 @@ passport.use(
                   )
                   return done(1)
                 }
+                console.log(process.env.NODE_ENV)
                 const newUser = new User()
                 newUser.oid = profile.oid
                 newUser.displayName = profile.displayName
                 newUser.email = profile._json.email
-                profile.admin = false
-                profile.supplier = false
+                newUser.admin =
+                  process.env.NODE_ENV.toLowerCase() === 'development'
+                    ? true
+                    : false
+                newUser.supplier =
+                  process.env.NODE_ENV.toLowerCase() === 'development'
+                    ? true
+                    : false
                 // Async function to find highest keypad ID and increment it by one.
                 const latestUser = function (callback) {
                   User.find()

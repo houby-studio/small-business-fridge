@@ -5,13 +5,13 @@
 
 ## 2023 UPDATE
 
-This simple system is alive and kicking for 4 years already in our office! While imperfect, it has enabled us to share 4379 pieces of drinks and food in total cost of 76374 CZK as of today.  
+This simple system is alive and kicking for 4 years already in our office! While imperfect, it has enabled us to share 4379 pieces of drinks and food in total cost of 76374 CZK as of today.
 We actually keep expanding to other colleagues, adding more products and features. That has obviously shown certain weak points of this system and for that very reason we have dusted off our javascript skills to get this system back on track!
 You can expect fixes of many features, updating all dependencies, some most needed new features and who knows, maybe some magical ✨AI✨ add-ons?
 
 ## Disclaimer
 
-This tool is exclusively made by us and used by us, but we have commited anyways to make it FOSS and configurable to allow others to use it if they want!  
+This tool is exclusively made by us and used by us, but we have commited anyways to make it FOSS and configurable to allow others to use it if they want!
 There are however couple things that may need some customizations on your end, whether you fork it or open a pull request on this repository. The list of gotchas:
 
 - Authentication is written for Microsoft Entra ID (Azure Active Directory)
@@ -20,22 +20,22 @@ There are however couple things that may need some customizations on your end, w
 
 ## Super simple e-shop for colleagues
 
-**Small Business Fridge** offers simple, mostly intuitive e-shop which shows what products are available, how many and for how much.  
-Customers can buy product with one simple click. The only other thing they have to do is to take the product and consume it. They also receive simple e-mail notification.  
+**Small Business Fridge** offers simple, mostly intuitive e-shop which shows what products are available, how many and for how much.
+Customers can buy product with one simple click. The only other thing they have to do is to take the product and consume it. They also receive simple e-mail notification.
 This obviously comes with many other utilities such as:
 
- - page to display order history, total amount spent
- - page for supplier to add products to the stock
- - page for supplier to automatically create invoices (read QR code) for all customers and send it to their e-mail addresses
- - page to mark invoice as paid from both customer and supplier side
- - page for admin who can view all the standard pages across all the customers and suppliers
- - colorful graphs which are hopefully useful
+- page to display order history, total amount spent
+- page for supplier to add products to the stock
+- page for supplier to automatically create invoices (read QR code) for all customers and send it to their e-mail addresses
+- page to mark invoice as paid from both customer and supplier side
+- page for admin who can view all the standard pages across all the customers and suppliers
+- colorful graphs which are hopefully useful
 
-*But what if I do not want to launch browser to buy product even though it is super easy?*  
-No problem! You can either assign kiosk role to a user, which can be logged on a some thin client with browser next to a fridge, eventually with touch screen display to allow easy shopping right at the fridge,  
+*But what if I do not want to launch browser to buy product even though it is super easy?*
+No problem! You can either assign kiosk role to a user, which can be logged on a some thin client with browser next to a fridge, eventually with touch screen display to allow easy shopping right at the fridge,
 or there is API for anything you can and want to make! We have also worked and used for some time simple Arduino ESP32 device which may be found here [Small business fridge IoT keypad](https://github.com/houby-studio/small-business-fridge-keypad)
 
-The whole system is running on Node.js with Express.js framework and stores data in MongoDB. We have made everything in our power to secure this application by using Azure passport allowing you to use your company ID to login and manage everything.  
+The whole system is running on Node.js with Express.js framework and stores data in MongoDB. We have made everything in our power to secure this application by using Azure passport allowing you to use your company ID to login and manage everything.
 It should be pretty lightweight, as we run it on a potato without any problems for around 20 users.
 
 ## Want to know more?
@@ -45,13 +45,20 @@ Go checkout [Wiki](https://github.com/houby-studio/small-bussiness-fridge/wiki) 
 ## Images
 
 ### E-Shop
-![Shop](https://raw.githubusercontent.com/wiki/houby-studio/small-bussiness-fridge/images/sbf_shop.png)  
+
+![Shop](https://raw.githubusercontent.com/wiki/houby-studio/small-bussiness-fridge/images/sbf_shop.png)
+
 ### Orders
-![image2](https://raw.githubusercontent.com/wiki/houby-studio/small-bussiness-fridge/images/sbf_orders.png)  
+
+![image2](https://raw.githubusercontent.com/wiki/houby-studio/small-bussiness-fridge/images/sbf_orders.png)
+
 ### Invoice
-![image3](https://raw.githubusercontent.com/wiki/houby-studio/small-bussiness-fridge/images/sbf_invoice.png)  
+
+![image3](https://raw.githubusercontent.com/wiki/houby-studio/small-bussiness-fridge/images/sbf_invoice.png)
+
 ### Deliver
-![image4](https://raw.githubusercontent.com/wiki/houby-studio/small-bussiness-fridge/images/sbf_deliver.png)  
+
+![image4](https://raw.githubusercontent.com/wiki/houby-studio/small-bussiness-fridge/images/sbf_deliver.png)
 
 ## License
 
@@ -70,7 +77,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 One way
 
 - You can customize docker-compose.dev.example.yaml to develop with all required tools in containers
- - Not tested, we debug main application directly on our computer and use containers to run database and other dev tools
+- Not tested, we debug main application directly on our computer and use containers to run database and other dev tools
 
 Second way
 
@@ -82,3 +89,36 @@ Second way
 For linux users, you may want to allow node to bind to system protected ports
 
 `sudo setcap 'cap_net_bind_service=+ep' $(readlink -f $(which node))`
+
+### Manjaro
+
+Tested this setup 2023-10-26 with VSCode, Node.js 18 and Docker.
+Main app is being run directly on host, mongo, mongo express and maildev in docker compose.
+
+#### Installed packages
+
+- git
+- nodejs-lts-hydrogen
+- docker
+- docker-compose
+- yay
+  - visual-studio-code-bin
+
+### Setup development environment
+
+- Clone repo `git clone https://github.com/houby-studio/small-business-fridge.git`
+- Change into a directory and launch VSCode `cd small-business-fridge && code .`
+- For VSCode extensions we recommend at least Prettier (Native formatter does not like handlebars)
+- Install dependencies `npm install`
+- Prepare other containers for dev `cp docker-compose.dev.example.yaml docker-compose.dev.yaml`
+  - If you want to run main app in container as well, there is commented out section, which may be used with some tweaks
+- Prepare dotenv variables `cp dev.example.env .env` and at least change following variables with your AAD registered App:
+  - CREDS_IDENTITY_METADATA
+  - CREDS_CLIENT_ID
+  - CREDS_CLIENT_SECRET
+- Allow node to bind to port 443 `sudo setcap 'cap_net_bind_service=+ep' $(readlink -f $(which node))`
+- Hit F5 to start debugging
+- Navigate to <https://localhost/> and login with your AAD account - since you have **NODE_ENV=development**, all new users will be admins and suppliers by default
+- Add new products, deliveries, start buying, invoicing etc.
+- Navigate to <http://localhost:8080> to view all **e-mails** being sent
+- Navigate to <http://localhost:8081> with login admin:pass to view, edit, export and import data in database **sbf-dev**
