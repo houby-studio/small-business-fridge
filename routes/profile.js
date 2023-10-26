@@ -146,12 +146,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
       return
     }
   } else if (req.body.name === 'favorite') {
-    console.log(newValue?.state)
-    if (newValue?.state) {
-      console.log('adding')
-    }
     const operation = newValue?.state ? '$push' : '$pull'
-    console.log(operation)
     User.findByIdAndUpdate(req.user.id, {
       [operation]: {
         favorites: newValue?.product
@@ -172,6 +167,34 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
       .catch((err) => {
         logger.error(
           `server.routes.profile.post__Failed to add/remove favorite for user:[${req.user.displayName}].`,
+          {
+            metadata: {
+              error: err.message
+            }
+          }
+        )
+        res.status(400).send()
+        return
+      })
+  } else if (req.body.name === 'colormode') {
+    User.findByIdAndUpdate(req.user.id, {
+      colorMode: newValue
+    })
+      .then(() => {
+        logger.info(
+          `server.routes.profile.post__User:[${req.user.displayName}] changed color mode:[${newValue}].`,
+          {
+            metadata: {
+              result: req.user
+            }
+          }
+        )
+        res.status(200).send()
+        return
+      })
+      .catch((err) => {
+        logger.error(
+          `server.routes.profile.post__Failed to change color mode for user:[${req.user.displayName}].`,
           {
             metadata: {
               error: err.message

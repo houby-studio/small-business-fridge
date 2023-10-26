@@ -6,6 +6,23 @@ const tooltipList = [...tooltipTriggerList].map(
   (tooltipTriggerEl) => new bootstrap.Tooltip(tooltipTriggerEl)
 )
 
+async function changeColorMode() {
+  const color = document.getElementById('colormode')
+
+  document.documentElement.setAttribute('data-bs-theme', color.value)
+
+  await fetch('/profile', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      name: color.id,
+      value: color.value
+    })
+  })
+}
+
 // Change settings when checkbox state changes
 const checkboxes = document.getElementsByClassName('realtime-checkbox')
 
@@ -58,3 +75,8 @@ ibanEvents.forEach(function (event) {
     }
   })
 })
+
+window.onload = function (_event) {
+  document.getElementById('colormode').value =
+    document.documentElement.getAttribute('data-bs-theme')
+}

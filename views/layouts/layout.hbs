@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="cs" data-bs-theme="dark">
+<html lang="cs" data-bs-theme="{{#if user.colorMode}}{{user.colorMode}}{{else}}dark{{/if}}">
 
 <head>
   <!-- Meta Tags -->
@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{title}}</title>
   <!-- Locally hosted CSS -->
-  <link rel="stylesheet" href="/stylesheets/bootstrap.min.css">
+  <link rel="stylesheet" href="/stylesheets/bootstrap/bootstrap.min.css">
   <link rel="stylesheet" href="/stylesheets/fontawesome.min.css">
   <link rel="stylesheet" href="/stylesheets/style.css">
   {{!-- Favicon --}}

@@ -52,7 +52,9 @@ const userSchema = new Schema({
       ref: 'Product',
       required: false
     }
-  ]
+  ],
+  colorMode: { type: String, enum: ['light', 'dark'] },
+  theme: { type: String, enum: ['happy', 'angry', 'shocked'] }
 })
 
 const model = mongoose.model('User', userSchema)

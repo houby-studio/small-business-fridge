@@ -105,7 +105,7 @@ router.post(
       .limit(1)
       .then((product) => {
         var newProduct = new Product({
-          keypadId: product[0].keypadId + 1,
+          keypadId: 1 + product[0]?.keypadId || 1,
           displayName: req.body.product_name,
           description: req.body.product_description,
           imagePath: './images/' + req.file.filename
