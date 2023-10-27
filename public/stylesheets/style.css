@@ -1,3 +1,4 @@
+/* Index logo as mask to control color from CSS */
 .large-logo {
   background-color: var(--bs-body-color) !important;
   mask: url(/images/fridge-it.svg) no-repeat center / contain;
