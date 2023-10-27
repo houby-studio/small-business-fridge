@@ -14,4 +14,4 @@ RUN npm ci --only=production
 COPY . .
 
 # Change ownership for writeable folders to node user
-RUN chown -R node:node /usr/src/app/{public/images,database-backup,logs}
+RUN chown -R node:node /usr/src/app/public/images && chown -R node:node /usr/src/app/database-backup && chown -R node:node /usr/src/app/logs
