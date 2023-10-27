@@ -1,3 +1,11 @@
+.large-logo {
+  background-color: var(--bs-body-color) !important;
+  mask: url(/images/fridge-it.svg) no-repeat center / contain;
+  -webkit-mask: url(/images/fridge-it.svg) no-repeat center / contain;
+  width: 10em;
+  height: 17.5em;
+}
+
 /* Favorite button */
 input.favorite {
   visibility: hidden;
