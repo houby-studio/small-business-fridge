@@ -2,11 +2,11 @@
 <html lang="cs" data-bs-theme="{{#if user.colorMode}}{{user.colorMode}}{{else}}dark{{/if}}">
 
 <head>
-  <!-- Meta Tags -->
+  {{!-- Meta Tags --}}
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{title}}</title>
-  <!-- Locally hosted CSS -->
+  {{!-- Locally hosted CSS --}}
   <link rel="stylesheet" href="/stylesheets/bootstrap/bootstrap.min.css">
   <link rel="stylesheet" href="/stylesheets/fontawesome.min.css">
   <link rel="stylesheet" href="/stylesheets/style.css">
@@ -25,12 +25,12 @@
 <body>
   {{> header}}
   {{> alert}}
-  <div class="container-fluid mt-3">
-    <!-- Locally hosted JS, depended on by child pages -->
+  <div class="container-fluid">
+    {{!-- Locally hosted JS, depended on by child pages --}}
     <script src="/javascripts/bootstrap.bundle.min.js"></script>
     {{{body}}}
   </div>
-  <!-- Locally hosted JS -->
+  {{!-- Locally hosted JS --}}
   <script src="/javascripts/alert_timeout.js"></script>
 </body>
 

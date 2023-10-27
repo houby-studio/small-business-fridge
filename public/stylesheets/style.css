@@ -30,12 +30,12 @@ input.favorite::after {
 /* When checked, change color and to fa-solid */
 input.favorite:checked:after {
   font-weight: 900;
-  color: gold;
+  color: var(--bs-yellow);
 }
 
 /* Kiosk favorite */
 i.favorite {
-  color: gold;
+  color: var(--bs-yellow);
   position: absolute;
   right: -0.5em;
   top: -0.5em;
