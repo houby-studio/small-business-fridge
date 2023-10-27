@@ -135,7 +135,7 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res) {
       }
       if (docs[0]) {
         logger.debug(
-          `server.routes.orders.get__Successfully loaded ${docs[0].length} orders.`,
+          `server.routes.orders.get__Successfully loaded ${docs[0].results.length} orders.`,
           {
             metadata: {
               result: docs
