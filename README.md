@@ -90,7 +90,41 @@ For linux users, you may want to allow node to bind to system protected ports
 
 `sudo setcap 'cap_net_bind_service=+ep' $(readlink -f $(which node))`
 
-### Manjaro
+### Windows 11
+
+Tested this setup 2023-10-27 with VSCode, Node.js 20 and Docker.
+Main app is being run directly on host, mongo, mongo express and maildev in docker compose.
+
+#### Installed software
+
+- git
+- nodejs lts 20
+- docker desktop
+- visual studio code
+
+### Setup development environment
+
+- Clone repo `git clone https://github.com/houby-studio/small-business-fridge.git`
+- Launch VSCode as administrator (to be able to bind to port 443)
+- Open folder small-business-fridge
+- For VSCode extensions we recommend at least Prettier (Native formatter does not like handlebars)
+- Install dependencies `npm install`
+- Prepare other containers for dev `cp dev.example.docker-compose.yaml docker-compose.dev.yaml`
+  - If you want to run main app in container as well, there is commented out section, which may be used with some tweaks
+- Prepare dotenv variables `cp dev.example.env .env` and at least change following variables with your AAD registered App:
+  - CREDS_IDENTITY_METADATA
+  - CREDS_CLIENT_ID
+  - CREDS_CLIENT_SECRET
+- Start docker containers `docker compose --file docker-compose.dev.yaml up -d`
+- Hit F5 to start debugging
+- Navigate to <https://localhost/> and login with your AAD account - since you have **NODE_ENV=development**, all new users will be admins and suppliers by default
+- Add new products, deliveries, start buying, invoicing etc.
+- Navigate to <http://localhost:8080> to view all **e-mails** being sent
+- Navigate to <http://localhost:8081> with login admin:pass to view, edit, export and import data in database **sbf-dev**
+
+### Setup development environment
+
+### Manjaro / Linux
 
 Tested this setup 2023-10-26 with VSCode, Node.js 18 and Docker.
 Main app is being run directly on host, mongo, mongo express and maildev in docker compose.
@@ -110,13 +144,14 @@ Main app is being run directly on host, mongo, mongo express and maildev in dock
 - Change into a directory and launch VSCode `cd small-business-fridge && code .`
 - For VSCode extensions we recommend at least Prettier (Native formatter does not like handlebars)
 - Install dependencies `npm install`
-- Prepare other containers for dev `cp docker-compose.dev.example.yaml docker-compose.dev.yaml`
+- Prepare other containers for dev `cp dev.example.docker-compose.yaml docker-compose.dev.yaml`
   - If you want to run main app in container as well, there is commented out section, which may be used with some tweaks
 - Prepare dotenv variables `cp dev.example.env .env` and at least change following variables with your AAD registered App:
   - CREDS_IDENTITY_METADATA
   - CREDS_CLIENT_ID
   - CREDS_CLIENT_SECRET
 - Allow node to bind to port 443 `sudo setcap 'cap_net_bind_service=+ep' $(readlink -f $(which node))`
+- Start docker containers `docker compose --file docker-compose.dev.yaml up -d`
 - Hit F5 to start debugging
 - Navigate to <https://localhost/> and login with your AAD account - since you have **NODE_ENV=development**, all new users will be admins and suppliers by default
 - Add new products, deliveries, start buying, invoicing etc.
