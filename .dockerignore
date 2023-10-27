@@ -1,7 +1,6 @@
 .git
 .github
 .vscode
-build-deps
 **/node_modules/
 test
 
