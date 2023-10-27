@@ -33,6 +33,14 @@ var schema = new Schema({
   requestPaid: {
     type: Boolean,
     default: false
+  },
+  autoReminderCount: {
+    type: Number,
+    default: 0
+  },
+  manualReminderCount: {
+    type: Number,
+    default: 0
   }
 })
 

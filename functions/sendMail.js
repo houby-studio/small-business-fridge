@@ -1,4 +1,5 @@
 import { createTransport } from 'nodemailer'
+import hbs from 'nodemailer-express-handlebars'
 import logger from './logger.js'
 
 export function sendMail(mailto, mailsubject, mailbody, image) {
@@ -33,6 +34,17 @@ export function sendMail(mailto, mailsubject, mailbody, image) {
     }
   })
 
+  // Configure templates
+  var options = {
+    viewEngine: {
+      layoutsDir: 'views/email',
+      partialsDir: 'views/email/partials',
+      defaultLayout: 'layout'
+    },
+    viewPath: 'views/email'
+  }
+  transporter.use('compile', hbs(options))
+
   var mailOptions = {
     from: {
       name: process.env.MAIL_FROM,
@@ -40,7 +52,16 @@ export function sendMail(mailto, mailsubject, mailbody, image) {
     },
     to: mailto,
     subject: mailsubject,
-    html: mailbody
+    template: mailbody,
+    context: {
+      message: 'Ahoj',
+      subject: 'Tak to je něco',
+      order: {
+        Datum: '10.10.2023',
+        Název: 'Coca cola',
+        Cena: 27
+      }
+    }
   }
 
   if (image) {
