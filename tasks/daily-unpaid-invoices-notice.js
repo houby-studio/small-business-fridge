@@ -11,8 +11,7 @@ var rule = new RecurrenceRule()
 rule.hour = process.env.TASKS_DAILY_INCOMPLETE_INVOICE_HOUR
 rule.minute = process.env.TASKS_DAILY_INCOMPLETE_INVOICE_MINUTE
 
-// replace '* * * * *' with rule or vice versa for development
-var dailyReport = scheduleJob('* * * * *', function () {
+var dailyReport = scheduleJob(rule, function () {
   // This schedule can be disabled in the ENV
   if (!process.env.TASKS_DAILY_INCOMPLETE_INVOICE_ENABLED) {
     return
