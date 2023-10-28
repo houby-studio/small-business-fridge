@@ -611,7 +611,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
               docs[i].total_user_sum_orders_notinvoiced,
               docs[i].user.displayName,
               req.user.displayName,
-              function (qrcode) {
+              function (qrImageData, qrText) {
                 logger.debug(
                   `server.routes.invoice.post__QR code generated, sending invioce e-mail to customer.`,
                   {
@@ -633,7 +633,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
                   req.headers.origin
                 }/invoices">Více na webu Lednice IT</a></p><p>Platbu je možné provést hotově nebo převodem.<br>Po platbě si zkontrolujte, zda dodavatel označil Vaši platbu jako zaplacenou.</p>`
                 if (req.user.IBAN) {
-                  body += `<h2>QR platba</h2><img width="480" height="480" style="width: 20rem; height: 20rem;" alt="QR kód pro mobilní platbu se Vám nezobrazuje správně." src="${qrcode}"/><p>IBAN: ${req.user.IBAN}</p><p>Předem díky za včasnou platbu!</p>`
+                  body += `<h2>QR platba</h2><img width="480" height="480" style="width: 20rem; height: 20rem;" alt="${qrText}" src="${qrImageData}"/><p>IBAN: ${req.user.IBAN}</p><p>Předem díky za včasnou platbu!</p>`
                 }
                 sendMail(docs[i].user.email, subject, body)
               }

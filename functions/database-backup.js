@@ -47,7 +47,6 @@ export default function dbAutoBackUp() {
     logger.info(
       `server.functions.databasebackup__Automatic backup is configured to directory ${dbOptions.autoBackupPath}.`
     )
-    console.log(backupDirPath)
     const date = new Date()
     let beforeDate, oldBackupDir, oldBackupPath
 

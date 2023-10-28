@@ -1,3 +1,4 @@
+{{! Footer with e-shop links }}
 <table
   width='640'
   cellpadding='0'
@@ -6,15 +7,17 @@
   class='wrapper'
   bgcolor='#e1e1e1'
 >
-  <tr bgcolor='#f6f6f6'>
-    <td height='10' style='font-size:10px; line-height:10px;'>&nbsp;</td>
-  </tr>
+
+  {{! Spacer with different color }}
   <tr bgcolor='#ececec'>
     <td height='10' style='font-size:10px; line-height:10px;'>&nbsp;</td>
   </tr>
+
+  {{! Spacer }}
   <tr>
     <td height='10' style='font-size:10px; line-height:10px;'>&nbsp;</td>
   </tr>
+
   <tr>
     <td align='center' valign='top'>
 
@@ -26,33 +29,43 @@
         class='container'
       >
         <tr>
-          <td width='200' class='mobile' align='center' valign='top'>
+
+          {{! Left column }}
+          <td width='200' class='mobile breakpoint' align='center' valign='top'>
             <a
-              href='#'
-              target='_blank'
-              style='color:#000; text-decoration:underline;'
-            >Nakupovat</a>
-          </td>
-          <td width='200' class='mobile' align='center' valign='top'>
-            <a
-              href='#'
+              href='{{baseUrl}}/profile'
               target='_blank'
               style='color:#000; text-decoration:underline;'
             >Preference</a>
           </td>
-          <td width='200' class='mobile' align='center' valign='top'>
+
+          {{! Middle column }}
+          <td width='200' class='mobile breakpoint' align='center' valign='top'>
             <a
-              href='#'
+              href='{{baseUrl}}/shop'
+              target='_blank'
+              style='color:#000; text-decoration:underline;'
+            >Nakupovat</a>
+          </td>
+
+          {{! Right column }}
+          <td width='200' class='mobile breakpoint' align='center' valign='top'>
+            <a
+              href='{{baseUrl}}/documentation#Obchodní-podmínky'
               target='_blank'
               style='color:#000; text-decoration:underline;'
             >Obchodní podmínky</a>
           </td>
+
         </tr>
       </table>
 
     </td>
   </tr>
+
+  {{! Spacer }}
   <tr>
     <td height='10' style='font-size:10px; line-height:10px;'>&nbsp;</td>
   </tr>
+
 </table>

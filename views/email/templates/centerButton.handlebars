@@ -1,7 +1,11 @@
+{{! Three columns template }}
 <table width='640' cellpadding='0' cellspacing='0' border='0' class='wrapper'>
+
+  {{! Spacer }}
   <tr>
     <td height='10' style='font-size:10px; line-height:10px;'>&nbsp;</td>
   </tr>
+
   <tr>
     <td align='center' valign='top'>
 
@@ -13,8 +17,11 @@
         class='container'
       >
         <tr>
+          {{! Left column }}
           <td width='200' class='mobile' align='center' valign='top'>
           </td>
+
+          {{! Button column }}
           <td width='200' class='mobile' align='center' valign='top'>
             <table
               width='200'
@@ -33,22 +40,28 @@
                   style='font-family: Arial, sans-serif; font-size:14px; font-weight:bold;'
                 >
                   <a
-                    href='#'
+                    href='{{baseUrl}}{{path}}{{query}}{{paramValue}}'
                     target='_blank'
                     style='font-family: Arial, sans-serif; color:#ffffff; display: inline-block; text-decoration: none; line-height:44px; width:200px; font-weight:bold;'
-                  >Přidat do oblíbených</a>
+                  >{{label}}</a>
                 </td>
               </tr>
             </table>
           </td>
+
+          {{! Right column }}
           <td width='200' class='mobile' align='center' valign='top'>
           </td>
+
         </tr>
       </table>
 
     </td>
   </tr>
+
+  {{! Spacer }}
   <tr>
     <td height='10' style='font-size:10px; line-height:10px;'>&nbsp;</td>
   </tr>
+
 </table>

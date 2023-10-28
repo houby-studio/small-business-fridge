@@ -195,7 +195,7 @@ router.post('/', ensureAuthenticated, checkKiosk, function (req, res) {
             .save()
             .then((order) => {
               logger.info(
-                `server.routes.shop.post__User [${req.user.id}] succesfully purchased product [${req.body.display_name}] for [${req.body.product_price}] via e-shop.`,
+                `server.routes.shop.post__User [${req.user.id}] succesfully purchased product [${req.body.display_name}] for [${object.price}] via e-shop.`,
                 {
                   metadata: {
                     order: order
@@ -204,19 +204,28 @@ router.post('/', ensureAuthenticated, checkKiosk, function (req, res) {
               )
               const alert = {
                 type: 'success',
-                message: `Zakoupili jste ${req.body.display_name} za ${req.body.product_price}Kč.`,
+                message: `Zakoupili jste ${req.body.display_name} za ${object.price}Kč.`,
                 success: 1
               }
               req.session.alert = alert
               res.redirect('/shop')
               if (req.user.sendMailOnEshopPurchase) {
-                const subject = 'Děkujeme za nákup!'
-                const body = `<h1>Výborná volba!</h1><p>Tímto jste si udělali radost:</p><img width="135" height="240" style="width: auto; height: 10rem;" alt="Obrázek zakoupeného produktu" src="cid:image@prdelka.eu"/><p>Název: ${
-                  req.body.display_name
-                }<br>Cena: ${
-                  req.body.product_price
-                }Kč<br>Kdy: ${moment().format('LLLL')}</p><p>Přijďte zas!</p>`
-                sendMail(req.user.email, subject, body, req.body.image_path)
+                const subject = `Potvrzení objednávky - ${req.body.display_name}`
+                const mailPreview = `Zakoupili jste ${req.body.display_name} za ${object.price} Kč na e-shopu.`
+                sendMail(
+                  req.user.email,
+                  'productPurchased',
+                  {
+                    subject,
+                    mailPreview,
+                    orderId: order._id,
+                    productId: object.productId,
+                    productName: req.body.display_name,
+                    productPrice: object.price,
+                    purchaseDate: moment(order.order_date).format('LLLL')
+                  },
+                  req.body.image_path
+                )
               }
               return
             })

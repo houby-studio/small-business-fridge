@@ -1,0 +1,78 @@
+{{> title title="Denní report nákupů" }}
+{{! Single column template }}
+<table width='640' cellpadding='0' cellspacing='0' border='0' class='wrapper' bgcolor='#f6f6f6'>
+
+  {{! Spacer }}
+  <tr>
+    <td height='10' style='font-size:10px; line-height:10px;'>&nbsp;</td>
+  </tr>
+
+  <tr>
+    <td align='center' valign='top'>
+
+      <table width='600' cellpadding='0' cellspacing='0' border='0' class='container'>
+
+        {{! 1st row - text }}
+        <tr>
+          {{! Middle column }}
+          <td align='center' valign='top'>
+            {{! Single column template }}
+            <table width='640' cellpadding='0' cellspacing='0' border='0' class='wrapper' bgcolor='#f6f6f6'>
+
+              {{! Spacer }}
+              <tr>
+                <td height='10' style='font-size:10px; line-height:10px;'>&nbsp;</td>
+              </tr>
+
+              <tr>
+                <td align='center' valign='top'>
+
+                  <table width='600' cellpadding='0' cellspacing='0' border='0' class='container'>
+                    <tr>
+
+                      {{! Middle column }}
+                      <td align='left' valign='top'>
+                        <p>Vážený zákazníku,</p>
+                        <p>ve snaze o eliminaci zcela jistě neúmyslných kráděží, které snižují vůli dodavatelů dodávat Vaše oblíbené produkty, Vám zasíláme počet Vašich objednávek za posledních 24 hodin.</p>
+                        <p>Prosím porovnejte si níže uvedenou hodnotu s tím, co jste dnes skutečně odebrali a případné nesrovnalosti okamžitě napravte. Detaily objednávek naleznete na stránce Objednávky.</p>
+                        <h2 style="text-align: center;">{{purchaseCount}}</h2>
+                        <p>Pokud nejste pravidelným zákazníkem a jste si jisti, že každý svůj nákup zaevidujete předem, případně na místě za pomoci samoobslužného kiosku, můžete tento pravidelný report vypnout ve svých
+                          <a href='{{baseUrl}}/profile' target='_blank' style='color:#000; text-decoration:underline;'>preferencích</a>.</p>
+                        <p>Děkujeme za pochopení a těsíme se na Vás opět zítra.</p>
+                      </td>
+
+                    </tr>
+                  </table>
+
+                </td>
+              </tr>
+
+              {{! Spacer }}
+              <tr>
+                <td height='10' style='font-size:10px; line-height:10px;'>&nbsp;</td>
+              </tr>
+
+            </table>
+          </td>
+
+        </tr>
+
+        {{! 2nd row - button }}
+        <tr>
+          {{! Middle column }}
+          <td align='center' valign='top'>
+            {{!-- Button table partial --}}
+            {{> centerButton label="Objednávky" baseUrl=baseUrl path="/orders" }}
+          </td>
+        </tr>
+      </table>
+
+    </td>
+  </tr>
+
+  {{! Spacer }}
+  <tr>
+    <td height='10' style='font-size:10px; line-height:10px;'>&nbsp;</td>
+  </tr>
+
+</table>

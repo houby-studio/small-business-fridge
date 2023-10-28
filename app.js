@@ -28,9 +28,9 @@ import './functions/azure-passport.js'
 
 // Import scheduled tasks
 logger.info('server.app.startup__Importing scheduled tasks.')
-import './tasks/daily-report.js'
+import './tasks/daily-purchase-report.js'
 import './tasks/daily-backup.js'
-import './tasks/daily-unpaid-invoices.js'
+import './tasks/daily-unpaid-invoices-notice.js'
 
 // Load routes from routes folder to later app.use them.
 // Access for all

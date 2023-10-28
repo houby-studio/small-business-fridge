@@ -28,11 +28,11 @@ export function generateQR(IBAN, amount, payer, receiver, callback) {
     .replace(/[\u0300-\u036f]/g, '')
     .toUpperCase()
   toDataURL(code)
-    .then((url) => {
+    .then((imageData) => {
       logger.info(
         `server.functions.qrpayment__Succesfully generated QR code customer:[${payer}]>supplier:[${receiver}]=amount:[${amount}].`
       )
-      return callback(url)
+      return callback(imageData, code)
     })
     .catch((err) => {
       logger.error(

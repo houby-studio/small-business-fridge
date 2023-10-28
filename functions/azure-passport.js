@@ -113,7 +113,6 @@ passport.use(
                   )
                   return done(1)
                 }
-                console.log(process.env.NODE_ENV)
                 const newUser = new User()
                 newUser.oid = profile.oid
                 newUser.displayName = profile.displayName

@@ -45,7 +45,6 @@ const _numberButtonsEvent = [...numberButtons].forEach((element) => {
 
     // Display numbers on screen
     const screen = document.getElementById('customer_id')
-    console.log(screen.value)
     screen.value = screen.value + this.value
   })
 })

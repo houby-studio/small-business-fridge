@@ -1,4 +1,4 @@
-{{> title title="Potvrzení objednávky" }}
+{{> title title="Upomínka neuhrazené faktury" }}
 {{! Single column template }}
 <table width='640' cellpadding='0' cellspacing='0' border='0' class='wrapper' bgcolor='#f6f6f6'>
 
@@ -33,9 +33,18 @@
                       {{! Middle column }}
                       <td align='left' valign='top'>
                         <p>Vážený zákazníku,</p>
-                        <p>děkujeme za vaši objednávku produktu <b>{{productName}}</b>.</p>
-                        <p>Pokud budete se svým nákupem spokojeni, můžete produkt přidat mezi své oblíbené, aby se Vám vždy ukázal jako první a získali jste oznámeni o naskladnění.</p>
-                        <p>Přejeme příjemný prožitek a těsíme se na Vaši další návštěvu.</p>
+                        <p>dodavatel
+                          <b>{{supplierDisplayName}}</b>
+                           od Vás dosud na svém účtu nezaznamenal částku
+                          <b>{{invoiceTotalCost}} Kč</b>
+                          za fakturu ze dne
+                          <b>{{invoiceDate}}</b>.
+                        </p>
+                        <p>Prosíme o co nejrychlejší uhrazení této částky. Pokud
+                          již k úhradě došlo, potvrďte prosím tuto skutečnost v
+                          našem systému.</p>
+                        <p>Děkujeme za pochopení a těšíme se na další
+                          spolupráci.</p>
                       </td>
 
                     </tr>
@@ -54,7 +63,7 @@
 
         </tr>
 
-        {{! 2nd row - info and picture }}
+        {{! 2nd row - info and QR code }}
         <tr>
           {{! Middle column }}
           <td align='center' valign='top'>
@@ -77,15 +86,15 @@
                         <table width='100%' cellpadding='0' cellspacing='0' border='1' bgcolor='#fff'>
                           <tr>
                             <td align='center' valign='top' colspan='2'>
-                              <h3>Detail objednávky</h3>
+                              <h3>Detail faktury</h3>
                             </td>
                           </tr>
                           <tr>
                             <td align='left' valign='top'>
-                              <b>Název</b>
+                              <b>Upomínka</b>
                             </td>
                             <td align='left' valign='top'>
-                              {{productName}}.
+                              {{noticeCount}}.
                             </td>
                           </tr>
                           <tr>
@@ -93,7 +102,7 @@
                               <b>Datum</b>
                             </td>
                             <td align='left' valign='top'>
-                              {{purchaseDate}}
+                              {{invoiceDate}}
                             </td>
                           </tr>
                           <tr>
@@ -101,7 +110,24 @@
                               <b>Částka</b>
                             </td>
                             <td align='left' valign='top'>
-                              {{productPrice}} Kč
+                              {{invoiceTotalCost}}
+                              Kč
+                            </td>
+                          </tr>
+                          <tr>
+                            <td align='left' valign='top'>
+                              <b>Dodavatel</b>
+                            </td>
+                            <td align='left' valign='top'>
+                              {{supplierDisplayName}}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td align='left' valign='top'>
+                              <b>Účet</b>
+                            </td>
+                            <td align='left' valign='top'>
+                              {{supplierIBAN}}
                             </td>
                           </tr>
                           <tr>
@@ -109,7 +135,7 @@
                               <b>Číslo</b>
                             </td>
                             <td align='left' valign='top'>
-                              {{orderId}}
+                              {{invoiceId}}
                             </td>
                           </tr>
                         </table>
@@ -117,9 +143,9 @@
 
                       {{! Right column }}
                       <td width='300' class='mobile breakpoint' align='center' valign='top'>
-                        <img src='cid:image@sbf.pictures' width='' height='300'
+                        <img src='{{qrImageData}}' width='280' height='280'
                           style='margin:0; padding:0; border:none; display:block;' border='0'
-                          alt='Buď jste zrakově postižený a čtečka Vám tento popis předčítá, což vám nepomůže zjistit, jak zakoupený produkt vypadá, nebo jsme udělali chybu a obrázek se nezobrazuje. V obou případech se omlouváme.' />
+                          alt='{{qrText}}' />
                       </td>
 
                     </tr>
@@ -142,7 +168,7 @@
           {{! Middle column }}
           <td align='center' valign='top'>
             {{!-- Button table partial --}}
-            {{> centerButton label="Přidat do oblíbených" baseUrl=baseUrl path="/shop" query="?addfavorite=" paramValue=productId }}
+            {{> centerButton label="Přidat do oblíbených" baseUrl=baseUrl path="/invoices" query="?requestPaid=" paramValue=invoiceId }}
           </td>
         </tr>
       </table>

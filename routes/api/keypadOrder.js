@@ -151,14 +151,12 @@ router.post('/', ensureAuthenticatedAPI, function (req, res, _next) {
                 })
             })
             .catch((err) => {
-              console.log(err)
               res.status(err.status || 500)
               res.render('error')
               return
             })
         })
         .catch((err) => {
-          console.log(err)
           res.status(err.status || 500)
           res.render('error')
           return
