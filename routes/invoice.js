@@ -620,22 +620,39 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
                     }
                   }
                 )
-                var subject = 'Fakturace!'
-                var body = `<h1>Přišel čas zúčtování!</h1><p>Váš nejoblíbenější dodavatel ${
-                  req.user.displayName
-                } Vám zaslal fakturu.</p><h2>Fakturační údaje</h2><p>Částka k úhradě: ${
-                  docs[i].total_user_sum_orders_notinvoiced
-                }Kč<br>Počet zakoupených produktů: ${
-                  docs[i].total_user_num_orders_notinvoiced
-                }ks<br>Datum fakturace: ${moment().format(
-                  'LLLL'
-                )}<br><a href="${
-                  req.headers.origin
-                }/invoices">Více na webu Lednice IT</a></p><p>Platbu je možné provést hotově nebo převodem.<br>Po platbě si zkontrolujte, zda dodavatel označil Vaši platbu jako zaplacenou.</p>`
-                if (req.user.IBAN) {
-                  body += `<h2>QR platba</h2><img width="480" height="480" style="width: 20rem; height: 20rem;" alt="${qrText}" src="${qrImageData}"/><p>IBAN: ${req.user.IBAN}</p><p>Předem díky za včasnou platbu!</p>`
-                }
-                sendMail(docs[i].user.email, subject, body)
+                // var subject = 'Fakturace!'
+                // var body = `<h1>Přišel čas zúčtování!</h1><p>Váš nejoblíbenější dodavatel ${
+                //   req.user.displayName
+                // } Vám zaslal fakturu.</p><h2>Fakturační údaje</h2><p>Částka k úhradě: ${
+                //   docs[i].total_user_sum_orders_notinvoiced
+                // }Kč<br>Počet zakoupených produktů: ${
+                //   docs[i].total_user_num_orders_notinvoiced
+                // }ks<br>Datum fakturace: ${moment().format(
+                //   'LLLL'
+                // )}<br><a href="${
+                //   req.headers.origin
+                // }/invoices">Více na webu Lednice IT</a></p><p>Platbu je možné provést hotově nebo převodem.<br>Po platbě si zkontrolujte, zda dodavatel označil Vaši platbu jako zaplacenou.</p>`
+                // if (req.user.IBAN) {
+                //   body += `<h2>QR platba</h2><img width="480" height="480" style="width: 20rem; height: 20rem;" alt="${qrText}" src="${qrImageData}"/><p>IBAN: ${req.user.IBAN}</p><p>Předem díky za včasnou platbu!</p>`
+                // }
+
+                // const friendlyInvoiceDate = moment(docs.invoiceDate).format(
+                //   'LLLL'
+                // )
+                const subject = `Fakturace`
+                // const mailPreview = `Faktura ze dne ${friendlyInvoiceDate} za ${totalCost} Kč čeká na potvrzení z Vaší strany.`
+
+                sendMail(docs[i].user.email, 'layout', {
+                  subject,
+                  invoiceId: 'nemaju,refactor',
+                  invoiceDate: moment().format('LLLL'),
+                  invoiceTotalCost: docs[i].total_user_sum_orders_notinvoiced,
+                  invoiceTOtalCount: docs[i].total_user_num_orders_notinvoiced,
+                  supplierDisplayName: req.user.displayName,
+                  supplierIBAN: req.user.IBAN,
+                  qrImageData,
+                  qrText
+                })
               }
             )
           })

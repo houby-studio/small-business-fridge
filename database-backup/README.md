@@ -13,5 +13,5 @@ mongorestore --uri="$DB_CONNECTION_STRING" --nsInclude="*" --archive=./database-
 To restore with different database name, for example for testing and development purposes, use following command:
 
 ```bash
-mongorestore --uri="$DB_CONNECTION_STRING" --archive=./database-backup/backup-mongodump-2023-11-1.tar.gz --nsInclude="*" --nsFrom="sbf.*" --nsTo="sbf-dev.*"
+mongorestore --uri="$DB_CONNECTION_STRING" --archive=./database-backup/backup-mongodump-2023-11-1.tar.gz --drop --nsInclude="*" --nsFrom="sbf.*" --nsTo="sbf-dev.*"
 ```

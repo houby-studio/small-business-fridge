@@ -171,19 +171,25 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
               }
             }
           )
-          const subject = `Zákazník ${req.user.displayName} uhradil fakturu!`
-          const body = `<h1>Penízky už se sypou!</h1><p>Zákazník ${
-            req.user.displayName
-          } označil fakturu od Vás s datem vytvoření ${moment(
-            docs.invoiceDate
-          ).format('LLLL')} a celkovou částkou k úhradě ${
-            docs.totalCost
-          } za zaplacenou.</p><p>Zkontrolujte zda se tak stalo a následně potvrďte na webu přes tento odkaz</p>`
-          sendMail(docs.supplierId.email, subject, body)
+
+          const friendlyInvoiceDate = moment(docs.invoiceDate).format('LLLL')
+          const subject = `Faktura byla označena za zaplacenou - ${req.user.displayName} - ${docs.totalCost}`
+          const mailPreview = `Faktura ze dne ${friendlyInvoiceDate} za ${docs.totalCost} Kč čeká na potvrzení z Vaší strany.`
+
+          sendMail(docs.supplierId.email, 'invoicesStatusChange', {
+            subject,
+            mailPreview,
+            invoiceId: docs._id,
+            invoiceDate: friendlyInvoiceDate,
+            invoiceTotalCost: docs.totalCost,
+            customerDisplayName: req.user.displayName,
+            paid: true
+          })
+
           const alert = {
             type: 'success',
             message:
-              'Faktura byla označena jako uhrazená u dodavatele. Vyčkejte na schválení.',
+              'Faktura byla z Vaší strany označena jako uhrazená. Vyčkejte na schválení ze strany dodavatele.',
             success: 1
           }
           req.session.alert = alert
@@ -229,19 +235,25 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
               }
             }
           )
-          var subject = `Zákazník ${req.user.displayName} stornoval platbu faktury!`
-          var body = `<h1>Že by se někdo nemohl dopočítat?</h1><p>Zákazník ${
-            req.user.displayName
-          } označil fakturu od Vás s datem vytvoření ${moment(
-            docs.invoiceDate
-          ).format('LLLL')} a celkovou částkou k úhradě ${
-            docs.totalCost
-          } za nezaplacenou. Nezbývá než čekat, až skutečně zaplatí.</p>`
-          sendMail(docs.supplierId.email, subject, body)
+
+          const friendlyInvoiceDate = moment(docs.invoiceDate).format('LLLL')
+          const subject = `Faktura byla označena za nezaplacenou - ${req.user.displayName} - ${docs.totalCost}`
+          const mailPreview = `Faktura ze dne ${friendlyInvoiceDate} za ${docs.totalCost} Kč byla zákazníkem označena za nezaplacenou.`
+
+          sendMail(docs.supplierId.email, 'invoicesStatusChange', {
+            subject,
+            mailPreview,
+            invoiceId: docs._id,
+            invoiceDate: friendlyInvoiceDate,
+            invoiceTotalCost: docs.totalCost,
+            customerDisplayName: req.user.displayName,
+            paid: false
+          })
+
           const alert = {
             type: 'success',
             message:
-              'Platba byla stornována a faktura byla označena jako neuhrazená.',
+              'Platba byla z Vaší strany zrušena. Prosíme uhraďte fakturu co nejdříve.',
             success: 1
           }
           req.session.alert = alert

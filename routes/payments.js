@@ -225,6 +225,22 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
               }
             }
           )
+          // const subject = `${noticeCount}. výzva k úhradě faktury po splatnosti`
+          // const mailPreview = `Částka k úhradě ${docs[i].totalCost} Kč.`
+
+          // sendMail(docs[i].buyer[0].email, 'unpaidInvoiceNotice', {
+          //   subject,
+          //   mailPreview,
+          //   invoiceId: docs[i]._id,
+          //   invoiceDate: moment(docs[i].invoiceDate).format('LLLL'),
+          //   invoiceTotalCost: docs[i].totalCost,
+          //   noticeCount: noticeCount,
+          //   supplierDisplayName: docs[i].supplier[0].displayName,
+          //   supplierIBAN: docs[i].supplier[0].IBAN,
+          //   qrImageData,
+          //   qrText
+          // })
+
           const subject = 'Vaše platba byla potvrzena!'
           const body = `<h1>Obchod byl dokončen!</h1><p>Váš dodavatel ${
             req.user.displayName
@@ -232,6 +248,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
             docs.invoiceDate
           ).format('LLLL')}<br>Celková částka k úhradě: ${docs.totalCost}Kč</p>`
           sendMail(docs.buyerId.email, subject, body)
+
           const alert = {
             type: 'success',
             message: 'Faktura byla označena jako uhrazená.',
