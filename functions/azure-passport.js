@@ -171,9 +171,14 @@ passport.use(
                           }
                         }
                       )
-                      const subject = `Lednice IT je pyšná, že ji navštívila osoba jménem ${newUser.displayName}`
-                      const body = `<h1>Lednice IT Vás vítá!</h1><p>Snad se Vám zde bude líbit.</p><p>Vaše ID pro objednávání skrze kiosek: ${newUser.keypadId}</p><h2>Jak to funguje</h2><p>Do Lednice IT dodává produkty více dodavatelů. Zákazník si přes e-shop či přes kiosek zakoupí vybraný produkt. Až se dodavateli nashromáždí dostatek prodaného zboží, vytvoří hromadnou fakturaci. Každý zákazník, který si u daného dodavatele něco zakoupil obdrží e-mail s QR kódem, který uhradí. Platbu obě strany potvrdí v rozhraní e-shopu.</p><p>Pokud se budete chtít stát dodavatelem, kontaktujte správce Lednice IT.</p>`
-                      sendMail(newUser.email, subject, body)
+                      const subject = 'Potvrzení registrace nového zákazníka'
+                      const mailPreview = `Zákazník ${newUser.displayName} registrován s ID ${newUser.keypadId}.`
+
+                      sendMail(newUser.email, 'newUserWelcome', {
+                        subject,
+                        mailPreview,
+                        keypadId: newUser.keypadId
+                      })
                     })
                     .catch((err) => {
                       logger.error(

@@ -117,7 +117,7 @@ var dailyReport = scheduleJob(rule, function () {
                 const subject = `${noticeCount}. výzva k úhradě faktury po splatnosti`
                 const mailPreview = `Částka k úhradě ${docs[i].totalCost} Kč.`
 
-                sendMail(docs[i].buyer[0].email, 'invoiceNotice', {
+                sendMail(docs[i].buyer[0].email, 'unpaidInvoiceNotice', {
                   subject,
                   mailPreview,
                   invoiceId: docs[i]._id,
