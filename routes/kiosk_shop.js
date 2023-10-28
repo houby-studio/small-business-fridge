@@ -297,19 +297,29 @@ router.post('/', ensureAuthenticated, function (req, res) {
               )
               newOrder
                 .save()
-                .then(() => {
+                .then((order) => {
                   req.session.alert = {
                     type: 'success',
-                    message: `Zákazník ${user.displayName} zakoupil ${req.body.display_name} za ${req.body.product_price}Kč.`,
+                    message: `Zákazník ${user.displayName} zakoupil ${req.body.display_name} za ${object.price}Kč.`,
                     success: 1
                   }
-                  const subject = 'Děkujeme za nákup!'
-                  const body = `<h1>Výborná volba!</h1><p>Tímto jste si udělali radost:</p><img width="135" height="240" style="width: auto; height: 10rem;" alt="Obrázek zakoupeného produktu" src="cid:image@prdelka.eu"/><p>Název: ${
-                    req.body.display_name
-                  }<br>Cena: ${
-                    req.body.product_price
-                  }Kč<br>Kdy: ${moment().format('LLLL')}</p><p>Přijďte zas!</p>`
-                  sendMail(user.email, subject, body, req.body.image_path)
+
+                  const subject = `Potvrzení objednávky - ${req.body.display_name}`
+                  const mailPreview = `Zakoupili jste ${req.body.display_name} za ${object.price} Kč na kiosku.`
+                  sendMail(
+                    user.email,
+                    'productPurchased',
+                    {
+                      subject,
+                      mailPreview,
+                      orderId: order._id,
+                      productId: object.productId,
+                      productName: req.body.display_name,
+                      productPrice: object.price,
+                      purchaseDate: moment(order.order_date).format('LLLL')
+                    },
+                    req.body.image_path
+                  )
                   res.redirect('/kiosk_keypad')
                 })
                 .catch((err) => {
