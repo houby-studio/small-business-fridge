@@ -1,5 +1,5 @@
 {{!-- Kiosk control --}}
-<div class="row">
+<div class="row mt-3">
   <div class="col-lg mb-2">
     <form action="/kiosk_keypad" method="get">
       <input type="submit" value="Zpět" name="Submit" id="Submit"
@@ -34,7 +34,7 @@
 {{/if}}
 <div class="row">
   {{#each products }}
-  <div class="col-12 col-md-6 col-xl-3 col-xxxl-2 py-3 collapse show {{#if this.favorite}}order-first{{/if}}" id="{{this._id}}" data-category="{{this.category.0._id}}">
+  <div class="col-12 col-md-6 col-xl-3 col-xxxl-2 equal-gutter collapse show {{#if this.favorite}}order-first{{/if}}" id="{{this._id}}" data-category="{{this.category.0._id}}">
     <form id="shop_buy_product_{{this.stock.0._id}}" class="needs-validation h-100"
       method="POST" action="/kiosk_shop" novalidate>
       <div class="card h-100 text-center">

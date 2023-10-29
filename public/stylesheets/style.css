@@ -1,3 +1,9 @@
+/* Make cards on shop same padding on Y as is on X from row class */
+.equal-gutter {
+  padding-top: calc(var(--bs-gutter-x) * .5);
+  padding-bottom: calc(var(--bs-gutter-x) * .5);
+}
+
 /* Index logo as mask to control color from CSS */
 .large-logo {
   background-color: var(--bs-body-color) !important;
