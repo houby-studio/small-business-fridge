@@ -282,16 +282,16 @@ router.post('/', ensureAuthenticated, function (req, res) {
       Delivery.findOne({
         _id: req.body.product_id
       })
-        .then((object) => {
-          object.amount_left--
-          object
+        .then((delivery) => {
+          delivery.amount_left--
+          delivery
             .save()
             .then(() => {
               logger.debug(
-                `server.routes.kioskshop.post__Purchased product stock amount decremented from delivery [${object._id}].`,
+                `server.routes.kioskshop.post__Purchased product stock amount decremented from delivery [${delivery._id}].`,
                 {
                   metadata: {
-                    object: object
+                    object: delivery
                   }
                 }
               )
@@ -300,12 +300,12 @@ router.post('/', ensureAuthenticated, function (req, res) {
                 .then((order) => {
                   req.session.alert = {
                     type: 'success',
-                    message: `Zákazník ${user.displayName} zakoupil ${req.body.display_name} za ${object.price}Kč.`,
+                    message: `Zákazník ${user.displayName} zakoupil ${req.body.display_name} za ${delivery.price}Kč.`,
                     success: 1
                   }
 
                   const subject = `Potvrzení objednávky - ${req.body.display_name}`
-                  const mailPreview = `Zakoupili jste ${req.body.display_name} za ${object.price} Kč na kiosku.`
+                  const mailPreview = `Zakoupili jste ${req.body.display_name} za ${delivery.price} Kč na kiosku.`
                   sendMail(
                     user.email,
                     'productPurchased',
@@ -313,9 +313,9 @@ router.post('/', ensureAuthenticated, function (req, res) {
                       subject,
                       mailPreview,
                       orderId: order._id,
-                      productId: object.productId,
+                      productId: delivery.productId,
                       productName: req.body.display_name,
-                      productPrice: object.price,
+                      productPrice: delivery.price,
                       purchaseDate: moment(order.order_date).format('LLLL')
                     },
                     req.body.image_path
@@ -328,7 +328,7 @@ router.post('/', ensureAuthenticated, function (req, res) {
                     {
                       metadata: {
                         error: err.message,
-                        delivery: object
+                        delivery: delivery
                       }
                     }
                   )

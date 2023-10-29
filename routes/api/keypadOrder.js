@@ -121,17 +121,27 @@ router.post('/', ensureAuthenticatedAPI, function (req, res, _next) {
           Delivery.findByIdAndUpdate(product[0].stock[0]._id, {
             amount_left: newAmount
           })
-            .then(() => {
+            .then((delivery) => {
               newOrder
                 .save()
-                .then(() => {
-                  const subject = 'Děkujeme za nákup!'
-                  const body = `<h1>Výborná volba!</h1><p>Tímto jste si udělali radost:</p><img width="135" height="240" style="width: auto; height: 10rem;" alt="Obrázek zakoupeného produktu" src="cid:image@prdelka.eu"/><p>Název: ${
-                    product[0].displayName
-                  }<br>Cena: ${
-                    product[0].stock[0].price
-                  }Kč<br>Kdy: ${moment().format('LLLL')}</p><p>Přijďte zas!</p>`
-                  sendMail(user.email, subject, body, product[0].imagePath)
+                .then((order) => {
+                  const subject = `Potvrzení objednávky - ${product[0].displayName}`
+                  const mailPreview = `Zakoupili jste ${product[0].displayName} za ${delivery.price} Kč přes API.`
+                  sendMail(
+                    user.email,
+                    'productPurchased',
+                    {
+                      subject,
+                      mailPreview,
+                      orderId: order._id,
+                      productId: delivery.productId,
+                      productName: product[0].displayName,
+                      productPrice: delivery.price,
+                      purchaseDate: moment(order.order_date).format('LLLL')
+                    },
+                    product[0].imagePath
+                  )
+
                   res.status(200)
                   res.set('Content-Type', 'application/json')
                   responseJson = {

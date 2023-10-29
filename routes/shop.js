@@ -178,16 +178,16 @@ router.post('/', ensureAuthenticated, checkKiosk, function (req, res) {
   Delivery.findOne({
     _id: req.body.product_id
   })
-    .then((object) => {
-      object.amount_left--
-      object
+    .then((delivery) => {
+      delivery.amount_left--
+      delivery
         .save()
         .then(() => {
           logger.debug(
-            `server.routes.shop.post__Purchased product stock amount decremented from delivery [${object._id}].`,
+            `server.routes.shop.post__Purchased product stock amount decremented from delivery [${delivery._id}].`,
             {
               metadata: {
-                object: object
+                object: delivery
               }
             }
           )
@@ -195,7 +195,7 @@ router.post('/', ensureAuthenticated, checkKiosk, function (req, res) {
             .save()
             .then((order) => {
               logger.info(
-                `server.routes.shop.post__User [${req.user.id}] succesfully purchased product [${req.body.display_name}] for [${object.price}] via e-shop.`,
+                `server.routes.shop.post__User [${req.user.id}] succesfully purchased product [${req.body.display_name}] for [${delivery.price}] via e-shop.`,
                 {
                   metadata: {
                     order: order
@@ -204,14 +204,14 @@ router.post('/', ensureAuthenticated, checkKiosk, function (req, res) {
               )
               const alert = {
                 type: 'success',
-                message: `Zakoupili jste ${req.body.display_name} za ${object.price}Kč.`,
+                message: `Zakoupili jste ${req.body.display_name} za ${delivery.price}Kč.`,
                 success: 1
               }
               req.session.alert = alert
               res.redirect('/shop')
               if (req.user.sendMailOnEshopPurchase) {
                 const subject = `Potvrzení objednávky - ${req.body.display_name}`
-                const mailPreview = `Zakoupili jste ${req.body.display_name} za ${object.price} Kč na e-shopu.`
+                const mailPreview = `Zakoupili jste ${req.body.display_name} za ${delivery.price} Kč na e-shopu.`
                 sendMail(
                   req.user.email,
                   'productPurchased',
@@ -219,9 +219,9 @@ router.post('/', ensureAuthenticated, checkKiosk, function (req, res) {
                     subject,
                     mailPreview,
                     orderId: order._id,
-                    productId: object.productId,
+                    productId: delivery.productId,
                     productName: req.body.display_name,
-                    productPrice: object.price,
+                    productPrice: delivery.price,
                     purchaseDate: moment(order.order_date).format('LLLL')
                   },
                   req.body.image_path
@@ -235,7 +235,7 @@ router.post('/', ensureAuthenticated, checkKiosk, function (req, res) {
                 {
                   metadata: {
                     error: err.message,
-                    delivery: object
+                    delivery: delivery
                   }
                 }
               )
