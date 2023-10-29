@@ -11,14 +11,14 @@ var rule = new RecurrenceRule()
 rule.hour = process.env.TASKS_DAILY_INCOMPLETE_INVOICE_HOUR
 rule.minute = process.env.TASKS_DAILY_INCOMPLETE_INVOICE_MINUTE
 
-var dailyReport = scheduleJob(rule, function () {
+var scheduledTask = scheduleJob(rule, function () {
   // This schedule can be disabled in the ENV
   if (!process.env.TASKS_DAILY_INCOMPLETE_INVOICE_ENABLED) {
     return
   }
 
   logger.info(
-    `server.tasks.dailyunpaidinvoices__Started scheduled task to find unpaid invoices and send notices.`
+    `server.tasks.dailyunpaidinvoicesnotice__Started scheduled task to find unpaid invoices and send notices.`
   )
 
   // Get date from process.env.TASKS_DAILY_INCOMPLETE_INVOICE_NET_DAYS days ago
@@ -79,7 +79,7 @@ var dailyReport = scheduleJob(rule, function () {
   ])
     .then((docs) => {
       logger.debug(
-        `server.tasks.dailyunpaidinvoices__Successfully loaded ${docs.length} past due invoices.`,
+        `server.tasks.dailyunpaidinvoicesnotice__Successfully loaded ${docs.length} past due invoices.`,
         {
           metadata: {
             result: docs
@@ -93,7 +93,7 @@ var dailyReport = scheduleJob(rule, function () {
         })
           .then((result) => {
             logger.info(
-              `server.tasks.dailyunpaidinvoices__Successfully incremented autoReminderCount:[${result.autoReminderCount}] on invoice:[${docs[i]._id}].`,
+              `server.tasks.dailyunpaidinvoicesnotice__Successfully incremented autoReminderCount:[${result.autoReminderCount}] on invoice:[${docs[i]._id}].`,
               {
                 metadata: {
                   result: result
@@ -117,7 +117,7 @@ var dailyReport = scheduleJob(rule, function () {
                 const subject = `${noticeCount}. výzva k úhradě faktury po splatnosti`
                 const mailPreview = `Částka k úhradě ${docs[i].totalCost} Kč.`
 
-                sendMail(docs[i].buyer[0].email, 'unpaidInvoiceNotice', {
+                sendMail(docs[i].buyer[0].email, 'dailyUnpaidInvoiceNotice', {
                   subject,
                   mailPreview,
                   invoiceId: docs[i]._id,
@@ -135,7 +135,7 @@ var dailyReport = scheduleJob(rule, function () {
           })
           .catch((err) => {
             logger.error(
-              `server.tasks.dailyunpaidinvoices__Failed to increment autoReminderCount:[${result.autoReminderCount}] on invoice:[${docs[i]._id}].`,
+              `server.tasks.dailyunpaidinvoicesnotice__Failed to increment autoReminderCount:[${result.autoReminderCount}] on invoice:[${docs[i]._id}].`,
               {
                 metadata: {
                   error: err.message
@@ -147,7 +147,7 @@ var dailyReport = scheduleJob(rule, function () {
     })
     .catch((err) => {
       logger.error(
-        `server.tasks.dailyunpaidinvoices__Failed to load past due invoices.`,
+        `server.tasks.dailyunpaidinvoicesnotice__Failed to load past due invoices.`,
         {
           metadata: {
             error: err.message
@@ -157,4 +157,4 @@ var dailyReport = scheduleJob(rule, function () {
     })
 })
 
-export default dailyReport
+export default scheduledTask

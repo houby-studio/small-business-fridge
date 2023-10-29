@@ -31,6 +31,7 @@ logger.info('server.app.startup__Importing scheduled tasks.')
 import './tasks/daily-purchase-report.js'
 import './tasks/daily-backup.js'
 import './tasks/daily-unpaid-invoices-notice.js'
+import './tasks/daily-paid-invoices-needs-approval.js'
 
 // Load routes from routes folder to later app.use them.
 // Access for all

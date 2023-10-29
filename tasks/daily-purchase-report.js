@@ -25,7 +25,7 @@ rule.dayOfWeek = new Range(
 rule.hour = process.env.TASKS_DAILY_REPORT_SEND_HOUR || 16
 rule.minute = process.env.TASKS_DAILY_REPORT_SEND_MINUTE || 30
 
-var dailyReport = scheduleJob(rule, function () {
+var scheduledTask = scheduleJob(rule, function () {
   // This schedule can be disabled in the ENV
   if (!process.env.TASKS_DAILY_REPORT_ENABLED) {
     return
@@ -96,4 +96,4 @@ var dailyReport = scheduleJob(rule, function () {
     })
 })
 
-export default dailyReport
+export default scheduledTask

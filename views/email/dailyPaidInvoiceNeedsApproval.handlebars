@@ -1,0 +1,174 @@
+{{> title title="Upomínka neuhrazené faktury" }}
+{{! Single column template }}
+<table width='640' cellpadding='0' cellspacing='0' border='0' class='wrapper' bgcolor='#f6f6f6'>
+
+  {{! Spacer }}
+  <tr>
+    <td height='10' style='font-size:10px; line-height:10px;'>&nbsp;</td>
+  </tr>
+
+  <tr>
+    <td align='center' valign='top'>
+
+      <table width='600' cellpadding='0' cellspacing='0' border='0' class='container'>
+
+        {{! 1st row - text }}
+        <tr>
+          {{! Middle column }}
+          <td align='center' valign='top'>
+            {{! Single column template }}
+            <table width='640' cellpadding='0' cellspacing='0' border='0' class='wrapper' bgcolor='#f6f6f6'>
+
+              {{! Spacer }}
+              <tr>
+                <td height='10' style='font-size:10px; line-height:10px;'>&nbsp;</td>
+              </tr>
+
+              <tr>
+                <td align='center' valign='top'>
+
+                  <table width='600' cellpadding='0' cellspacing='0' border='0' class='container'>
+                    <tr>
+
+                      {{! Middle column }}
+                      <td align='left' valign='top'>
+                        <p>Vážený dodavateli,</p>
+                        <p>zákazník
+                          <b>{{customerDisplayName}}</b>
+                           označil fakturu v částce
+                          <b>{{invoiceTotalCost}} Kč</b>
+                          ze dne
+                          <b>{{invoiceDate}}</b> za uhrazenou a ta nyní čeká na potvrzení platby z Vaší strany, aby byla faktura považována za vyřízenou.
+                        </p>
+                        <p>Prosíme Vás o kontrolu Vašeho bankovního účtu a v případě, že jste požadovanou částku obdrželi, potvrďte platbu v systému.</p>
+                        <p>Děkujeme za spolupráci.</p>
+                      </td>
+
+                    </tr>
+                  </table>
+
+                </td>
+              </tr>
+
+              {{! Spacer }}
+              <tr>
+                <td height='10' style='font-size:10px; line-height:10px;'>&nbsp;</td>
+              </tr>
+
+            </table>
+          </td>
+
+        </tr>
+
+        {{! 2nd row - info and QR code }}
+        <tr>
+          {{! Middle column }}
+          <td align='center' valign='top'>
+            {{! Two columns template }}
+            <table width='640' cellpadding='0' cellspacing='0' border='0' class='wrapper' bgcolor='#f6f6f6'>
+
+              {{! Spacer }}
+              <tr>
+                <td height='10' style='font-size:10px; line-height:10px;'>&nbsp;</td>
+              </tr>
+
+              <tr>
+                <td align='center' valign='top'>
+
+                  <table width='300' cellpadding='0' cellspacing='0' border='0' class='container'>
+                    <tr>
+
+                      {{! Middle column }}
+                      <td align='left' valign='top'>
+                        <table width='100%' cellpadding='0' cellspacing='0' border='1' bgcolor='#fff'>
+                          <tr>
+                            <td align='center' valign='top' colspan='2'>
+                              <h3>Detail faktury</h3>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td align='left' valign='top'>
+                              <b>Datum</b>
+                            </td>
+                            <td align='left' valign='top'>
+                              {{invoiceDate}}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td align='left' valign='top'>
+                              <b>Částka</b>
+                            </td>
+                            <td align='left' valign='top'>
+                              {{invoiceTotalCost}}
+                              Kč
+                            </td>
+                          </tr>
+                          <tr>
+                            <td align='left' valign='top'>
+                              <b>Zákazník</b>
+                            </td>
+                            <td align='left' valign='top'>
+                              {{customerDisplayName}}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td align='left' valign='top'>
+                              <b>Dodavatel</b>
+                            </td>
+                            <td align='left' valign='top'>
+                              {{supplierDisplayName}}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td align='left' valign='top'>
+                              <b>Účet</b>
+                            </td>
+                            <td align='left' valign='top'>
+                              {{supplierIBAN}}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td align='left' valign='top'>
+                              <b>Číslo</b>
+                            </td>
+                            <td align='left' valign='top'>
+                              {{invoiceId}}
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+
+                    </tr>
+                  </table>
+
+                </td>
+              </tr>
+
+              {{! Spacer }}
+              <tr>
+                <td height='10' style='font-size:10px; line-height:10px;'>&nbsp;</td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+
+        {{! 3rd row - button }}
+        <tr>
+          {{! Middle column }}
+          <td align='center' valign='top'>
+            {{!-- Button table partial --}}
+            {{> centerButton label="Potvrdit platbu" baseUrl=baseUrl path="/payments" query="?confirmPaid=" paramValue=invoiceId }}
+          </td>
+        </tr>
+      </table>
+
+    </td>
+  </tr>
+
+  {{! Spacer }}
+  <tr>
+    <td height='10' style='font-size:10px; line-height:10px;'>&nbsp;</td>
+  </tr>
+
+</table>
