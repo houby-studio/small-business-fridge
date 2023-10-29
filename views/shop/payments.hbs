@@ -34,7 +34,7 @@
             <td>
               <form class="needs-validation h-100" method="POST" action="/payments" novalidate>
                 {{#if this.paid}}
-                <input type="submit" class="btn btn-danger float-right w-100" value="Storno">
+                <input type="submit" class="btn btn-danger float-right w-100" value="Odvolat">
                 <input type="hidden" name="action" value="storno">
                 {{else}}
                 <input type="submit" class="btn btn-success float-right w-100" value="Zaplaceno">

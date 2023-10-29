@@ -97,7 +97,7 @@ router.get('/', ensureAuthenticated, function (req, res, _next) {
           } else if (element.requestPaid) {
             element.status = 'Kontrola platby'
           } else {
-            element.status = 'Neuhrazeno'
+            element.status = 'Nezaplaceno'
           }
         })
       }
@@ -225,33 +225,24 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
               }
             }
           )
-          // const subject = `${noticeCount}. výzva k úhradě faktury po splatnosti`
-          // const mailPreview = `Částka k úhradě ${docs[i].totalCost} Kč.`
+          const friendlyInvoiceDate = moment(docs.invoiceDate).format('LLLL')
+          const subject = `Platba potvrzena dodavatelem - ${req.user.displayName} - ${docs.totalCost} Kč`
+          const mailPreview = `Faktura ze dne ${friendlyInvoiceDate} za ${docs.totalCost} Kč byla dodavatelem označena za zaplacenou.`
 
-          // sendMail(docs[i].buyer[0].email, 'unpaidInvoiceNotice', {
-          //   subject,
-          //   mailPreview,
-          //   invoiceId: docs[i]._id,
-          //   invoiceDate: moment(docs[i].invoiceDate).format('LLLL'),
-          //   invoiceTotalCost: docs[i].totalCost,
-          //   noticeCount: noticeCount,
-          //   supplierDisplayName: docs[i].supplier[0].displayName,
-          //   supplierIBAN: docs[i].supplier[0].IBAN,
-          //   qrImageData,
-          //   qrText
-          // })
-
-          const subject = 'Vaše platba byla potvrzena!'
-          const body = `<h1>Obchod byl dokončen!</h1><p>Váš dodavatel ${
-            req.user.displayName
-          } potvrdil, že jste fakturu uhradil!</p><p>Podrobnosti k faktuře:<br>Datum fakturace: ${moment(
-            docs.invoiceDate
-          ).format('LLLL')}<br>Celková částka k úhradě: ${docs.totalCost}Kč</p>`
-          sendMail(docs.buyerId.email, subject, body)
+          sendMail(docs.buyerId.email, 'paymentsStatusChange', {
+            subject,
+            mailPreview,
+            invoiceId: docs._id,
+            invoiceDate: friendlyInvoiceDate,
+            invoiceTotalCost: docs.totalCost,
+            supplierDisplayName: req.user.displayName,
+            customerDisplayName: docs.buyerId.displayName,
+            paid: true
+          })
 
           const alert = {
             type: 'success',
-            message: 'Faktura byla označena jako uhrazená.',
+            message: 'Faktura byla označena jako zaplacená.',
             success: 1
           }
           req.session.alert = alert
@@ -297,19 +288,27 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
               }
             }
           )
-          const subject = 'Vaše platba byla stornována!'
-          const body = `<h1>Jak je toto možné?</h1><p>Váš dodavatel ${
-            req.user.displayName
-          } označil Vaši fakturu s datem vytvoření ${moment(
-            docs.invoiceDate
-          ).format('LLLL')} a celkovou částkou k úhradě ${
-            docs.totalCost
-          }Kč za nezaplacenou. Vyřiďte si s ním kde nastala chyba.</p>`
-          sendMail(docs.buyerId.email, subject, body)
+
+          const friendlyInvoiceDate = moment(docs.invoiceDate).format('LLLL')
+          const subject = `Platba odvolána dodavatelem - ${req.user.displayName} - ${docs.totalCost} Kč`
+          const mailPreview = `Faktura ze dne ${friendlyInvoiceDate} za ${docs.totalCost} Kč byla dodavatelem označena za nezaplacenou.`
+
+          sendMail(docs.buyerId.email, 'paymentsStatusChange', {
+            subject,
+            mailPreview,
+            invoiceId: docs._id,
+            invoiceDate: friendlyInvoiceDate,
+            invoiceTotalCost: docs.totalCost,
+            invoiceRequestPaid: docs.requestPaid,
+            supplierDisplayName: req.user.displayName,
+            customerDisplayName: docs.buyerId.displayName,
+            paid: false
+          })
+
           const alert = {
             type: 'success',
             message:
-              'Platba byla stornována a faktura byla označena jako neuhrazená.',
+              'Platba byla stornována a faktura byla označena jako nezaplacená.',
             success: 1
           }
           req.session.alert = alert

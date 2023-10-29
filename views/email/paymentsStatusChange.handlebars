@@ -34,17 +34,21 @@
                       {{! Middle column }}
                       {{#if paid}}
                         <td align='left' valign='top'>
-                          <p>Vážený dodavateli,</p>
-                          <p>zákazník <b>{{customerDisplayName}}</b> označil Vámi vystavenou fakturu ze dne <b>{{invoiceDate}}</b> za uhrazenou v plné výši <b>{{invoiceTotalCost}} Kč</b>.</p>
-                          <p>Pokud nedošlo k platbě v hotovosti, zkontrolujte prosím stav Vašeho bankovního účtu a po obdržení potvrďte platbu i ze své strany.</p>
-                          <p>Děkujeme za Vaši ochotu dodávat produkty a přejeme Vám mnoho úspěchů.</p>
+                          <p>Vážený zákazníku,</p>
+                          <p>dodavatel <b>{{supplierDisplayName}}</b> označil fakturu ze dne <b>{{invoiceDate}}</b> za uhrazenou a tím potvrdil Vaši platbu ve výši <b>{{invoiceTotalCost}} Kč</b>.</p>
+                          <p>Děkujeme za Vaši spolupráci.</p>
                         </td>
                       {{else}}
                         <td align='left' valign='top'>
-                          <p>Vážený dodavateli,</p>
-                          <p>zákazník <b>{{customerDisplayName}}</b> odvolal své potvrzení o platbě u Vámi vystavené faktury ze dne <b>{{invoiceDate}}</b>, která je nepotvrzená i z Vaší strany a tím ji uvedl opět do úvodního neuhrazeného stavu.</p>
-                          <p>Zkontrolujte prosím, zda jste od zákazníka skutečně částku <b>{{invoiceTotalCost}} Kč</b> neobdržel a dohodnodněte si se zákazníkem potřebné kroky pro napravení vzniklé situace.</p>
-                          <p>Děkujeme za Vaši ochotu dodávat produkty a přejeme méně takových problémů.</p>
+                          <p>Vážený zákazníku,</p>
+                          <p>dodavatel <b>{{supplierDisplayName}}</b> odvolal své potvrzení o platbě faktury ze dne <b>{{invoiceDate}}</b>. To znamená, že stále čeká na obdržení platby z Vaší strany.</p>
+                          {{#if invoiceRequestPaid}}
+                            <p>Jelikož je tato faktura z Vaší strany označená za zaplacenou, zkontrolujte prosím, zda se Vaše platba ve výši <b>{{invoiceTotalCost}} Kč</b> z nějakého důvodu nezpozdila a okamžitě zjednejte nápravu.</p>
+                          {{else}}
+                            <p>Jelikož je tato faktura z Vaší strany označená za nezaplacenou, možná se jedná o nápravu chybného označení faktury na straně dodavatele. Prosíme Vás o zaplacení faktury ve výši <b>{{invoiceTotalCost}} Kč</b> a následné potvrzení v
+                          našem systému.</p>
+                          {{/if}}
+                          <p>Předem děkujeme za uhrazení dlužné částky.</p>
                         </td>
                       {{/if}}
 
@@ -156,9 +160,13 @@
           <td align='center' valign='top'>
             {{!-- Button table partial --}}
             {{#if paid}}
-              {{> centerButton label="Potvrdit platbu" baseUrl=baseUrl path="/payments" query="?confirmPaid=" paramValue=invoiceId }}
+              {{> centerButton label="Faktury" baseUrl=baseUrl path="/invoices" }}
             {{else}}
-              {{> centerButton label="Platby" baseUrl=baseUrl path="/payments" }}
+              {{#if invoiceRequestPaid}}
+                {{> centerButton label="Faktury" baseUrl=baseUrl path="/invoices" }}
+              {{else}}
+                {{> centerButton label="Potvrdit platbu" baseUrl=baseUrl path="/invoices" query="?confirmPaid=" paramValue=invoiceId }}
+              {{/if}}
             {{/if}}
           </td>
         </tr>

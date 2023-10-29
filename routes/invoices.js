@@ -64,11 +64,11 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
           )
           element.invoiceDate = moment(element.invoiceDate).format()
           if (element.paid) {
-            element.status = 'Uhrazeno'
+            element.status = 'Zaplaceno'
           } else if (element.requestPaid) {
-            element.status = 'Čeká na potvrzení'
+            element.status = 'Kontrola platby'
           } else {
-            element.status = 'Neuhrazeno'
+            element.status = 'Nezaplaceno'
           }
         })
       }
@@ -173,7 +173,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           )
 
           const friendlyInvoiceDate = moment(docs.invoiceDate).format('LLLL')
-          const subject = `Faktura byla označena za zaplacenou - ${req.user.displayName} - ${docs.totalCost}`
+          const subject = `Faktura byla označena za zaplacenou - ${req.user.displayName} - ${docs.totalCost} Kč`
           const mailPreview = `Faktura ze dne ${friendlyInvoiceDate} za ${docs.totalCost} Kč čeká na potvrzení z Vaší strany.`
 
           sendMail(docs.supplierId.email, 'invoicesStatusChange', {
@@ -182,6 +182,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
             invoiceId: docs._id,
             invoiceDate: friendlyInvoiceDate,
             invoiceTotalCost: docs.totalCost,
+            supplierDisplayName: docs.supplierId.displayName,
             customerDisplayName: req.user.displayName,
             paid: true
           })
@@ -237,7 +238,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           )
 
           const friendlyInvoiceDate = moment(docs.invoiceDate).format('LLLL')
-          const subject = `Faktura byla označena za nezaplacenou - ${req.user.displayName} - ${docs.totalCost}`
+          const subject = `Faktura byla označena za nezaplacenou - ${req.user.displayName} - ${docs.totalCost} Kč`
           const mailPreview = `Faktura ze dne ${friendlyInvoiceDate} za ${docs.totalCost} Kč byla zákazníkem označena za nezaplacenou.`
 
           sendMail(docs.supplierId.email, 'invoicesStatusChange', {
@@ -246,6 +247,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
             invoiceId: docs._id,
             invoiceDate: friendlyInvoiceDate,
             invoiceTotalCost: docs.totalCost,
+            supplierDisplayName: docs.supplierId.displayName,
             customerDisplayName: req.user.displayName,
             paid: false
           })

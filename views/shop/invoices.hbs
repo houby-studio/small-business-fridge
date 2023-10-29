@@ -33,12 +33,12 @@
             <td>
               {{#if this.paid}}
               <span data-bs-toggle="tooltip" data-bs-title="Faktura již byla označena dodavatelem jako uhrazená.">
-                <input type="submit" class="btn btn-secondary float-right w-100" value="Uhrazeno" disabled>
+                <input type="submit" class="btn btn-secondary float-right w-100" value="Zaplaceno" disabled>
               </span>
               {{else}}
               <form class="needs-validation h-100" method="POST" action="/invoices" novalidate>
                 {{#if this.requestPaid}}
-                <input type="submit" class="btn btn-danger float-right w-100" value="Storno">
+                <input type="submit" class="btn btn-danger float-right w-100" value="Odvolat">
                 <input type="hidden" name="action" value="storno">
                 {{else}}
                 <input type="submit" class="btn btn-success float-right w-100" value="Zaplaceno">
