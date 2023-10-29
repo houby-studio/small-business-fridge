@@ -126,6 +126,7 @@ var dailyReport = scheduleJob(rule, function () {
                   noticeCount: noticeCount,
                   supplierDisplayName: docs[i].supplier[0].displayName,
                   supplierIBAN: docs[i].supplier[0].IBAN,
+                  customerDisplayName: docs[i].buyer[0].displayName,
                   qrImageData,
                   qrText
                 })
