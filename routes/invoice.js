@@ -186,12 +186,12 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
       }
     }
   ])
-    .then((docs) => {
+    .then((groupByProduct) => {
       logger.debug(
-        `server.routes.invoice.get__Successfully loaded ${docs[0]?.stock.length} product metrics.`,
+        `server.routes.invoice.get__Successfully loaded ${groupByProduct[0]?.stock.length} product metrics.`,
         {
           metadata: {
-            result: docs
+            result: groupByProduct
           }
         }
       )
@@ -280,28 +280,28 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
           }
         }
       ])
-        .then((udocs) => {
+        .then((groupByUser) => {
           logger.debug(
-            `server.routes.invoice.get__Successfully loaded ${udocs.length} user metrics.`,
+            `server.routes.invoice.get__Successfully loaded ${groupByUser.length} user metrics.`,
             {
               metadata: {
-                result: udocs
+                result: groupByUser
               }
             }
           )
           var graphColors
-          if (docs[0]) {
-            if (docs[0].stock.length > 64) {
+          if (groupByProduct[0]) {
+            if (groupByProduct[0].stock.length > 64) {
               logger.debug(
                 'server.routes.invoice.get__There is more than 65 products, loading full palette.'
               )
               graphColors = palette('mpn65', 65)
             } else {
-              graphColors = palette('mpn65', docs[0].stock.length)
+              graphColors = palette('mpn65', groupByProduct[0].stock.length)
             }
             let colorCount = 0
-            for (var i = 0; i < docs[0].stock.length; i++) {
-              docs[0].stock[i].color = graphColors[colorCount]
+            for (var i = 0; i < groupByProduct[0].stock.length; i++) {
+              groupByProduct[0].stock[i].color = graphColors[colorCount]
               colorCount++
               if (colorCount >= graphColors.length) {
                 logger.debug(
@@ -311,18 +311,18 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
               }
             }
           }
-          if (udocs[0]) {
-            if (udocs.length > 64) {
+          if (groupByUser[0]) {
+            if (groupByUser.length > 64) {
               logger.debug(
                 'server.routes.invoice.get__There is more than 65 users, loading full palette.'
               )
               graphColors = palette('mpn65', 65)
             } else {
-              graphColors = palette('mpn65', udocs.length)
+              graphColors = palette('mpn65', groupByUser.length)
             }
             let colorCount = 0
-            for (var y = 0; y < udocs.length; y++) {
-              udocs[y].color = graphColors[colorCount]
+            for (var y = 0; y < groupByUser.length; y++) {
+              groupByUser[y].color = graphColors[colorCount]
               colorCount++
               if (colorCount >= graphColors.length) {
                 logger.debug(
@@ -330,7 +330,7 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
                 )
                 colorCount = 0
               }
-              udocs[y].orders.forEach(function (element) {
+              groupByUser[y].orders.forEach(function (element) {
                 element.order_date_format = moment(element.order_date).format(
                   'LLLL'
                 )
@@ -346,8 +346,8 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
           res.render('shop/invoice', {
             title: 'Fakturace | Lednice IT',
             user: req.user,
-            productview: docs[0],
-            userview: udocs,
+            productview: groupByProduct[0],
+            userview: groupByUser,
             supplier: filter,
             alert: alert
           })
@@ -534,127 +534,130 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
       }
     }
   ])
-    .then((docs) => {
+    .then((groupByUser) => {
       logger.debug(
         'server.routes.invoice.post__Successfully loaded orders grouped by users to invoice.',
         {
           metadata: {
-            result: docs
+            result: groupByUser
           }
         }
       )
+
       // Loop through array for each user
-      for (let i = 0; i < docs.length; i++) {
+      for (let i = 0; i < groupByUser.length; i++) {
         // Create new invoice to be sent to user
         logger.debug(
-          `server.routes.invoice.post__Creating invoice for user ${docs[i].user._id} for amount ${docs[i].total_user_sum_orders_notinvoiced}.`,
+          `server.routes.invoice.post__Creating invoice for user ${groupByUser[i].user._id} for amount ${groupByUser[i].total_user_sum_orders_notinvoiced}.`,
           {
             metadata: {
-              result: docs[i]
+              result: groupByUser[i]
             }
           }
         )
-        var newInvoice = new Invoice({
-          buyerId: docs[i].user._id,
-          supplierId: req.user.id,
-          totalCost: docs[i].total_user_sum_orders_notinvoiced
-        })
-        var bulk = Order.collection.initializeUnorderedBulkOp()
-        // Loop through array for each order for that user
-        for (let p = 0; p < docs[i].orders.length; p++) {
-          logger.debug(
-            `server.routes.invoice.post__Pushing order ${docs[i].orders[p]._id} to invoice array.`,
-            {
-              metadata: {
-                result: docs[i].orders[p]._id
-              }
-            }
-          )
-          newInvoice.ordersId.push(docs[i].orders[p]._id)
-          bulk
-            .find({
-              _id: docs[i].orders[p]._id
-            })
-            .updateOne({
-              $set: {
+        // var newInvoice = new Invoice // Former placement of new invoice - cannot be here when saved inside bulkWrite
+
+        // Create command to update property 'invoice' on all orders pushed to new invoice
+        const writeOperations = [
+          {
+            updateMany: {
+              filter: {
+                _id: { $in: groupByUser[i].orders.map((order) => order._id) }
+              },
+              update: {
                 invoice: true
               }
+            }
+          }
+        ]
+
+        // Write all changes at once, then save new invoice and send e-mail
+        Order.bulkWrite(writeOperations)
+          .then((bulkResult) => {
+            // bulkWrite uses some dark magic which causes same Invoice to be created twice if defined outside its scope
+
+            const selfInvoice = req.user._id.equals(groupByUser[i].user._id)
+
+            new Invoice({
+              buyerId: groupByUser[i].user._id,
+              supplierId: req.user._id,
+              totalCost: groupByUser[i].total_user_sum_orders_notinvoiced,
+              ordersId: groupByUser[i].orders.map((order) => order._id),
+              paid: selfInvoice,
+              requestPaid: selfInvoice
             })
-        }
-        newInvoice
-          .save()
-          .then((result) => {
-            logger.debug(
-              `server.routes.invoice.post__Successfully saved invoice ${res._id} to database.`,
-              {
-                metadata: {
-                  result: result
-                }
-              }
-            )
-          })
-          .catch((err) => {
-            logger.error(
-              `server.routes.invoice.post__Failed to save invoice to database.`,
-              {
-                metadata: {
-                  error: err.message
-                }
-              }
-            )
-          })
-        bulk
-          .execute()
-          .then((result) => {
-            generateQR(
-              req.user.IBAN,
-              docs[i].total_user_sum_orders_notinvoiced,
-              docs[i].user.displayName,
-              req.user.displayName,
-              function (qrImageData, qrText) {
+              .save()
+              .then((invoice) => {
                 logger.debug(
-                  `server.routes.invoice.post__QR code generated, sending invioce e-mail to customer.`,
+                  `server.routes.invoice.post__Successfully saved invoice ${invoice._id} to database.`,
                   {
                     metadata: {
-                      result: result
+                      result: invoice
                     }
                   }
                 )
-                // var subject = 'Fakturace!'
-                // var body = `<h1>Přišel čas zúčtování!</h1><p>Váš nejoblíbenější dodavatel ${
-                //   req.user.displayName
-                // } Vám zaslal fakturu.</p><h2>Fakturační údaje</h2><p>Částka k úhradě: ${
-                //   docs[i].total_user_sum_orders_notinvoiced
-                // }Kč<br>Počet zakoupených produktů: ${
-                //   docs[i].total_user_num_orders_notinvoiced
-                // }ks<br>Datum fakturace: ${moment().format(
-                //   'LLLL'
-                // )}<br><a href="${
-                //   req.headers.origin
-                // }/invoices">Více na webu Lednice IT</a></p><p>Platbu je možné provést hotově nebo převodem.<br>Po platbě si zkontrolujte, zda dodavatel označil Vaši platbu jako zaplacenou.</p>`
-                // if (req.user.IBAN) {
-                //   body += `<h2>QR platba</h2><img width="480" height="480" style="width: 20rem; height: 20rem;" alt="${qrText}" src="${qrImageData}"/><p>IBAN: ${req.user.IBAN}</p><p>Předem díky za včasnou platbu!</p>`
-                // }
+                generateQR(
+                  req.user.IBAN,
+                  groupByUser[i].total_user_sum_orders_notinvoiced,
+                  groupByUser[i].user.displayName,
+                  req.user.displayName,
+                  function (qrImageData, qrText) {
+                    logger.debug(
+                      `server.routes.invoice.post__QR code generated, sending invioce e-mail to customer.`,
+                      {
+                        metadata: {
+                          result: bulkResult
+                        }
+                      }
+                    )
+                    const friendlyInvoiceDate = moment(
+                      invoice.invoiceDate
+                    ).format('LLLL')
+                    const subject = `Hromadná fakturace - ${req.user.displayName} - ${invoice.totalCost} Kč`
+                    const mailPreview = `Detaily faktury - Datum: ${friendlyInvoiceDate} - Počet produktů: ${invoice.ordersId.length} Celková částka: ${invoice.totalCost} Kč.`
 
-                // const friendlyInvoiceDate = moment(docs.invoiceDate).format(
-                //   'LLLL'
-                // )
-                const subject = `Fakturace`
-                // const mailPreview = `Faktura ze dne ${friendlyInvoiceDate} za ${totalCost} Kč čeká na potvrzení z Vaší strany.`
-
-                sendMail(docs[i].user.email, 'layout', {
-                  subject,
-                  invoiceId: 'nemaju,refactor',
-                  invoiceDate: moment().format('LLLL'),
-                  invoiceTotalCost: docs[i].total_user_sum_orders_notinvoiced,
-                  invoiceTOtalCount: docs[i].total_user_num_orders_notinvoiced,
-                  supplierDisplayName: req.user.displayName,
-                  supplierIBAN: req.user.IBAN,
-                  qrImageData,
-                  qrText
-                })
-              }
-            )
+                    sendMail(groupByUser[i].user.email, 'newInvoiceNotice', {
+                      subject,
+                      mailPreview,
+                      invoiceId: invoice._id,
+                      invoiceDate: friendlyInvoiceDate,
+                      invoiceTotalCost: invoice.totalCost,
+                      invoiceTotalCount: invoice.ordersId.length,
+                      supplierDisplayName: req.user.displayName,
+                      customerDisplayName: groupByUser[i].user.displayName,
+                      supplierIBAN: req.user.IBAN,
+                      qrImageData,
+                      qrText,
+                      selfInvoiced: selfInvoice,
+                      invoiceDueDays: () => {
+                        const dueDays =
+                          process.env.TASKS_DAILY_INCOMPLETE_INVOICE_NET_DAYS ||
+                          14
+                        switch (true) {
+                          case dueDays === 0:
+                            return 'Okamžitá'
+                          case dueDays === 1:
+                            return `${dueDays} den`
+                          case dueDays < 5:
+                            return `${dueDays} dny`
+                          default:
+                            return `${dueDays} dní`
+                        }
+                      }
+                    })
+                  }
+                )
+              })
+              .catch((err) => {
+                logger.error(
+                  `server.routes.invoice.post__Failed to save invoice to database.`,
+                  {
+                    metadata: {
+                      error: err.message
+                    }
+                  }
+                )
+              })
           })
           .catch((err) => {
             logger.error(
