@@ -186,17 +186,24 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
         `server.routes.payments.post__User:[${req.user.id}] tried to manipulate invoice:[${req.body.invoice_id}], which was not created by this user.`,
         {
           metadata: {
-            error: err.message
+            user: req.user.id,
+            result: check
           }
         }
       )
-      var subject = 'Neoprávněná akce?!'
-      var body = `<h1>Jak se toto podařilo?!</h1><p>Dodavatel ${req.body.displayName} se pokouší manipulovat s fakturou ID ${check._id}, přestože ji nevytvořil.</p>Jeho akce byla revertována. Prověřte celou situaci!</p>`
-      sendMail('system@system', subject, body)
+
+      const subject =
+        '[SECURITY INCIDENT] Pokus o změnu stavu faktury jiného dodavatele!'
+      const message = `Dodavatel ID [${req.user._id}], zobrazované jméno [${req.user.displayName}] se pokusil změnit stav faktury ID [${check._id}], přestože ji nevytvořil. Systém tento pokus zablokobal. Zjistěte důvod této operace a proveďte nezbytné kroky vůči dané osobě, aby se to již neopakovalo.`
+      sendMail('system@system', 'systemMessage', {
+        subject,
+        message,
+        messageTime: moment().toISOString()
+      })
+
       const alert = {
         type: 'danger',
-        message:
-          'Nemáte oprávnění měnit status faktury, kterou jste nevytvořil!',
+        message: 'Nemáte oprávnění měnit stav faktury, kterou jste nevytvořil!',
         danger: 1
       }
       req.session.alert = alert

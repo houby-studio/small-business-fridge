@@ -247,9 +247,16 @@ router.post('/', ensureAuthenticated, checkKiosk, function (req, res) {
               }
               req.session.alert = alert
               res.redirect('/shop')
-              const subject = 'Nepodařilo se zapsat změny do databáze!'
-              const body = `<h1>Chyba při zapisování do databáze při nákupu!</h1><p>Pokus o vytvoření záznamu nákupu skončil chybou. Zkontrolujte konzistenci databáze!</p><p>Chyba: ${err.message}</p>`
-              sendMail('system@system', subject, body)
+
+              const subject = '[SYSTEM ERROR] Chyba při zápisu do databáze!'
+              const message = `Potenciálně se nepodařilo zapsat novou objednávku do databáze, ale již došlo k ponížení skladové zásoby v dodávce ID [${delivery._id}]. Zákazník ID [${req.user._id}], zobrazované jméno [${req.user.displayName}] se pokusil koupit produkt ID [${delivery.productId}], zobrazované jméno [${req.body.display_name}] za [${delivery.price}] Kč. Zkontrolujte konzistenci databáze.`
+              sendMail('system@system', 'systemMessage', {
+                subject,
+                message,
+                messageTime: moment().toISOString(),
+                errorMessage: err.message
+              })
+
               return
             })
         })
@@ -270,9 +277,16 @@ router.post('/', ensureAuthenticated, checkKiosk, function (req, res) {
           }
           req.session.alert = alert
           res.redirect('/shop')
-          const subject = 'Nepodařilo se zapsat změny do databáze!'
-          const body = `<h1>Chyba při zapisování do databáze při nákupu!</h1><p>Pokus o snížení skladové zásoby skončil chybou. Zkontrolujte konzistenci databáze!</p><p>Chyba: ${err.message}</p>`
-          sendMail('system@system', subject, body)
+
+          const subject = '[SYSTEM ERROR] Chyba při zápisu do databáze!'
+          const message = `Potenciálně se nepodařilo snížit skladovou zásobu v dodávce ID [${delivery._id}] a následně vystavit objednávku. Zákazník ID [${req.user._id}], zobrazované jméno [${req.user.displayName}] se pokusil koupit produkt ID [${delivery.productId}], zobrazované jméno [${req.body.display_name}] za [${delivery.price}] Kč. Zkontrolujte konzistenci databáze.`
+          sendMail('system@system', 'systemMessage', {
+            subject,
+            message,
+            messageTime: moment().toISOString(),
+            errorMessage: err.message
+          })
+
           return
         })
     })

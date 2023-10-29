@@ -154,21 +154,43 @@ router.post('/', ensureAuthenticatedAPI, function (req, res, _next) {
                   res.json(responseJson)
                 })
                 .catch((err) => {
-                  const subject = 'Nepodařilo se zapsat změny do databáze!'
-                  const body = `<h1>Chyba při zapisování do databáze při nákupu!</h1><p>Pokus o vytvoření záznamu nákupu skončil chybou. Zkontrolujte konzistenci databáze!</p><p>Chyba: ${err.message}</p>`
-                  sendMail('system@system', subject, body)
+                  res.status(err.status || 500)
+                  res.set('Content-Type', 'application/json')
+                  res.json('SYSTEM_ERROR')
+
+                  const subject = '[SYSTEM ERROR] Chyba při zápisu do databáze!'
+                  const message = `Potenciálně se nepodařilo zapsat novou objednávku do databáze, ale již došlo k ponížení skladové zásoby v dodávce ID [${delivery._id}]. Zákazník ID [${user._id}], zobrazované jméno [${user.displayName}] se pokusil koupit produkt ID [${product[0]._id}], zobrazované jméno [${product[0].displayName}] za [${delivery.price}] Kč. Zkontrolujte konzistenci databáze.`
+                  sendMail('system@system', 'systemMessage', {
+                    subject,
+                    message,
+                    messageTime: moment().toISOString(),
+                    errorMessage: err.message
+                  })
+
                   return
                 })
             })
             .catch((err) => {
               res.status(err.status || 500)
-              res.render('error')
+              res.set('Content-Type', 'application/json')
+              res.json('SYSTEM_ERROR')
+
+              const subject = '[SYSTEM ERROR] Chyba při zápisu do databáze!'
+              const message = `Potenciálně se nepodařilo snížit skladovou zásobu v dodávce ID [${newOrder.deliveryId}] a následně vystavit objednávku. Zákazník ID [${user._id}], zobrazované jméno [${user.displayName}] se pokusil koupit produkt ID [${product[0]._id}], zobrazované jméno [${product[0].displayName}]. Zkontrolujte konzistenci databáze.`
+              sendMail('system@system', 'systemMessage', {
+                subject,
+                message,
+                messageTime: moment().toISOString(),
+                errorMessage: err.message
+              })
+
               return
             })
         })
         .catch((err) => {
           res.status(err.status || 500)
-          res.render('error')
+          res.set('Content-Type', 'application/json')
+          res.json('SYSTEM_ERROR')
           return
         })
     })

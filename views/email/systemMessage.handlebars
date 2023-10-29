@@ -1,0 +1,77 @@
+{{> title title="Zpráva pro správce systému" }}
+{{! Single column template }}
+<table width='640' cellpadding='0' cellspacing='0' border='0' class='wrapper' bgcolor='#f6f6f6'>
+
+  {{! Spacer }}
+  <tr>
+    <td height='10' style='font-size:10px; line-height:10px;'>&nbsp;</td>
+  </tr>
+
+  <tr>
+    <td align='center' valign='top'>
+
+      <table width='600' cellpadding='0' cellspacing='0' border='0' class='container'>
+
+        {{! 1st row - text }}
+        <tr>
+          {{! Middle column }}
+          <td align='center' valign='top'>
+            {{! Single column template }}
+            <table width='640' cellpadding='0' cellspacing='0' border='0' class='wrapper' bgcolor='#f6f6f6'>
+
+              {{! Spacer }}
+              <tr>
+                <td height='10' style='font-size:10px; line-height:10px;'>&nbsp;</td>
+              </tr>
+
+              <tr>
+                <td align='center' valign='top'>
+
+                  <table width='600' cellpadding='0' cellspacing='0' border='0' class='container'>
+                    <tr>
+
+                      {{! Middle column }}
+                      <td align='left' valign='top'>
+                        <p>Vážený administrátore,</p>
+                        <p>Došlo k chybě systému či útoku, který potenciálně narušil konzistenci aplikace.</p>
+                        <p><b>Důkladně prověřte tento incident dle návodu v dokumentaci.</b></p>
+                        <p><b>Čas [UTC]</b>: {{messageTime}}</p>
+                        <p><b>Zpráva</b>: {{message}}</p>
+                        {{#if errorMessage}}<p><b>Chyba</b>: {{errorMessage}}</p>{{/if}}
+                      </td>
+
+                    </tr>
+                  </table>
+
+                </td>
+              </tr>
+
+              {{! Spacer }}
+              <tr>
+                <td height='10' style='font-size:10px; line-height:10px;'>&nbsp;</td>
+              </tr>
+
+            </table>
+          </td>
+
+        </tr>
+
+        {{! 2nd row - button }}
+        <tr>
+          {{! Middle column }}
+          <td align='center' valign='top'>
+            {{!-- Button table partial --}}
+            {{> centerButton label="Dokumentace" baseUrl=baseUrl path="/documentation" }}
+          </td>
+        </tr>
+      </table>
+
+    </td>
+  </tr>
+
+  {{! Spacer }}
+  <tr>
+    <td height='10' style='font-size:10px; line-height:10px;'>&nbsp;</td>
+  </tr>
+
+</table>

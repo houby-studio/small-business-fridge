@@ -320,6 +320,7 @@ router.post('/', ensureAuthenticated, function (req, res) {
                     },
                     req.body.image_path
                   )
+
                   res.redirect('/kiosk_keypad')
                 })
                 .catch((err) => {
@@ -339,9 +340,16 @@ router.post('/', ensureAuthenticated, function (req, res) {
                     danger: 1
                   }
                   res.redirect('/kiosk_keypad')
-                  const subject = 'Nepodařilo se zapsat změny do databáze!'
-                  const body = `<h1>Chyba při zapisování do databáze při nákupu!</h1><p>Pokus o vytvoření záznamu nákupu skončil chybou. Zkontrolujte konzistenci databáze!</p><p>Chyba: ${err.message}</p>`
-                  sendMail('system@system', subject, body)
+
+                  const subject = '[SYSTEM ERROR] Chyba při zápisu do databáze!'
+                  const message = `Potenciálně se nepodařilo zapsat novou objednávku do databáze, ale již došlo k ponížení skladové zásoby v dodávce ID [${delivery._id}]. Zákazník ID [${user._id}], zobrazované jméno [${user.displayName}] se pokusil koupit produkt ID [${delivery.productId}], zobrazované jméno [${req.body.display_name}] za [${delivery.price}] Kč. Zkontrolujte konzistenci databáze.`
+                  sendMail('system@system', 'systemMessage', {
+                    subject,
+                    message,
+                    messageTime: moment().toISOString(),
+                    errorMessage: err.message
+                  })
+
                   return
                 })
             })
@@ -361,9 +369,16 @@ router.post('/', ensureAuthenticated, function (req, res) {
                 danger: 1
               }
               res.redirect('/kiosk_keypad')
-              const subject = 'Nepodařilo se zapsat změny do databáze!'
-              const body = `<h1>Chyba při zapisování do databáze při nákupu!</h1><p>Pokus o snížení skladové zásoby skončil chybou. Zkontrolujte konzistenci databáze!</p><p>Chyba: ${err.message}</p>`
-              sendMail('system@system', subject, body)
+
+              const subject = '[SYSTEM ERROR] Chyba při zápisu do databáze!'
+              const message = `Potenciálně se nepodařilo snížit skladovou zásobu v dodávce ID [${delivery._id}] a následně vystavit objednávku. Zákazník ID [${user._id}], zobrazované jméno [${user.displayName}] se pokusil koupit produkt ID [${delivery.productId}], zobrazované jméno [${req.body.display_name}] za [${delivery.price}] Kč. Zkontrolujte konzistenci databáze.`
+              sendMail('system@system', 'systemMessage', {
+                subject,
+                message,
+                messageTime: moment().toISOString(),
+                errorMessage: err.message
+              })
+
               return
             })
         })

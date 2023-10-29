@@ -117,9 +117,15 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           }
         }
       )
-      const subject = 'Neoprávněná akce?!'
-      const body = `<h1>Jak se toto podařilo?!</h1><p>Zákazník ${req.body.displayName} se pokouší manipulovat s fakturou ID ${check._id}, přestože ji nevlastní.</p>Žádná akce nebyla provedena. Prověřte celou situaci!</p>`
-      sendMail('system@system', subject, body)
+      const subject =
+        '[SECURITY INCIDENT] Pokus o změnu stavu faktury jiného zákazníka!'
+      const message = `Zákazník ID [${req.user._id}], zobrazované jméno [${req.user.displayName}] se pokusil změnit stav faktury ID [${check._id}], přestože ji nevlastní. Systém tento pokus zablokobal. Zjistěte důvod této operace a proveďte nezbytné kroky vůči dané osobě, aby se to již neopakovalo.`
+      sendMail('system@system', 'systemMessage', {
+        subject,
+        message,
+        messageTime: moment().toISOString()
+      })
+
       const alert = {
         type: 'danger',
         message: 'Nemáte oprávnění měnit status faktury, která Vám nepatří!',
