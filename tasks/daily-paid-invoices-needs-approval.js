@@ -1,4 +1,4 @@
-import { RecurrenceRule, Range, scheduleJob } from 'node-schedule'
+import { RecurrenceRule, scheduleJob } from 'node-schedule'
 import { sendMail } from '../functions/sendMail.js'
 import moment from 'moment'
 import Invoice from '../models/invoice.js'
