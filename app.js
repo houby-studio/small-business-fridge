@@ -59,7 +59,6 @@ import kioskShopRouter from './routes/kiosk_shop.js'
 // Passport routes
 import loginRouter from './routes/login.js'
 import logoutRouter from './routes/logout.js'
-import authOpenId from './routes/auth_openid.js'
 import authOpenIdReturnGet from './routes/auth_openid_return.js'
 import authOpenIdReturnPost from './routes/auth_openid_return_post.js'
 // API routes
@@ -155,7 +154,6 @@ app.use('/kiosk_shop', kioskShopRouter)
 // Passport routes
 app.use('/login', loginRouter)
 app.use('/logout', logoutRouter)
-app.use('/auth/openid', authOpenId)
 app.use('/auth/openid/return', authOpenIdReturnGet)
 app.use('/auth/openid/return', authOpenIdReturnPost)
 // API routes
