@@ -4,6 +4,7 @@
       <table id="table-invoices" class="table">
         <thead>
           <tr>
+            <th scope="col">Číslo faktury</th>
             <th scope="col">Datum</th>
             <th scope="col">Zákazník</th>
             <th scope="col">Počet kusů</th>
@@ -15,6 +16,9 @@
         <tbody>
           {{# each invoices }}
           <tr {{#if this.paid}} class="subdue-50" {{/if}}>
+            <td>
+              {{ this._id }}
+            </td>
             <td>
               <span class="d-none">{{ this.invoiceDate }}</span>{{ this.invoiceDate_format }}
             </td>
@@ -55,4 +59,4 @@
 
 {{> datatables }}
 
-<script src="/javascripts/payments.js"></script>
+<script src="/javascripts/payments_and_invoices.js"></script>

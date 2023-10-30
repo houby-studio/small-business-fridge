@@ -165,7 +165,7 @@
               {{#if invoiceRequestPaid}}
                 {{> centerButton label="Faktury" baseUrl=baseUrl path="/invoices" }}
               {{else}}
-                {{> centerButton label="Potvrdit platbu" baseUrl=baseUrl path="/invoices" query="?confirmPaid=" paramValue=invoiceId }}
+                {{> centerButton label="Potvrdit platbu" baseUrl=baseUrl path="/invoices" query="?confirmpayment=" paramValue=invoiceId }}
               {{/if}}
             {{/if}}
           </td>

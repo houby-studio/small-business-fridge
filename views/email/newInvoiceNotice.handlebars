@@ -188,7 +188,7 @@
             {{#if selfInvoiced}}
               {{> centerButton label="Platby" baseUrl=baseUrl path="/payments" }}
             {{else}}
-              {{> centerButton label="Potvrdit platbu" baseUrl=baseUrl path="/invoices" query="?requestPaid=" paramValue=invoiceId }}
+              {{> centerButton label="Potvrdit platbu" baseUrl=baseUrl path="/invoices" query="?confirmpayment=" paramValue=invoiceId }}
             {{/if}}
           </td>
         </tr>

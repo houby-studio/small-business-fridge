@@ -6,16 +6,25 @@ const tooltipList = [...tooltipTriggerList].map(
   (tooltipTriggerEl) => new bootstrap.Tooltip(tooltipTriggerEl)
 )
 
+var userClicks = false
+var prodClicks = false
+
 // User graph swapper - changes between 'Spent amount in Kč and bought amount'
-// TODO: remove jQuery, however this page uses it anyways due to datatables
-$('#user-swap').click(function () {
-  var clicks = $(this).data('clicks')
-  $('#user-spin').addClass('spin')
+document.getElementById('user-swap').addEventListener('click', (e) => {
+  // Load required objects
+  const userSpin = document.getElementById('user-spin')
+  const userText = document.getElementById('user-text')
+
+  // Spin button for 300ms
+  userSpin.classList.add('spin')
   setTimeout(function () {
-    $('#user-spin').removeClass('spin')
+    userSpin.classList.remove('spin')
   }, 300)
-  if (clicks) {
-    $('#user-text').html('Uživatelé - k fakturaci v Kč')
+
+  // Change text depending on state
+  if (userClicks) {
+    userText.textContent = 'Uživatelé - k fakturaci v Kč'
+
     perUserSpent.data.datasets[0].data = userDatasetPriceSpent
     perUserSpent.options.plugins.labels = {
       render: function (args) {
@@ -25,7 +34,8 @@ $('#user-swap').click(function () {
     }
     perUserSpent.update()
   } else {
-    $('#user-text').html('Uživatelé - k fakturaci v ks')
+    userText.textContent = 'Uživatelé - k fakturaci v ks'
+
     perUserSpent.data.datasets[0].data = userDatasetAmountBought
     perUserSpent.options.plugins.labels = {
       render: function (args) {
@@ -35,7 +45,7 @@ $('#user-swap').click(function () {
     }
     perUserSpent.update()
   }
-  $(this).data('clicks', !clicks)
+  userClicks = !userClicks
 })
 
 // User graph
@@ -67,15 +77,21 @@ var perUserSpent = new Chart(ctx, {
 })
 
 // Product graph swapper - changes between 'Spent amount in Kč and bought amount'
-// TODO: remove jQuery, however this page uses it anyways due to datatables
-$('#prod-swap').click(function () {
-  var clicks = $(this).data('clicks')
-  $('#prod-spin').addClass('spin')
+document.getElementById('prod-swap').addEventListener('click', (e) => {
+  // Load required objects
+  const prodSpin = document.getElementById('prod-spin')
+  const prodText = document.getElementById('prod-text')
+
+  // Spin button for 300ms
+  prodSpin.classList.add('spin')
   setTimeout(function () {
-    $('#prod-spin').removeClass('spin')
+    prodSpin.classList.remove('spin')
   }, 300)
-  if (clicks) {
-    $('#prod-text').html('Produkty - k fakturaci v Kč')
+
+  // Change text depending on state
+  if (prodClicks) {
+    prodText.textContent = 'Produkty - k fakturaci v Kč'
+
     perProductSpent.data.datasets[0].data = productDatasetPriceSpent
     perProductSpent.options.plugins.labels = {
       render: function (args) {
@@ -85,7 +101,8 @@ $('#prod-swap').click(function () {
     }
     perProductSpent.update()
   } else {
-    $('#prod-text').html('Produkty - k fakturaci v ks')
+    prodText.textContent = 'Produkty - k fakturaci v ks'
+
     perProductSpent.data.datasets[0].data = productDatasetAmountBought
     perProductSpent.options.plugins.labels = {
       render: function (args) {
@@ -95,7 +112,7 @@ $('#prod-swap').click(function () {
     }
     perProductSpent.update()
   }
-  $(this).data('clicks', !clicks)
+  prodClicks = !prodClicks
 })
 
 // Product graph
@@ -126,8 +143,8 @@ var perProductSpent = new Chart(ctx, {
   }
 })
 
-// Bootstrap table customization
-$(document).ready(function () {
+// Initialize DataTables and conditionally disable invoice button
+document.addEventListener('DOMContentLoaded', function () {
   $('#table-orders').DataTable({
     dom:
       "<'row'<'col-sm-12 col-md-4'l><'col-sm-12 col-md-4'f><'col-sm-12 col-md-4'B>>" +
@@ -143,13 +160,15 @@ $(document).ready(function () {
     lengthMenu: [
       [10, 25, 50, -1],
       [10, 25, 50, 'Vše']
-    ]
+    ],
+    stateSave: false
   })
+
+  // If no items to invoice, disable button
   const someIsNotZero = perUserSpent.data.datasets[0].data.some(
     (item) => item !== 0
   )
   if (!someIsNotZero) {
-    // No data is present
-    $('#invoice_submit').attr('disabled', true)
+    document.getElementById('invoice_submit').disabled = true
   }
 })

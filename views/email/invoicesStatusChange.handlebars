@@ -156,7 +156,7 @@
           <td align='center' valign='top'>
             {{!-- Button table partial --}}
             {{#if paid}}
-              {{> centerButton label="Potvrdit platbu" baseUrl=baseUrl path="/payments" query="?confirmPaid=" paramValue=invoiceId }}
+              {{> centerButton label="Potvrdit platbu" baseUrl=baseUrl path="/payments" query="?confirmpayment=" paramValue=invoiceId }}
             {{else}}
               {{> centerButton label="Platby" baseUrl=baseUrl path="/payments" }}
             {{/if}}

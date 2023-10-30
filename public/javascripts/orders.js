@@ -15,6 +15,6 @@ $(document).ready(function () {
       [10, 25, 50, 'Vše']
     ],
     order: [[0, 'desc']],
-    stateSave: true
+    stateSave: false
   })
 })

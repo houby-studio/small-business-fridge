@@ -6,9 +6,9 @@ const tooltipList = [...tooltipTriggerList].map(
   (tooltipTriggerEl) => new bootstrap.Tooltip(tooltipTriggerEl)
 )
 
-// Bootstrap table customization
-$(document).ready(function () {
-  $('#table-invoices').DataTable({
+// Initialize DataTables
+document.addEventListener('DOMContentLoaded', function () {
+  const table = $('#table-invoices').DataTable({
     dom:
       "<'row'<'col-sm-12 col-md-4'l><'col-sm-12 col-md-4'f><'col-sm-12 col-md-4'B>>" +
       "<'row'<'col-sm-12'tr>>" +
@@ -18,11 +18,17 @@ $(document).ready(function () {
       url: '/datatables/cs.json',
       searchPlaceholder: 'Hledaný výraz'
     },
-    order: [[4, 'asc']],
+    order: [[5, 'asc']],
     lengthMenu: [
       [10, 25, 50, -1],
       [10, 25, 50, 'Vše']
     ],
-    stateSave: true
+    stateSave: false
   })
+
+  // If navigating from context aware link, search for specific item
+  const paymentParam = new URLSearchParams(location.search).get(
+    'confirmpayment'
+  )
+  if (paymentParam) table.search(paymentParam).draw()
 })
