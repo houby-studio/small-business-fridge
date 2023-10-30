@@ -42,7 +42,7 @@
               {{/if }}
             </div>
             <div class="col-6 text-end">
-              <input class="form-check-input favorite" {{#if this.favorite}}checked{{/if}} type="checkbox" value="{{this._id}}" onclick="set_favorite(this)">
+              <input class="form-check-input favorite" {{#if this.favorite}}checked{{/if}} type="checkbox" id="favorite_{{this._id}}" value="{{this._id}}" onclick="set_favorite(this)">
             </div>
           </div>
         </div>

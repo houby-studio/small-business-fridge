@@ -7,5 +7,6 @@ export function ensureAuthenticated(req, res, next) {
   logger.info(
     'server.functions.ensureauthenticated__Redirecting unauthenticated request to /login page.'
   )
-  res.redirect('/login')
+  const originalUrl = encodeURIComponent(req.originalUrl)
+  res.redirect(`/login?originalUrl=${originalUrl}`)
 }

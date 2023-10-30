@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { ensureAuthenticated } from '../../functions/ensureAuthenticated.js'
 import csrf from 'csurf'
+import logger from '../../functions/logger.js'
 var router = Router()
 var csrfProtection = csrf()
 router.use(csrfProtection)

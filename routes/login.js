@@ -8,7 +8,8 @@ router.get(
   function (req, res, next) {
     passport.authenticate('azuread-openidconnect', {
       response: res,
-      failureRedirect: '/'
+      failureRedirect: '/',
+      customState: req.query.originalUrl ? req.query.originalUrl : '/'
     })(req, res, next)
   },
   function (req, res) {
