@@ -53,9 +53,7 @@ passport.use(
         process.env.CREDS_VALIDATE_ISSUER.toLowerCase() === 'true' || false,
       isB2C: process.env.CREDS_ISB2C.toLowerCase() === 'true' || false,
       issuer: process.env.CREDS_ISSUER,
-      passReqToCallback:
-        process.env.CREDS_PASS_REQ_TO_CALLBACK.toLowerCase() === 'true' ||
-        false,
+      passReqToCallback: false,
       scope: ['profile', 'offline_access', 'email'],
       loggingLevel: process.env.CREDS_LOGGING_LEVEL,
       nonceMaxAmount: parseInt(process.env.CREDS_NONCE_MAX_AMOUNT),
