@@ -6,6 +6,7 @@
 - 🏷️ Mnoho produktů - Jelikož se sortiment neustále rozšířuje, jsou nově řazeny do kategorií, podle kterých lze rychle filtrovat
 - 📲 Skutečně responzivní (v mezích Bootstrapu) - Nyní kromě zobrazení 1 nebo 4 produktů může v závislosti na velikosti obrazovky být zobrazeno i 2 nebo 6 produktů v řadě
 - ⭐ Jan Kříž - Při nakupování přes e-shop můžete zařadit konkrétní produkty mezi své oblíbené a tím je vidět vždy vpředu jak na e-shopu, tak na kiosku - věrní odběratelé stále stejných produktů to nikdy neměli snazší
+- 📨 Už běžím - Jakmile se naskladní produkt, který máte v oblíbených, obdržíte e-mailovou notifikaci, abyste si to mohli okamžitě běžet koupit
 - 🍔 Předělaná navigace - Prvky, které se skrývaly pod tlačítkem uživatele jsou nyní klasicky v horní navigaci
 - ✉️ Hezčí e-maily - Všechny e-maily se nyní generují pomocí šablon a mají tak trochu komplexnější vzhled a uspořádání obsahu
 - 🔢 Všude stejné - Na e-shopu i na kiosku se zboží nyní řadí stejně a to abecedně

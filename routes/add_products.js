@@ -4,6 +4,7 @@ import Product from '../models/product.js'
 import Delivery from '../models/delivery.js'
 import csrf from 'csurf'
 import logger from '../functions/logger.js'
+import { sendFavoriteProductNotification } from '../functions/sendFavoriteProductNotification.js'
 var router = Router()
 var csrfProtection = csrf()
 router.use(csrfProtection)
@@ -28,19 +29,19 @@ router.get('/', ensureAuthenticated, function (req, res) {
   }
   Product.find()
     .sort([['displayName', 1]])
-    .then((docs) => {
+    .then((product) => {
       logger.debug(
-        `server.routes.addproducts.get__Successfully loaded ${docs.length} products.`,
+        `server.routes.addproducts.get__Successfully loaded ${product.length} products.`,
         {
           metadata: {
-            result: docs
+            result: product
           }
         }
       )
 
       res.render('shop/add_products', {
         title: 'Naskladnit | Lednice IT',
-        products: docs,
+        products: product,
         user: req.user,
         alert: alert,
         csrfToken: req.csrfToken()
@@ -73,18 +74,18 @@ router.post('/', ensureAuthenticated, function (req, res) {
   }
 
   Product.findById(req.body.product_id)
-    .then((prod) => {
+    .then((product) => {
       logger.debug(
-        `server.routes.addproducts.post__Successfully found product ${prod.displayName} in the database.`,
+        `server.routes.addproducts.post__Successfully found product ${product.displayName} in the database.`,
         {
           metadata: {
-            result: prod
+            result: product
           }
         }
       )
       var newDelivery = new Delivery({
         supplierId: req.user.id,
-        productId: req.body.product_id,
+        productId: product._id,
         amount_supplied: req.body.product_amount,
         amount_left: req.body.product_amount,
         price: req.body.product_price
@@ -92,26 +93,34 @@ router.post('/', ensureAuthenticated, function (req, res) {
 
       newDelivery
         .save()
-        .then((result) => {
+        .then((delivery) => {
           logger.info(
-            `server.routes.addproducts.post__Successfully added product:[${prod.displayName}] amount:[${req.body.product_amount}] price:${req.body.product_price}.`,
+            `server.routes.addproducts.post__Successfully added product:[${product.displayName}] amount:[${delivery.amount_supplied}] price:${delivery.price}.`,
             {
               metadata: {
-                result: result
+                result: delivery
               }
             }
           )
           const alert = {
             type: 'success',
-            message: `Produkt ${prod.displayName} přidán v počtu ${req.body.product_amount}ks za ${req.body.product_price}Kč.`,
+            message: `Produkt ${product.displayName} přidán v počtu ${delivery.amount_supplied} ks za ${delivery.price} Kč.`,
             success: 1
           }
           req.session.alert = alert
           res.redirect('/add_products')
+          sendFavoriteProductNotification(
+            product._id,
+            product.displayName,
+            product.imagePath,
+            req.user.displayName,
+            delivery.amount_supplied,
+            delivery.price
+          )
         })
         .catch((err) => {
           logger.error(
-            `server.routes.addproducts.post__Failed to add product:[${prod.displayName}] amount:[${req.body.product_amount}] price:${req.body.product_price}.`,
+            `server.routes.addproducts.post__Failed to add product:[${product.displayName}] amount:[${req.body.product_amount}] price:${req.body.product_price}.`,
             {
               metadata: {
                 result: err.message

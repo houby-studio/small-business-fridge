@@ -204,7 +204,7 @@ router.post('/', ensureAuthenticated, checkKiosk, function (req, res) {
               )
               const alert = {
                 type: 'success',
-                message: `Zakoupili jste ${req.body.display_name} za ${delivery.price}Kč.`,
+                message: `Zakoupili jste ${req.body.display_name} za ${delivery.price} Kč.`,
                 success: 1
               }
               req.session.alert = alert

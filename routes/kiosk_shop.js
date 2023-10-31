@@ -300,7 +300,7 @@ router.post('/', ensureAuthenticated, function (req, res) {
                 .then((order) => {
                   req.session.alert = {
                     type: 'success',
-                    message: `Zákazník ${user.displayName} zakoupil ${req.body.display_name} za ${delivery.price}Kč.`,
+                    message: `Zákazník ${user.displayName} zakoupil ${req.body.display_name} za ${delivery.price} Kč.`,
                     success: 1
                   }
 
