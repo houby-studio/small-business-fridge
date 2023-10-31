@@ -56,13 +56,22 @@ document.getElementById('reset').addEventListener('click', function () {
   document.getElementById('timer').value = '⏱️'
 })
 
+document.getElementById('submit').addEventListener('click', function () {
+  // Play sound on click
+  kiosk_number_click.currentTime = 0
+  kiosk_number_click.play()
+})
+
 const kiosk_number_click = new Audio('/audio/kiosk_number_click.wav')
-const kiosk_storno_click = new Audio('/audio/kiosk_storno_click.wav')
+const kiosk_storno_click = new Audio('/audio/kiosk_storno_click.ogg')
 
 document.addEventListener('DOMContentLoaded', function () {
   const alertElement = document.getElementById('alert')
   if (alertElement?.classList.contains('alert-danger')) {
-    console.log(alertElement)
     new Audio('/audio/kiosk_error.wav').play()
+  } else if (alertElement?.classList.contains('alert-success')) {
+    new Audio('/audio/kiosk_purchase_confirmed.mp3').play()
+  } else if (alertElement?.classList.contains('alert-warn')) {
+    new Audio('/audio/kiosk_timeout.wav').play()
   }
 })
