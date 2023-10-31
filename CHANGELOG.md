@@ -16,6 +16,7 @@
 - ⏱️ David Kahoun - Kolikrát se Vám stalo, že jste přišli ke kiosku, kde byl přihlášený roztržitý kolega? S novou funkcí časomíry se tato šance značně snižuje! Pro zadání Vašeho ID máte minutu a pro výběr a zakoupení produktu rovnou minuty tři, pak dojde k návratu na úvodní obrazovku bez zadaného ID
 - ✏️ Úpravy - Je to neuvěřitelné, ale nyní již lze upravit vlastnosti produktu přímo z aplikace a není potřeba zasahovat do databáze
 - ❓ Automatické ID - Dodavatele jistě potěší, že již nemusí vymýšlet ID produktu pro API z hlavy, ale systém jej automaticky vytvoří za ně
+- 🔊 Richard Síbrt - Používání kiosku vám bude nově zpříjemněno zvukovým projevem
 - 🔐 Lepší role - Práva na vytvoření produktu již má i dodavatel, nikoliv pouze administrátor
 - 🖼️ Bez obrázku to nejde - Nyní již není možné přidat produkt bez vlastního obrázku
 - 🔭 Kdo dělá co - Lednice dostala do všech svých částí moc krásné logování a tudíž budoucí chyby půjde lépe dohledávat a odstraňovat

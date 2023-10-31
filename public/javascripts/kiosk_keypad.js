@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var interval
   const kiosk_click_button = new Audio('/audio/kiosk_click_button.mp3')
   const kiosk_click_reset = new Audio('/audio/kiosk_click_reset.mp3')
+  const kiosk_timeout_alert = new Audio('/audio/kiosk_timeout.mp3')
   const timer_display = document.getElementById('timer')
 
   // Play sound on SUBMIT click
@@ -16,6 +17,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Play sound on RESET click and reset and stop timer
   document.getElementById('reset').addEventListener('click', function () {
+    kiosk_timeout_alert.pause()
+
     kiosk_click_reset.currentTime = 0
     kiosk_click_reset.play()
 
@@ -32,7 +35,7 @@ document.addEventListener('DOMContentLoaded', function () {
   } else {
     // If navigating from context aware link, trigger timeout alert
     const timeout = new URLSearchParams(location.search).get('timeout')
-    if (timeout) new Audio('/audio/kiosk_timeout.mp3').play()
+    if (timeout) kiosk_timeout_alert.play()
   }
 
   // Register number input handling for all numeric buttons
