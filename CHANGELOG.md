@@ -8,7 +8,7 @@
 - ⭐ Jan Kříž - Při nakupování přes e-shop můžete zařadit konkrétní produkty mezi své oblíbené a tím je vidět vždy vpředu jak na e-shopu, tak na kiosku - věrní odběratelé stále stejných produktů to nikdy neměli snazší
 - 📨 Už běžím - Jakmile se naskladní produkt, který máte v oblíbených, obdržíte e-mailovou notifikaci, abyste si to mohli okamžitě běžet koupit
 - 🍔 Předělaná navigace - Prvky, které se skrývaly pod tlačítkem uživatele jsou nyní klasicky v horní navigaci
-- ✉️ Hezčí e-maily - Všechny e-maily se nyní generují pomocí šablon a mají tak trochu komplexnější vzhled a uspořádání obsahu
+- ✉️ Hezčí e-maily - Všechny e-maily se nyní generují pomocí šablon a mají tak trochu komplexnější vzhled a uspořádání obsahu - některé dokonce mají chytré tlačítko, které vás vezme přesně tam, kam potřebujete
 - 🔢 Všude stejné - Na e-shopu i na kiosku se zboží nyní řadí stejně a to abecedně
 - 🟰 Počty sedí - Kiosek již zobrazuje celkový počet zboží, nikoli pouze aktuální dodávku
 - 🤑 Štěpán Kruťa - Všichni víme kde pracujeme a jak se chováme k fakturám, ale i tak nově neplatičům faktur nyní bude pravidelně chodit automatická upomínka každý den, abychom doufejme zkrátili dobu, po kterou jsou chudáci dodavatelé bez svých peněz
@@ -26,8 +26,6 @@
 - 🤖 Sbohem útočníci - Všechny funkce, které zapisují do databáze jsou nyní rate limited, aby se zvýšila ochrana proti útokům typu DDoS
 - 📏 Dlouhé popisy - Aby se předešlo deformaci zobrazení, když má nějaký produkt nadprůměrně dlouhý popis, zobrazuje se nově pouze jeden řádek, dokud se na něj nenajede myší, následně dojde k jeho rozbalení
 - 💀 Ozvěna minulosti - Ve všech vlastních skriptech byl jQuery nahrazen nativním javascriptem, takže jej obvykle vůbec nepotřebujete - výjimkou jsou stránky s tabulkami, protože námi použitá knihovna jej používá jako závislost
-- TODO: favorites stocked notification
-- TODO: context aware buttons
 - TODO: docs
 
 ## 🐞 Opravy chyb
