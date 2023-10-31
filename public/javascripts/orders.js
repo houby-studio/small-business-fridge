@@ -2,7 +2,7 @@
 // dom customizes header paging, search and export
 // columndefs makes id unsortable, sortabledate hidden, date linked for filtering and displays currency next to price
 // sort by date by default
-$(document).ready(function () {
+document.addEventListener('DOMContentLoaded', function () {
   $('#table-orders').DataTable({
     dom:
       "<'row'<'col-sm-12 col-md-4'l><'col-sm-12 col-md-4'f><'col-sm-12 col-md-4'B>>" +

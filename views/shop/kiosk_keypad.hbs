@@ -3,6 +3,7 @@
   class='needs-validation'
   method='GET'
   action='/kiosk_shop'
+  onsubmit='submitWithSound()'
   novalidate
 >
   <div class='card w-100 mx-auto mt-3'>
@@ -125,6 +126,7 @@
         </div>
         <div class='col-lg-6'>
           <input
+            id='submit'
             type='submit'
             class='form-control btn btn-success btn-lg btn-block keypad'
             value='Pokračovat'
@@ -133,6 +135,10 @@
       </div>
     </div>
   </div>
+  {{! <audio id='kiosk_number_click' src='/audio/kiosk_number_click.wav'></audio>
+  <audio id='kiosk_submit_click' src='/audio/kiosk_submit_click.wav'></audio>
+  <audio id='kiosk_storno_click' src='/audio/kiosk_storno_click.wav'></audio>
+  <audio id='kiosk_error' src='/audio/kiosk_error.wav'></audio> }}
 </form>
 
 <script src='/javascripts/kiosk_keypad.js'></script>

@@ -5,6 +5,9 @@ function addMinutes(date, minutes) {
 var interval
 
 window.onload = function (event) {
+  kiosk_submit_click.currentTime = 0
+  kiosk_submit_click.play()
+
   // Set the date we're counting down to
   var countDownDate = addMinutes(new Date(), 3)
 
@@ -38,3 +41,5 @@ const forms = document.querySelectorAll('form').forEach((element) => {
     this.submit()
   })
 })
+
+const kiosk_submit_click = new Audio('/audio/kiosk_submit_click.wav')

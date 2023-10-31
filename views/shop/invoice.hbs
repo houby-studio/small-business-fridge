@@ -88,9 +88,9 @@
             <thead>
               <tr>
                 <th scope="col" class="text-start">Produkt</th>
-                <th scope="col" data-bs-toggle="tooltip" data-bs-title="Nevyfakturováno" class="font-weight-bold"><i class="fa-regular fa-money-bill-alt"></i></th>
+                <th scope="col" data-bs-toggle="tooltip" data-bs-title="Čeká na fakturaci" class="font-weight-bold"><i class="fa-solid fa-cart-shopping"></i></th>
                 <th scope="col" data-bs-toggle="tooltip" data-bs-title="Vyfakturováno"><i class="fa-solid fa-file-invoice-dollar"></i></th>
-                <th scope="col" data-bs-toggle="tooltip" data-bs-title="Sklad"><i class="fa-solid fa-boxes"></i></th>
+                <th scope="col" data-bs-toggle="tooltip" data-bs-title="Skladem"><i class="fa-solid fa-boxes"></i></th>
               </tr>
             </thead>
             <tbody>
@@ -119,11 +119,10 @@
             <thead>
               <tr>
                 <th scope="col" class="text-start hide-xl">Produkt</th>
-                <th scope="col" data-bs-toggle="tooltip" data-bs-title="Nevyfakturováno" class="font-weight-bold"><i
-                    class="fa-regular fa-money-bill-alt"></i></th>
+                <th scope="col" data-bs-toggle="tooltip" data-bs-title="Čeká na fakturaci" class="font-weight-bold"><i class="fa-solid fa-cart-shopping"></i></th>
                 <th scope="col" data-bs-toggle="tooltip" data-bs-title="Vyfakturováno"><i
                     class="fa-solid fa-file-invoice-dollar"></i></th>
-                <th scope="col" data-bs-toggle="tooltip" data-bs-title="Sklad"><i class="fa-solid fa-boxes"></i>
+                <th scope="col" data-bs-toggle="tooltip" data-bs-title="Skladem"><i class="fa-solid fa-boxes"></i>
                 </th>
               </tr>
             </thead>
@@ -151,23 +150,27 @@
       </div>
       <div class="card-body">
         <div class="table-responsive">
-          <table class="table" id="table-orders">
+          <table id="table-orders" class="table table-striped">
             <thead>
               <tr>
-                <th scope="col">Datum</th>
-                <th scope="col">Jméno</th>
+                <th scope="col">Číslo objednávky</th>
+                <th scope="col" class="d-none">Časové razítko</th>
+                <th scope="col">Datum a čas</th>
                 <th scope="col">Produkt</th>
                 <th scope="col">Cena</th>
+                <th scope="col">Zákazník</th>
               </tr>
             </thead>
             <tbody>
               {{#each userview}}
               {{#each orders}}
               <tr>
-                <td><span class="d-none">{{ this.order_date }}</span>{{ this.order_date_format }}</td>
-                <td>{{ ../user }}</td>
+                <td>{{ this.product._id }}</td>
+                <td>{{ this.order_date }}</td>
+                <td>{{ this.order_date_format }}</td>
                 <td>{{ this.product.displayName }}</td>
-                <td>{{ this.price }}Kč</td>
+                <td>{{ this.price }}</td>
+                <td>{{ ../user }}</td>
               </tr>
               {{/each}}
               {{/each}}

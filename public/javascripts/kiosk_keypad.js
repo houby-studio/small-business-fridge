@@ -9,7 +9,11 @@ const numberButtons = document.getElementsByClassName('numberBtn')
 
 const _numberButtonsEvent = [...numberButtons].forEach((element) => {
   element.addEventListener('click', async function () {
-    // Stop previous interval
+    // Play sound on click
+    kiosk_number_click.currentTime = 0
+    kiosk_number_click.play()
+
+    // Stop previous interval to prevent multiple counting at once
     clearInterval(interval)
 
     // Set the date we're counting down to
@@ -44,6 +48,21 @@ const _numberButtonsEvent = [...numberButtons].forEach((element) => {
 })
 
 document.getElementById('reset').addEventListener('click', function () {
+  // Play sound on click
+  kiosk_storno_click.currentTime = 0
+  kiosk_storno_click.play()
+  // Reset timer and stop it
   clearInterval(interval)
   document.getElementById('timer').value = '⏱️'
+})
+
+const kiosk_number_click = new Audio('/audio/kiosk_number_click.wav')
+const kiosk_storno_click = new Audio('/audio/kiosk_storno_click.wav')
+
+document.addEventListener('DOMContentLoaded', function () {
+  const alertElement = document.getElementById('alert')
+  if (alertElement?.classList.contains('alert-danger')) {
+    console.log(alertElement)
+    new Audio('/audio/kiosk_error.wav').play()
+  }
 })

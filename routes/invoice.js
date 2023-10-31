@@ -268,6 +268,7 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
         {
           $project: {
             user: '$user.displayName',
+            'orders.product._id': 1,
             'orders.product.displayName': 1,
             'orders.order_date': 1,
             'orders.price': 1,

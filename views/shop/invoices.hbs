@@ -1,11 +1,12 @@
 <div class="row my-3">
   <div class="col">
     <div class="table-responsive">
-      <table id="table-invoices" class="table">
+      <table id="table-invoices" class="table table-striped">
         <thead>
           <tr>
             <th scope="col">Číslo faktury</th>
-            <th scope="col">Datum</th>
+            <th scope="col" class="d-none">Časové razítko</th>
+            <th scope="col">Datum a čas</th>
             <th scope="col">Dodavatel</th>
             <th scope="col">Počet kusů</th>
             <th scope="col">Cena celkem</th>
@@ -19,17 +20,20 @@
             <td>
               {{ this._id }}
             </td>
+            <td class="d-none">
+              {{ this.invoiceDate }}
+            </td>
             <td>
-              <span class="d-none">{{ this.invoiceDate }}</span>{{ this.invoiceDate_format }}
+              {{ this.invoiceDate_format }}
             </td>
             <td>
               {{ this.supplier.displayName }}
             </td>
             <td>
-              {{ this.orders_sum }}ks
+              {{ this.orders_sum }}
             </td>
             <td>
-              {{ this.totalCost }}Kč
+              {{ this.totalCost }}
             </td>
             <td>
               {{ this.status }}

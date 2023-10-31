@@ -150,17 +150,45 @@ document.addEventListener('DOMContentLoaded', function () {
       "<'row'<'col-sm-12 col-md-4'l><'col-sm-12 col-md-4'f><'col-sm-12 col-md-4'B>>" +
       "<'row'<'col-sm-12'tr>>" +
       "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
-    columnDefs: [{ type: 'natural', targets: 3 }],
+    columnDefs: [
+      { sortable: false, targets: 0 },
+      { visible: false, targets: 1 },
+      { targets: 2, orderData: 1 },
+      {
+        type: 'num',
+        targets: 4,
+        data: 'Cena',
+        render: function (data, type, _row, _meta) {
+          return type === 'display' ? data + ' Kč' : data
+        }
+      }
+    ],
+    buttons: [
+      {
+        extend: 'print',
+        exportOptions: {
+          columns: [1, 3, 4, 5]
+        }
+      },
+      'copyHtml5',
+      'excelHtml5',
+      'csvHtml5',
+      {
+        extend: 'pdfHtml5',
+        exportOptions: {
+          columns: [0, 1, 3, 4, 5]
+        }
+      }
+    ],
     language: {
       url: '/datatables/cs.json',
       searchPlaceholder: 'Hledaný výraz'
     },
-    fixedHeader: true,
-    order: [[0, 'desc']],
     lengthMenu: [
       [10, 25, 50, -1],
       [10, 25, 50, 'Vše']
     ],
+    order: [[2, 'desc']],
     stateSave: false
   })
 

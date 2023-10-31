@@ -1,10 +1,11 @@
 <div class="row my-3">
   <div class="col">
     <div class="table-responsive">
-      <table id="table-invoices" class="table">
+      <table id="table-invoices" class="table table-striped">
         <thead>
           <tr>
             <th scope="col">Číslo faktury</th>
+            <th scope="col" class="d-none">Časové razítko</th>
             <th scope="col">Datum</th>
             <th scope="col">Zákazník</th>
             <th scope="col">Počet kusů</th>
@@ -19,17 +20,20 @@
             <td>
               {{ this._id }}
             </td>
+            <td class="d-none">
+              {{ this.invoiceDate }}
+            </td>
             <td>
-              <span class="d-none">{{ this.invoiceDate }}</span>{{ this.invoiceDate_format }}
+              {{ this.invoiceDate_format }}
             </td>
             <td>
               {{ this.buyer.displayName }}
             </td>
             <td>
-              {{ this.orders_sum }}ks
+              {{ this.orders_sum }}
             </td>
             <td>
-              {{ this.totalCost }}Kč
+              {{ this.totalCost }}
             </td>
             <td>
               {{ this.status }}
@@ -37,13 +41,19 @@
             {{#if ../supplier.supplierId}}
             <td>
               <form class="needs-validation h-100" method="POST" action="/payments" novalidate>
-                {{#if this.paid}}
-                <input type="submit" class="btn btn-danger float-right w-100" value="Odvolat">
-                <input type="hidden" name="action" value="storno">
-                {{else}}
-                <input type="submit" class="btn btn-success float-right w-100" value="Zaplaceno">
-                <input type="hidden" name="action" value="approve">
-                {{/if}}
+                <div class="btn-toolbar" role="toolbar" aria-label="Toolbar with button groups">
+                  <div class="btn-group me-2 w-100" role="group" aria-label="First group">
+                    <button type="button" class="btn btn-primary"><i class="fa-solid fa-qrcode"></i></button>
+                    <button type="button" class="btn btn-primary"><i class="fa-solid fa-file-invoice-dollar"></i></button>
+                      {{#if this.paid}}
+                        <input type="hidden" name="action" value="storno">
+                        <input type="submit" class="btn btn-danger float-right w-100" value="Odvolat">
+                      {{else}}
+                        <input type="hidden" name="action" value="approve">
+                        <input type="submit" class="btn btn-success float-right w-100" value="Zaplaceno">
+                      {{/if}}
+                  </div>
+                </div>
                 <input type="hidden" name="invoice_id" value="{{ this._id }}">
                 <input type="hidden" name="_csrf" value="{{ ../csrfToken }}">
               </form>
