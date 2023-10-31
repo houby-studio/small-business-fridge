@@ -1,5 +1,5 @@
 <form
-  id='admin_new_product'
+  id='supplier_new_product'
   class='needs-validation'
   method='POST'
   action='/new_product?_csrf={{csrfToken}}'
@@ -60,7 +60,7 @@
             />
           </div>
 
-          {{! Image upload }}
+          {{! Produict image upload }}
           <div class='input-group input-group-lg mb-3'>
             <span
               class='input-group-text w-25'
@@ -77,7 +77,7 @@
             />
           </div>
 
-          {{! Product selection }}
+          {{! Product category selection }}
           <div class='input-group input-group-lg mb-3'>
             <label
               for='product_category'
@@ -100,15 +100,13 @@
     </div>
     {{! End of card-body }}
     <div class='card-footer text-muted'>
-      <div class='card-footer text-muted'>
-        <div class='d-grid gap-2 d-md-flex justify-content-md-end'>
-          <a href='/' class='btn btn-danger me-md-2'>Storno</a>
-          <input
-            type='submit'
-            class='btn btn-success float-end'
-            value='Vytvořit'
-          />
-        </div>
+      <div class='d-grid gap-2 d-md-flex justify-content-md-end'>
+        <a href='/' class='btn btn-danger me-md-2'>Storno</a>
+        <input
+          type='submit'
+          class='btn btn-success float-end'
+          value='Vytvořit'
+        />
       </div>
     </div>
   </div>

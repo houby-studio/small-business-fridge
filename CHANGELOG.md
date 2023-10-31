@@ -20,12 +20,15 @@
 - 🔊 Richard Síbrt - Používání kiosku vám bude nově zpříjemněno zvukovým projevem
 - 🔐 Lepší role - Práva na vytvoření produktu již má i dodavatel, nikoliv pouze administrátor
 - 🖼️ Bez obrázku to nejde - Nyní již není možné přidat produkt bez vlastního obrázku
+- 🔧 Tvorba kategorií - Samozřejmě nová funkce kategorií musí mít i stránky pro jejich vytváření a úpravu, má je k dispozici administrátor
+- 🏠 Sám sobě si - Dodavatelé nyní po fakturaci sami sobě budou mít rovnou fakturu označenou za zaplacenou, sbohem zbytečná administrativo
 - 🔭 Kdo dělá co - Lednice dostala do všech svých částí moc krásné logování a tudíž budoucí chyby půjde lépe dohledávat a odstraňovat
 - 🔐 Nepoužívám, vypínám - Pokud není nastavený API klíč, je funkce API úplně vypnutá
 - 🌐 Nemít internet - Všechny knihovny již nejsou načítány přes cizí CDN, ale jsou součástí kódu aplikace
 - 🤖 Sbohem útočníci - Všechny funkce, které zapisují do databáze jsou nyní rate limited, aby se zvýšila ochrana proti útokům typu DDoS
 - 📏 Dlouhé popisy - Aby se předešlo deformaci zobrazení, když má nějaký produkt nadprůměrně dlouhý popis, zobrazuje se nově pouze jeden řádek, dokud se na něj nenajede myší, následně dojde k jeho rozbalení
 - 💀 Ozvěna minulosti - Ve všech vlastních skriptech byl jQuery nahrazen nativním javascriptem, takže jej obvykle vůbec nepotřebujete - výjimkou jsou stránky s tabulkami, protože námi použitá knihovna jej používá jako závislost
+- 👑 Admin dashboard - Odebrány odkazy pro vytvoření produktu a přidány odkazy na správu kategorií a správu uživatelů
 - TODO: docs
 
 ## 🐞 Opravy chyb
