@@ -11,8 +11,8 @@ function loadProductImage() {
   }
 }
 
-window.onload = function (_event) {
+document.addEventListener('DOMContentLoaded', function () {
   if (document.getElementById('product_id').value) {
     loadProductImage()
   }
-}
+})

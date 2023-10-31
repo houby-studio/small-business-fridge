@@ -1,10 +1,10 @@
 // Handles product to edit selection
 function loadProductInfo() {
   // Get selected product
-  var productId = document.getElementById('product_id').value
+  const productId = document.getElementById('product_id').value
 
   // Image should change no matter what
-  var newImg = new Image()
+  const newImg = new Image()
   newImg.onload = function () {
     document.getElementById('product_img').src = this.src
   }
@@ -51,9 +51,9 @@ function readURL(input) {
   }
 }
 
-// In case user goes back, load product info
-window.onload = function (_event) {
+document.addEventListener('DOMContentLoaded', function () {
+  // Load image when browser navigates back to this page
   if (document.getElementById('product_id').value) {
     loadProductInfo()
   }
-}
+})

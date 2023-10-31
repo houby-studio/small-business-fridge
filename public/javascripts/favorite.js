@@ -24,7 +24,9 @@ async function set_favorite(element) {
   })
 }
 
-// If navigating from context aware link, add product to favorite
-const favoriteParam = new URLSearchParams(location.search).get('addfavorite')
-if (favoriteParam)
-  set_favorite({ value: favoriteParam, checked: true, fromQueryParam: true })
+document.addEventListener('DOMContentLoaded', function () {
+  // If navigating from context aware link, add product to favorite
+  const favoriteParam = new URLSearchParams(location.search).get('addfavorite')
+  if (favoriteParam)
+    set_favorite({ value: favoriteParam, checked: true, fromQueryParam: true })
+})

@@ -1,11 +1,4 @@
-<form
-  id='kiosk_keypad_customer'
-  class='needs-validation'
-  method='GET'
-  action='/kiosk_shop'
-  onsubmit='submitWithSound()'
-  novalidate
->
+<form class='needs-validation' method='GET' action='/kiosk_shop' novalidate>
   <div class='card w-100 mx-auto mt-3'>
     <div class='card-header h2 text-center'>
       Zadejte ID zákazníka
@@ -135,10 +128,6 @@
       </div>
     </div>
   </div>
-  {{! <audio id='kiosk_number_click' src='/audio/kiosk_number_click.wav'></audio>
-  <audio id='kiosk_submit_click' src='/audio/kiosk_submit_click.wav'></audio>
-  <audio id='kiosk_storno_click' src='/audio/kiosk_storno_click.wav'></audio>
-  <audio id='kiosk_error' src='/audio/kiosk_error.wav'></audio> }}
 </form>
 
 <script src='/javascripts/kiosk_keypad.js'></script>

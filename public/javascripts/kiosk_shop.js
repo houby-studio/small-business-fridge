@@ -2,12 +2,21 @@ function addMinutes(date, minutes) {
   return new Date(date.getTime() + minutes * 60000)
 }
 
-var interval
-
-window.onload = function (event) {
+document.addEventListener('DOMContentLoaded', function () {
+  var interval
   const backgroundMusic = new Audio('/audio/kiosk_shop_theme.mp3')
+
+  // Play background them
   backgroundMusic.volume = 0.3
   backgroundMusic.play()
+
+  // Make whole product card clickable for touch screens
+  const _forms = document.querySelectorAll('form').forEach((element) => {
+    element.addEventListener('click', async function (event) {
+      event.preventDefault()
+      this.submit()
+    })
+  })
 
   // Set the date we're counting down to
   var countDownDate = addMinutes(new Date(), 3)
@@ -23,22 +32,13 @@ window.onload = function (event) {
     var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60))
     var seconds = Math.floor((distance % (1000 * 60)) / 1000)
 
-    // Display the result in the element with id="demo"
-    document.getElementById('timer').value =
-      //days + 'd ' + hours + 'h ' + minutes + 'm ' + seconds + 's '
-      minutes + 'm ' + seconds + 's'
+    // Display the result in the element with id="timer"
+    document.getElementById('timer').value = minutes + 'm ' + seconds + 's'
 
-    // If the count down is finished, write some text
+    // If the count down is finished, redirect to keypad to reset page state
     if (distance < 0) {
       clearInterval(interval)
-      window.location.href = '/kiosk_keypad'
+      window.location.href = '/kiosk_keypad?timeout=1'
     }
   }, 1000)
-}
-
-const forms = document.querySelectorAll('form').forEach((element) => {
-  element.addEventListener('click', async function (event) {
-    event.preventDefault()
-    this.submit()
-  })
 })
