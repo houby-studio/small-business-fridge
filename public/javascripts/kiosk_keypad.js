@@ -36,6 +36,9 @@ document.addEventListener('DOMContentLoaded', function () {
     // If navigating from context aware link, trigger timeout alert
     const timeout = new URLSearchParams(location.search).get('timeout')
     if (timeout) kiosk_timeout_alert.play()
+    // If navigating from context aware link, trigger timeout alert
+    const cancel = new URLSearchParams(location.search).get('cancel')
+    if (cancel) new Audio('/audio/kiosk_purchase_cancel.mp3').play()
   }
 
   // Register number input handling for all numeric buttons
