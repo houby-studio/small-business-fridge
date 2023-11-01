@@ -1,3 +1,4 @@
+{{> qr_code_modal }}
 <div class="row my-3">
   <div class="col">
     <div class="table-responsive">
@@ -41,17 +42,24 @@
             <td>
               {{#if this.paid}}
               <span data-bs-toggle="tooltip" data-bs-title="Faktura již byla označena dodavatelem jako uhrazená.">
-                <input type="submit" class="btn btn-secondary float-right w-100" value="Zaplaceno" disabled>
+                <div class="btn-group me-2 w-100" role="group" aria-label="First group">
+                  <button type="button" class="btn btn-primary" onclick="getQrCode('{{ this._id }}', {{this.paid}})"><i class="fa-solid fa-qrcode"></i></button>
+                  <input type="submit" class="btn btn-secondary float-right w-100" value="Uzavřeno" disabled>
+                </div>
               </span>
               {{else}}
-              <form class="needs-validation h-100" method="POST" action="/invoices" novalidate>
-                {{#if this.requestPaid}}
-                <input type="submit" class="btn btn-danger float-right w-100" value="Odvolat">
-                <input type="hidden" name="action" value="storno">
-                {{else}}
-                <input type="submit" class="btn btn-success float-right w-100" value="Zaplaceno">
-                <input type="hidden" name="action" value="paid">
-                {{/if}}
+              <form id="{{ this._id }}" class="needs-validation h-100" method="POST" action="/invoices" novalidate>
+                <div class="btn-group me-2 w-100" role="group" aria-label="First group">
+                  {{#if this.requestPaid}}
+                    <button type="button" class="btn btn-primary" onclick="getQrCode('{{ this._id }}', {{this.requestPaid}})"><i class="fa-solid fa-qrcode"></i></button>
+                    <input type="hidden" name="action" value="storno">
+                    <input type="submit" class="btn btn-danger float-right w-100" value="Odvolat">
+                  {{else}}
+                    <button type="button" class="btn btn-primary" onclick="getQrCode('{{ this._id }}', {{this.requestPaid}})"><i class="fa-solid fa-qrcode"></i></button>
+                    <input type="hidden" name="action" value="paid">
+                    <input type="submit" class="btn btn-success float-right w-100" value="Zaplaceno">
+                  {{/if}}
+                </div>
                 <input type="hidden" name="invoice_id" value="{{ this._id }}">
                 <input type="hidden" name="_csrf" value="{{ ../csrfToken }}">
               </form>

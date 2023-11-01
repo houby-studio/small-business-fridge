@@ -1,12 +1,11 @@
-const myModal = new bootstrap.Modal('#qr-modal')
-
-// Initialize Bootstraps 5 tooltips
+// Initialize Bootstraps 5 tooltips and modal
 const tooltipTriggerList = document.querySelectorAll(
   '[data-bs-toggle="tooltip"]'
 )
 const tooltipList = [...tooltipTriggerList].map(
   (tooltipTriggerEl) => new bootstrap.Tooltip(tooltipTriggerEl)
 )
+const myModal = new bootstrap.Modal('#qr-modal')
 
 // Initialize DataTables
 document.addEventListener('DOMContentLoaded', function () {
@@ -87,10 +86,14 @@ document.addEventListener('DOMContentLoaded', function () {
   if (paymentParam) table.search(paymentParam).draw()
 })
 
-async function getQrCode(id) {
+// Display QR Code and handle modal display and button
+async function getQrCode(id, paid) {
+  // Append url to current url
   let url = window.location.pathname + '/qrcode'
+  // Obtain CSRF token
   const csrf = document.getElementsByName('_csrf')[0].value
 
+  // Fetch QRCode data
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -103,6 +106,29 @@ async function getQrCode(id) {
   })
   const qrCode = await response.text()
 
-  document.getElementById('qr_code').src = qrCode
+  // Handle if supplier does not have IBAN
+  if (qrCode === 'NOIBAN') {
+    document.getElementById('qr_code').classList.add('d-none')
+    document.getElementById('no_qr_code').classList.remove('d-none')
+  } else {
+    document.getElementById('qr_code').classList.remove('d-none')
+    document.getElementById('no_qr_code').classList.add('d-none')
+    document.getElementById('qr_code').src = qrCode
+  }
+
+  // Change button state depending on paid status
+  const submit = document.getElementById('modal_confirm')
+  if (!paid) {
+    submit.dataset.submit_id = id
+    submit.disabled = false
+  } else {
+    submit.disabled = true
+  }
+
   myModal.show()
+}
+
+// Submit form from modal to confirm payment
+function submitFromModal(ctx) {
+  document.getElementById(ctx.dataset.submit_id).submit()
 }

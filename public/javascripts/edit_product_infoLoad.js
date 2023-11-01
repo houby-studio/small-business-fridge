@@ -12,7 +12,7 @@ function loadProductInfo() {
   // Reset form if product deselected
   if (productId === '') {
     document.getElementById('supplier_edit_product').reset()
-    newImg.src = '/images/preview.png'
+    newImg.src = '/static_images/preview.png'
     return
   }
 

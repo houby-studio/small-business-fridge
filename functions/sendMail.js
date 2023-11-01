@@ -58,13 +58,17 @@ export function sendMail(mailto, template, context, image) {
     context: context
   }
 
+  mailOptions.attachments = [
+    {
+      path: `./public/static_images/logo.png`,
+      cid: 'logo@sbf.pictures'
+    }
+  ]
   if (image) {
-    mailOptions.attachments = [
-      {
-        path: `./public/${image}`,
-        cid: 'image@sbf.pictures'
-      }
-    ]
+    mailOptions.attachments.push({
+      path: `./public/${image}`,
+      cid: 'image@sbf.pictures'
+    })
   }
 
   transporter

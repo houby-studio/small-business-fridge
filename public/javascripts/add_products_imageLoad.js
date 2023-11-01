@@ -5,7 +5,7 @@ function loadProductImage() {
     document.getElementById('product_img').src = this.src
   }
   if (imageId === '') {
-    newImg.src = '/images/preview.png'
+    newImg.src = '/static_images/preview.png'
   } else {
     newImg.src = json_data[imageId].product_image
   }

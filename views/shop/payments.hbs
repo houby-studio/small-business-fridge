@@ -1,24 +1,4 @@
-<div class="modal" id="qr-modal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">QR platba</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body mx-auto">
-        <img
-            src=''
-            alt='QR Code'
-            id='qr_code'
-            class='img-fluid'
-          />
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zavřít</button>
-      </div>
-    </div>
-  </div>
-</div>
+{{> qr_code_modal }}
 <div class="row my-3">
   <div class="col">
     <div class="table-responsive">
@@ -61,11 +41,11 @@
             </td>
             {{#if ../supplier.supplierId}}
             <td>
-              <form class="needs-validation h-100" method="POST" action="/payments" novalidate>
+              <form id="{{ this._id }}" class="needs-validation h-100" method="POST" action="/payments" novalidate>
                 <div class="btn-toolbar" role="toolbar" aria-label="Toolbar with button groups">
                   <div class="btn-group me-2 w-100" role="group" aria-label="First group">
-                    <button type="button" class="btn btn-primary" onclick="getQrCode('{{ this._id }}')"><i class="fa-solid fa-qrcode"></i></button>
-                    <button type="button" class="btn btn-primary"><i class="fa-solid fa-file-invoice-dollar"></i></button>
+                    <button type="button" class="btn btn-primary" onclick="getQrCode('{{ this._id }}', {{this.paid}})"><i class="fa-solid fa-qrcode"></i></button>
+                    {{!-- TODO: <button type="button" class="btn btn-primary"><i class="fa-solid fa-file-invoice-dollar"></i></button> --}}
                       {{#if this.paid}}
                         <input type="hidden" name="action" value="storno">
                         <input type="submit" class="btn btn-danger float-right w-100" value="Odvolat">

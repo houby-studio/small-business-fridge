@@ -1,0 +1,36 @@
+<div class='modal' id='qr-modal' tabindex='-1'>
+  <div class='modal-dialog modal-dialog-centered'>
+    <div class='modal-content'>
+      <div class='modal-header'>
+        <h5 class='modal-title'>QR platba</h5>
+        <button
+          type='button'
+          class='btn-close'
+          data-bs-dismiss='modal'
+          aria-label='Close'
+        ></button>
+      </div>
+      <div class='modal-body mx-auto'>
+        <img src='' alt='QR Code' id='qr_code' class='img-fluid' />
+        <h5 id='no_qr_code' class='d-none'>Dodavatel nemá vyplněné bankovní
+          spojení.</h5>
+        <p>Musíte provést platbu v hotovosti nebo si vyžádat číslo účtu přímo od
+          dodavatele.</p>
+      </div>
+      <div class='modal-footer'>
+        <button
+          type='button'
+          class='btn btn-secondary'
+          data-bs-dismiss='modal'
+        >Zavřít</button>
+        <button
+          id='modal_confirm'
+          type='button'
+          class='btn btn-success'
+          data-bs-dismiss='modal'
+          onclick='submitFromModal(this)'
+        >Zaplaceno</button>
+      </div>
+    </div>
+  </div>
+</div>

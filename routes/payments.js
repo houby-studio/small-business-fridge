@@ -397,12 +397,11 @@ router.post('/qrcode', ensureAuthenticated, function (req, res, _next) {
             }
           }
         )
-        console.log(invoice.supplierId)
         res.status(403).send()
         return
       }
       if (!invoice.supplierId.IBAN) {
-        res.status(404).send('Supplier does not have IBAN')
+        res.status(404).send('NOIBAN')
       }
       generateQR(
         invoice.supplierId.IBAN,
