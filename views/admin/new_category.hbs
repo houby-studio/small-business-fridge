@@ -11,40 +11,57 @@
       Nová kategorie
     </div>
     <div class='card-body'>
-      <div class='row g-0'>
+      <div class='row'>
 
-        {{! Category name }}
-        <div class='input-group input-group-lg mb-3'>
-          <span
-            class='input-group-text w-25'
-            id='category_name-addon'
-          >Název</span>
-          <input
-            type='text'
-            name='category_name'
-            class='form-control'
-            placeholder='Název'
-            aria-label='Název'
-            aria-describedby='category_name-addon'
-            required
-          />
+        {{! Existing categories }}
+        <div class='col-md-4 mb-2 text-center'>
+          <ul class='list-group'>
+            <li class='list-group-item'><h5>Existující kategorie</h5></li>
+            {{#each categories}}
+              <li class='list-group-item'><i
+                  style='color: {{this.color}};'
+                  class='fa-solid fa-circle'
+                ></i>
+                {{this.name}}</li>
+            {{/each}}
+          </ul>
         </div>
 
-        {{! Category color }}
-        <div class='input-group input-group-lg mb-3'>
-          <span
-            class='input-group-text w-25'
-            id='category_color-addon'
-          >Barva</span>
-          <input
-            type='color'
-            name='category_color'
-            class='form-control form-control-color h-100'
-            value='#563d7c'
-            title='Vyberte barvu kategorie'
-          />
-        </div>
+        <div class='col-md-8 mb-2'>
+          {{! Category name }}
+          <div class='input-group input-group-lg mb-3'>
+            <span
+              class='input-group-text w-25'
+              id='category_name-addon'
+            >Název</span>
+            <input
+              type='text'
+              name='category_name'
+              class='form-control'
+              placeholder='Název'
+              aria-label='Název'
+              aria-describedby='category_name-addon'
+              required
+            />
+          </div>
 
+          {{! Category color }}
+          <div class='input-group input-group-lg mb-3'>
+            <span
+              class='input-group-text w-25'
+              id='category_color-addon'
+            >Barva</span>
+            <span class='input-group-text form-control'>
+              <input
+                type='color'
+                name='category_color'
+                class='form-control form-control-color w-100'
+                value='#563d7c'
+                title='Vyberte barvu kategorie'
+              />
+            </span>
+          </div>
+        </div>
       </div>
     </div>
     {{! End of card-body }}
