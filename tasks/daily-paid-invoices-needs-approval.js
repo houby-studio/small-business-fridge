@@ -74,7 +74,7 @@ var scheduledTask = scheduleJob(rule, function () {
         const subject = 'Zkontrolujte a potvrďte platbu faktury'
         const mailPreview = `Zákazník ${docs[i].buyer[0].displayName} označil fakturu v celkové hodnotě ${docs[i].totalCost} Kč za uhrazenou.`
 
-        sendMail(docs[i].buyer[0].email, 'dailyPaidInvoiceNeedsApproval', {
+        sendMail(docs[i].supplier[0].email, 'dailyPaidInvoiceNeedsApproval', {
           subject,
           mailPreview,
           invoiceId: docs[i]._id,
