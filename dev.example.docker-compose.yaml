@@ -6,6 +6,7 @@ services:
   #   environment:
   #     - DB_CONNECTION_STRING=mongodb://sbf-app:password@dev-mongo:27017/sbf-dev?retryWrites=true&w=majority&tls=false&directConnection=true&authSource=admin
   #     - API_SECRET=ffbbcb61-0000-4184-b7e2-
+  #     - OPENAI_API_KEY=openapisecret
   #     - MAIL_PORT=1025
   #     - MAIL_HOST=dev-maildev
   #     - CREDS_IDENTITY_METADATA=https://login.microsoftonline.com/{tenant}/v2.0/.well-known/openid-configuration

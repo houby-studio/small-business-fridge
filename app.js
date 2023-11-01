@@ -38,7 +38,7 @@ import './tasks/daily-paid-invoices-needs-approval.js'
 logger.info('server.app.startup__Importing routes.')
 import indexRouter from './routes/index.js'
 import aboutRouter from './routes/about.js'
-import changelogRouter from './routes/changelog.js'
+import docsRouter from './routes/docs.js'
 // Access for logged in users
 import shopRouter from './routes/shop.js'
 import profileRouter from './routes/profile.js'
@@ -63,9 +63,11 @@ import loginRouter from './routes/login.js'
 import logoutRouter from './routes/logout.js'
 import authOpenIdReturnGet from './routes/auth_openid_return.js'
 import authOpenIdReturnPost from './routes/auth_openid_return_post.js'
-// API routes
+// API routes for embedded devices
 import keypadOrderRouter from './routes/api/keypadOrder.js'
-import customerName from './routes/api/customerName.js'
+import customerNameRouter from './routes/api/customerName.js'
+// API routes for clientside javascript
+import promptGptRouter from './routes/api/promptGpt.js'
 // Middleware routes
 import rateLimitRouter from './routes/middleware/rate_limit.js'
 
@@ -132,7 +134,7 @@ app.use(rateLimitRouter)
 logger.info('server.app.startup__Registering routes.')
 app.use('/', indexRouter)
 app.use('/about', aboutRouter)
-app.use('/changelog', changelogRouter)
+app.use('/docs', docsRouter)
 // Access for logged in users
 app.use('/shop', shopRouter)
 app.use('/profile', profileRouter)
@@ -160,9 +162,11 @@ app.use('/login', loginRouter)
 app.use('/logout', logoutRouter)
 app.use('/auth/openid/return', authOpenIdReturnGet)
 app.use('/auth/openid/return', authOpenIdReturnPost)
-// API routes
+// API routes for embedded devices
 app.use('/api/keypadOrder', keypadOrderRouter)
-app.use('/api/customerName', customerName)
+app.use('/api/customerName', customerNameRouter)
+// API routes for clientside javascript
+app.use('/api/promptGpt', promptGptRouter)
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

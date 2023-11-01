@@ -35,6 +35,7 @@
             <input
               type='text'
               name='product_name'
+              id='product_name'
               class='form-control'
               placeholder='Název'
               aria-label='Název'
@@ -49,9 +50,15 @@
               class='input-group-text w-25'
               id='product_description-addon'
             >Popis</span>
+            {{! <button
+              type='button'
+              class='btn btn-primary'
+              onclick='promptGptForDescription()'
+            >✨</button> }}
             <input
               type='text'
               name='product_description'
+              id='product_description'
               class='form-control'
               placeholder='Popis'
               aria-label='Popis'
@@ -112,6 +119,6 @@
   </div>
 </form>
 
-<script src='/javascripts/new_product_imageLoad.js'></script>
+<script src='/javascripts/new_product.js'></script>
 
 <script src='/javascripts/form_validate.js'></script>
