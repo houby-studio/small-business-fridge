@@ -4,12 +4,8 @@
   padding-bottom: calc(var(--bs-gutter-x) * .5);
 }
 
-/* Index logo as mask to control color from CSS */
+/* Index logo */
 .large-logo {
-  background-color: var(--bs-body-color) !important;
-  mask: url(/static_images/fridge-it.svg) no-repeat center / contain;
-  -webkit-mask: url(/static_images/fridge-it.svg) no-repeat center / contain;
-  width: 10em;
   height: 17.5em;
 }
 
