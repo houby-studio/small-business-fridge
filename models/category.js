@@ -10,6 +10,10 @@ var schema = new Schema({
   color: {
     type: String,
     required: true
+  },
+  disabled: {
+    type: Boolean,
+    default: false
   }
 })
 

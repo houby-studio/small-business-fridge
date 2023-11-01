@@ -18,7 +18,7 @@
           <ul class='list-group'>
             <li class='list-group-item'><h5>Existující kategorie</h5></li>
             {{#each categories}}
-              <li class='list-group-item'><i
+              <li class='list-group-item {{#if this.disabled}}text-decoration-line-through{{/if}}'><i
                   style='color: {{this.color}};'
                   class='fa-solid fa-circle'
                 ></i>
@@ -56,7 +56,7 @@
                 type='color'
                 name='category_color'
                 class='form-control form-control-color w-100'
-                value='#563d7c'
+                value='#000000'
                 title='Vyberte barvu kategorie'
               />
             </span>

@@ -72,7 +72,7 @@ function renderPage(req, res, alert) {
     }
   ])
     .then((docs) => {
-      Category.find()
+      Category.find({ disabled: { $exists: false } })
         .sort([['name', 1]])
         .then((categories) => {
           logger.debug(

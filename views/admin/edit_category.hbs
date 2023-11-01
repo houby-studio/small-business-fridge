@@ -18,7 +18,7 @@
           <ul class='list-group'>
             <li class='list-group-item'><h5>Existující kategorie</h5></li>
             {{#each categories}}
-              <li class='list-group-item'><i
+              <li class='list-group-item {{#if this.disabled}}text-decoration-line-through{{/if}}'><i
                   style='color: {{this.color}};'
                   class='fa-solid fa-circle'
                 ></i>
@@ -33,7 +33,7 @@
             <label
               for='category_id'
               class='input-group-text w-25'
-            >Produkt</label>
+            >Kategorie</label>
             <select
               name='category_id'
               id='category_id'
@@ -57,6 +57,7 @@
             <input
               type='text'
               name='category_name'
+              id='category_name'
               class='form-control'
               placeholder='Název'
               aria-label='Název'
@@ -75,11 +76,30 @@
               <input
                 type='color'
                 name='category_color'
+                id='category_color'
                 class='form-control form-control-color w-100'
-                value='#563d7c'
+                value='#000000'
                 title='Vyberte barvu kategorie'
               />
             </span>
+          </div>
+
+          {{! Category disable }}
+          <div class='input-group input-group-lg mb-3'>
+            <span
+              class='input-group-text w-25'
+              id='category_disabled-addon'
+            >Zakázána</span>
+            <div class='input-group-text form-control'>
+              <input
+                name='category_disabled'
+                id='category_disabled'
+                class='form-check-input mt-0'
+                type='checkbox'
+                value='true'
+                aria-label='Checkbox for disable category to hide it'
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -88,15 +108,23 @@
     <div class='card-footer text-muted'>
       <div class='d-grid gap-2 d-md-flex justify-content-md-end'>
         <a href='/' class='btn btn-danger me-md-2'>Storno</a>
-        <input
-          type='submit'
-          class='btn btn-success float-end'
-          value='Vytvořit'
-        />
+        <input type='submit' class='btn btn-success float-end' value='Uložit' />
       </div>
     </div>
   </div>
   <input type='hidden' name='_csrf' value='{{csrfToken}}' />
 </form>
 
+<script>
+  var json_data = {
+  {{#each categories}}
+    "{{this._id}}": { "category_name": "{{this.name}}", "category_color": "{{this.color}}",
+    "category_disabled":
+    {{this.disabled}}
+    },
+  {{/each}}
+  }
+</script>
+
+<script src='/javascripts/edit_category_infoLoad.js'></script>
 <script src='/javascripts/form_validate.js'></script>

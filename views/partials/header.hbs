@@ -16,14 +16,14 @@
       <ul class='navbar-nav me-auto'>
         {{#if user}}
         <li class='nav-item'>
-          <a class='nav-link' href='/shop'><i class='fa-solid fa-shopping-basket'></i> Nakupovat <span
+          <a class='nav-link text-nowrap' href='/shop'><i class='fa-solid fa-shopping-basket'></i> Nakupovat <span
               class='sr-only'></span></a>
         </li>
         <li class='nav-item'>
-          <a class='nav-link' href='/orders'><i class='fa-solid fa-shopping-cart'></i> Objednávky</a>
+          <a class='nav-link text-nowrap' href='/orders'><i class='fa-solid fa-shopping-cart'></i> Objednávky</a>
         </li>
         <li class='nav-item'>
-          <a class='nav-link' href='/invoices'><i class='fa-solid fa-file-invoice-dollar'></i> Faktury</a>
+          <a class='nav-link text-nowrap' href='/invoices'><i class='fa-solid fa-file-invoice-dollar'></i> Faktury</a>
         </li>
         {{/if}}
         {{#if user.supplier}}
@@ -32,13 +32,12 @@
             <i class="fa-solid fa-parachute-box"></i> Dodavatel
           </a>
           <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="/add_products"><i class='fa-solid fa-dolly'></i> Naskladnit</a></li>
-            <li><a class="dropdown-item" href="/new_product"><i class="fa-solid fa-cart-plus"></i> Nový produkt</a></li>
-            <li><a class="dropdown-item" href="/edit_product"><i class="fa-solid fa-cart-arrow-down"></i> Upravit
-                produkt</a></li>
-            <li><a class="dropdown-item" href="/invoice"><i class='fa-solid fa-cash-register'></i> Fakturace</a></li>
-            <li><a class="dropdown-item" href="/payments"><i class='fa-solid fa-file-invoice'></i> Platby</a></li>
-            <li><a class="dropdown-item" href="/stock"><i class='fa-solid fa-boxes'></i> Stav skladu</a></li>
+            <li><a class="dropdown-item text-nowrap" href="/add_products"><i class='fa-solid fa-dolly'></i> Naskladnit</a></li>
+            <li><a class="dropdown-item text-nowrap" href="/new_product"><i class="fa-solid fa-cart-plus"></i> Nový produkt</a></li>
+            <li><a class="dropdown-item text-nowrap" href="/edit_product"><i class="fa-solid fa-cart-arrow-down"></i> Upravit produkt</a></li>
+            <li><a class="dropdown-item text-nowrap" href="/invoice"><i class='fa-solid fa-cash-register'></i> Fakturace</a></li>
+            <li><a class="dropdown-item text-nowrap" href="/payments"><i class='fa-solid fa-file-invoice'></i> Platby</a></li>
+            <li><a class="dropdown-item text-nowrap" href="/stock"><i class='fa-solid fa-boxes'></i> Stav skladu</a></li>
           </ul>
         </li>
         {{/if}}
@@ -48,18 +47,18 @@
             <i class="fa-solid fa-crown"></i> Administrátor
           </a>
           <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="/dashboard"><i class='fa-solid fa-columns'></i> Dashboard</a></li>
-            <li><a class="dropdown-item" href="/admin_orders"><i class='fa-solid fa-shopping-cart'></i> Objednávky</a>
-            </li>
-            <li><a class="dropdown-item" href="/admin_invoice"><i class='fa-solid fa-cash-register'></i> Fakturace</a>
-            </li>
-            <li><a class="dropdown-item" href="/admin_payments"><i class='fa-solid fa-file-invoice'></i> Platby</a></li>
+            <li><a class="dropdown-item text-nowrap" href="/dashboard"><i class='fa-solid fa-columns'></i> Dashboard</a></li>
+            <li><a class="dropdown-item text-nowrap" href="/admin_orders"><i class='fa-solid fa-shopping-cart'></i> Všechny objednávky</a></li>
+            <li><a class="dropdown-item text-nowrap" href="/admin_payments"><i class='fa-solid fa-file-invoice'></i> Všechny platby</a></li>
+            <li><a class="dropdown-item text-nowrap" href="/admin_invoice"><i class='fa-solid fa-cash-register'></i> Vše k fakturaci</a></li>
+            <li><a class="dropdown-item text-nowrap" href="/new_category"><i class='fa-solid fa-filter'></i> Nová kategorie</a></li>
+            <li><a class="dropdown-item text-nowrap" href="/edit_category"><i class="fa-solid fa-filter-circle-xmark"></i> Upravit kategorii</a></li>
           </ul>
         </li>
         {{/if}}
 
         <li class='nav-item'>
-          <a class='nav-link' href='/about'><i class="fa-solid fa-book"></i> Dokumentace <span
+          <a class='nav-link text-nowrap' href='/about'><i class="fa-solid fa-book"></i> Dokumentace <span
               class='sr-only'></span></a>
         </li>
 
@@ -68,16 +67,15 @@
       <ul class='navbar-nav'>
         {{#if user}}
         <li class='nav-item'>
-          <div class="btn-group">
-            {{!-- <a href="#" class="btn btn-primary"><i class="fa-solid fa-circle-question"></i></a> --}}
-            <a href="/profile" class="btn btn-outline-secondary" title="Profil uživatele">{{#if user.admin}}<i
+          <div class="btn-group w-100 text-nowrap">
+            <a href="/profile" class="btn btn-outline-secondary w-100" title="Profil uživatele">{{#if user.admin}}<i
                 class="fa-solid fa-user-cog">{{else}}<i class="fa-solid fa-user">{{/if}}</i> {{user.displayName}}</a>
             <a href="/logout" class="btn btn-danger" title="Odhlásit"><i class="fa-solid fa-right-from-bracket"></i></a>
           </div>
         </li>
         {{else}}
         <li class='nav-item'>
-          <a class='btn btn-success' href='/login'><i class="fa-solid fa-right-to-bracket"></i> Přihlásit</a>
+          <a class='btn btn-success w-100' href='/login'><i class="fa-solid fa-right-to-bracket"></i> Přihlásit</a>
         </li>
         {{/if}}
       </ul>

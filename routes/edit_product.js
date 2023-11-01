@@ -51,7 +51,7 @@ router.get('/', ensureAuthenticated, function (req, res) {
         }
       )
 
-      Category.find()
+      Category.find({ disabled: { $exists: false } })
         .sort([['name', 1]])
         .then((categories) => {
           logger.debug(

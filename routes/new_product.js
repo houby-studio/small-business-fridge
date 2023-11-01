@@ -38,7 +38,7 @@ router.get('/', ensureAuthenticated, function (req, res) {
     var alert = req.session.alert
     delete req.session.alert
   }
-  Category.find()
+  Category.find({ disabled: { $exists: false } })
     .sort([['name', 1]])
     .then((categories) => {
       logger.debug(
