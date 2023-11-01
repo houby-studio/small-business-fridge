@@ -5,6 +5,7 @@ import Invoice from '../models/invoice.js'
 import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
 import csrf from 'csurf'
 import logger from '../functions/logger.js'
+import { generateQR } from '../functions/qrPayment.js'
 var router = Router()
 var csrfProtection = csrf()
 router.use(csrfProtection)
@@ -359,6 +360,60 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
       res.redirect('/payments')
     }
   })
+})
+
+// API called from client to show QR code
+router.post('/qrcode', ensureAuthenticated, function (req, res, _next) {
+  if (!req.user.supplier) {
+    logger.warn(
+      `server.routes.payments.qrcode.post__User tried to access supplier page without permission.`,
+      {
+        metadata: {
+          result: req.user
+        }
+      }
+    )
+    res.status(403).send()
+    return
+  }
+
+  Invoice.findById(req.body.invoice_id)
+    .populate('supplierId')
+    .populate('buyerId')
+    .then((invoice) => {
+      // No invoice found
+      if (!invoice) {
+        res.status(404).send()
+        return
+      }
+      // User manipulates someones elses invoice
+      if (!invoice.supplierId.equals(req.user.id)) {
+        logger.warn(
+          `server.routes.payments.post__User:[${req.user.id}] tried to manipulate invoice:[${req.body.invoice_id}], which was not created by this user.`,
+          {
+            metadata: {
+              user: req.user.id,
+              result: invoice
+            }
+          }
+        )
+        console.log(invoice.supplierId)
+        res.status(403).send()
+        return
+      }
+      if (!invoice.supplierId.IBAN) {
+        res.status(404).send('Supplier does not have IBAN')
+      }
+      generateQR(
+        invoice.supplierId.IBAN,
+        invoice.totalCost,
+        invoice.buyerId.displayName,
+        invoice.supplierId.displayName,
+        (qrCode) => {
+          res.status(200).send(qrCode)
+        }
+      )
+    })
 })
 
 export default router

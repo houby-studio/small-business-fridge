@@ -1,3 +1,5 @@
+const myModal = new bootstrap.Modal('#qr-modal')
+
 // Initialize Bootstraps 5 tooltips
 const tooltipTriggerList = document.querySelectorAll(
   '[data-bs-toggle="tooltip"]'
@@ -84,3 +86,23 @@ document.addEventListener('DOMContentLoaded', function () {
   )
   if (paymentParam) table.search(paymentParam).draw()
 })
+
+async function getQrCode(id) {
+  let url = window.location.pathname + '/qrcode'
+  const csrf = document.getElementsByName('_csrf')[0].value
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      invoice_id: id,
+      _csrf: csrf
+    })
+  })
+  const qrCode = await response.text()
+
+  document.getElementById('qr_code').src = qrCode
+  myModal.show()
+}
