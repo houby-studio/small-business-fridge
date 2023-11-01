@@ -34,7 +34,7 @@
             >
               <option value='' selected>Vyberte ze seznamu..</option>
               {{#each products}}
-                <option value='{{this.id}}'>{{this.displayName}}</option>
+                <option value='{{this._id}}'>{{this.displayName}}</option>
               {{/each}}
             </select>
           </div>
@@ -92,7 +92,7 @@
 <script>
   var json_data = {
   {{#each products}}
-    "{{this.id}}": { "product_image": "{{this.imagePath}}" },
+    "{{this._id}}": { "product_image": "{{this.imagePath}}" },
   {{/each}}
   }
 </script>

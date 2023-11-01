@@ -38,7 +38,7 @@
             >
               <option value='' selected>Vyberte ze seznamu..</option>
               {{#each products}}
-                <option value='{{this.id}}'>{{this.displayName}}</option>
+                <option value='{{this._id}}'>{{this.displayName}}</option>
               {{/each}}
             </select>
           </div>
@@ -108,7 +108,7 @@
             >
               <option value='' selected>Vyberte ze seznamu..</option>
               {{#each categories}}
-                <option value='{{this.id}}'>{{this.name}}</option>
+                <option value='{{this._id}}'>{{this.name}}</option>
               {{/each}}
             </select>
           </div>
@@ -130,7 +130,7 @@
 <script>
   var json_data = {
   {{#each products}}
-    "{{this.id}}": { "product_name": "{{this.displayName}}",
+    "{{this._id}}": { "product_name": "{{this.displayName}}",
     "product_description": "{{this.description}}", "product_image": "{{this.imagePath}}",
     "product_category": "{{this.category}}" },
   {{/each}}
