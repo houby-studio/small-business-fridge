@@ -41,14 +41,12 @@
             </td>
             <td>
               {{#if this.paid}}
-              <span data-bs-toggle="tooltip" data-bs-title="Faktura již byla označena dodavatelem jako uhrazená.">
-                <div class="btn-group me-2 w-100" role="group" aria-label="First group">
+                <div class="btn-group me-2 w-100" role="group" aria-label="First group" data-bs-toggle="tooltip" data-bs-title="Faktura již byla označena dodavatelem jako uhrazená.">
                   <button type="button" class="btn btn-primary" onclick="getQrCode('{{ this._id }}', {{this.paid}})"><i class="fa-solid fa-qrcode"></i></button>
                   <input type="hidden" name="invoice_id" value="{{ this._id }}">
                   <input type="hidden" name="_csrf" value="{{ ../csrfToken }}">
                   <input type="submit" class="btn btn-secondary float-right w-100" value="Uzavřeno" disabled>
                 </div>
-              </span>
               {{else}}
               <form id="{{ this._id }}" class="needs-validation h-100" method="POST" action="/invoices" novalidate>
                 <div class="btn-group me-2 w-100" role="group" aria-label="First group">

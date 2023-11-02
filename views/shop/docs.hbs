@@ -1,97 +1,253 @@
 <div class='row mt-3'>
   <div class='col'>
-    <div class='card text-center mx-3 mx-lg-auto w-lg-75 w-xxl-50'>
-      <div class='accordion' id='accordionExample'>
+    <div class='card text-start mx-3 mx-xxl-auto w-xxl-75'>
+      {{!-- About --}}
+      <div class='accordion' id='docsAccordion'>
         <div class='accordion-item'>
           <h2 class='accordion-header'>
-            <button
-              class='accordion-button'
-              type='button'
-              data-bs-toggle='collapse'
-              data-bs-target='#collapseOne'
-              aria-expanded='true'
-              aria-controls='collapseOne'
-            >
-              Co je Lednice IT a k čemu se používá
+            <button class='accordion-button' type='button' data-bs-toggle='collapse' data-bs-target='#About'
+              aria-expanded='true' aria-controls='About'>
+              Co je Lednice IT a k čemu slouží
             </button>
           </h2>
-          <div
-            id='collapseOne'
-            class='accordion-collapse collapse show'
-            data-bs-parent='#accordionExample'
-          >
+          <div id='About' class='accordion-collapse collapse show' data-bs-parent='#docsAccordion'>
             <div class='accordion-body'>
-              <strong>This is the first item's accordion body.</strong>
-              It is shown by default, until the collapse plugin adds the
-              appropriate classes that we use to style each element. These
-              classes control the overall appearance, as well as the showing and
-              hiding via CSS transitions. You can modify any of this with custom
-              CSS or overriding our default variables. It's also worth noting
-              that just about any HTML can go within the
-              <code>.accordion-body</code>, though the transition does limit
-              overflow.
+              <p><b>Lednice IT</b>
+                vznikla jako benefit, který si tvoří převážně pracovníci IT sami
+                pro sebe.</p>
+              <p>Dobrovolníci, kteří na sebe přebírají roli dodavatele, čas od
+                času dodají libovolné produkty, které bez vidiny zisku nabízejí
+                ostatním kolegům, potažmo zákazníkům, kteří si mohou jakýkoliv
+                produkt koupit a vychutnat si jej, kdykoliv mají chuť.</p>
+              <p>S cílem vytvořit co nejpohodlnější systém jak pro zákazníky,
+                tak pro dodavatele, byly procesy v Lednici IT navrženy tak, aby
+                byla většina operací na jedno kliknutí, nemuselo se nic evidovat
+                v dalších systémech a cyklus naskladnění, nákupu, fakturace a
+                platby nevyžadoval žádnou přímou komunikaci mezi uživateli. Vše
+                zvládnete z pohodlí aplikace a v každém kroku se o komunikaci
+                starají automatické e-maily.</p>
             </div>
           </div>
         </div>
+        {{!-- Getting started --}}
         <div class='accordion-item'>
           <h2 class='accordion-header'>
-            <button
-              class='accordion-button collapsed'
-              type='button'
-              data-bs-toggle='collapse'
-              data-bs-target='#collapseTwo'
-              aria-expanded='false'
-              aria-controls='collapseTwo'
-            >
-              Accordion Item #2
+            <button class='accordion-button collapsed' type='button' data-bs-toggle='collapse'
+              data-bs-target='#GettingStarted' aria-expanded='false' aria-controls='GettingStarted'>
+              Začínáme
             </button>
           </h2>
-          <div
-            id='collapseTwo'
-            class='accordion-collapse collapse'
-            data-bs-parent='#accordionExample'
-          >
+          <div id='GettingStarted' class='accordion-collapse collapse' data-bs-parent='#docsAccordion'>
             <div class='accordion-body'>
-              <strong>This is the second item's accordion body.</strong>
-              It is hidden by default, until the collapse plugin adds the
-              appropriate classes that we use to style each element. These
-              classes control the overall appearance, as well as the showing and
-              hiding via CSS transitions. You can modify any of this with custom
-              CSS or overriding our default variables. It's also worth noting
-              that just about any HTML can go within the
-              <code>.accordion-body</code>, though the transition does limit
-              overflow.
+              <p>Pro vytvoření účtu se stačí
+                <a href='/login'>přihlásit účtem AAD</a>. Po přihlášení obdržíte
+                uvítací e-mail, ve kterém se dozvíte Vaše
+                <b>ID</b>, pomocí kterého lze nakupovat na samoobslužném kiosku.
+                Rovněž jej naleznete ve svém
+                <a href='/profile' target='_blank'>Profilu</a>.
+              </p>
+              <p>Po přihlášení je Váš účet kompletně připraven a můžete jít
+                rovnou na stránku
+                <a href='/shop' target='_blank'>Nakupovat</a>, kde si vyberete
+                produkt, který se Vám líbí a tlačítkem
+                <b>Koupit</b>
+                jej okamžitě zakoupíte. Pak už jen stačí zajít na místo, kde se
+                produkt nachází a vzít si jej. Gratulujeme k prvnímu nákupu!
+              </p>
+              <p>Po nákupu si jen zkontrolujte, že Vám přišel
+                <b>e-mail s potvrzením objednávky</b>, případně se podívejte na
+                historii svých objednávek na stránce
+                <a href='/orders' target='_blank'>Objednávky.</a>
+              </p>
+              <p>Jakmile přijde vhodná doba, vyvolá dodavatel hromadnou
+                fakturaci, do které se sloučí všechny Vaše dosud nevyfakturované
+                objednávky vůči danému dodavateli a obdržíte výzvu k úhradě.
+                Pokud dodavatel vyplnil číslo svého účtu, bude součástí e-mailu
+                i QR kód, který stačí načíst ve Vaší mobilní bankovní aplikaci a
+                zaplatit. Následně jen potvrdíte platbu na své straně, aby
+                dodavatel věděl, že má očekávat platbu a potvrdit ji ze své
+                strany, jakmile se mu částka objeví na účtu.</p>
             </div>
           </div>
         </div>
+        {{!-- Shop --}}
         <div class='accordion-item'>
           <h2 class='accordion-header'>
-            <button
-              class='accordion-button collapsed'
-              type='button'
-              data-bs-toggle='collapse'
-              data-bs-target='#collapseThree'
-              aria-expanded='false'
-              aria-controls='collapseThree'
-            >
-              Accordion Item #3
+            <button class='accordion-button collapsed' type='button' data-bs-toggle='collapse' data-bs-target='#Shop'
+              aria-expanded='false' aria-controls='Shop'>
+              Nakupovat
             </button>
           </h2>
-          <div
-            id='collapseThree'
-            class='accordion-collapse collapse'
-            data-bs-parent='#accordionExample'
-          >
+          <div id='Shop' class='accordion-collapse collapse' data-bs-parent='#docsAccordion'>
             <div class='accordion-body'>
-              <strong>This is the third item's accordion body.</strong>
-              It is hidden by default, until the collapse plugin adds the
-              appropriate classes that we use to style each element. These
-              classes control the overall appearance, as well as the showing and
-              hiding via CSS transitions. You can modify any of this with custom
-              CSS or overriding our default variables. It's also worth noting
-              that just about any HTML can go within the
-              <code>.accordion-body</code>, though the transition does limit
-              overflow.
+              <p>Na stránce <a href='/shop' target='_blank'>Nakupovat</a> se nachází karty produktů, které slouží jako
+                katalog pro výběr produktu a následný nákup.</p>
+              <img src='/static_images/docs_shop_overview_01.png' class='mx-auto img-fluid d-block'
+                alt='Přehled stránky Nakupovat' />
+              <ol>
+                <li>Lišta kategorií umožňuje filtrovat produkty podle kategorií. Kliknutím na tlačítko Vše zobrazíte
+                  všechny položky.</li>
+                <li>Barevná lišta pod názvem označuje kategorii produktu.</li>
+                <li>Horní část karty zobrazuje název produktu.</li>
+                <li>Obrázek produktu.</li>
+                <li>Popis produktu. Pokud se popis nevejde na jeden řádek, uvidíte na konci "...", po najetí myší se
+                  popis rozbalí a uvidíte obsah popisu.</li>
+                <li>Počet kusů skladem. Po najetí myší uvidíte počet kusů v rámci jedné dodávky a tudíž zcela jistě mají
+                  cenu,. která je uvedena níže.</li>
+                <li>Hvězdička Vám umožňuje přidat produkt mezi své oblíbené. Tím se karta produktu posune dopředu a
+                  umožní tak rychlý a pohodlný nákup. Rovněž obdržíte notifikaci, pokud nějaký dodavatel Váš oblíbený
+                  produkt naskladní.</li>
+                <li>Cena produktu.</li>
+                <li>Stiskem tlačítka Koupit můžete provést samotné zakoupení produktu.</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+        {{!-- Orders --}}
+        <div class='accordion-item'>
+          <h2 class='accordion-header'>
+            <button class='accordion-button collapsed' type='button' data-bs-toggle='collapse' data-bs-target='#Orders'
+              aria-expanded='false' aria-controls='Orders'>
+              Objednávky
+            </button>
+          </h2>
+          <div id='Orders' class='accordion-collapse collapse' data-bs-parent='#docsAccordion'>
+            <div class='accordion-body'>
+              <p>Na stránce <a href='/orders' target='_blank'>Objednávky</a> se nachází seznam Vašich nákupů.</p>
+              <img src='/static_images/docs_orders_overview_01.png' class='mx-auto img-fluid d-block'
+                alt='Přehled stránky Objednávky' />
+              <ol>
+                <li>Celkem zakoupeno udává počet objednávek, které jste za celou dobu provedli.</li>
+                <li>Celkem utraceno udává celkovou částku, za kterou jste za celou dobu nakoupili. </li>
+                <li>Nefakturováno udává celkovou částku, která aktuálně čeká na hromadnou fakturaci od dodavatelů.</li>
+                <li>Tlačítkem Zobrazit X výsledků můžete měnit počet zobrazených objednávek na stránkce.</li>
+                <li>Ve vyhledávání můžete hledat objednávky podle data, názvu produktu, ceny, jména dodavatele, způsobu
+                  nákupu a stavu fakturace.</li>
+                <li>Tlačítky Tisknout, Kopírovat, Excel, CSV a PDF můžete exportovat tabulku s daty příšlušnými způsoby.
+                </li>
+                <li>Tabulka objednávek zobrazuje všechny potřebné detaily ke každému jednotlivému nákupu.</li>
+                <li>Informace o zobrazených objednávkách na stránce a celkovém počtu objednávek.</li>
+                <li>Tlačítko pro nagivaci mezi stránkami tabulky.</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+        {{!-- Invoices --}}
+        <div class='accordion-item'>
+          <h2 class='accordion-header'>
+            <button class='accordion-button collapsed' type='button' data-bs-toggle='collapse'
+              data-bs-target='#Invoices' aria-expanded='false' aria-controls='Invoices'>
+              Faktury
+            </button>
+          </h2>
+          <div id='Invoices' class='accordion-collapse collapse' data-bs-parent='#docsAccordion'>
+            <div class='accordion-body'>
+              <p>Na stránce <a href='/invoices' target='_blank'>Faktury</a> se nachází seznam faktur, které Vám
+                vystavili dodavatelé.</p>
+              <p>Faktura vzikne tak, že dodavatel spustí proces hromadné fakturace, který všechny prodané produkty sečte
+                u každého zákazníka do jednoho dokladu a odešle e-mail s žádostí o platbu.</p>
+              <p>Faktura pak prochází následujícími stavy:</p>
+              <ol>
+                <li>Nezaplaceno: Ani zákazník, ani dodavatel neoznačil fakturu za zaplacenou. Čeká se na platbu
+                  zákazníka.</li>
+                <li>Kontrola platby: Zákazník označil fakturu za zaplacenou, ale dodavatel přijetí platby ještě
+                  nepotvrdil. Čeká se na potvrzení platby dodavatelem.</li>
+                <li>Zaplaceno: Faktura byla potvrzena zákazníkem i dodavatelem jako zaplacená, případně pouze
+                  dodavatelem.</li>
+              </ol>
+              <img src='/static_images/docs_invoices_overview_01.png' class='mx-auto img-fluid d-block'
+                alt='Přehled stránky Faktury' />
+              <ol>
+                <li>Tlačítkem Zobrazit X výsledků můžete měnit počet zobrazených faktur na stránkce.</li>
+                <li>Ve vyhledávání můžete hledat faktury podle data, jména dodavatele, počtu kusů, celkové ceně stavu
+                  platby.</li>
+                <li>Tlačítky Tisknout, Kopírovat, Excel, CSV a PDF můžete exportovat tabulku s daty příšlušnými způsoby.
+                </li>
+                <li>Tabulka faktur zobrazuje všechny potřebné detaily ke každé jednotlivé faktuře.</li>
+                <li>Tlačítko s ikonou QR kódu Vám zobrazí QR kód pro platbu za danou fakturu.</li>
+                <li>Tlačítko Akce se liší podle stavu faktury.
+                  <ol>
+                  <li>Zaplaceno: Označí fakturu za zaplacenou. Dodavatel obdrží e-mail o Vaší platbě a bude požádán o
+                    potvrzení z jeho strany.</li>
+                  <li>Odvolat: Pokud jste omylem potvrdili fakturu, kterou jste však skutečně nezaplatili, můžete své
+                    potvrzení vrátit zpět. Dodavatel o tom obdrží e-mail.</li>
+                  <li>Uzavřeno: Tlačítko je vypnuté, protože dodavatel označil fakturu za zaplacenou a tím její životní
+                    cyklus uzavřel.</li>
+                  </ol>
+                </li>
+                <li>Informace o zobrazených fakturách na stránce a celkovém počtu faktur.</li>
+                <li>Tlačítko pro nagivaci mezi stránkami tabulky.</li>
+              </ol>
+              <p>Při stisknutí tlačítka QR kódu se Vám zobrazí modální okno, jenž v případě, že dodavatel má vyplněné
+                bankovní spojení obsahuje QR kód pro uhrazení faktury na řádku, kde jste stiskli tlačítko.</p>
+              <img src='/static_images/docs_invoices_qrcode_01.png' class='mx-auto img-fluid d-block'
+                alt='Modální okno QR platby' />
+              <ol>
+                <li>QR kód pro uhrazení faktury, pokud má dodavatel nastavený IBAN na stránce profilu.</li>
+                <li>Tlačítko zavřít zavře modální okno, stejně jako křížek v pravém horním rohu.</li>
+                <li>Tlačítko Zaplaceno bude k aktivní v případě, že jste otevřeli QR kód u faktury ve stavu Nezaplaceno.</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+        {{!-- Profile --}}
+        <div class='accordion-item'>
+          <h2 class='accordion-header'>
+            <button class='accordion-button collapsed' type='button' data-bs-toggle='collapse' data-bs-target='#Profile'
+              aria-expanded='false' aria-controls='Profile'>
+              Profil
+            </button>
+          </h2>
+          <div id='Profile' class='accordion-collapse collapse' data-bs-parent='#docsAccordion'>
+            <div class='accordion-body'>
+              <p>Na stránce <a href='/profile' target='_blank'>Profil</a> se Vaše uživatelské údaje a nastavení.</p>
+              <img src='/static_images/docs_profile_overview_01.png' class='mx-auto img-fluid d-block'
+                alt='Přehled stránky Profil' />
+              <ol>
+                <li>Základní údaje obsahuje neměnitelné údaje, které byly načteny od zprostředkovatele identity třetí strany.</li>
+                <li>Nastavení komunikace Vám umožňuje měnit některé preference pro e-mailovou komunikaci
+                  <ol>
+                    <li>Povolením volby Zobrazovat produkty, které nejsou skladem se Vám na stránce Nakupovat budou zobrazovat všechny vytvořené produkty. Ve výchozím stavu se ukazují pouze produkty, jejichž skladová zásoba je vyšší než nula.</li>
+                    <li>Povolením volby Odesílat e-mail po nákupu v e-shopu si zajistíte e-mail s potvrzením objednávky po každém nákupu v e-shopu. Při nákupu přes kiosek dojde vždy k odeslání e-mailu bez ohledu na toto nastavení, aby se předešlo možnému zneužití.</li>
+                    <li>Povolením volby Odebírat denní report nákupů se přihlásíte k odběru reportu, který Vám na konci pracovního dne odešle počet zakoupených kusů za posledních 24 hodin. Slouží to především pro kontrolu, zda zákazník nezapomněl některý ze svých nákupů zaevidovat v systému Lednice IT.</li>
+                  </ol>
+                </li>
+                <li>Nastavení vzhledu umožňuje měnit celkový vzhled e-shopu Lednice IT
+                  <ol>
+                    <li>Barevný režim lze měnit mezi tmavým a světlým. Upozorňujeme, že vývoj a optimalizace se provádí primárně proto tmavému režimu.</li>
+                    <li>Téma umožňuje načítat alternativní téma knihovny Bootstrap. Aktuálně je k dispozici pouze výchozí vzhled.</li>
+                  </ol>
+                </li>
+                <li>Nastavení dodavatele vidí pouze uživatelé s rolí dodavatel. V rámci tohoto nastavení lze přidat IBAN pro generování QR kódů.</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+        {{!-- TOS --}}
+        <div class='accordion-item'>
+          <h2 class='accordion-header'>
+            <button class='accordion-button collapsed' type='button' data-bs-toggle='collapse'
+              data-bs-target='#TermsAndConditions' aria-expanded='false' aria-controls='TermsAndConditions'>
+              Obchodní podmínky
+            </button>
+          </h2>
+          <div id='TermsAndConditions' class='accordion-collapse collapse' data-bs-parent='#docsAccordion'>
+            <div class='accordion-body'>
+              {{> tos}}
+            </div>
+          </div>
+        </div>
+        {{!-- GDPR --}}
+        <div class='accordion-item'>
+          <h2 class='accordion-header'>
+            <button class='accordion-button collapsed' type='button' data-bs-toggle='collapse' data-bs-target='#GDPR'
+              aria-expanded='false' aria-controls='GDPR'>
+              Zásady zpracování osobních údajů
+            </button>
+          </h2>
+          <div id='GDPR' class='accordion-collapse collapse' data-bs-parent='#docsAccordion'>
+            <div class='accordion-body'>
+              {{> gdpr}}
             </div>
           </div>
         </div>

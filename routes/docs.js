@@ -5,7 +5,7 @@ var router = Router()
 /* GET docs page. */
 router.get('/', checkKiosk, function (req, res, next) {
   res.render('shop/docs', {
-    title: 'Changelog | Lednice IT',
+    title: 'Dokumentace | Lednice IT',
     user: req.user
   })
 })

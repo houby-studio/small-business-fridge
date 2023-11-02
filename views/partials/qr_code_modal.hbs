@@ -11,11 +11,16 @@
         ></button>
       </div>
       <div class='modal-body mx-auto'>
-        <img src='' alt='QR Code' id='qr_code' class='img-fluid' />
-        <span id='no_qr_code' class='d-none'><h5>Dodavatel nemá vyplněné
-            bankovní spojení.</h5>
+        <img
+          src='/static_images/qr_placeholder.png'
+          alt='QR Code'
+          id='qr_code'
+          class='img-fluid'
+        />
+        <div id='no_qr_code' class='d-none'><h5>Dodavatel nemá vyplněné bankovní
+            spojení.</h5>
           <p>Musíte provést platbu v hotovosti nebo si vyžádat číslo účtu přímo
-            od dodavatele.</p></span>
+            od dodavatele.</p></div>
       </div>
       <div class='modal-footer'>
         <button
