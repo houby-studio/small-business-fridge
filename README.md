@@ -5,20 +5,22 @@
 
 ## 2023 UPDATE
 
-This simple system is alive and kicking for 4 years already in our office! While imperfect, it has enabled us to share 4379 pieces of drinks and food in total cost of 76374 CZK as of today.
-We actually keep expanding to other colleagues, adding more products and features. That has obviously shown certain weak points of this system and for that very reason we have dusted off our javascript skills to get this system back on track!
-You can expect fixes of many features, updating all dependencies, some most needed new features and who knows, maybe some magical ✨AI✨ add-ons?
+This simple system is alive and kicking for 4 years already in our office! While imperfect, it has enabled us to share 4561 pieces of drinks and food in total cost of 79084 CZK in version 1.0.x.   
+Version 1.0.x has been in use from 2019-09-07 to 2023-11-02 and since 2023-11-03 we have deployed version 2.0.0 and hope to keep going strong.  
+Only time will tell, if everything is worknig as expected and whether we need to develop additional updates. Most likely we will.  
 
 ## Disclaimer
 
-This tool is exclusively made by us and used by us, but we have commited anyways to make it FOSS and configurable to allow others to use it if they want!
-There are however couple things that may need some customizations on your end, whether you fork it or open a pull request on this repository. The list of gotchas:
+This tool is exclusively made for our office, but we have commited to make it FOSS and hopefully configurable enough to allow others to use it if they want!
+There are however couple things that may need some customizations on your end, whether you fork it or open a pull request on this repository. The list of known gotchas:
 
-- Authentication is written for Microsoft Entra ID (Azure Active Directory)
-- Application is in czech language and there is no internalization package currently
-- Application has the minimum required features required for this model - no alternative methods for orders, payments, administration etc.
+- Authentication is written for Microsoft Entra ID (Azure Active Directory) with Passport.js - You are more than welcome to securely replace it with general OAuth/OIDC library
+- Application is in czech language and there is no internalization package currently - Again, if you are willing to provide translations, we will try to implement it
+- Application has the minimum required features required for our use case, that is sharing foods and drinks with no profit, thus no legal compliance typically required for businesses
 
 ## Super simple e-shop for colleagues
+
+> ⚠️ NEEDS UPDATING: Current text block is from version 1.0.x and does not reflect new features available in new versions
 
 **Small Business Fridge** offers simple, mostly intuitive e-shop which shows what products are available, how many and for how much.
 Customers can buy product with one simple click. The only other thing they have to do is to take the product and consume it. They also receive simple e-mail notification.
@@ -40,9 +42,13 @@ It should be pretty lightweight, as we run it on a potato without any problems f
 
 ## Want to know more?
 
+> ⚠️ NEEDS UPDATING: Current text block is from version 1.0.x and does not reflect new features available in new versions
+
 Go checkout [Wiki](https://github.com/houby-studio/small-bussiness-fridge/wiki) for more detailed informations and getting started guides.
 
 ## Images
+
+> ⚠️ NEEDS UPDATING: Current text block is from version 1.0.x and does not reflect new features available in new versions
 
 ### E-Shop
 
@@ -60,35 +66,21 @@ Go checkout [Wiki](https://github.com/houby-studio/small-bussiness-fridge/wiki) 
 
 ![image4](https://raw.githubusercontent.com/wiki/houby-studio/small-bussiness-fridge/images/sbf_deliver.png)
 
-## License
-
-### MIT
-
-Copyright 2023 Jakub Šindelář
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
 ## Development
 
-One way
+### General instructions
 
-- You can customize docker-compose.dev.example.yaml to develop with all required tools in containers
-- Not tested, we debug main application directly on our computer and use containers to run database and other dev tools
+- To develop main application directly on host, you can follow instructions below for both Windows and Linux, or follow general instructions:
+  - Download and install NodeJS
+  - Install dependencies `npm install`
+  - Copy `defaults.env` as `.env` and configure variables
+  - Copy `dev.example.docker-compose.yaml` as `docker-compose.dev.yaml` and configure variables
+  - Start docker compose to start dependencies (at least mongoDB)
+  - Start server with `npm start` or run debug task in VSCode
+- As an alternative, you can potentially customize `docker-compose.dev.example.yaml` to develop with all required tools in containers - Not tested
 
-Second way
-
-- Download and install NodeJS
-- Install dependencies `npm install`
-- Copy `defaults.env` as `.env` and configure variables
-- Start server with `npm start` or run debug task in VSCode
-
-For linux users, you may want to allow node to bind to system protected ports
-
-`sudo setcap 'cap_net_bind_service=+ep' $(readlink -f $(which node))`
+To allow bind on port 443, Windows users need to launch IDE as administrator.  
+Linux users should be able to configure non-root usage by running `sudo setcap 'cap_net_bind_service=+ep' $(readlink -f $(which node))`
 
 ### Windows 11
 
@@ -157,3 +149,15 @@ Main app is being run directly on host, mongo, mongo express and maildev in dock
 - Add new products, deliveries, start buying, invoicing etc.
 - Navigate to <http://localhost:8080> to view all **e-mails** being sent
 - Navigate to <http://localhost:8081> with login admin:pass to view, edit, export and import data in database **sbf-dev**
+
+## License
+
+### MIT
+
+Copyright 2023 Jakub Šindelář
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
