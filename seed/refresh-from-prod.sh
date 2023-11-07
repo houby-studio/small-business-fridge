@@ -13,7 +13,7 @@ PROD_BACKUPPATH="/var/lib/docker/volumes/small-business-fridge_backup/_data/"
 TEST_BACKUPPATH="/var/lib/docker/volumes/test-small-business-fridge_test-backup/_data/"
 PROD_IMAGEPATH="/var/lib/docker/volumes/small-business-fridge_images/_data/"
 TEST_IMAGEPATH="/var/lib/docker/volumes/test-small-business-fridge_test-images/_data/"
-YESTERDAY=$(date -d "yesterday" '+%Y-%m-%d')
+YESTERDAY=$(date -d "yesterday" '+%Y-%-m-%-d')
 
 echo "Deleting TEST images"
 rm ${TEST_IMAGEPATH}*
