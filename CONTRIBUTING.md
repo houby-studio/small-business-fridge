@@ -6,7 +6,7 @@ Please note we have a [code of conduct](CODE_OF_CONDUCT.md), please follow it in
 
 ## Pull Request Process
 
-1. Ensure your coding style follows [StandardJS](https://standardjs.com/) coding standard, otherwise test build will fail.  
+1. Ensure your coding style follows [StandardJS](https://standardjs.com/) coding standard, otherwise test build will fail.
 If using Visual Studio Code, you can install [StandardJS extension](https://github.com/standard/vscode-standardjs), which offers IntelliSense and function to format code.
 2. Follow coding styles and recommendations from codebeat and codeclimate to maintain high ratings of our code.
 3. If new functions are added, add comment style description/documentation to simply describe what function does and what inputs it expects. You should also include example in the comment.

@@ -5,9 +5,9 @@
 
 ## 2023 UPDATE
 
-This simple system is alive and kicking for 4 years already in our office! While imperfect, it has enabled us to share 4561 pieces of drinks and food in total cost of 79084 CZK in version 1.0.x.   
-Version 1.0.x has been in use from 2019-09-07 to 2023-11-02 and since 2023-11-03 we have deployed version 2.0.0 and hope to keep going strong.  
-Only time will tell, if everything is worknig as expected and whether we need to develop additional updates. Most likely we will.  
+This simple system is alive and kicking for 4 years already in our office! While imperfect, it has enabled us to share 4561 pieces of drinks and food in total cost of 79084 CZK in version 1.0.x.
+Version 1.0.x has been in use from 2019-09-07 to 2023-11-02 and since 2023-11-03 we have deployed version 2.0.0 and hope to keep going strong.
+Only time will tell, if everything is worknig as expected and whether we need to develop additional updates. Most likely we will.
 
 ## Disclaimer
 
@@ -73,13 +73,13 @@ Go checkout [Wiki](https://github.com/houby-studio/small-bussiness-fridge/wiki) 
 - To develop main application directly on host, you can follow instructions below for both Windows and Linux, or follow general instructions:
   - Download and install NodeJS
   - Install dependencies `npm install`
-  - Copy `defaults.env` as `.env` and configure variables
-  - Copy `dev.example.docker-compose.yaml` as `docker-compose.dev.yaml` and configure variables
-  - Start docker compose to start dependencies (at least mongoDB)
+  - Copy `example-dev.env` as `.env` and configure variables
+  - Copy `example.compose-dev.yaml` as `compose-dev.yaml` and configure variables
+  - Start docker compose to start dependencies (at least mongoDB) `docker compose --file compose-dev.yaml up -d`
   - Start server with `npm start` or run debug task in VSCode
 - As an alternative, you can potentially customize `docker-compose.dev.example.yaml` to develop with all required tools in containers - Not tested
 
-To allow bind on port 443, Windows users need to launch IDE as administrator.  
+To allow bind on port 443, Windows users need to launch IDE as administrator.
 Linux users should be able to configure non-root usage by running `sudo setcap 'cap_net_bind_service=+ep' $(readlink -f $(which node))`
 
 ### Windows 11
@@ -94,27 +94,25 @@ Main app is being run directly on host, mongo, mongo express and maildev in dock
 - docker desktop
 - visual studio code
 
-### Setup development environment
+### Setup development environment on Windows
 
 - Clone repo `git clone https://github.com/houby-studio/small-business-fridge.git`
 - Launch VSCode as administrator (to be able to bind to port 443)
 - Open folder small-business-fridge
 - For VSCode extensions we recommend at least Prettier (Native formatter does not like handlebars)
 - Install dependencies `npm install`
-- Prepare other containers for dev `cp dev.example.docker-compose.yaml docker-compose.dev.yaml`
+- Prepare other containers for dev `cp example.compose-dev.yaml compose-dev.yaml`
   - If you want to run main app in container as well, there is commented out section, which may be used with some tweaks
-- Prepare dotenv variables `cp dev.example.env .env` and at least change following variables with your AAD registered App:
+- Prepare dotenv variables `cp example-dev.env .env` and at least change following variables with your AAD registered App:
   - CREDS_IDENTITY_METADATA
   - CREDS_CLIENT_ID
   - CREDS_CLIENT_SECRET
-- Start docker containers `docker compose --file docker-compose.dev.yaml up -d`
+- Start docker containers `docker compose --file compose-dev.yaml up -d`
 - Hit F5 to start debugging
 - Navigate to <https://localhost/> and login with your AAD account - since you have **NODE_ENV=development**, all new users will be admins and suppliers by default
 - Add new products, deliveries, start buying, invoicing etc.
 - Navigate to <http://localhost:8080> to view all **e-mails** being sent
 - Navigate to <http://localhost:8081> with login admin:pass to view, edit, export and import data in database **sbf-dev**
-
-### Setup development environment
 
 ### Manjaro / Linux
 
@@ -130,20 +128,20 @@ Main app is being run directly on host, mongo, mongo express and maildev in dock
 - yay
   - visual-studio-code-bin
 
-### Setup development environment
+### Setup development environment on Linux
 
 - Clone repo `git clone https://github.com/houby-studio/small-business-fridge.git`
 - Change into a directory and launch VSCode `cd small-business-fridge && code .`
 - For VSCode extensions we recommend at least Prettier (Native formatter does not like handlebars)
 - Install dependencies `npm install`
-- Prepare other containers for dev `cp dev.example.docker-compose.yaml docker-compose.dev.yaml`
+- Prepare other containers for dev `cp example.compose-dev.yaml compose-dev.yaml`
   - If you want to run main app in container as well, there is commented out section, which may be used with some tweaks
-- Prepare dotenv variables `cp dev.example.env .env` and at least change following variables with your AAD registered App:
+- Prepare dotenv variables `cp example-dev.env .env` and at least change following variables with your AAD registered App:
   - CREDS_IDENTITY_METADATA
   - CREDS_CLIENT_ID
   - CREDS_CLIENT_SECRET
 - Allow node to bind to port 443 `sudo setcap 'cap_net_bind_service=+ep' $(readlink -f $(which node))`
-- Start docker containers `docker compose --file docker-compose.dev.yaml up -d`
+- Start docker containers `docker compose --file compose-dev.yaml up -d`
 - Hit F5 to start debugging
 - Navigate to <https://localhost/> and login with your AAD account - since you have **NODE_ENV=development**, all new users will be admins and suppliers by default
 - Add new products, deliveries, start buying, invoicing etc.

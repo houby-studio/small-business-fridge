@@ -8,5 +8,5 @@
 
 ## Reporting a Vulnerability
 
-We have configured all default automation tools provided by Github to check for updates and vulnerabilities.  
+We have configured all default automation tools provided by Github to check for updates and vulnerabilities.
 If you feel like something else should be done, feel free to open discussion or an issue.

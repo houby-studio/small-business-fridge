@@ -131,6 +131,8 @@ dist
 
 # Docker compose
 docker-compose.dev.yaml
+docker-compose.yaml
 
 # Database backups
 database-backup/*.tar.gz
+compose-dev.yaml
