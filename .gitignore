@@ -137,3 +137,4 @@ database-backup/*.tar.gz
 
 # Images
 public/images/*
+!public/images/.gitkeep
