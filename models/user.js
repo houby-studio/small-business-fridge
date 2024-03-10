@@ -21,6 +21,7 @@ const userSchema = new Schema({
   keypadId: {
     type: Number,
     required: true,
+    maxlength: 5,
   },
   admin: {
     type: Boolean,
@@ -63,6 +64,8 @@ const userSchema = new Schema({
     unique: true,
   },
 });
+
+userSchema.index({});
 
 const model = mongoose.model("User", userSchema);
 

@@ -168,9 +168,13 @@ router.get("/", ensureAuthenticated, function (req, res) {
     res.redirect("/logout");
     return;
   }
-  // Find user by keypadId
+  // Find user by keypadId or card number depending on char length
+  const filter =
+    req.query.customer_id.length < 6
+      ? { keypadId: req.query.customer_id }
+      : { card: req.query.customer_id };
   User.findOne({
-    keypadId: req.query.customer_id,
+    ...filter,
     keypadDisabled: { $in: [null, false] },
   })
     .then((customer) => {
@@ -253,9 +257,13 @@ router.post("/", ensureAuthenticated, function (req, res) {
     deliveryId: req.body.product_id,
   });
 
-  // Find user by keypadId
+  // Find user by keypadId or card number depending on char length
+  const filter =
+    req.body.customer_id.length < 6
+      ? { keypadId: req.body.customer_id }
+      : { card: req.body.customer_id };
   User.findOne({
-    keypadId: req.body.customer_id,
+    ...filter,
     keypadDisabled: { $in: [null, false] },
   })
     .then((user) => {

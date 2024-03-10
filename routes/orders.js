@@ -1,101 +1,105 @@
-import { Router } from 'express'
-import moment from 'moment'
-import Order from '../models/order.js'
-import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
-import { checkKiosk } from '../functions/checkKiosk.js'
-import logger from '../functions/logger.js'
-var router = Router()
-moment.locale('cs')
+import { Router } from "express";
+import moment from "moment";
+import Order from "../models/order.js";
+import { ensureAuthenticated } from "../functions/ensureAuthenticated.js";
+import { checkKiosk } from "../functions/checkKiosk.js";
+import logger from "../functions/logger.js";
+var router = Router();
+moment.locale("cs");
 
 /* GET orders page. */
-router.get('/', ensureAuthenticated, checkKiosk, function (req, res) {
-  if (req.baseUrl === '/admin_orders') {
-    var filter
+router.get("/", ensureAuthenticated, checkKiosk, function (req, res) {
+  if (req.baseUrl === "/admin_orders") {
+    var filter;
     if (!req.user.admin) {
       logger.warn(
         `server.routes.orders.get__User tried to access admin page without permission.`,
         {
           metadata: {
-            result: req.user
-          }
+            result: req.user,
+          },
         }
-      )
-      res.redirect('/')
-      return
+      );
+      res.redirect("/");
+      return;
     }
-    filter = {}
+    filter = {};
   } else {
     filter = {
-      buyerId: req.user._id
-    }
+      buyerId: req.user._id,
+    };
   }
+
+  Order.listIndexes().then((indexes) => {
+    console.log(indexes);
+  });
 
   Order.aggregate([
     {
-      $match: filter
+      $match: filter,
     },
     {
       $sort: {
-        _id: -1
-      }
+        _id: -1,
+      },
     },
     {
       $lookup: {
-        from: 'deliveries',
-        localField: 'deliveryId',
-        foreignField: '_id',
-        as: 'deliveryInfo'
-      }
+        from: "deliveries",
+        localField: "deliveryId",
+        foreignField: "_id",
+        as: "deliveryInfo",
+      },
     },
     {
-      $unwind: '$deliveryInfo'
-    },
-    {
-      $lookup: {
-        from: 'users',
-        localField: 'deliveryInfo.supplierId',
-        foreignField: '_id',
-        as: 'supplierInfo'
-      }
-    },
-    {
-      $unwind: '$supplierInfo'
+      $unwind: "$deliveryInfo",
     },
     {
       $lookup: {
-        from: 'users',
-        localField: 'buyerId',
-        foreignField: '_id',
-        as: 'buyerInfo'
-      }
+        from: "users",
+        localField: "deliveryInfo.supplierId",
+        foreignField: "_id",
+        as: "supplierInfo",
+      },
     },
     {
-      $unwind: '$buyerInfo'
+      $unwind: "$supplierInfo",
     },
     {
       $lookup: {
-        from: 'products',
-        localField: 'deliveryInfo.productId',
-        foreignField: '_id',
-        as: 'productInfo'
-      }
+        from: "users",
+        localField: "buyerId",
+        foreignField: "_id",
+        as: "buyerInfo",
+      },
     },
     {
-      $unwind: '$productInfo'
+      $unwind: "$buyerInfo",
+    },
+    {
+      $lookup: {
+        from: "products",
+        localField: "deliveryInfo.productId",
+        foreignField: "_id",
+        as: "productInfo",
+      },
+    },
+    {
+      $unwind: "$productInfo",
     },
     {
       $group: {
         _id: null,
         totalOrders: {
-          $sum: 1
+          $sum: 1,
         },
         totalSpend: {
-          $sum: '$deliveryInfo.price'
+          $sum: "$deliveryInfo.price",
         },
         results: {
-          $push: '$$ROOT'
-        }
-      }
+          $push: "$$ROOT",
+        },
+      },
     },
     {
       $project: {
@@ -107,21 +111,21 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res) {
             vars: {
               field: {
                 $filter: {
-                  input: '$results',
-                  as: 'calc',
+                  input: "$results",
+                  as: "calc",
                   cond: {
-                    $eq: ['$$calc.invoice', false]
-                  }
-                }
-              }
+                    $eq: ["$$calc.invoice", false],
+                  },
+                },
+              },
             },
             in: {
-              $sum: '$$field.deliveryInfo.price'
-            }
-          }
-        }
-      }
-    }
+              $sum: "$$field.deliveryInfo.price",
+            },
+          },
+        },
+      },
+    },
   ])
     .then((docs) => {
       if (req.query.a) {
@@ -130,39 +134,39 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res) {
           component: req.query.c,
           message: req.query.m,
           success: req.query.s,
-          danger: req.query.d
-        }
+          danger: req.query.d,
+        };
       }
       if (docs[0]) {
         logger.debug(
           `server.routes.orders.get__Successfully loaded ${docs[0].results.length} orders.`,
           {
             metadata: {
-              result: docs
-            }
+              result: docs,
+            },
           }
-        )
+        );
         docs[0].results.forEach(function (element) {
-          element.order_date_format = moment(element.order_date).format('LLLL')
-          element.order_date = moment(element.order_date).format()
-        })
+          element.order_date_format = moment(element.order_date).format("LLLL");
+          element.order_date = moment(element.order_date).format();
+        });
       }
 
-      res.render('shop/orders', {
-        title: 'Objednávky | Lednice IT',
+      res.render("shop/orders", {
+        title: "Objednávky | Lednice IT",
         orders: docs[0],
         admin: filter,
         user: req.user,
-        alert: alert
-      })
+        alert: alert,
+      });
     })
     .catch((err) => {
       logger.error(`server.routes.orders.get__Failed to load orders.`, {
         metadata: {
-          error: err.message
-        }
-      })
-    })
-})
+          error: err.message,
+        },
+      });
+    });
+});
 
-export default router
+export default router;
