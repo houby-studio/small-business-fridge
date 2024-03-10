@@ -1,63 +1,70 @@
-import mongoose, { Schema } from 'mongoose'
+import mongoose, { Schema } from "mongoose";
 
 const userSchema = new Schema({
   oid: {
     type: String,
-    required: true
+    required: true,
   },
   displayName: {
     type: String,
-    required: true
+    required: true,
   },
   email: {
     type: String,
-    required: true
+    required: true,
   },
   IBAN: {
     type: String,
     minlength: 24,
-    maxlength: 24
+    maxlength: 24,
   },
   keypadId: {
     type: Number,
-    required: true
+    required: true,
   },
   admin: {
     type: Boolean,
-    default: false
+    default: false,
   },
   supplier: {
     type: Boolean,
-    default: false
+    default: false,
   },
   kiosk: {
     type: Boolean,
-    default: false
+    default: false,
   },
   showAllProducts: {
     type: Boolean,
-    default: false
+    default: false,
   },
   sendMailOnEshopPurchase: {
     type: Boolean,
-    default: true
+    default: true,
   },
   sendDailyReport: {
     type: Boolean,
-    default: true
+    default: true,
   },
   favorites: [
     {
       type: Schema.Types.ObjectId,
-      ref: 'Product',
-      required: false
-    }
+      ref: "Product",
+      required: false,
+    },
   ],
-  colorMode: { type: String, enum: ['light', 'dark'] },
-  theme: { type: String, enum: ['happy', 'angry', 'shocked'] }
-})
+  colorMode: { type: String, enum: ["light", "dark"] },
+  theme: { type: String, enum: ["happy", "angry", "shocked"] },
+  keypadDisabled: { type: Boolean, default: false },
+  card: {
+    type: String,
+    required: false,
+    minlength: 6,
+    unique: true,
+  },
+});
 
-const model = mongoose.model('User', userSchema)
+const model = mongoose.model("User", userSchema);
 
-export const schema = model.schema
-export default model
+export const schema = model.schema;
+export default model;
