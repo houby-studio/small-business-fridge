@@ -4,6 +4,8 @@ const userSchema = new Schema({
   oid: {
     type: String,
     required: true,
+    unique: true,
+    index: true,
   },
   displayName: {
     type: String,
@@ -22,6 +24,7 @@ const userSchema = new Schema({
     type: Number,
     required: true,
     maxlength: 5,
+    index: true,
   },
   admin: {
     type: Boolean,
