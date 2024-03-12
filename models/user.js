@@ -4,8 +4,8 @@ const userSchema = new Schema({
   oid: {
     type: String,
     required: true,
-    unique: true,
     index: true,
+    unique: true,
   },
   displayName: {
     type: String,
@@ -64,7 +64,9 @@ const userSchema = new Schema({
     type: String,
     required: false,
     minlength: 6,
+    index: true,
     unique: true,
+    sparse: true,
   },
 });
 
