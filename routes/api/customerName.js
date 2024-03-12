@@ -29,11 +29,12 @@ router.get("/", ensureAuthenticatedAPI, function (req, res, _next) {
 
   // Find user in database
   const filter =
-    req.query.customer_id.length < 6
-      ? { keypadId: req.query.customer_id }
-      : { card: req.query.customer_id };
+    req.query.customer.length < 6
+      ? { keypadId: req.query.customer }
+      : { card: req.query.customer };
   User.findOne({
     ...filter,
+    keypadDisabled: { $in: [null, false] },
   })
     .then((user) => {
       // If database doesn't contain user with supplied keypadId, database returns empty object, which doesn't contain parameter displayName.

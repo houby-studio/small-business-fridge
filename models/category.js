@@ -1,20 +1,22 @@
-import { Schema as _Schema, model } from 'mongoose'
-var Schema = _Schema
+import { Schema, model } from "mongoose";
+import uniqueValidator from "mongoose-unique-validator";
 
 var schema = new Schema({
   name: {
     type: String,
     required: true,
-    unique: true
+    unique: true,
   },
   color: {
     type: String,
-    required: true
+    required: true,
   },
   disabled: {
     type: Boolean,
-    default: false
-  }
-})
+    default: false,
+  },
+});
 
-export default model('Category', schema)
+schema.plugin(uniqueValidator);
+
+export default model("Category", schema);

@@ -56,11 +56,12 @@ router.post("/", ensureAuthenticatedAPI, function (req, res, _next) {
 
   // Find user by keypadId
   const filter =
-    req.body.customer_id.length < 6
-      ? { keypadId: req.body.customer_id }
-      : { card: req.body.customer_id };
+    req.body.customer.toString().length < 6
+      ? { keypadId: req.body.customer }
+      : { card: req.body.customer };
   User.findOne({
     ...filter,
+    keypadDisabled: { $in: [null, false] },
   })
     .then((user) => {
       if (!user) {
@@ -149,7 +150,10 @@ router.post("/", ensureAuthenticatedAPI, function (req, res, _next) {
                   res.status(200);
                   res.set("Content-Type", "application/json");
                   responseJson = {
-                    user,
+                    user: {
+                      displayName: user.displayName,
+                      email: user.email,
+                    },
                     product: {
                       name: product[0].displayName,
                       price: product[0].stock[0].price,

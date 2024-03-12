@@ -1,6 +1,7 @@
-import mongoose, { Schema } from "mongoose";
+import { Schema, model } from "mongoose";
+import uniqueValidator from "mongoose-unique-validator";
 
-const userSchema = new Schema({
+const schema = new Schema({
   oid: {
     type: String,
     required: true,
@@ -70,9 +71,8 @@ const userSchema = new Schema({
   },
 });
 
-userSchema.index({});
+schema.plugin(uniqueValidator);
 
-const model = mongoose.model("User", userSchema);
+// userSchema.index({});
 
-export const schema = model.schema;
-export default model;
+export default model("User", schema);

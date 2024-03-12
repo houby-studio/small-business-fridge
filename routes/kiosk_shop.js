@@ -266,6 +266,7 @@ router.post("/", ensureAuthenticated, function (req, res) {
     ...filter,
     keypadDisabled: { $in: [null, false] },
   })
+    // .explain()
     .then((user) => {
       if (!user) {
         logger.error(

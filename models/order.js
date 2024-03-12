@@ -1,34 +1,33 @@
-import { Schema as _Schema, model } from 'mongoose'
-var Schema = _Schema
+import { Schema, model } from "mongoose";
 
 var schema = new Schema({
   buyerId: {
     type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+    ref: "User",
+    required: true,
   },
   deliveryId: {
     type: Schema.Types.ObjectId,
-    ref: 'Stock',
-    required: true
+    ref: "Stock",
+    required: true,
   },
   order_date: {
     type: Date,
-    default: Date.now
+    default: Date.now,
   },
   invoice: {
     type: Boolean,
-    default: false
+    default: false,
   },
   invoiceId: {
     type: Schema.Types.ObjectId,
-    ref: 'Invoice',
-    required: false
+    ref: "Invoice",
+    required: false,
   },
   keypadOrder: {
     type: Boolean,
-    default: false
-  }
-})
+    default: false,
+  },
+});
 
-export default model('Order', schema)
+export default model("Order", schema);
