@@ -4,18 +4,17 @@ import User from "../../models/user.js";
 var router = Router();
 let responseJson;
 
-// GET /api/customerName - accepts customer's keypadId and returns customer's display name
+// GET /api/scannerAuthUser - accepts customer's keypadId or card and returns customer basic information
 router.get("/", ensureAuthenticatedAPI, function (req, res, _next) {
   // Check if request contains 'customer' parameter
   if (!req.query.customer) {
     res.status(400);
     res.set("Content-Type", "application/problem+json");
     responseJson = {
-      type: "https://github.com/houby-studio/small-business-fridge/wiki/API-documentation#customerName",
+      type: "https://github.com/houby-studio/small-business-fridge/wiki/API-documentation#scannerAuthUser",
       title: "Your request does not contain parameter 'customer'.",
       status: 400,
-      "detail:":
-        "This function requires parameter 'customer'. More details can be found in documentation https://git.io/JeodS",
+      "detail:": "This function requires parameter 'customer'.",
       "invalid-params": [
         {
           name: "customer",
@@ -36,32 +35,35 @@ router.get("/", ensureAuthenticatedAPI, function (req, res, _next) {
     ...filter,
   })
     .then((user) => {
-      // If database doesn't contain user with supplied keypadId, database returns empty object, which doesn't contain parameter displayName.
+      // If database doesn't contain user with supplied keypadId or card, database returns empty object, which doesn't contain user object.
       res.set("Content-Type", "application/json");
       if (!user) {
         res.status(404);
         res.json("NOT_FOUND");
       } else {
         res.status(200);
-        const normalized = user.displayName
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "");
-        res.json(normalized);
+        const response = {
+          _id: user._id,
+          displayName: user.displayName,
+          admin: user.admin,
+          supplier: user.supplier,
+        };
+        res.json(response);
       }
     })
     .catch((_err) => {
       res.status(400);
       res.set("Content-Type", "application/problem+json");
       const responseJson = {
-        type: "https://github.com/houby-studio/small-business-fridge/wiki/API-documentation#customerName",
+        type: "https://github.com/houby-studio/small-business-fridge/wiki/API-documentation#scannerAuthUser",
         title: "Your parameter 'customer' is wrong type.",
         status: 400,
         "detail:":
-          "Parameter 'customer' must be a 'Number'. More details can be found in documentation https://git.io/JeodS",
+          "Parameter 'customer' must be either a 'Number' with max value 99999 or a 'String' with minimum length of 6.",
         "invalid-params": [
           {
             name: "customer",
-            reason: "must be natural number",
+            reason: "must be number or string",
           },
         ],
       };

@@ -171,11 +171,13 @@ router.get("/", ensureAuthenticated, function (req, res) {
   // Find user by keypadId or card number depending on char length
   const filter =
     req.query.customer_id.length < 6
-      ? { keypadId: req.query.customer_id }
+      ? {
+          keypadId: req.query.customer_id,
+          keypadDisabled: { $in: [null, false] },
+        }
       : { card: req.query.customer_id };
   User.findOne({
     ...filter,
-    keypadDisabled: { $in: [null, false] },
   })
     .then((customer) => {
       if (!customer) {
@@ -260,11 +262,13 @@ router.post("/", ensureAuthenticated, function (req, res) {
   // Find user by keypadId or card number depending on char length
   const filter =
     req.body.customer_id.length < 6
-      ? { keypadId: req.body.customer_id }
+      ? {
+          keypadId: req.body.customer_id,
+          keypadDisabled: { $in: [null, false] },
+        }
       : { card: req.body.customer_id };
   User.findOne({
     ...filter,
-    keypadDisabled: { $in: [null, false] },
   })
     // .explain()
     .then((user) => {

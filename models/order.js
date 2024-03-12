@@ -28,6 +28,10 @@ var schema = new Schema({
     type: Boolean,
     default: false,
   },
+  scannerOrder: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 export default model("Order", schema);

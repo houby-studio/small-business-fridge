@@ -57,11 +57,10 @@ router.post("/", ensureAuthenticatedAPI, function (req, res, _next) {
   // Find user by keypadId
   const filter =
     req.body.customer.toString().length < 6
-      ? { keypadId: req.body.customer }
+      ? { keypadId: req.body.customer, keypadDisabled: { $in: [null, false] } }
       : { card: req.body.customer };
   User.findOne({
     ...filter,
-    keypadDisabled: { $in: [null, false] },
   })
     .then((user) => {
       if (!user) {

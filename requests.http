@@ -1,0 +1,29 @@
+# Call api to get scannerAuthUser
+GET https://localhost/api/customerName?customer=1 HTTP/1.1
+Content-Type: application/json
+sbf-API-secret: developmentsecret
+
+###
+
+POST https://localhost/api/keypadOrder HTTP/1.1
+Content-Type: application/json
+sbf-API-secret: developmentsecret
+
+{
+  "customer": 1,
+  "product": 1
+}
+
+###
+
+GET https://localhost/api/scannerAuthUser?customer=123456 HTTP/1.1
+Content-Type: application/json
+sbf-API-secret: developmentsecret
+
+###
+
+GET https://localhost/api/scannerProduct?product=1234 HTTP/1.1
+Content-Type: application/json
+sbf-API-secret: developmentsecret
+
+###
