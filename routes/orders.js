@@ -30,9 +30,9 @@ router.get("/", ensureAuthenticated, checkKiosk, function (req, res) {
     };
   }
 
-  Order.listIndexes().then((indexes) => {
-    console.log(indexes);
-  });
+  // Order.listIndexes().then((indexes) => {
+  //   console.log(indexes);
+  // });
 
   Order.aggregate([
     {

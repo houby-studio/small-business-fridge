@@ -10,18 +10,17 @@ var router = Router();
 let responseJson;
 moment.locale("cs");
 
-/* API to order via keypad */
+// GET /api/scannerOrder - validate product price and purchase product if it matches
 router.post("/", ensureAuthenticatedAPI, function (req, res, _next) {
   if (!req.body.customer) {
     // Check if request contains 'customer' parameter
     res.status(400);
     res.set("Content-Type", "application/problem+json");
     responseJson = {
-      type: "https://github.com/houby-studio/small-business-fridge/wiki/API-documentation#keypadOrder",
+      type: "https://github.com/houby-studio/small-business-fridge/wiki/API-documentation#scannerOrder",
       title: "Your request does not contain parameter 'customer'.",
       status: 400,
-      "detail:":
-        "This function requires parameter 'customer'. More details can be found in documentation https://git.io/Jey70",
+      "detail:": "This function requires parameter 'customer'.",
       "invalid-params": [
         {
           name: "customer",
@@ -36,14 +35,31 @@ router.post("/", ensureAuthenticatedAPI, function (req, res, _next) {
     res.status(400);
     res.set("Content-Type", "application/problem+json");
     responseJson = {
-      type: "https://github.com/houby-studio/small-business-fridge/wiki/API-documentation#keypadOrder",
+      type: "https://github.com/houby-studio/small-business-fridge/wiki/API-documentation#scannerOrder",
       title: "Your request does not contain parameter 'product'.",
       status: 400,
-      "detail:":
-        "This function requires parameter 'product'. More details can be found in documentation https://git.io/Jey70",
+      "detail:": "This function requires parameter 'product'.",
       "invalid-params": [
         {
           name: "product",
+          reason: "must be specified",
+        },
+      ],
+    };
+    res.json(responseJson);
+    return;
+  } else if (!req.body.price) {
+    // Check if request contains 'price' parameter
+    res.status(400);
+    res.set("Content-Type", "application/problem+json");
+    responseJson = {
+      type: "https://github.com/houby-studio/small-business-fridge/wiki/API-documentation#scannerOrder",
+      title: "Your request does not contain parameter 'price'.",
+      status: 400,
+      "detail:": "This function requires parameter 'price'.",
+      "invalid-params": [
+        {
+          name: "price",
           reason: "must be specified",
         },
       ],
@@ -74,13 +90,13 @@ router.post("/", ensureAuthenticatedAPI, function (req, res, _next) {
       }
 
       newOrder.buyerId = user._id;
-      newOrder.keypadOrder = true;
+      newOrder.scannerOrder = true;
 
       // Get product
       Product.aggregate([
         {
           $match: {
-            keypadId: Number(req.body.product),
+            code: req.body.product.toString(),
           },
         },
         {
@@ -121,7 +137,13 @@ router.post("/", ensureAuthenticatedAPI, function (req, res, _next) {
             res.set("Content-Type", "application/json");
             res.json("STOCK_NOT_FOUND");
             return;
+          } else if (product[0].stock[0].price !== req.body.price) {
+            res.status(400);
+            res.set("Content-Type", "application/json");
+            res.json("PRICE_MISMATCH");
+            return;
           }
+
           newOrder.deliveryId = product[0].stock[0]._id;
           const newAmount = product[0].stock[0].amount_left - 1;
 
@@ -209,7 +231,7 @@ router.post("/", ensureAuthenticatedAPI, function (req, res, _next) {
       res.status(400);
       res.set("Content-Type", "application/problem+json");
       const responseJson = {
-        type: "https://github.com/houby-studio/small-business-fridge/wiki/API-documentation#keypadOrder",
+        type: "https://github.com/houby-studio/small-business-fridge/wiki/API-documentation#scannerOrder",
         title: "Your parameter 'customer' is wrong type.",
         status: 400,
         "detail:":

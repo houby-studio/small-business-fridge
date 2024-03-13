@@ -22,8 +22,18 @@ sbf-API-secret: developmentsecret
 
 ###
 
-GET https://localhost/api/scannerProduct?product=1234 HTTP/1.1
+GET https://localhost/api/scannerProduct?product=123 HTTP/1.1
 Content-Type: application/json
 sbf-API-secret: developmentsecret
 
 ###
+
+POST https://localhost/api/scannerOrder HTTP/1.1
+Content-Type: application/json
+sbf-API-secret: developmentsecret
+
+{
+  "customer": "123456",
+  "product": "123",
+  "price": 5
+}

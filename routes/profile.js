@@ -1,28 +1,28 @@
-import { Router } from 'express'
-import User from '../models/user.js'
-import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
-import { checkKiosk } from '../functions/checkKiosk.js'
-import logger from '../functions/logger.js'
-var router = Router()
+import { Router } from "express";
+import User from "../models/user.js";
+import { ensureAuthenticated } from "../functions/ensureAuthenticated.js";
+import { checkKiosk } from "../functions/checkKiosk.js";
+import logger from "../functions/logger.js";
+var router = Router();
 
 /* GET profile page. */
-router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
-  res.render('shop/profile', {
-    title: 'Profil | Lednice IT',
-    user: req.user
-  })
-})
+router.get("/", ensureAuthenticated, checkKiosk, function (req, res, _next) {
+  res.render("shop/profile", {
+    title: "Profil | Lednice IT",
+    user: req.user,
+  });
+});
 
-router.post('/', ensureAuthenticated, function (req, res, _next) {
-  const newValue = req.body.value
-  if (req.body.name === 'checkAllProducts') {
+router.post("/", ensureAuthenticated, function (req, res, _next) {
+  const newValue = req.body.value;
+  if (req.body.name === "checkAllProducts") {
     User.findByIdAndUpdate(
       req.user.id,
       {
-        showAllProducts: newValue
+        showAllProducts: newValue,
       },
       {
-        upsert: true
+        upsert: true,
       }
     )
       .then(() => {
@@ -30,183 +30,211 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           `server.routes.profile.post__User:[${req.user.displayName}] set preference showAllProducts:[${newValue}].`,
           {
             metadata: {
-              result: req.user
-            }
+              result: req.user,
+            },
           }
-        )
-        res.status(200).send()
-        return
+        );
+        res.status(200).send();
+        return;
       })
       .catch((err) => {
         logger.error(
           `server.routes.profile.post__Failed to set preference showAllProducts:[${newValue}] for user:[${req.user.displayName}].`,
           {
             metadata: {
-              error: err.message
-            }
+              error: err.message,
+            },
           }
-        )
-        res.status(400).send()
-      })
-  } else if (req.body.name === 'checkSendEmailEshop') {
+        );
+        res.status(400).send();
+      });
+  } else if (req.body.name === "checkSendEmailEshop") {
     User.findByIdAndUpdate(req.user.id, {
-      sendMailOnEshopPurchase: newValue
+      sendMailOnEshopPurchase: newValue,
     })
       .then(() => {
         logger.info(
           `server.routes.profile.post__User:[${req.user.displayName}] set preference sendMailOnEshopPurchase:[${newValue}].`,
           {
             metadata: {
-              result: req.user
-            }
+              result: req.user,
+            },
           }
-        )
-        res.status(200).send()
-        return
+        );
+        res.status(200).send();
+        return;
       })
       .catch((err) => {
         logger.error(
           `server.routes.profile.post__Failed to set preference sendMailOnEshopPurchase:[${newValue}] for user:[${req.user.displayName}].`,
           {
             metadata: {
-              error: err.message
-            }
+              error: err.message,
+            },
           }
-        )
-        res.status(400).send()
-        return
-      })
-  } else if (req.body.name === 'checkSendDailyReport') {
+        );
+        res.status(400).send();
+        return;
+      });
+  } else if (req.body.name === "checkSendDailyReport") {
     User.findByIdAndUpdate(req.user.id, {
-      sendDailyReport: newValue
+      sendDailyReport: newValue,
     })
       .then(() => {
         logger.info(
           `server.routes.profile.post__User:[${req.user.displayName}] set preference sendDailyReport:[${newValue}].`,
           {
             metadata: {
-              result: req.user
-            }
+              result: req.user,
+            },
           }
-        )
-        res.status(200).send()
-        return
+        );
+        res.status(200).send();
+        return;
       })
       .catch((err) => {
         logger.error(
           `server.routes.profile.post__Failed to set preference sendDailyReport:[${newValue}] for user:[${req.user.displayName}].`,
           {
             metadata: {
-              error: err.message
-            }
+              error: err.message,
+            },
           }
-        )
-        res.status(400).send()
-        return
-      })
-  } else if (req.body.name === 'realtime-iban') {
+        );
+        res.status(400).send();
+        return;
+      });
+  } else if (req.body.name === "realtime-iban") {
     if (/^CZ\d{22}$/.test(newValue)) {
       User.findByIdAndUpdate(req.user.id, {
-        IBAN: newValue
+        IBAN: newValue,
       })
         .then(() => {
           logger.info(
             `server.routes.profile.post__User:[${req.user.displayName}] set new IBAN:[${newValue}].`,
             {
               metadata: {
-                result: req.user
-              }
+                result: req.user,
+              },
             }
-          )
-          res.status(200).send()
-          return
+          );
+          res.status(200).send();
+          return;
         })
         .catch((err) => {
           logger.error(
             `server.routes.profile.post__Failed to set IBAN:[${newValue}] for user:[${req.user.displayName}].`,
             {
               metadata: {
-                error: err.message
-              }
+                error: err.message,
+              },
             }
-          )
-          res.status(400).send()
-          return
-        })
+          );
+          res.status(400).send();
+          return;
+        });
     } else {
       logger.warn(
         `server.routes.profile.post__User:[${req.user.displayName}] tried to set invalid IBAN:[${newValue}].`,
         {
           metadata: {
-            result: req.user
-          }
+            result: req.user,
+          },
         }
-      )
-      res.status(400).send()
-      return
+      );
+      res.status(400).send();
+      return;
     }
-  } else if (req.body.name === 'favorite') {
-    const operation = newValue?.state ? '$push' : '$pull'
+  } else if (req.body.name === "favorite") {
+    const operation = newValue?.state ? "$push" : "$pull";
     User.findByIdAndUpdate(req.user.id, {
       [operation]: {
-        favorites: newValue?.product
-      }
+        favorites: newValue?.product,
+      },
     })
       .then(() => {
         logger.info(
           `server.routes.profile.post__User:[${req.user.displayName}] added/removed favorite:[${newValue?.product}].`,
           {
             metadata: {
-              result: req.user
-            }
+              result: req.user,
+            },
           }
-        )
-        res.status(200).send()
-        return
+        );
+        res.status(200).send();
+        return;
       })
       .catch((err) => {
         logger.error(
           `server.routes.profile.post__Failed to add/remove favorite for user:[${req.user.displayName}].`,
           {
             metadata: {
-              error: err.message
-            }
+              error: err.message,
+            },
           }
-        )
-        res.status(400).send()
-        return
-      })
-  } else if (req.body.name === 'colormode') {
+        );
+        res.status(400).send();
+        return;
+      });
+  } else if (req.body.name === "colormode") {
     User.findByIdAndUpdate(req.user.id, {
-      colorMode: newValue
+      colorMode: newValue,
     })
       .then(() => {
         logger.info(
           `server.routes.profile.post__User:[${req.user.displayName}] changed color mode:[${newValue}].`,
           {
             metadata: {
-              result: req.user
-            }
+              result: req.user,
+            },
           }
-        )
-        res.status(200).send()
-        return
+        );
+        res.status(200).send();
+        return;
       })
       .catch((err) => {
         logger.error(
           `server.routes.profile.post__Failed to change color mode for user:[${req.user.displayName}].`,
           {
             metadata: {
-              error: err.message
-            }
+              error: err.message,
+            },
           }
-        )
-        res.status(400).send()
-        return
+        );
+        res.status(400).send();
+        return;
+      });
+  } else if (req.body.name === "checkDisableKeypadLogin") {
+    User.findByIdAndUpdate(req.user.id, {
+      keypadDisabled: newValue,
+    })
+      .then(() => {
+        logger.info(
+          `server.routes.profile.post__User:[${req.user.displayName}] set preference checkDisableKeypadLogin:[${newValue}].`,
+          {
+            metadata: {
+              result: req.user,
+            },
+          }
+        );
+        res.status(200).send();
+        return;
       })
+      .catch((err) => {
+        logger.error(
+          `server.routes.profile.post__Failed to set preference checkDisableKeypadLogin:[${newValue}] for user:[${req.user.displayName}].`,
+          {
+            metadata: {
+              error: err.message,
+            },
+          }
+        );
+        res.status(400).send();
+        return;
+      });
   } else {
-    res.status(400).send()
+    res.status(400).send();
   }
-})
+});
 
-export default router
+export default router;

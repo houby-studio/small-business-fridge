@@ -68,6 +68,7 @@ import keypadOrderRouter from "./routes/api/keypadOrder.js";
 import customerNameRouter from "./routes/api/customerName.js";
 import scannerAuthUser from "./routes/api/scannerAuthUser.js";
 import scannerProduct from "./routes/api/scannerProduct.js";
+import scannerOrder from "./routes/api/scannerOrder.js";
 // API routes for clientside javascript
 import promptGptRouter from "./routes/api/promptGpt.js";
 // Middleware routes
@@ -169,6 +170,7 @@ app.use("/api/keypadOrder", keypadOrderRouter);
 app.use("/api/customerName", customerNameRouter);
 app.use("/api/scannerAuthUser", scannerAuthUser);
 app.use("/api/scannerProduct", scannerProduct);
+app.use("/api/scannerOrder", scannerOrder);
 // API routes for clientside javascript
 app.use("/api/promptGpt", promptGptRouter);
 

@@ -33,7 +33,7 @@ router.get("/", ensureAuthenticatedAPI, function (req, res, _next) {
     [
       {
         $match: {
-          code: req.query.product,
+          code: req.query.product.toString(),
         },
       },
       {

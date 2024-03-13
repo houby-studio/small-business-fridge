@@ -28,9 +28,12 @@ router.get("/", ensureAuthenticatedAPI, function (req, res, _next) {
 
   // Find user in database
   const filter =
-    req.query.customer.length < 6
-      ? { keypadId: req.query.customer, keypadDisabled: { $in: [null, false] } }
-      : { card: req.query.customer };
+    req.query.customer.toString().length < 6
+      ? {
+          keypadId: Number(req.query.customer),
+          keypadDisabled: { $in: [null, false] },
+        }
+      : { card: req.query.customer.toString() };
   User.findOne({
     ...filter,
   })
