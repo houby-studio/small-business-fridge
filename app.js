@@ -4,6 +4,7 @@ logger.info("server.app.startup__Importing root modules.");
 import morgan from "morgan";
 import createError from "http-errors"; // Generating errors
 import express, { json, urlencoded } from "express"; // Express
+import cors from "cors"; // Cross-origin resource sharing
 import methodOverride from "method-override";
 import path, { join } from "path"; // used for handling paths which held express files
 import cookieParser from "cookie-parser";
@@ -69,6 +70,7 @@ import customerNameRouter from "./routes/api/customerName.js";
 import scannerAuthUser from "./routes/api/scannerAuthUser.js";
 import scannerProduct from "./routes/api/scannerProduct.js";
 import scannerOrder from "./routes/api/scannerOrder.js";
+import scannerValidate from "./routes/api/scannerValidate.js";
 // API routes for clientside javascript
 import promptGptRouter from "./routes/api/promptGpt.js";
 // Middleware routes
@@ -93,6 +95,12 @@ app.enable("trust proxy");
 app.set("trust proxy", 1);
 app.set("view engine", ".hbs");
 app.enable("view cache");
+// Configure CORS for scanner
+app.use(
+  cors({
+    origin: process.env.CORS,
+  })
+);
 // Stream logs to winston
 app.use(
   morgan(
@@ -171,6 +179,7 @@ app.use("/api/customerName", customerNameRouter);
 app.use("/api/scannerAuthUser", scannerAuthUser);
 app.use("/api/scannerProduct", scannerProduct);
 app.use("/api/scannerOrder", scannerOrder);
+app.use("/api/scannerValidate", scannerValidate);
 // API routes for clientside javascript
 app.use("/api/promptGpt", promptGptRouter);
 
