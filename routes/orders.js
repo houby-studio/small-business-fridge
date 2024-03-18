@@ -33,7 +33,10 @@ router.get("/", ensureAuthenticated, checkKiosk, function (req, res) {
   // Order.listIndexes().then((indexes) => {
   //   console.log(indexes);
   // });
-
+  if (req.session.alert) {
+    var alert = req.session.alert;
+    delete req.session.alert;
+  }
   Order.aggregate([
     {
       $match: filter,
@@ -128,15 +131,6 @@ router.get("/", ensureAuthenticated, checkKiosk, function (req, res) {
     },
   ])
     .then((docs) => {
-      if (req.query.a) {
-        var alert = {
-          type: req.query.a,
-          component: req.query.c,
-          message: req.query.m,
-          success: req.query.s,
-          danger: req.query.d,
-        };
-      }
       if (docs[0]) {
         logger.debug(
           `server.routes.orders.get__Successfully loaded ${docs[0].results.length} orders.`,

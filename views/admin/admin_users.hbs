@@ -1,0 +1,94 @@
+<div class="row my-3">
+  <div class="col">
+    <div class="table-responsive">
+      <table id="table-users" class="table table-striped">
+        <thead>
+          <tr>
+            <th scope="col">ID v databázi</th>
+            <th scope="col">ID klávesnice</th>
+            <th scope="col">Jméno</th>
+            <th scope="col">E-mail</th>
+            <th scope="col">Dodavatel</th>
+            <th scope="col">Admin</th>
+            <th scope="col">Denní report</th>
+            <th scope="col">ID Login</th>
+            <th scope="col">Karta</th>
+            <th scope="col">Akce</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{# each users }}
+          <tr>
+            <td>
+              {{ this._id }}
+            </td>
+            <td>
+              {{ this.keypadId }}
+            </td>
+            <td>
+              {{ this.displayName }}
+            </td>
+            <td>
+              {{ this.email }}
+            </td>
+            <td>
+              <input class="form-check-input realtime-checkbox" type="checkbox" id="{{ this._id }}_supplier" title="Dodavatel" placeholder="Dodavatel"
+              {{#if this.supplier}}
+              checked>
+              <span class="d-none">Ano</span>
+              {{else}}
+              >
+              <span class="d-none">Ne</span>
+              {{/if}}
+            </td>
+            <td>
+              <input class="form-check-input realtime-checkbox" type="checkbox" id="{{ this._id }}_admin" title="Admin" placeholder="Admin"
+              {{#if this.admin}}
+              checked>
+              <span class="d-none">Ano</span>
+              {{else}}
+              >
+              <span class="d-none">Ne</span>
+              {{/if}}
+            </td>
+            <td>
+              {{#if this.sendDailyReport }}
+              Povolen
+              {{else}}
+              Zakázán
+              {{/if}}
+            </td>
+            <td>
+              {{#if this.keypadDisabled }}
+              Zakázán
+              {{else}}
+              Povolen
+              {{/if}}
+            </td>
+            <td>
+              <input type="text" class="form-control" id="{{ this._id }}_card" name="realtime-iban"
+              placeholder="123456" minlength="6" {{#if this.card}}
+              value="{{this.card}}" {{/if}} required>
+            </td>
+            <td>
+              <form id="{{ this._id }}" class="needs-validation h-100" method="POST" action="/admin_users" novalidate>
+                <div class="btn-toolbar" role="toolbar" aria-label="Toolbar with button groups">
+                  <div class="btn-group me-2 w-100" role="group" aria-label="Action group">
+                    <input type="submit" class="btn btn-danger float-right w-100" value="Anonymizovat">
+                  </div>
+                </div>
+                <input type="hidden" name="user_id" value="{{ this._id }}">
+                <input type="hidden" name="_csrf" value="{{ ../csrfToken }}">
+              </form>
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{{> datatables }}
+
+<script src="/javascripts/admin_users.js"></script>
