@@ -10,7 +10,7 @@ var router = Router();
 let responseJson;
 moment.locale("cs");
 
-// GET /api/scannerOrder - validate product price and purchase product if it matches
+// POST /api/scannerOrder - validate product price and purchase product if it matches
 router.post("/", ensureAuthenticatedAPI, function (req, res, _next) {
   if (!req.body.customer) {
     // Check if request contains 'customer' parameter

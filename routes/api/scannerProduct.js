@@ -79,7 +79,7 @@ router.get("/", ensureAuthenticatedAPI, function (req, res, _next) {
     .then((product) => {
       // If database doesn't contain user with supplied keypadId or card, database returns empty object, which doesn't contain user object.
       res.set("Content-Type", "application/json");
-      if (!product) {
+      if (product.length === 0) {
         res.status(404);
         res.json("NOT_FOUND");
       } else {
