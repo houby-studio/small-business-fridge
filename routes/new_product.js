@@ -109,10 +109,9 @@ router.post(
           displayName: req.body.product_name,
           description: req.body.product_description,
           imagePath: "./images/" + req.file.filename,
+          category: req.body.product_category || undefined,
+          code: req.body.product_code || undefined,
         });
-        if (req.body.product_category) {
-          newProduct.category = req.body.product_category;
-        }
         newProduct
           .save()
           .then((result) => {

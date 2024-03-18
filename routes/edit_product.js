@@ -136,8 +136,20 @@ router.post(
           product.description = req.body.product_description;
         }
 
+        // Handle barcode change
+        if (req.body.product_code.length === 0) {
+          // Make input same type as mongoose scheme
+          req.body.product_code = undefined;
+        }
+        if (product.code !== req.body.product_code) {
+          logger.info(
+            `server.routes.editproduct.post__Changing product's barcode:[${product.code}] to new barcode:[${req.body.product_code}].`
+          );
+          product.code = req.body.product_code;
+        }
+
         // Handle categories change
-        if (req.body.product_category === "") {
+        if (req.body.product_category.length === 0) {
           // Make input same type as mongoose scheme
           req.body.product_category = undefined;
         }
@@ -146,8 +158,6 @@ router.post(
             `server.routes.editproduct.post__Changing product's category:[${product.category}] to new category:[${req.body.product_category}].`
           );
           product.category = req.body.product_category;
-        } else {
-          logger.debug("server.routes.editproduct.post__Else");
         }
 
         // If image was not uploaded, we do not change it

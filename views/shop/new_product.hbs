@@ -1,103 +1,111 @@
 <form
-  id='supplier_new_product'
-  class='needs-validation'
-  method='POST'
-  action='/new_product?_csrf={{csrfToken}}'
-  enctype='multipart/form-data'
+  id="supplier_new_product"
+  class="needs-validation"
+  method="POST"
+  action="/new_product?_csrf={{csrfToken}}"
+  enctype="multipart/form-data"
   novalidate
 >
-  <div class='card mx-3 mt-3 mx-lg-auto w-lg-75 w-xxl-50'>
-    <div class='card-header h4 text-center'>
-      <i class='fa-solid fa-cart-plus'></i>
+  <div class="card mx-3 mt-3 mx-lg-auto w-lg-75 w-xxl-50">
+    <div class="card-header h4 text-center">
+      <i class="fa-solid fa-cart-plus"></i>
       Nový produkt
     </div>
-    <div class='card-body'>
-      <div class='row g-0'>
+    <div class="card-body">
+      <div class="row g-0">
 
         {{! Image preview }}
-        <div class='col-md-4 text-center'>
+        <div class="col-md-4 text-center">
           <img
-            src='/static_images/preview.png'
-            alt='Preview'
-            id='product_img'
-            class='img-fluid form-image-thumbnail'
+            src="/static_images/preview.png"
+            alt="Preview"
+            id="product_img"
+            class="img-fluid form-image-thumbnail"
           />
           <p>Doporučená velikost: 450x800px</p>
         </div>
-        <div class='col-md-8'>
+        <div class="col-md-8">
 
           {{! Product name }}
-          <div class='input-group input-group-lg mb-3'>
-            <span
-              class='input-group-text w-25'
-              id='product_name-addon'
-            >Název</span>
+          <div class="input-group input-group-lg mb-3">
+            <span class="input-group-text w-25" id="product_name-addon">
+              Název
+            </span>
             <input
-              type='text'
-              name='product_name'
-              id='product_name'
-              class='form-control'
-              placeholder='Název'
-              aria-label='Název'
-              aria-describedby='product_name-addon'
+              type="text"
+              name="product_name"
+              id="product_name"
+              class="form-control"
+              placeholder="Název"
+              aria-label="Název"
+              aria-describedby="product_name-addon"
               required
             />
           </div>
 
           {{! Product description }}
-          <div class='input-group input-group-lg mb-3'>
-            <span
-              class='input-group-text w-25'
-              id='product_description-addon'
-            >Popis</span>
-            {{! <button
-              type='button'
-              class='btn btn-primary'
-              onclick='promptGptForDescription()'
-            >✨</button> }}
+          <div class="input-group input-group-lg mb-3">
+            <span class="input-group-text w-25" id="product_description-addon">
+              Popis
+            </span>
+            {{! <button type='button' class='btn btn-primary' onclick='promptGptForDescription()'>✨</button> }}
             <input
-              type='text'
-              name='product_description'
-              id='product_description'
-              class='form-control'
-              placeholder='Popis'
-              aria-label='Popis'
-              aria-describedby='product_description-addon'
+              type="text"
+              name="product_description"
+              id="product_description"
+              class="form-control"
+              placeholder="Popis"
+              aria-label="Popis"
+              aria-describedby="product_description-addon"
               required
             />
           </div>
 
-          {{! Produict image upload }}
-          <div class='input-group input-group-lg mb-3'>
-            <span
-              class='input-group-text w-25'
-              id='product_image-addon'
-            >Obrázek</span>
+          {{! Product scan code }}
+          <div class="input-group input-group-lg mb-3">
+            <span class="input-group-text w-25" id="product_code-addon">
+              Čárový kód
+            </span>
             <input
-              class='form-control'
-              type='file'
-              id='product_image'
-              name='product_image'
-              accept='image/png'
-              onchange='readURL(this);'
+              type="text"
+              name="product_code"
+              id="product_code"
+              class="form-control"
+              placeholder="Čárový kód"
+              aria-label="Čárový kód"
+              aria-describedby="product_code-addon"
+            />
+          </div>
+
+          {{! Product image upload }}
+          <div class="input-group input-group-lg mb-3">
+            <span class="input-group-text w-25" id="product_image-addon">
+              Obrázek
+            </span>
+            <input
+              class="form-control"
+              type="file"
+              id="product_image"
+              name="product_image"
+              accept="image/png"
+              onchange="readURL(this);"
               required
             />
           </div>
 
           {{! Product category selection }}
-          <div class='input-group input-group-lg mb-3'>
-            <label
-              for='product_category'
-              class='input-group-text w-25'
-            >Kategorie</label>
+          <div class="input-group input-group-lg mb-3">
+            <label for="product_category" class="input-group-text w-25">
+              Kategorie
+            </label>
             <select
-              name='product_category'
-              id='product_category'
-              class='form-select'
+              name="product_category"
+              id="product_category"
+              class="form-select"
             >
-              <option value='' selected>Vyberte ze seznamu..</option>
+              <option value="" selected>Vyberte ze seznamu..</option>
               {{#each categories}}
-                <option value='{{this._id}}'>{{this.name}}</option>
+                <option value="{{this._id}}">{{this.name}}</option>
               {{/each}}
             </select>
           </div>
@@ -106,19 +114,19 @@
       </div>
     </div>
     {{! End of card-body }}
-    <div class='card-footer text-muted'>
-      <div class='d-grid gap-2 d-md-flex justify-content-md-end'>
-        <a href='/' class='btn btn-danger me-md-2'>Storno</a>
+    <div class="card-footer text-muted">
+      <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+        <a href="/" class="btn btn-danger me-md-2">Storno</a>
         <input
-          type='submit'
-          class='btn btn-success float-end'
-          value='Vytvořit'
+          type="submit"
+          class="btn btn-success float-end"
+          value="Vytvořit"
         />
       </div>
     </div>
   </div>
 </form>
 
-<script src='/javascripts/new_product.js'></script>
+<script src="/javascripts/new_product.js"></script>
 
-<script src='/javascripts/form_validate.js'></script>
+<script src="/javascripts/form_validate.js"></script>
