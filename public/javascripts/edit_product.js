@@ -27,7 +27,7 @@ function loadProductInfo() {
   document.getElementById("product_description").value =
     json_data[productId].product_description;
 
-  // Description - optional parameter
+  // Barcode - optional parameter
   document.getElementById("product_code").value =
     json_data[productId].product_code || "";
 
