@@ -13,6 +13,7 @@ router.get("/", ensureAuthenticated, checkKiosk, function (req, res, _next) {
   });
 });
 
+/* POST profile page. */
 router.post("/", ensureAuthenticated, function (req, res, _next) {
   const newValue = req.body.value;
   if (req.body.name === "checkAllProducts") {
