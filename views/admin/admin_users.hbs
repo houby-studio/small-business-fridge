@@ -1,4 +1,4 @@
-{{> confirm_modal }}
+{{> confirm_deactivate_modal }}
 <div class="row my-3">
   <div class="col">
     <div class="table-responsive">
@@ -19,12 +19,13 @@
         </thead>
         <tbody>
           {{# each users }}
-          <tr>
+          <tr {{#if this.disabled}} class="subdue-50" {{/if}}>
             <td>
               {{ this._id }}
             </td>
             <td>
-              {{ this.keypadId }}
+              <input type="text" class="form-control realtime-keypad" data-user="{{ this._id }}" data-property="keypad"
+              minlength="1" maxlength="5" {{#if this.keypadId}} value="{{ this.keypadId }}" {{/if}} required>
             </td>
             <td>
               {{ this.displayName }}
@@ -67,7 +68,7 @@
               {{/if}}
             </td>
             <td>
-              <input type="text" class="form-control realtime-card" data-user="{{ this._id }}" data-property="realtime-card"
+              <input type="text" class="form-control realtime-card" data-user="{{ this._id }}" data-property="card"
               placeholder="ZAK123" minlength="6" {{#if this.card}} value="{{ this.card }}" {{/if}} required>
             </td>
             <td>

@@ -2,6 +2,12 @@ import { Schema, model } from "mongoose";
 import uniqueValidator from "mongoose-unique-validator";
 
 const schema = new Schema({
+  disabled: {
+    type: Boolean,
+    default: false,
+    index: true,
+    sparse: true,
+  },
   oid: {
     type: String,
     required: true,

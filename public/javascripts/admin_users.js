@@ -53,6 +53,39 @@ const cardEvents = ["paste", "keyup"];
   });
 });
 
+// Change keypad when state changes
+const keypads = document.getElementsByClassName("realtime-keypad");
+const keypadEvents = ["paste", "keyup"];
+
+[...keypads].forEach((element) => {
+  keypadEvents.forEach(function (event) {
+    element.addEventListener(event, async function () {
+      const sanitizedValue = this.value.replace(/\s/g, "");
+
+      if (this.checkValidity()) {
+        this.style.color = "green";
+        const response = await fetch("/admin_users", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            user: this.dataset.user,
+            name: this.dataset.property,
+            value: sanitizedValue,
+            _csrf: document.getElementsByName("_csrf")[0].value,
+          }),
+        });
+        if (response.status !== 200) {
+          this.style.color = "red";
+        }
+      } else {
+        this.style.color = "red";
+      }
+    });
+  });
+});
+
 // Display confirmation dialog
 async function showConfirm(id) {
   const submit = document.getElementById("modal_confirm");

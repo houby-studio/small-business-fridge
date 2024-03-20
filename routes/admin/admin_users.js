@@ -138,10 +138,51 @@ router.post("/", ensureAuthenticated, function (req, res, _next) {
         );
         res.status(400).send();
       });
-  } else if (req.body.name === "realtime-card") {
+  } else if (req.body.name === "card") {
     if (/.{6,}/.test(newValue)) {
       User.findByIdAndUpdate(req.body.user, {
         card: newValue,
+      })
+        .then(() => {
+          logger.info(
+            `server.routes.adminusers.post__User:[${req.user.displayName}] changed property:[${req.body.name}] for user:[${req.body.user}] to new value:[${newValue}].`,
+            {
+              metadata: {
+                result: req.user,
+              },
+            }
+          );
+          res.status(200).send();
+          return;
+        })
+        .catch((err) => {
+          logger.error(
+            `server.routes.adminusers.post__Failed to set property:[${req.body.name}] for user:[${req.user.displayName}] to new value:[${newValue}].`,
+            {
+              metadata: {
+                error: err.message,
+              },
+            }
+          );
+          res.status(400).send();
+          return;
+        });
+    } else {
+      logger.warn(
+        `server.routes.adminusers.post__User:[${req.user.displayName}] tried to set invalid property:[${req.body.name}] for user:[${req.user.displayName}] to new value:[${newValue}].`,
+        {
+          metadata: {
+            result: req.user,
+          },
+        }
+      );
+      res.status(400).send();
+      return;
+    }
+  } else if (req.body.name === "keypad") {
+    if (/^[0-9]{1,3}$/.test(newValue)) {
+      User.findByIdAndUpdate(req.body.user, {
+        keypadId: newValue,
       })
         .then(() => {
           logger.info(
@@ -191,6 +232,7 @@ router.post("/", ensureAuthenticated, function (req, res, _next) {
         sendMailOnEshopPurchase: false,
         sendDailyReport: false,
         keypadDisabled: true,
+        disabled: true,
       },
       $unset: {
         keypadId: 1,
