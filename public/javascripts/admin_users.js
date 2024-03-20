@@ -40,6 +40,7 @@ const cardEvents = ["paste", "keyup"];
             user: this.dataset.user,
             name: this.dataset.property,
             value: sanitizedValue,
+            _csrf: document.getElementsByName("_csrf")[0].value,
           }),
         });
         if (response.status !== 200) {
