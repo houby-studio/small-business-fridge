@@ -1,0 +1,158 @@
+{{> title title="Stornování objednávky" }}
+{{! Single column template }}
+<table width='640' cellpadding='0' cellspacing='0' border='0' class='wrapper' bgcolor='#f6f6f6'>
+
+  {{! Spacer }}
+  <tr>
+    <td height='10' style='font-size:10px; line-height:10px;'>&nbsp;</td>
+  </tr>
+
+  <tr>
+    <td align='center' valign='top'>
+
+      <table width='600' cellpadding='0' cellspacing='0' border='0' class='container'>
+
+        {{! 1st row - text }}
+        <tr>
+          {{! Middle column }}
+          <td align='center' valign='top'>
+            {{! Single column template }}
+            <table width='640' cellpadding='0' cellspacing='0' border='0' class='wrapper' bgcolor='#f6f6f6'>
+
+              {{! Spacer }}
+              <tr>
+                <td height='10' style='font-size:10px; line-height:10px;'>&nbsp;</td>
+              </tr>
+
+              <tr>
+                <td align='center' valign='top'>
+
+                  <table width='600' cellpadding='0' cellspacing='0' border='0' class='container'>
+                    <tr>
+
+                      {{! Middle column }}
+                      <td align='left' valign='top'>
+                        <p>Vážený zákazníku,</p>
+                        <p>mrzí nás, že nejste spokojený se zakoupeným produktem <b>{{productName}}</b>.</p>
+                        <p>Administrátor stornoval Vaši objednávku. Prosíme Vás, pokud jste tak ještě neučinili, vraťte produkt do Lednice IT a ověřte skladovou zásobu, zda souhlasí se skutečným stavem.</p>
+                        <p>Přejeme, ať se Váš další výběr produktu podaří a těsíme se na Vaši další návštěvu.</p>
+                      </td>
+
+                    </tr>
+                  </table>
+
+                </td>
+              </tr>
+
+              {{! Spacer }}
+              <tr>
+                <td height='10' style='font-size:10px; line-height:10px;'>&nbsp;</td>
+              </tr>
+
+            </table>
+          </td>
+
+        </tr>
+
+        {{! 2nd row - info and picture }}
+        <tr>
+          {{! Middle column }}
+          <td align='center' valign='top'>
+            {{! Two columns template }}
+            <table width='640' cellpadding='0' cellspacing='0' border='0' class='wrapper' bgcolor='#f6f6f6'>
+
+              {{! Spacer }}
+              <tr>
+                <td height='10' style='font-size:10px; line-height:10px;'>&nbsp;</td>
+              </tr>
+
+              <tr>
+                <td align='center' valign='top'>
+
+                  <table width='600' cellpadding='0' cellspacing='0' border='0' class='container'>
+                    <tr>
+
+                      {{! Left column }}
+                      <td width='300' class='mobile breakpoint' align='center' valign='top'>
+                        <table width='100%' cellpadding='0' cellspacing='0' border='1' bgcolor='#fff'>
+                          <tr>
+                            <td align='center' valign='top' colspan='2'>
+                              <h3>Detail objednávky</h3>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td align='left' valign='top'>
+                              <b>Název</b>
+                            </td>
+                            <td align='left' valign='top'>
+                              {{productName}}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td align='left' valign='top'>
+                              <b>Datum</b>
+                            </td>
+                            <td align='left' valign='top'>
+                              {{purchaseDate}}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td align='left' valign='top'>
+                              <b>Částka</b>
+                            </td>
+                            <td align='left' valign='top'>
+                              {{productPrice}} Kč
+                            </td>
+                          </tr>
+                          <tr>
+                            <td align='left' valign='top'>
+                              <b>Číslo</b>
+                            </td>
+                            <td align='left' valign='top'>
+                              {{orderId}}
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+
+                      {{! Right column }}
+                      <td width='300' class='mobile breakpoint' align='center' valign='top'>
+                        <img src='cid:image@sbf.pictures' width='' height='280'
+                          style='margin:0; padding:0; border:none; display:block;' border='0'
+                          alt='Buď jste zrakově postižený a čtečka Vám tento popis předčítá, což vám nepomůže zjistit, jak zakoupený produkt vypadá, nebo jsme udělali chybu a obrázek se nezobrazuje. V obou případech se omlouváme.' />
+                      </td>
+
+                    </tr>
+                  </table>
+
+                </td>
+              </tr>
+
+              {{! Spacer }}
+              <tr>
+                <td height='10' style='font-size:10px; line-height:10px;'>&nbsp;</td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+
+        {{! 3rd row - button }}
+        <tr>
+          {{! Middle column }}
+          <td align='center' valign='top'>
+            {{!-- Button table partial --}}
+            {{> centerButton label="Objednávky" baseUrl=baseUrl path="/orders" }}
+          </td>
+        </tr>
+      </table>
+
+    </td>
+  </tr>
+
+  {{! Spacer }}
+  <tr>
+    <td height='10' style='font-size:10px; line-height:10px;'>&nbsp;</td>
+  </tr>
+
+</table>

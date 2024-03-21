@@ -8,7 +8,7 @@ var schema = new Schema({
   },
   deliveryId: {
     type: Schema.Types.ObjectId,
-    ref: "Stock",
+    ref: "Delivery",
     required: true,
   },
   order_date: {

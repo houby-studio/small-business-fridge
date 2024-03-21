@@ -1,3 +1,6 @@
+{{#unless admin.buyerId}}
+  {{> confirm_storno_modal }}
+{{/unless}}
 <div class="row my-3">
   <div class="col">
     <div class="card text-center mx-auto h-100">
@@ -34,6 +37,9 @@
             <th scope="col">Dodavatel</th>
             <th scope="col">Způsob</th>
             <th scope="col">Fakturováno</th>
+            {{#unless admin.buyerId}}
+            <th scope="col">Akce</th>
+            {{/unless}}
           </tr>
         </thead>
         <tbody>
@@ -78,6 +84,16 @@
               Ne
               {{/if}}
             </td>
+            {{#unless ../admin.buyerId}}
+            <td>
+              <button type="button" class="btn btn-danger float-right w-100" onclick="showConfirm('{{ this._id }}')" {{#if this.invoice }} disabled>Bylo fakturováno{{else}}>Stornovat objednávku{{/if}}</button>
+              <form id="storno_{{ this._id }}" class="needs-validation h-100" method="POST" action="/admin_orders" novalidate>
+                <input type="hidden" name="name" value="storno">
+                <input type="hidden" name="order" value="{{ this._id }}">
+                <input type="hidden" name="_csrf" value="{{ ../csrfToken }}">
+              </form>
+            </td>
+            {{/unless}}
           </tr>
           {{/each}}
         </tbody>
@@ -89,3 +105,6 @@
 {{> datatables }}
 
 <script src="/javascripts/orders.js"></script>
+{{#unless admin.buyerId}}
+  <script src="/javascripts/admin_orders.js"></script>
+{{/unless}}
