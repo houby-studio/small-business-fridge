@@ -144,7 +144,19 @@ router.get("/", ensureAuthenticated, checkKiosk, function (req, res) {
             },
           }
         );
+        const fifteen_minutes_ago = moment(new Date() - 900000);
         docs[0].results.forEach(function (element) {
+          // If older than 15 minutes, disable storno button
+          if (req.baseUrl === "/admin_orders") {
+            if (
+              fifteen_minutes_ago > element.order_date ||
+              element.invoice === true
+            ) {
+              element.cancel = false;
+            } else {
+              element.cancel = true;
+            }
+          }
           element.order_date_format = moment(element.order_date).format("LLLL");
           element.order_date = moment(element.order_date).format();
         });
@@ -183,9 +195,11 @@ router.post("/", ensureAuthenticated, function (req, res, _next) {
     return;
   }
   if (req.body.name === "storno") {
-    // TODO: Handle already invoiced orders and orders older than 15 minutes - Possibly replace with FindOneAndDelete
-    Order.findByIdAndDelete({
+    // Allow to cancel order only if it's not older than 15 minutes and not invoiced
+    Order.findOneAndDelete({
       _id: req.body.order,
+      order_date: { $gte: new moment(new Date() - 900000) },
+      invoice: false,
     })
       .populate("buyerId", "email")
       .populate({
@@ -197,6 +211,24 @@ router.post("/", ensureAuthenticated, function (req, res, _next) {
         select: ["productId", "price"],
       })
       .then((order) => {
+        if (!order) {
+          logger.warn(
+            `server.routes.adminorders.post__Order not found or already invoiced or older than 15 minutes.`,
+            {
+              metadata: {
+                result: req.body.order,
+              },
+            }
+          );
+          const alert = {
+            type: "danger",
+            message: `Objednávku nelze stornovat. Buď neexistuje, byla fakturována nebo byla provedena před více než 15 minutami.`,
+            danger: 1,
+          };
+          req.session.alert = alert;
+          res.redirect("/admin_orders");
+          return;
+        }
         logger.debug(
           `server.routes.adminorders.post__Order [${order._id}] with product [${order.deliveryId.productId.displayName}] purchased by user [${order.buyerId.email}] has been deleted.`,
           {
@@ -286,48 +318,6 @@ router.post("/", ensureAuthenticated, function (req, res, _next) {
             });
             return;
           });
-
-        //     newOrder
-        //       .save()
-        //       .then((order) => {
-
-        //         req.session.alert = alert;
-        //         res.redirect("/shop");
-        //         if (req.user.sendMailOnEshopPurchase) {
-
-        //         }
-        //         return;
-        //       })
-        //       .catch((err) => {
-        //       });
-        //   })
-        // .catch((err) => {
-        //   logger.error(
-        //     "server.routes.shop.post__Failed to decrement stock amount from the delivery.",
-        //     {
-        //       metadata: {
-        //         error: err.message,
-        //       },
-        //     }
-        //   );
-        //   const alert = {
-        //     type: "danger",
-        //     component: "db",
-        //     message: err.message,
-        //     danger: 1,
-        //   };
-        //   req.session.alert = alert;
-        //   res.redirect("/shop");
-        //   const subject = "[SYSTEM ERROR] Chyba při zápisu do databáze!";
-        //   const message = `Potenciálně se nepodařilo snížit skladovou zásobu v dodávce ID [${delivery._id}] a následně vystavit objednávku. Zákazník ID [${req.user._id}], zobrazované jméno [${req.user.displayName}] se pokusil koupit produkt ID [${delivery.productId}], zobrazované jméno [${req.body.display_name}] za [${delivery.price}] Kč. Zkontrolujte konzistenci databáze.`;
-        //   sendMail("system@system", "systemMessage", {
-        //     subject,
-        //     message,
-        //     messageTime: moment().toISOString(),
-        //     errorMessage: err.message,
-        //   });
-        //   return;
-        // });
       })
       .catch((err) => {
         logger.error(

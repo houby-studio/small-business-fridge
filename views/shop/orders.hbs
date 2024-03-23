@@ -86,7 +86,7 @@
             </td>
             {{#unless ../admin.buyerId}}
             <td>
-              <button type="button" class="btn btn-danger float-right w-100" onclick="showConfirm('{{ this._id }}')" {{#if this.invoice }} disabled>Bylo fakturováno{{else}}>Stornovat objednávku{{/if}}</button>
+              <button type="button" class="btn btn-danger float-right w-100" onclick="showConfirm('{{ this._id }}')" {{#unless this.cancel }} disabled>Nelze stornovat{{else}}>Stornovat objednávku{{/unless}}</button>
               <form id="storno_{{ this._id }}" class="needs-validation h-100" method="POST" action="/admin_orders" novalidate>
                 <input type="hidden" name="name" value="storno">
                 <input type="hidden" name="order" value="{{ this._id }}">
