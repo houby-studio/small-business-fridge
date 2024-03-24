@@ -19,6 +19,7 @@ async function changeColorMode() {
     body: JSON.stringify({
       name: color.id,
       value: color.value,
+      _csrf: document.getElementById("csrf").value,
     }),
   });
 }
@@ -36,6 +37,7 @@ const _checkboxesEvent = [...checkboxes].forEach((element) => {
       body: JSON.stringify({
         name: this.id,
         value: this.checked,
+        _csrf: document.getElementById("csrf").value,
       }),
     });
   });
@@ -64,6 +66,7 @@ ibanEvents.forEach(function (event) {
         body: JSON.stringify({
           name: this.id,
           value: sanitizedValue,
+          _csrf: document.getElementById("csrf").value,
         }),
       });
     } else {

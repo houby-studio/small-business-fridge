@@ -1,15 +1,19 @@
 import { Router } from "express";
+import csrf from "csurf";
 import User from "../models/user.js";
 import { ensureAuthenticated } from "../functions/ensureAuthenticated.js";
 import { checkKiosk } from "../functions/checkKiosk.js";
 import logger from "../functions/logger.js";
 var router = Router();
+var csrfProtection = csrf();
+router.use(csrfProtection);
 
 /* GET profile page. */
 router.get("/", ensureAuthenticated, checkKiosk, function (req, res, _next) {
   res.render("shop/profile", {
     title: "Profil | Lednice IT",
     user: req.user,
+    csrfToken: req.csrfToken(),
   });
 });
 
