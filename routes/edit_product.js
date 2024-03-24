@@ -137,7 +137,7 @@ router.post(
         }
 
         // Handle barcode change
-        if (req.body.product_code.length === 0) {
+        if (req.body.product_code?.length === 0) {
           // Make input same type as mongoose scheme
           req.body.product_code = undefined;
         }
@@ -149,7 +149,7 @@ router.post(
         }
 
         // Handle categories change
-        if (req.body.product_category.length === 0) {
+        if (req.body.product_category?.length === 0) {
           // Make input same type as mongoose scheme
           req.body.product_category = undefined;
         }
