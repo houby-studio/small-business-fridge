@@ -30,6 +30,7 @@ function renderPage(req, res, alert) {
         from: "categories",
         localField: "category",
         foreignField: "_id",
+        pipeline: [{ $match: { disabled: { $in: [null, false] } } }],
         as: "category",
       },
     },

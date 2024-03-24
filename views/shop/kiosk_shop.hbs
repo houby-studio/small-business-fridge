@@ -1,7 +1,10 @@
+{{!-- Purchase confirmation modal --}}
+{{> kiosk_purchase_modal displayName=customer.displayName }}
+
 {{!-- Kiosk control --}}
 <div class="row mt-3">
   <div class="col-lg mb-2">
-    <form action="/kiosk_keypad" method="get">
+    <form action="/kiosk_keypad" method="get" id="back-button">
       <input type="submit" value="Zpět" name="Submit" id="Submit"
         class="form-control btn btn-danger btn-block waves-effect">
       <input type="hidden" name="cancel" value="1">
@@ -36,8 +39,8 @@
 <div class="row">
   {{#each products }}
   <div class="col-12 col-md-6 col-xl-3 col-xxxl-2 equal-gutter collapse show {{#if this.favorite}}order-first{{/if}}" id="{{this._id}}" data-category="{{this.category.0._id}}">
-    <form id="shop_buy_product_{{this.stock.0._id}}" class="needs-validation h-100"
-      method="POST" action="/kiosk_shop" novalidate>
+    <form id="shop_buy_product_{{this.stock.0._id}}" class="needs-validation h-100" data-productname="{{ this.displayName }}" data-productprice="{{ this.stock.0.price }}" data-productimage="{{ this.imagePath }}"
+      method="POST" action="/kiosk_shop" {{#if this.code}}data-code="{{this.code}}"{{/if}} novalidate>
       <div class="card h-100 text-center">
         <div class="card-header h4 card-header-h4-min-height d-flex align-items-center justify-content-center">
           {{ this.displayName }}
@@ -69,7 +72,7 @@
           </div>
           <input type="hidden" name="product_id" value="{{ this.stock.0._id }}">
           <input type="hidden" name="user_id" value="{{ ../user._id }}">
-          <input type="hidden" name="customer_id" value="{{ ../customer.keypadId }}">
+          <input type="hidden" name="customer_id" value="{{ ../customer.form_identifier }}">
           <input type="hidden" name="display_name" value="{{ this.displayName }}">
           <input type="hidden" name="image_path" value="{{ this.imagePath }}">
           <input type="hidden" name="_csrf" value="{{ ../csrfToken }}">

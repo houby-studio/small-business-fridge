@@ -1,0 +1,60 @@
+<div class="modal" id="confirm-modal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Dokončení objednávky</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body mx-auto">
+        {{! List of product name, price  and in second column picture of image }}
+        <div class="row">
+          <div class="col-6">
+            <ul class="list-group">
+              <li class="list-group-item flex-fill"><b>Zákazník</b>:
+                {{displayName}}</li>
+              <li class="list-group-item flex-fill"><b>Produkt</b>:
+                <span id="product_name"></span></li>
+              <li class="list-group-item flex-fill"><b>Cena</b>:
+                <span id="product_price"></span>
+                Kč</li>
+            </ul>
+          </div>
+          <div class="col-6">
+            <img
+              id="product_image"
+              src=""
+              class="img-fluid"
+              alt="Product image"
+            />
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          data-bs-dismiss="modal"
+        >Zpět</button>
+        <button
+          id="modal_confirm_continue"
+          type="button"
+          class="btn btn-success"
+          data-bs-dismiss="modal"
+          onclick="submitFromModal(this, true)"
+        >Koupit další</button>
+        <button
+          id="modal_confirm"
+          type="button"
+          class="btn btn-success"
+          data-bs-dismiss="modal"
+          onclick="submitFromModal(this, false)"
+        >Dokončit nákup</button>
+      </div>
+    </div>
+  </div>
+</div>

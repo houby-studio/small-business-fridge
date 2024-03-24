@@ -30,6 +30,7 @@ function renderPage(req, res, alert, customer) {
         from: "categories",
         localField: "category",
         foreignField: "_id",
+        pipeline: [{ $match: { disabled: { $in: [null, false] } } }],
         as: "category",
       },
     },
@@ -47,6 +48,7 @@ function renderPage(req, res, alert, customer) {
         description: "$description",
         imagePath: "$imagePath",
         category: "$category",
+        code: "$code",
         stock: {
           $filter: {
             // We filter only the stock object from array where ammount left is greater than 0
@@ -210,6 +212,11 @@ router.get("/", ensureAuthenticated, function (req, res) {
         alert = req.session.alert;
         delete req.session.alert;
       }
+      if (req.query.customer_id.length.toString() < 6) {
+        customer.form_identifier = customer.keypadId;
+      } else {
+        customer.form_identifier = customer.card;
+      }
       renderPage(req, res, alert, customer);
     })
     .catch((err) => {
@@ -273,7 +280,7 @@ router.post("/", ensureAuthenticated, function (req, res) {
     .then((user) => {
       if (!user) {
         logger.error(
-          `server.routes.kioskshop.post__Failed to find user by keypadId ${req.body.customer_id}.`,
+          `server.routes.kioskshop.post__Failed to find user by keypadId or card ${req.body.customer_id}.`,
           {
             metadata: {
               error: req.body.customer_id,
@@ -335,7 +342,13 @@ router.post("/", ensureAuthenticated, function (req, res) {
                     req.body.image_path
                   );
 
-                  res.redirect("/kiosk_keypad");
+                  if (req.query.return === "kiosk_shop") {
+                    res.redirect(
+                      "/kiosk_shop?customer_id=" + req.body.customer_id
+                    );
+                  } else {
+                    res.redirect("/kiosk_keypad");
+                  }
                 })
                 .catch((err) => {
                   logger.error(
