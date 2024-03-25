@@ -37,7 +37,7 @@
     "passport": "^0.7.0",
     "passport-azure-ad": "^4.3.5",
     "qrcode": "^1.4.4",
-    "winston": "^3.11.0"
+    "winston": "^3.13.0"
   },
   "devDependencies": {
     "chai": "^5.1.0",
