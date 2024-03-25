@@ -1,5 +1,5 @@
 <div class="modal" id="confirm-modal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">Dokončení objednávky</h5>
@@ -10,21 +10,27 @@
           aria-label="Close"
         ></button>
       </div>
-      <div class="modal-body mx-auto">
+      <div class="modal-body">
         {{! List of product name, price  and in second column picture of image }}
         <div class="row">
-          <div class="col-6">
+          <div class="col-6 text-center align-self-center">
             <ul class="list-group">
-              <li class="list-group-item flex-fill"><b>Zákazník</b>:
-                {{displayName}}</li>
-              <li class="list-group-item flex-fill"><b>Produkt</b>:
-                <span id="product_name"></span></li>
-              <li class="list-group-item flex-fill"><b>Cena</b>:
-                <span id="product_price"></span>
-                Kč</li>
+              <li class="list-group-item flex-fill active"><h3
+                >Zákazník</h3></li>
+              <li class="list-group-item flex-fill"><h3
+                >{{displayName}}</h3></li>
+              <li class="list-group-item flex-fill active"><h3>Produkt</h3></li>
+              <li class="list-group-item flex-fill"><h3
+                  id="product_name"
+                ></h3></li>
+              <li class="list-group-item flex-fill active"><h3>Cena</h3></li>
+              <li class="list-group-item flex-fill"><h3><span
+                    id="product_price"
+                  ></span>
+                  Kč</h3></li>
             </ul>
           </div>
-          <div class="col-6">
+          <div class="col-6 text-center align-self-center">
             <img
               id="product_image"
               src=""
@@ -35,25 +41,33 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button
-          type="button"
-          class="btn btn-secondary"
-          data-bs-dismiss="modal"
-        >Zpět</button>
-        <button
-          id="modal_confirm_continue"
-          type="button"
-          class="btn btn-success"
-          data-bs-dismiss="modal"
-          onclick="submitFromModal(this, true)"
-        >Koupit další</button>
-        <button
-          id="modal_confirm"
-          type="button"
-          class="btn btn-success"
-          data-bs-dismiss="modal"
-          onclick="submitFromModal(this, false)"
-        >Dokončit nákup</button>
+        <div class="row w-100">
+          <div class="col">
+            <button
+              type="button"
+              class="btn btn-secondary btn-lg btn-block w-100 h-100 p-5"
+              data-bs-dismiss="modal"
+            >Zpět</button>
+          </div>
+          <div class="col">
+            <button
+              id="modal_confirm_continue_btn"
+              type="button"
+              class="btn btn-success btn-lg btn-block w-100 h-100 p-5"
+              data-bs-dismiss="modal"
+              onclick="submitFromModal(this, true)"
+            >Koupit další produkt</button>
+          </div>
+          <div class="col">
+            <button
+              id="modal_confirm_btn"
+              type="button"
+              class="btn btn-success btn-lg btn-block w-100 h-100 p-5"
+              data-bs-dismiss="modal"
+              onclick="submitFromModal(this, false)"
+            >Dokončit nákup</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
