@@ -93,6 +93,5 @@ document.addEventListener("keydown", function (e) {
   } else if (e.key.length === 1) {
     addTextToScreen(e.key);
   }
-  console.log("IR scan textInput", e);
   e.preventDefault();
 });
