@@ -5,11 +5,13 @@ var schema = new Schema({
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
+    index: true,
   },
   deliveryId: {
     type: Schema.Types.ObjectId,
     ref: "Delivery",
     required: true,
+    index: true,
   },
   order_date: {
     type: Date,
@@ -18,6 +20,7 @@ var schema = new Schema({
   invoice: {
     type: Boolean,
     default: false,
+    index: true,
   },
   invoiceId: {
     type: Schema.Types.ObjectId,

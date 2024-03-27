@@ -5,6 +5,7 @@ var schema = new Schema({
   name: {
     type: String,
     required: true,
+    index: true,
     unique: true,
   },
   color: {
@@ -14,6 +15,7 @@ var schema = new Schema({
   disabled: {
     type: Boolean,
     default: false,
+    index: true,
   },
 });
 

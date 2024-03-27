@@ -5,11 +5,13 @@ var schema = new Schema({
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
+    index: true,
   },
   supplierId: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
+    index: true,
   },
   ordersId: [
     {
