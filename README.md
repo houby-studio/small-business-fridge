@@ -3,6 +3,9 @@
 [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/houby-studio/small-business-fridge/issues)
 [![GitHub license](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/houby-studio/small-business-fridge/blob/master/LICENSE)
 
+**Small Business Fridge** is a super simple system for sharing foods and drinks with colleagues, it offers simple, mostly intuitive UI, which offers what products are available, how many and for how much.
+Customers can buy product with one simple click. The only other thing they have to do is to take the product and consume it and pay it later with QR code.
+
 ## Disclaimer
 
 This tool was exclusively developed for ourselves, colleagues in IT department, but we have commited to make it FOSS and hopefully configurable enough to allow others to use it if they want!
@@ -12,12 +15,7 @@ There are however couple things that may need some customizations on your end, w
 - Application is in czech language and there is no internalization package currently - Again, if you are willing to provide translations, we will try to implement it
 - Application has the minimum required features required for our use case, that is sharing foods and drinks with no profit, thus no legal compliance typically required for businesses
 
-## Super simple system for sharing foods and drinks with colleagues
-
-**Small Business Fridge** offers simple, mostly intuitive e-shop which shows what products are available, how many and for how much.
-Customers can buy product with one simple click. The only other thing they have to do is to take the product and consume it.
-
-### Features
+## Features
 
 - everything is available for both mobile and desktop
 - shopping page displaying products in a very practical way
