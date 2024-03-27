@@ -9,6 +9,7 @@
 - 🔢 Číslo klávesnice nyní může mít maximálně délku 5 znaků, pro delší bezpečnější způsob ověření slouží karta
 - 🔐 Zákazník si může zakázat přihlašování pomocí čísla klávesnice, aby jeho snadno uhodnutelná identita nemohla být zneužita
 - 🫅 Administrátorům konečně přibyla správa zákazníků, kde mohou nastavit práva, kartu a anonymizovat bývalé uživatele
+- 🎶 Už se hudba na kiosku oposlouchala? Nově se náhodně vybere jedna z mnoha melodií při každém přihlášení
 
 ## 🐞 Opravy chyb
 
