@@ -3,68 +3,85 @@
 [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/houby-studio/small-business-fridge/issues)
 [![GitHub license](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/houby-studio/small-business-fridge/blob/master/LICENSE)
 
-## 2023 UPDATE
-
-This simple system is alive and kicking for 4 years already in our office! While imperfect, it has enabled us to share 4561 pieces of drinks and food in total cost of 79084 CZK in version 1.0.x.
-Version 1.0.x has been in use from 2019-09-07 to 2023-11-02 and since 2023-11-03 we have deployed version 2.0.0 and hope to keep going strong.
-Only time will tell, if everything is worknig as expected and whether we need to develop additional updates. Most likely we will.
-
 ## Disclaimer
 
-This tool is exclusively made for our office, but we have commited to make it FOSS and hopefully configurable enough to allow others to use it if they want!
+This tool was exclusively developed for ourselves, colleagues in IT department, but we have commited to make it FOSS and hopefully configurable enough to allow others to use it if they want!
 There are however couple things that may need some customizations on your end, whether you fork it or open a pull request on this repository. The list of known gotchas:
 
 - Authentication is written for Microsoft Entra ID (Azure Active Directory) with Passport.js - You are more than welcome to securely replace it with general OAuth/OIDC library
 - Application is in czech language and there is no internalization package currently - Again, if you are willing to provide translations, we will try to implement it
 - Application has the minimum required features required for our use case, that is sharing foods and drinks with no profit, thus no legal compliance typically required for businesses
 
-## Super simple e-shop for colleagues
-
-> ⚠️ NEEDS UPDATING: Current text block is from version 1.0.x and does not reflect new features available in new versions
+## Super simple system for sharing foods and drinks with colleagues
 
 **Small Business Fridge** offers simple, mostly intuitive e-shop which shows what products are available, how many and for how much.
-Customers can buy product with one simple click. The only other thing they have to do is to take the product and consume it. They also receive simple e-mail notification.
-This obviously comes with many other utilities such as:
+Customers can buy product with one simple click. The only other thing they have to do is to take the product and consume it.
 
-- page to display order history, total amount spent
-- page for supplier to add products to the stock
-- page for supplier to automatically create invoices (read QR code) for all customers and send it to their e-mail addresses
-- page to mark invoice as paid from both customer and supplier side
-- page for admin who can view all the standard pages across all the customers and suppliers
-- colorful graphs which are hopefully useful
+### Features
 
-*But what if I do not want to launch browser to buy product even though it is super easy?*
-No problem! You can either assign kiosk role to a user, which can be logged on a some thin client with browser next to a fridge, eventually with touch screen display to allow easy shopping right at the fridge,
-or there is API for anything you can and want to make! We have also worked and used for some time simple Arduino ESP32 device which may be found here [Small business fridge IoT keypad](https://github.com/houby-studio/small-business-fridge-keypad)
+- everything is available for both mobile and desktop
+- shopping page displaying products in a very practical way
+- display all your orders
+- display invoices, their payment status and mark them as paid
+- create and edit products
+- add new categories and add products to categories
+- add products to favorites to display them at the top
+- stock products
+- generate QR payments for your customers with single click to e-mail
+- validate payments
+- automatic payment reminders
+- administer users, assign permissions and offboard users
+- easily onboard users by integrating with SSO and auto-registration
+- easily train users with simple documentation in app
+- use kiosk interface to deploy self-checkout device next to products
+- user [sbf-scan mobile app](https://github.com/aaaorg/sbf-scan) to self-scan and self-checkout
 
 The whole system is running on Node.js with Express.js framework and stores data in MongoDB. We have made everything in our power to secure this application by using Azure passport allowing you to use your company ID to login and manage everything.
-It should be pretty lightweight, as we run it on a potato without any problems for around 20 users.
+It should be pretty lightweight, as we run it on a potato without any problems for around 30 users.
 
 ## Want to know more?
 
-> ⚠️ NEEDS UPDATING: Current text block is from version 1.0.x and does not reflect new features available in new versions
-
-Go checkout [Wiki](https://github.com/houby-studio/small-bussiness-fridge/wiki) for more detailed informations and getting started guides.
+Read [Wiki](https://github.com/houby-studio/small-bussiness-fridge/wiki) for more detailed informations and getting started guides.
 
 ## Images
 
-> ⚠️ NEEDS UPDATING: Current text block is from version 1.0.x and does not reflect new features available in new versions
-
 ### E-Shop
 
-![Shop](https://raw.githubusercontent.com/wiki/houby-studio/small-bussiness-fridge/images/sbf_shop.png)
+![sbf_eshop](https://github.com/houby-studio/small-business-fridge/assets/25355950/d732c897-65a8-4f01-93a2-114b41d2d196)
 
 ### Orders
 
-![image2](https://raw.githubusercontent.com/wiki/houby-studio/small-bussiness-fridge/images/sbf_orders.png)
+![sbf_orders](https://github.com/houby-studio/small-business-fridge/assets/25355950/b35ca01b-1faa-4d98-ba5f-0c28fd1bfef3)
 
-### Invoice
+### Invoices for customers
 
-![image3](https://raw.githubusercontent.com/wiki/houby-studio/small-bussiness-fridge/images/sbf_invoice.png)
+![sbf_invoices](https://github.com/houby-studio/small-business-fridge/assets/25355950/9786a000-a11b-4043-a08e-49521484cf56)
 
-### Deliver
+### Invoice for suppliers
 
-![image4](https://raw.githubusercontent.com/wiki/houby-studio/small-bussiness-fridge/images/sbf_deliver.png)
+![sbf_invoice](https://github.com/houby-studio/small-business-fridge/assets/25355950/6a9b85b4-5b44-4256-a0ec-ae4dff7e5376)
+
+### Add new product
+
+![sbf_new_product](https://github.com/houby-studio/small-business-fridge/assets/25355950/4e823eed-11c0-4588-8b48-5fd41a0560d5)
+
+### Administer users
+
+![sbf_users](https://github.com/houby-studio/small-business-fridge/assets/25355950/d13c511c-c962-4a46-89ac-00a5d1a6aadf)
+
+### Modify user preferences
+
+![sbf_profile](https://github.com/houby-studio/small-business-fridge/assets/25355950/7b8f21f7-2c2e-4200-84bb-c79adc21e9ba)
+
+## 2024 UPDATE
+
+The 2.0.0 update brought so much life to our project in our office, that we had to develop even more features and also developed new [sbf-scan mobile app](https://github.com/aaaorg/sbf-scan), which allows users to take handheld scanner or even just smartphone and purchase multiple products by scanning codes from products.
+
+## 2023 UPDATE
+
+This simple system is alive and kicking for 4 years already in our office! While imperfect, it has enabled us to share 4561 pieces of drinks and food in total cost of 79084 CZK in version 1.0.x.
+Version 1.0.x has been in use from 2019-09-07 to 2023-11-02 and since 2023-11-03 we have deployed version 2.0.0 and hope to keep going strong.
+Only time will tell, if everything is worknig as expected and whether we need to develop additional updates. Most likely we will.
 
 ## Development
 
