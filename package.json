@@ -40,7 +40,7 @@
     "winston": "^3.11.0"
   },
   "devDependencies": {
-    "chai": "^5.1.0",
+    "chai": "^5.1.1",
     "chai-http": "*",
     "eslint": "^8.57.0",
     "eslint-config-standard": "^17.1.0",
