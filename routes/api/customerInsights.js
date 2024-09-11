@@ -36,7 +36,7 @@ router.get('/', ensureAuthenticatedAPI, function (req, res) {
 
   // Find user in database
   User.findOne({
-    phone: req.query.customer
+    phone: formattedPhone
   })
     .then((user) => {
       // If database doesn't contain user with supplied phone, database returns empty object, which doesn't contain any properties.

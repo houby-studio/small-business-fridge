@@ -28,7 +28,19 @@ sbf-API-secret: developmentsecret
 
 ###
 
-GET https://localhost/api/customerInsights?customer=123456789 HTTP/1.1
+GET https://localhost/api/customerInsights?customer=00420123456789 HTTP/1.1
+Content-Type: application/json
+sbf-API-secret: developmentsecret
+
+###
+
+GET https://localhost/api/customerInsights?customer=%2B420123456789 HTTP/1.1
+Content-Type: application/json
+sbf-API-secret: developmentsecret
+
+###
+
+GET https://localhost/api/customerInsights?customer=00420 123 456 789 HTTP/1.1
 Content-Type: application/json
 sbf-API-secret: developmentsecret
 
