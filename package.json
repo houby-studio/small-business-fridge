@@ -11,7 +11,9 @@
     "test-coverage": "nyc npm test && nyc report --reporter=text-lcov | coveralls"
   },
   "dependencies": {
+    "@azure/msal-node": "^2.13.1",
     "@handlebars/allow-prototype-access": "^1.0.5",
+    "axios": "^1.7.7",
     "connect-mongo": "^5.1.0",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",

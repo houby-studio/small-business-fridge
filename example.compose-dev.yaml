@@ -1,4 +1,4 @@
-version: "3.8"
+version: '3.8'
 services:
   # dev-small-business-fridge:
   #   image: houbystudio/small-business-fridge:latest
@@ -9,9 +9,10 @@ services:
   #     - OPENAI_API_KEY=openapisecret
   #     - MAIL_PORT=1025
   #     - MAIL_HOST=dev-maildev
-  #     - CREDS_IDENTITY_METADATA=https://login.microsoftonline.com/{tenant}/v2.0/.well-known/openid-configuration
+  #     - CREDS_IDENTITY_METADATA=https://login.microsoftonline.com/{tenant-id}/v2.0/.well-known/openid-configuration
   #     - CREDS_CLIENT_ID=26ea4641-db92-4cd4-a080-8027970bd7e5
   #     - CREDS_CLIENT_SECRET=26ea4641db924cd4a0808027970bd7e5
+  #     - CREDS_TENANT_ID={tenant-id}
   #   ports:
   #     - 3000:3000
   #   volumes:
@@ -53,12 +54,12 @@ services:
       - MAILDEV_WEB_PORT=1080
       - MAILDEV_SMTP_PORT=1025
     ports:
-      - "8080:1080"
-      - "8025:1025"
+      - '8080:1080'
+      - '8025:1025'
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "1m"
+        max-size: '1m'
 
 volumes:
   # dev-images:
