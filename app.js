@@ -75,6 +75,9 @@ import scannerOrder from './routes/api/scannerOrder.js'
 import scannerValidate from './routes/api/scannerValidate.js'
 // API routes for clientside javascript
 import promptGptRouter from './routes/api/promptGpt.js'
+// API routes for voice bot
+import customerInsights from './routes/api/customerInsights.js'
+import productList from './routes/api/productList.js'
 // Middleware routes
 import rateLimitRouter from './routes/middleware/rate_limit.js'
 
@@ -185,6 +188,9 @@ app.use('/api/scannerOrder', scannerOrder)
 app.use('/api/scannerValidate', scannerValidate)
 // API routes for clientside javascript
 app.use('/api/promptGpt', promptGptRouter)
+// API routes for voice bot
+app.use('/api/customerInsights', customerInsights)
+app.use('/api/productList', productList)
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

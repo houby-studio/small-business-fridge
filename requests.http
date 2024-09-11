@@ -28,12 +28,12 @@ sbf-API-secret: developmentsecret
 
 ###
 
-POST https://localhost/api/scannerOrder HTTP/1.1
+GET https://localhost/api/customerInsights?customer=123456789 HTTP/1.1
 Content-Type: application/json
 sbf-API-secret: developmentsecret
 
-{
-  "customer": "123456",
-  "product": "123",
-  "price": 5
-}
+###
+
+GET https://localhost/api/productList HTTP/1.1
+Content-Type: application/json
+sbf-API-secret: developmentsecret
