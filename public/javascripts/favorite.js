@@ -19,7 +19,8 @@ async function set_favorite(element) {
       value: {
         product: element.value,
         state: element.checked
-      }
+      },
+      _csrf: document.getElementsByName('_csrf')[0].value
     })
   })
 }
