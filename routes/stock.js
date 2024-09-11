@@ -2,13 +2,13 @@ import { Router } from 'express'
 import Delivery from '../models/delivery.js'
 import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
 import logger from '../functions/logger.js'
-var router = Router()
+const router = Router()
 
 /* GET about page. */
-router.get('/', ensureAuthenticated, function (req, res, next) {
+router.get('/', ensureAuthenticated, function (req, res) {
   if (!req.user.supplier) {
     logger.warn(
-      `server.routes.stock.get__User tried to access supplier page without permission.`,
+      'server.routes.stock.get__User tried to access supplier page without permission.',
       {
         metadata: {
           result: req.user
@@ -99,7 +99,6 @@ router.get('/', ensureAuthenticated, function (req, res, next) {
       }
       req.session.alert = alert
       res.redirect('/')
-      return
     })
 })
 

@@ -17,7 +17,7 @@ function getSubject(purchaseCount) {
 }
 
 // Schedule rule - should read weekday start and end day + report send hour and minute from ENV
-var rule = new RecurrenceRule()
+const rule = new RecurrenceRule()
 rule.dayOfWeek = new Range(
   process.env.TASKS_DAILY_REPORT_WEEK_START || 1,
   process.env.TASKS_DAILY_REPORT_WEEK_END || 5
@@ -25,14 +25,14 @@ rule.dayOfWeek = new Range(
 rule.hour = process.env.TASKS_DAILY_REPORT_SEND_HOUR || 16
 rule.minute = process.env.TASKS_DAILY_REPORT_SEND_MINUTE || 30
 
-var scheduledTask = scheduleJob(rule, function () {
+const scheduledTask = scheduleJob(rule, function () {
   // This schedule can be disabled in the ENV
   if (!process.env.TASKS_DAILY_REPORT_ENABLED) {
     return
   }
 
   logger.info(
-    `server.tasks.dailypurchasereport__Started scheduled task to notify customers of their purchases in past 24 hours.`
+    'server.tasks.dailypurchasereport__Started scheduled task to notify customers of their purchases in past 24 hours.'
   )
 
   // Get all orders from past 24 hours
@@ -86,7 +86,7 @@ var scheduledTask = scheduleJob(rule, function () {
     })
     .catch((err) => {
       logger.error(
-        `server.tasks.dailypurchasereport__Failed to load customers and their daily purchases.`,
+        'server.tasks.dailypurchasereport__Failed to load customers and their daily purchases.',
         {
           metadata: {
             error: err.message

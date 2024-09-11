@@ -1,6 +1,6 @@
 import logger from './logger.js'
 
-export function checkKiosk(req, res, next) {
+export function checkKiosk (req, res, next) {
   if (!req.user) {
     return next()
   }

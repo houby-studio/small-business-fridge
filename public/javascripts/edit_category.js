@@ -1,23 +1,26 @@
+/*global json_data*/
+
 // Handles category to edit selection
+// eslint-disable-next-line no-unused-vars
 function loadCategoryInfo() {
   // Get selected category
-  const categoryId = document.getElementById("category_id").value;
+  const categoryId = document.getElementById('category_id').value
 
   // Reset form if category deselected
-  if (categoryId === "") {
-    document.getElementById("admin_edit_category").reset();
-    return;
+  if (categoryId === '') {
+    document.getElementById('admin_edit_category').reset()
+    return
   }
 
   // Name
-  document.getElementById("category_name").value =
-    json_data[categoryId].category_name;
+  document.getElementById('category_name').value =
+    json_data[categoryId].category_name
 
   // Color
-  document.getElementById("category_color").value =
-    json_data[categoryId].category_color;
+  document.getElementById('category_color').value =
+    json_data[categoryId].category_color
 
   // Disable
-  document.getElementById("category_disabled").checked =
-    json_data[categoryId].category_disabled;
+  document.getElementById('category_disabled').checked =
+    json_data[categoryId].category_disabled
 }

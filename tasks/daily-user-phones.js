@@ -7,18 +7,18 @@ import { getUserDetails } from '../functions/getUserDetails.js'
 moment.locale('cs')
 
 // Schedule rule - should read weekday start and end day + report send hour and minute from ENV
-var rule = new RecurrenceRule()
+const rule = new RecurrenceRule()
 rule.hour = process.env.TASKS_DAILY_USER_PHONES_HOUR
 rule.minute = process.env.TASKS_DAILY_USER_PHONES_MINUTE
 
-var scheduledTask = scheduleJob(rule, async function () {
+const scheduledTask = scheduleJob(rule, async function () {
   // This schedule can be disabled in the ENV
   if (!process.env.TASKS_DAILY_USER_PHONES_ENABLED) {
     return
   }
 
   logger.info(
-    `server.tasks.dailyuserphones__Started scheduled task to user phones and update data.`
+    'server.tasks.dailyuserphones__Started scheduled task to user phones and update data.'
   )
 
   // Obtain Access Token
@@ -44,15 +44,17 @@ var scheduledTask = scheduleJob(rule, async function () {
         return
       }
       if (userDetails.businessPhones[0]) {
-        if (user.phone !== userDetails.businessPhones[0]) {
-          User.updateOne(
-            { _id: user._id },
-            { phone: userDetails.businessPhones[0] }
-          ).then((_result) => {
-            logger.info(
-              `server.tasks.dailyuserphones__Updated user [${user.email}] phone to [${userDetails.businessPhones[0]}]`
-            )
-          })
+        const formattedPhone = userDetails.businessPhones[0]
+          .replace(/ /g, '')
+          .replace('+', '00')
+        if (user.phone !== formattedPhone) {
+          User.updateOne({ _id: user._id }, { phone: formattedPhone }).then(
+            () => {
+              logger.info(
+                `server.tasks.dailyuserphones__Updated user [${user.email}] phone to [${formattedPhone}]`
+              )
+            }
+          )
         } else {
           logger.info(
             `server.tasks.dailyuserphones__User [${user.email}] phone is already up to date.`

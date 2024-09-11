@@ -1,4 +1,5 @@
 // Disable form submissions if there are invalid fields
+// eslint-disable-next-line no-extra-semi
 ;(() => {
   'use strict'
 

@@ -7,14 +7,14 @@ import { checkKiosk } from '../functions/checkKiosk.js'
 import csrf from 'csurf'
 import logger from '../functions/logger.js'
 import { generateQR } from '../functions/qrPayment.js'
-var router = Router()
-var csrfProtection = csrf()
+const router = Router()
+const csrfProtection = csrf()
 router.use(csrfProtection)
 moment.locale('cs')
 
 // GET invoices page.
-router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
-  var filter = {
+router.get('/', ensureAuthenticated, checkKiosk, function (req, res) {
+  const filter = {
     buyerId: req.user._id
   }
 
@@ -82,7 +82,7 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
         title: 'Faktury | Lednice IT',
         user: req.user,
         invoices: docs,
-        alert: alert,
+        alert,
         csrfToken: req.csrfToken()
       })
     })
@@ -100,12 +100,11 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
       }
       req.session.alert = alert
       res.redirect('/')
-      return
     })
 })
 
 // Form post - Handles Invoice "requestPaid" status changes
-router.post('/', ensureAuthenticated, function (req, res, _next) {
+router.post('/', ensureAuthenticated, function (req, res) {
   // Check if customer changes invoice which belongs to him
   Invoice.findById(req.body.invoice_id).then((check) => {
     if (!check.buyerId.equals(req.user.id)) {
@@ -220,7 +219,6 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           }
           req.session.alert = alert
           res.redirect('/invoices')
-          return
         })
     } else if (req.body.action === 'storno') {
       // Handles status change to 'requestPaid: false'
@@ -285,7 +283,6 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           }
           req.session.alert = alert
           res.redirect('/invoices')
-          return
         })
     } else {
       logger.warn(
@@ -309,7 +306,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
 })
 
 // API called from client to show QR code
-router.post('/qrcode', ensureAuthenticated, function (req, res, _next) {
+router.post('/qrcode', ensureAuthenticated, function (req, res) {
   Invoice.findById(req.body.invoice_id)
     .populate('supplierId')
     .populate('buyerId')

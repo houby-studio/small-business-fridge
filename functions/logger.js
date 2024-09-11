@@ -1,7 +1,7 @@
 import { createLogger, transports, format } from 'winston'
 const { combine, timestamp, json } = format
 
-var logger = createLogger({
+const logger = createLogger({
   transports: [
     new transports.File({
       format: combine(timestamp(), json()),
@@ -9,7 +9,7 @@ var logger = createLogger({
       filename: './logs/all-logs.json',
       handleExceptions: true,
       json: true,
-      maxsize: 5242880, //5MB
+      maxsize: 5242880, // 5MB
       maxFiles: '14d',
       colorize: false
     }),
@@ -19,7 +19,7 @@ var logger = createLogger({
       filename: './logs/error.json',
       handleExceptions: true,
       json: true,
-      maxsize: 5242880, //5MB
+      maxsize: 5242880, // 5MB
       maxFiles: '14d',
       colorize: false
     }),
@@ -41,7 +41,7 @@ var logger = createLogger({
 })
 
 logger.stream = {
-  write: function (message, _encoding) {
+  write: function (message) {
     logger.info(message.replace(/(\n)/gm, ''))
   }
 }

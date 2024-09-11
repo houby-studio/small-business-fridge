@@ -1,0 +1,11 @@
+{
+    // Javascript settings - do not use semicolons, format on save and use Prettier
+    "editor.formatOnSave": true,
+    "editor.tabSize": 2,
+    "[javascript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "prettier.singleQuote": true,
+    "prettier.semi": false,
+    "prettier.trailingComma": "none",
+}

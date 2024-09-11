@@ -1,40 +1,40 @@
-import { Schema, model } from "mongoose";
+import { Schema, model } from 'mongoose'
 
-var schema = new Schema({
+const schema = new Schema({
   buyerId: {
     type: Schema.Types.ObjectId,
-    ref: "User",
+    ref: 'User',
     required: true,
-    index: true,
+    index: true
   },
   deliveryId: {
     type: Schema.Types.ObjectId,
-    ref: "Delivery",
+    ref: 'Delivery',
     required: true,
-    index: true,
+    index: true
   },
   order_date: {
     type: Date,
-    default: Date.now,
+    default: Date.now
   },
   invoice: {
     type: Boolean,
     default: false,
-    index: true,
+    index: true
   },
   invoiceId: {
     type: Schema.Types.ObjectId,
-    ref: "Invoice",
-    required: false,
+    ref: 'Invoice',
+    required: false
   },
   keypadOrder: {
     type: Boolean,
-    default: false,
+    default: false
   },
   scannerOrder: {
     type: Boolean,
-    default: false,
-  },
-});
+    default: false
+  }
+})
 
-export default model("Order", schema);
+export default model('Order', schema)

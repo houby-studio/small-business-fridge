@@ -67,10 +67,10 @@ passport.use(
     function (_iss, _sub, profile, _accessToken, _refreshToken, done) {
       if (!profile.oid) {
         logger.error(
-          `server.functions.azurepassport__User profile does not contain OID.`,
+          'server.functions.azurepassport__User profile does not contain OID.',
           {
             metadata: {
-              profile: profile
+              profile
             }
           }
         )
@@ -105,7 +105,7 @@ passport.use(
                     `server.functions.azurepassport__User [${profile.oid}] does not contain email parameter. Cannot register user.`,
                     {
                       metadata: {
-                        profile: profile
+                        profile
                       }
                     }
                   )
@@ -117,12 +117,8 @@ passport.use(
                 newUser.email = profile._json.email
                 newUser.admin =
                   process.env.NODE_ENV.toLowerCase() === 'development'
-                    ? true
-                    : false
                 newUser.supplier =
                   process.env.NODE_ENV.toLowerCase() === 'development'
-                    ? true
-                    : false
                 // Async function to find highest keypad ID and increment it by one.
                 const latestUser = function (callback) {
                   User.find()
@@ -165,7 +161,7 @@ passport.use(
                         `server.functions.azurepassport__Created user [${profile._json.email}].`,
                         {
                           metadata: {
-                            result: result
+                            result
                           }
                         }
                       )
@@ -208,7 +204,7 @@ passport.use(
               `server.functions.azurepassport__User [${user._id}] is disabled, but tried to login anyways.`,
               {
                 metadata: {
-                  user: user
+                  user
                 }
               }
             )

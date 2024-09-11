@@ -42,6 +42,7 @@
     "winston": "^3.11.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.10.0",
     "chai": "^5.1.1",
     "chai-http": "*",
     "eslint": "^8.57.0",
@@ -49,6 +50,7 @@
     "eslint-plugin-import": "^2.29.1",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-promise": "^6.1.1",
+    "globals": "^15.9.0",
     "handlebars": "^4.7.7",
     "mocha": "^10.3.0",
     "nock": "^13.5.4",
@@ -58,5 +60,6 @@
     "resnap": "^1.0.1",
     "sinon": "^18.0.0",
     "supertest": "^7.0.0"
-  }
+  },
+  "standard": {}
 }

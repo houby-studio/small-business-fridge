@@ -5,7 +5,7 @@ connect(process.env.DB_CONNECTION_STRING, {
   useNewUrlParser: true
 })
 
-var users = [
+const users = [
   new User({
     oid: 'unique_string_01',
     displayName: 'Sindelar Jakub',
@@ -21,8 +21,8 @@ var users = [
   })
 ]
 
-var done = 0
-for (var i = 0; i < users.length; i++) {
+let done = 0
+for (let i = 0; i < users.length; i++) {
   users[i].save().then(() => {
     done++
     if (done === users.length) {
@@ -31,6 +31,6 @@ for (var i = 0; i < users.length; i++) {
   })
 }
 
-function exit() {
+function exit () {
   disconnect()
 }

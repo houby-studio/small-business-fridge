@@ -6,18 +6,18 @@ import logger from '../functions/logger.js'
 moment.locale('cs')
 
 // Schedule rule - should read weekday start and end day + report send hour and minute from ENV
-var rule = new RecurrenceRule()
+const rule = new RecurrenceRule()
 rule.hour = process.env.TASKS_DAILY_INCOMPLETE_INVOICE_HOUR
 rule.minute = process.env.TASKS_DAILY_INCOMPLETE_INVOICE_MINUTE
 
-var scheduledTask = scheduleJob(rule, function () {
+const scheduledTask = scheduleJob(rule, function () {
   // This schedule can be disabled in the ENV
   if (!process.env.TASKS_DAILY_INCOMPLETE_INVOICE_ENABLED) {
     return
   }
 
   logger.info(
-    `server.tasks.dailypaidinvoicesneedsapproval__Started scheduled task to find paid invoices without supplier confirmation and send notices.`
+    'server.tasks.dailypaidinvoicesneedsapproval__Started scheduled task to find paid invoices without supplier confirmation and send notices.'
   )
 
   // Aggregate paid invoices without supplier confirmation
@@ -88,7 +88,7 @@ var scheduledTask = scheduleJob(rule, function () {
     })
     .catch((err) => {
       logger.error(
-        `server.tasks.dailypaidinvoicesneedsapproval__Failed to load past due invoices.`,
+        'server.tasks.dailypaidinvoicesneedsapproval__Failed to load past due invoices.',
         {
           metadata: {
             error: err.message

@@ -1,3 +1,5 @@
+/*global bootstrap*/
+
 const bsAlert = new bootstrap.Alert('#alert')
 
 document.addEventListener('DOMContentLoaded', function () {

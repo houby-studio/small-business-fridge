@@ -5,7 +5,7 @@ connect(process.env.DB_CONNECTION_STRING, {
   useNewUrlParser: true
 })
 
-var products = [
+const products = [
   new Product({
     keypadId: 1,
     displayName: 'Monster Zero',
@@ -60,8 +60,8 @@ var products = [
   })
 ]
 
-var done = 0
-for (var i = 0; i < products.length; i++) {
+let done = 0
+for (let i = 0; i < products.length; i++) {
   products[i].save().then(() => {
     done++
     if (done === products.length) {
@@ -70,6 +70,6 @@ for (var i = 0; i < products.length; i++) {
   })
 }
 
-function exit() {
+function exit () {
   disconnect()
 }

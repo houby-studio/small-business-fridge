@@ -1,6 +1,6 @@
 import logger from './logger.js'
 
-export function ensureAuthenticated(req, res, next) {
+export function ensureAuthenticated (req, res, next) {
   if (req.isAuthenticated()) {
     return next()
   }

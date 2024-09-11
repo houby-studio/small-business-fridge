@@ -7,7 +7,7 @@ connect(process.env.DB_CONNECTION_STRING, {
   useNewUrlParser: true
 })
 
-function exit() {
+function exit () {
   disconnect()
 }
 

@@ -2,11 +2,11 @@ import { Router } from 'express'
 import { ensureAuthenticatedAPI } from '../../functions/ensureAuthenticatedAPI.js'
 import Product from '../../models/product.js'
 import Category from '../../models/category.js'
-var router = Router()
+const router = Router()
 let responseJson
 
 // GET /api/productList - returns list of products, stock and price
-router.get('/', ensureAuthenticatedAPI, function (req, res, _next) {
+router.get('/', ensureAuthenticatedAPI, function (req, res) {
   // Find products in database
   Product.aggregate([
     {
@@ -72,11 +72,11 @@ router.get('/', ensureAuthenticatedAPI, function (req, res, _next) {
           } else {
             res.status(200)
             responseJson = docs
-            // TODO: add categories
+            console.log(categories)
             res.json(responseJson)
           }
         })
-        .catch((_err) => {
+        .catch(() => {
           res.status(400)
           res.set('Content-Type', 'application/problem+json')
           const responseJson = {
@@ -85,10 +85,9 @@ router.get('/', ensureAuthenticatedAPI, function (req, res, _next) {
             status: 400
           }
           res.json(responseJson)
-          return
         })
     })
-    .catch((_err) => {
+    .catch(() => {
       res.status(400)
       res.set('Content-Type', 'application/problem+json')
       const responseJson = {
@@ -97,7 +96,6 @@ router.get('/', ensureAuthenticatedAPI, function (req, res, _next) {
         status: 400
       }
       res.json(responseJson)
-      return
     })
 })
 

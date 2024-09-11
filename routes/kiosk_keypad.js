@@ -1,9 +1,9 @@
 import { Router } from 'express'
 import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
-var router = Router()
+const router = Router()
 
 /* GET kiosk shop page. */
-router.get('/', ensureAuthenticated, function (req, res, next) {
+router.get('/', ensureAuthenticated, function (req, res) {
   if (!req.user.kiosk) {
     res.redirect('/')
     return
@@ -15,7 +15,7 @@ router.get('/', ensureAuthenticated, function (req, res, next) {
   res.render('shop/kiosk_keypad', {
     title: 'Kiosek | Lednice IT',
     user: req.user,
-    alert: alert
+    alert
   })
 })
 

@@ -1,3 +1,5 @@
+/*global json_data*/
+
 function loadProductImage() {
   var imageId = document.getElementById('product_id').value
   var newImg = new Image()

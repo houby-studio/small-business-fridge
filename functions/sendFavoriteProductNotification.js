@@ -2,7 +2,7 @@ import logger from './logger.js'
 import User from '../models/user.js'
 import { sendMail } from '../functions/sendMail.js'
 
-export async function sendFavoriteProductNotification(
+export async function sendFavoriteProductNotification (
   productId,
   productDisplayName,
   productImagePath,

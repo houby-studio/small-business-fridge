@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-unused-vars
 function readURL(input) {
   if (input.files && input.files[0]) {
     var reader = new FileReader()
@@ -12,6 +13,7 @@ function readURL(input) {
   }
 }
 
+// eslint-disable-next-line no-unused-vars
 async function promptGptForDescription() {
   console.log('getting called')
   const product_name = document.getElementById('product_name')

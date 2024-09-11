@@ -2,7 +2,7 @@ import { createTransport } from 'nodemailer'
 import hbs from 'nodemailer-express-handlebars'
 import logger from './logger.js'
 
-export function sendMail(mailto, template, context, image) {
+export function sendMail (mailto, template, context, image) {
   // In case mail is destined for system administrator or we run in development environment, send all e-mails to system address obtained from config.
   if (
     mailto === 'system@system' ||
@@ -13,7 +13,7 @@ export function sendMail(mailto, template, context, image) {
       `server.functions.sendmail__Sending e-mail [${context.subject}] to system administrator.`,
       {
         metadata: {
-          mailto: mailto,
+          mailto,
           nodeEnv: process.env.NODE_ENV,
           mailDevSystem: process.env.MAIL_DEV_SYSTEM
         }
@@ -22,7 +22,7 @@ export function sendMail(mailto, template, context, image) {
     mailto = process.env.MAIL_SYSTEM || 'root@localhost'
   }
 
-  var transporter = createTransport({
+  const transporter = createTransport({
     port: process.env.MAIL_PORT,
     host: process.env.MAIL_HOST,
     auth: {
@@ -35,7 +35,7 @@ export function sendMail(mailto, template, context, image) {
   })
 
   // Configure templates
-  var options = {
+  const options = {
     viewEngine: {
       layoutsDir: 'views/email',
       partialsDir: 'views/email/partials',
@@ -47,20 +47,20 @@ export function sendMail(mailto, template, context, image) {
 
   context.baseUrl = process.env.MAIL_BASE_URL || 'https://localhost'
 
-  var mailOptions = {
+  const mailOptions = {
     from: {
       name: process.env.MAIL_FROM,
       address: process.env.MAIL_USERNAME
     },
     to: mailto,
     subject: context.subject,
-    template: template,
-    context: context
+    template,
+    context
   }
 
   mailOptions.attachments = [
     {
-      path: `./public/static_images/logo.png`,
+      path: './public/static_images/logo.png',
       cid: 'logo@sbf.pictures'
     }
   ]
@@ -78,8 +78,8 @@ export function sendMail(mailto, template, context, image) {
         `server.functions.sendmail__Succesfully sent e-mail [${context.subject}].`,
         {
           metadata: {
-            result: result,
-            mailOptions: mailOptions
+            result,
+            mailOptions
           }
         }
       )
@@ -90,7 +90,7 @@ export function sendMail(mailto, template, context, image) {
         {
           metadata: {
             error: err.message,
-            mailOptions: mailOptions
+            mailOptions
           }
         }
       )

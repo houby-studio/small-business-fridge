@@ -1,3 +1,5 @@
+/* global $ */
+
 // Initialize DataTables
 // dom customizes header paging, search and export
 // columndefs makes id unsortable, sortabledate hidden, date linked for filtering and displays currency next to price
@@ -16,7 +18,7 @@ document.addEventListener('DOMContentLoaded', function () {
         type: 'num',
         targets: 4,
         data: 'Cena',
-        render: function (data, type, _row, _meta) {
+        render: function (data, type) {
           return type === 'display' ? data + ' Kč' : data
         }
       }

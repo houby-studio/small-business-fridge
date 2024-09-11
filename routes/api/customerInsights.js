@@ -1,11 +1,11 @@
 import { Router } from 'express'
 import { ensureAuthenticatedAPI } from '../../functions/ensureAuthenticatedAPI.js'
 import User from '../../models/user.js'
-var router = Router()
+const router = Router()
 let responseJson
 
 // GET /api/customerInsights - accepts customer's phone number and returns customer insights to be used by voice bot
-router.get('/', ensureAuthenticatedAPI, function (req, res, _next) {
+router.get('/', ensureAuthenticatedAPI, function (req, res) {
   // Check if request contains 'customer' parameter
   if (!req.query.customer) {
     res.status(400)
@@ -27,19 +27,16 @@ router.get('/', ensureAuthenticatedAPI, function (req, res, _next) {
     return
   }
 
-  console.log(
-    'Finding user with phone:',
-    req.query.customer.toString().replace(/\s/g, '\\s?').replace(/\+/g, '+?')
-  )
+  const formattedPhone = req.query.customer
+    .toString()
+    .replace(/ /g, '')
+    .replace('+', '00')
+
+  console.log('Finding user with phone: ', formattedPhone)
 
   // Find user in database
   User.findOne({
-    phone: {
-      $regex: req.query.customer
-        .toString()
-        .replace(' ', '\\s?')
-        .replace('+', '\\+?')
-    }
+    phone: req.query.customer
   })
     .then((user) => {
       // If database doesn't contain user with supplied phone, database returns empty object, which doesn't contain any properties.
@@ -53,7 +50,7 @@ router.get('/', ensureAuthenticatedAPI, function (req, res, _next) {
         res.json(responseJson)
       }
     })
-    .catch((_err) => {
+    .catch(() => {
       res.status(400)
       res.set('Content-Type', 'application/problem+json')
       const responseJson = {
@@ -71,7 +68,6 @@ router.get('/', ensureAuthenticatedAPI, function (req, res, _next) {
         ]
       }
       res.json(responseJson)
-      return
     })
 })
 

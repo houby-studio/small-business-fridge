@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { rateLimit } from 'express-rate-limit'
 import logger from '../../functions/logger.js'
-var router = Router()
+const router = Router()
 
 function limiterHandler(req, res, _next, options) {
   if (req.url.startsWith('/api/')) {
@@ -32,13 +32,12 @@ function limiterHandler(req, res, _next, options) {
   }
   req.session.alert = alert
   res.redirect(req.url)
-  return
 }
 
 // Redirect with alert
 const limiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  limit: async (req, res) => {
+  limit: async (req) => {
     if (req.client.remoteAddress === process.env.APP_RATE_LIMIT_TRUSTED_IP) {
       return 60000 // 1000 requests per second is to be considered as unlimited
     }

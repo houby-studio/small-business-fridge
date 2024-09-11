@@ -1,8 +1,11 @@
+/*global bootstrap*/
+
 // Using custom data-category to filter cards based on category
 // Using Bootstraps Collapse https://getbootstrap.com/docs/5.3/components/collapse/#methods
 // Using Map to avoid regenerating array of objects multiple times and to do it only once clicked
 const filterCategories = new Map()
 
+// eslint-disable-next-line no-unused-vars
 function filter_categories(category) {
   if (!filterCategories.get(category)) {
     const elementsToHide = []
@@ -32,6 +35,7 @@ function filter_categories(category) {
   })
 }
 
+// eslint-disable-next-line no-unused-vars
 function show_all_categories() {
   if (!filterCategories.get('all')) {
     const elementsToShow = []

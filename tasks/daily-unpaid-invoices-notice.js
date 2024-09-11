@@ -7,18 +7,18 @@ import logger from '../functions/logger.js'
 moment.locale('cs')
 
 // Schedule rule - should read weekday start and end day + report send hour and minute from ENV
-var rule = new RecurrenceRule()
+const rule = new RecurrenceRule()
 rule.hour = process.env.TASKS_DAILY_INCOMPLETE_INVOICE_HOUR
 rule.minute = process.env.TASKS_DAILY_INCOMPLETE_INVOICE_MINUTE
 
-var scheduledTask = scheduleJob(rule, function () {
+const scheduledTask = scheduleJob(rule, function () {
   // This schedule can be disabled in the ENV
   if (!process.env.TASKS_DAILY_INCOMPLETE_INVOICE_ENABLED) {
     return
   }
 
   logger.info(
-    `server.tasks.dailyunpaidinvoicesnotice__Started scheduled task to find unpaid invoices and send notices.`
+    'server.tasks.dailyunpaidinvoicesnotice__Started scheduled task to find unpaid invoices and send notices.'
   )
 
   // Get date from process.env.TASKS_DAILY_INCOMPLETE_INVOICE_NET_DAYS days ago
@@ -96,7 +96,7 @@ var scheduledTask = scheduleJob(rule, function () {
               `server.tasks.dailyunpaidinvoicesnotice__Successfully incremented autoReminderCount:[${result.autoReminderCount}] on invoice:[${docs[i]._id}].`,
               {
                 metadata: {
-                  result: result
+                  result
                 }
               }
             )
@@ -123,7 +123,7 @@ var scheduledTask = scheduleJob(rule, function () {
                   invoiceId: docs[i]._id,
                   invoiceDate: moment(docs[i].invoiceDate).format('LLLL'),
                   invoiceTotalCost: docs[i].totalCost,
-                  noticeCount: noticeCount,
+                  noticeCount,
                   supplierDisplayName: docs[i].supplier[0].displayName,
                   supplierIBAN: docs[i].supplier[0].IBAN,
                   customerDisplayName: docs[i].buyer[0].displayName,
@@ -135,7 +135,7 @@ var scheduledTask = scheduleJob(rule, function () {
           })
           .catch((err) => {
             logger.error(
-              `server.tasks.dailyunpaidinvoicesnotice__Failed to increment autoReminderCount:[${result.autoReminderCount}] on invoice:[${docs[i]._id}].`,
+              `server.tasks.dailyunpaidinvoicesnotice__Failed to increment autoReminderCount:[${docs[i].autoReminderCount}] on invoice:[${docs[i]._id}].`,
               {
                 metadata: {
                   error: err.message
@@ -147,7 +147,7 @@ var scheduledTask = scheduleJob(rule, function () {
     })
     .catch((err) => {
       logger.error(
-        `server.tasks.dailyunpaidinvoicesnotice__Failed to load past due invoices.`,
+        'server.tasks.dailyunpaidinvoicesnotice__Failed to load past due invoices.',
         {
           metadata: {
             error: err.message

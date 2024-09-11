@@ -4,12 +4,12 @@ import User from '../models/user.js'
 import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
 import { checkKiosk } from '../functions/checkKiosk.js'
 import logger from '../functions/logger.js'
-var router = Router()
-var csrfProtection = csrf()
+const router = Router()
+const csrfProtection = csrf()
 router.use(csrfProtection)
 
 /* GET profile page. */
-router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
+router.get('/', ensureAuthenticated, checkKiosk, function (req, res) {
   res.render('shop/profile', {
     title: 'Profil | Lednice IT',
     user: req.user,
@@ -18,7 +18,7 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
 })
 
 /* POST profile page. */
-router.post('/', ensureAuthenticated, function (req, res, _next) {
+router.post('/', ensureAuthenticated, function (req, res) {
   const newValue = req.body.value
   if (req.body.name === 'checkAllProducts') {
     User.findByIdAndUpdate(
@@ -40,7 +40,6 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           }
         )
         res.status(200).send()
-        return
       })
       .catch((err) => {
         logger.error(
@@ -67,7 +66,6 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           }
         )
         res.status(200).send()
-        return
       })
       .catch((err) => {
         logger.error(
@@ -79,7 +77,6 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           }
         )
         res.status(400).send()
-        return
       })
   } else if (req.body.name === 'checkSendDailyReport') {
     User.findByIdAndUpdate(req.user.id, {
@@ -95,7 +92,6 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           }
         )
         res.status(200).send()
-        return
       })
       .catch((err) => {
         logger.error(
@@ -107,7 +103,6 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           }
         )
         res.status(400).send()
-        return
       })
   } else if (req.body.name === 'realtime-iban') {
     if (/^CZ\d{22}$/.test(newValue)) {
@@ -124,7 +119,6 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
             }
           )
           res.status(200).send()
-          return
         })
         .catch((err) => {
           logger.error(
@@ -136,7 +130,6 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
             }
           )
           res.status(400).send()
-          return
         })
     } else {
       logger.warn(
@@ -148,7 +141,6 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
         }
       )
       res.status(400).send()
-      return
     }
   } else if (req.body.name === 'favorite') {
     const operation = newValue?.state ? '$push' : '$pull'
@@ -167,7 +159,6 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           }
         )
         res.status(200).send()
-        return
       })
       .catch((err) => {
         logger.error(
@@ -179,7 +170,6 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           }
         )
         res.status(400).send()
-        return
       })
   } else if (req.body.name === 'colormode') {
     User.findByIdAndUpdate(req.user.id, {
@@ -195,7 +185,6 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           }
         )
         res.status(200).send()
-        return
       })
       .catch((err) => {
         logger.error(
@@ -207,7 +196,6 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           }
         )
         res.status(400).send()
-        return
       })
   } else if (req.body.name === 'checkDisableKeypadLogin') {
     User.findByIdAndUpdate(req.user.id, {
@@ -223,7 +211,6 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           }
         )
         res.status(200).send()
-        return
       })
       .catch((err) => {
         logger.error(
@@ -235,7 +222,6 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           }
         )
         res.status(400).send()
-        return
       })
   } else {
     res.status(400).send()

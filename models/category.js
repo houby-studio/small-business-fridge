@@ -1,24 +1,24 @@
-import { Schema, model } from "mongoose";
-import uniqueValidator from "mongoose-unique-validator";
+import { Schema, model } from 'mongoose'
+import uniqueValidator from 'mongoose-unique-validator'
 
-var schema = new Schema({
+const schema = new Schema({
   name: {
     type: String,
     required: true,
     index: true,
-    unique: true,
+    unique: true
   },
   color: {
     type: String,
-    required: true,
+    required: true
   },
   disabled: {
     type: Boolean,
     default: false,
-    index: true,
-  },
-});
+    index: true
+  }
+})
 
-schema.plugin(uniqueValidator);
+schema.plugin(uniqueValidator)
 
-export default model("Category", schema);
+export default model('Category', schema)

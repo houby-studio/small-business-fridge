@@ -51,7 +51,7 @@ export default function dbAutoBackUp() {
     let beforeDate, oldBackupDir, oldBackupPath
 
     // Current date
-    var currentDate = stringToDate(date)
+    const currentDate = stringToDate(date)
     const newBackupDir =
       currentDate.getFullYear() +
       '-' +
@@ -85,7 +85,7 @@ export default function dbAutoBackUp() {
       '" --archive=' +
       newBackupPath
 
-    exec(cmd, (error, stdout, stderr) => {
+    exec(cmd, (error) => {
       if (empty(error)) {
         logger.info(
           `server.functions.databasebackup__Succesfully created backup ${newBackupPath}.`
@@ -96,7 +96,7 @@ export default function dbAutoBackUp() {
             logger.info(
               `server.functions.databasebackup__Deleting old backup ${oldBackupPath}.`
             )
-            exec('rm -rf ' + oldBackupPath, (_err) => {})
+            exec('rm -rf ' + oldBackupPath, () => {})
           }
         }
       } else {

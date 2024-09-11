@@ -1,19 +1,19 @@
-import { Schema, model } from "mongoose";
+import { Schema, model } from 'mongoose'
 
-var schema = new Schema({
+const schema = new Schema({
   name: {
     type: String,
-    required: true,
+    required: true
   },
   type: {
     type: Schema.Types.ObjectId,
-    ref: "TemplateType",
-    required: true,
+    ref: 'TemplateType',
+    required: true
   },
   message: {
     type: String,
-    required: true,
-  },
-});
+    required: true
+  }
+})
 
-export default model("MailTemplate", schema);
+export default model('MailTemplate', schema)

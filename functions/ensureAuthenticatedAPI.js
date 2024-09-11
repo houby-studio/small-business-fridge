@@ -1,6 +1,6 @@
 import logger from './logger.js'
 
-export function ensureAuthenticatedAPI(req, res, next) {
+export function ensureAuthenticatedAPI (req, res, next) {
   if (!process.env.API_SECRET) {
     // Check if request header contains API secret key
     logger.warn(

@@ -1,8 +1,11 @@
+/*global bootstrap,userDatasetPriceSpent,userDatasetAmountBought,Chart,productColorPalette,productDatasetPriceSpent,productLabelUsernames,$,userColorPalette,userLabelUsernames,productDatasetAmountBought*/
+
 // Initialize Bootstraps 5 tooltips
 const tooltipTriggerList = document.querySelectorAll(
   '[data-bs-toggle="tooltip"]'
 )
-const tooltipList = [...tooltipTriggerList].map(
+// eslint-disable-next-line no-unused-vars
+const _tooltipList = [...tooltipTriggerList].map(
   (tooltipTriggerEl) => new bootstrap.Tooltip(tooltipTriggerEl)
 )
 
@@ -10,7 +13,7 @@ var userClicks = false
 var prodClicks = false
 
 // User graph swapper - changes between 'Spent amount in Kč and bought amount'
-document.getElementById('user-swap').addEventListener('click', (e) => {
+document.getElementById('user-swap').addEventListener('click', () => {
   // Load required objects
   const userSpin = document.getElementById('user-spin')
   const userText = document.getElementById('user-text')
@@ -49,8 +52,8 @@ document.getElementById('user-swap').addEventListener('click', (e) => {
 })
 
 // User graph
-var ctx = document.getElementById('perUserSpent').getContext('2d')
-var perUserSpent = new Chart(ctx, {
+var ctxUser = document.getElementById('perUserSpent').getContext('2d')
+var perUserSpent = new Chart(ctxUser, {
   type: 'pie',
   data: {
     labels: userLabelUsernames,
@@ -77,7 +80,7 @@ var perUserSpent = new Chart(ctx, {
 })
 
 // Product graph swapper - changes between 'Spent amount in Kč and bought amount'
-document.getElementById('prod-swap').addEventListener('click', (e) => {
+document.getElementById('prod-swap').addEventListener('click', () => {
   // Load required objects
   const prodSpin = document.getElementById('prod-spin')
   const prodText = document.getElementById('prod-text')
@@ -116,8 +119,8 @@ document.getElementById('prod-swap').addEventListener('click', (e) => {
 })
 
 // Product graph
-var ctx = document.getElementById('perProductSpent').getContext('2d')
-var perProductSpent = new Chart(ctx, {
+var ctxProduct = document.getElementById('perProductSpent').getContext('2d')
+var perProductSpent = new Chart(ctxProduct, {
   type: 'pie',
   data: {
     labels: productLabelUsernames,
@@ -158,7 +161,7 @@ document.addEventListener('DOMContentLoaded', function () {
         type: 'num',
         targets: 4,
         data: 'Cena',
-        render: function (data, type, _row, _meta) {
+        render: function (data, type) {
           return type === 'display' ? data + ' Kč' : data
         }
       }

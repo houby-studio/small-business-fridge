@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import passport from 'passport'
-var router = Router()
+const router = Router()
 
 /* GET login page. */
 router.get(

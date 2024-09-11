@@ -6,7 +6,7 @@ import logger from './logger.js'
  * @param {object} userId
  * @param {object} token
  */
-async function getUserDetails(userId, token) {
+async function getUserDetails (userId, token) {
   const options = {
     headers: {
       Authorization: `Bearer ${token}`

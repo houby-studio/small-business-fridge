@@ -25,7 +25,7 @@
             </td>
             <td>
               <input type="text" class="form-control realtime-keypad" data-user="{{ this._id }}" data-property="keypad"
-              minlength="1" maxlength="5" {{#if this.keypadId}} value="{{ this.keypadId }}" {{/if}} required>
+                minlength="1" maxlength="5" {{#if this.keypadId}} value="{{ this.keypadId }}" {{/if}} required>
             </td>
             <td>
               {{ this.displayName }}
@@ -34,9 +34,8 @@
               {{ this.email }}
             </td>
             <td>
-              <input class="form-check-input realtime-checkbox" type="checkbox" data-user="{{ this._id }}" data-property="supplier" title="Supplier" placeholder="Checkbox"
-              {{#if this.supplier}}
-              checked>
+              <input class="form-check-input realtime-checkbox" type="checkbox" data-user="{{ this._id }}"
+                data-property="supplier" title="Supplier" placeholder="Checkbox" {{#if this.supplier}} checked>
               <span class="d-none">Ano</span>
               {{else}}
               >
@@ -44,9 +43,8 @@
               {{/if}}
             </td>
             <td>
-              <input class="form-check-input realtime-checkbox" type="checkbox" data-user="{{ this._id }}" data-property="admin" title="Admin" placeholder="Checkbox"
-              {{#if this.admin}}
-              checked>
+              <input class="form-check-input realtime-checkbox" type="checkbox" data-user="{{ this._id }}"
+                data-property="admin" title="Admin" placeholder="Checkbox" {{#if this.admin}} checked>
               <span class="d-none">Ano</span>
               {{else}}
               >
@@ -69,11 +67,13 @@
             </td>
             <td>
               <input type="text" class="form-control realtime-card" data-user="{{ this._id }}" data-property="card"
-              placeholder="ZAK123" minlength="6" {{#if this.card}} value="{{ this.card }}" {{/if}} required>
+                placeholder="ZAK123" minlength="6" {{#if this.card}} value="{{ this.card }}" {{/if}} required>
             </td>
             <td>
-              <button type="button" class="btn btn-danger float-right w-100" onclick="showConfirm('{{ this._id }}')">Deaktivovat</button>
-              <form id="deactivate_{{ this._id }}" class="needs-validation h-100" method="POST" action="/admin_users" novalidate>
+              <button type="button" class="btn btn-danger float-right w-100"
+                onclick="showConfirm('{{ this._id }}')">Deaktivovat</button>
+              <form id="deactivate_{{ this._id }}" class="needs-validation h-100" method="POST" action="/admin_users"
+                novalidate>
                 <input type="hidden" name="name" value="deactivate">
                 <input type="hidden" name="user" value="{{ this._id }}">
                 <input type="hidden" name="_csrf" value="{{ ../csrfToken }}">

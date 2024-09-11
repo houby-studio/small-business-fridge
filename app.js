@@ -1,6 +1,5 @@
 // Require all neccesary modules
 import logger from './functions/logger.js'
-logger.info('server.app.startup__Importing root modules.')
 import morgan from 'morgan'
 import createError from 'http-errors' // Generating errors
 import express, { json, urlencoded } from 'express' // Express
@@ -19,25 +18,12 @@ import https from 'https' // Using HTTPS for debug
 import fs from 'fs' // Loading certificate from file for debug
 import { fileURLToPath } from 'url'
 import 'dotenv/config'
-
-// Emulate CommonJS variable
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-
-// Functions
-logger.info('server.app.startup__Importing functions.')
 import './functions/azure-passport.js'
-
-// Import scheduled tasks
-logger.info('server.app.startup__Importing scheduled tasks.')
 import './tasks/daily-purchase-report.js'
 import './tasks/daily-backup.js'
 import './tasks/daily-unpaid-invoices-notice.js'
 import './tasks/daily-paid-invoices-needs-approval.js'
 import './tasks/daily-user-phones.js'
-
-// Load routes from routes folder to later app.use them.
-// Access for all
-logger.info('server.app.startup__Importing routes.')
 import indexRouter from './routes/index.js'
 import aboutRouter from './routes/about.js'
 import docsRouter from './routes/docs.js'
@@ -80,6 +66,20 @@ import customerInsights from './routes/api/customerInsights.js'
 import productList from './routes/api/productList.js'
 // Middleware routes
 import rateLimitRouter from './routes/middleware/rate_limit.js'
+logger.info('server.app.startup__Importing root modules.')
+
+// Emulate CommonJS variable
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+// Functions
+logger.info('server.app.startup__Importing functions.')
+
+// Import scheduled tasks
+logger.info('server.app.startup__Importing scheduled tasks.')
+
+// Load routes from routes folder to later app.use them.
+// Access for all
+logger.info('server.app.startup__Importing routes.')
 
 // Express app and database connection
 logger.info('server.app.startup__Connecting to MongoDB server.')
@@ -193,12 +193,12 @@ app.use('/api/customerInsights', customerInsights)
 app.use('/api/productList', productList)
 
 // catch 404 and forward to error handler
-app.use(function (req, res, next) {
+app.use(function (_req, _res, next) {
   next(createError(404))
 })
 
 // error handler
-app.use(function (err, req, res, next) {
+app.use(function (err, req, res) {
   // set locals, only providing error in development
   res.locals.message = err.message
   res.locals.error = req.app.get('env') === 'development' ? err : {}

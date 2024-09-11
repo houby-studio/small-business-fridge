@@ -6,16 +6,16 @@ import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
 import csrf from 'csurf'
 import logger from '../functions/logger.js'
 import { generateQR } from '../functions/qrPayment.js'
-var router = Router()
-var csrfProtection = csrf()
+const router = Router()
+const csrfProtection = csrf()
 router.use(csrfProtection)
 moment.locale('cs')
 
 /* GET supplier payments page. */
-router.get('/', ensureAuthenticated, function (req, res, _next) {
+router.get('/', ensureAuthenticated, function (req, res) {
   if (!req.user.supplier) {
     logger.warn(
-      `server.routes.payments.get__User tried to access supplier page without permission.`,
+      'server.routes.payments.get__User tried to access supplier page without permission.',
       {
         metadata: {
           result: req.user
@@ -26,11 +26,11 @@ router.get('/', ensureAuthenticated, function (req, res, _next) {
     return
   }
 
-  var filter
+  let filter
   if (req.baseUrl === '/admin_payments') {
     if (!req.user.admin) {
       logger.warn(
-        `server.routes.payments.get__User tried to access admin page without permission.`,
+        'server.routes.payments.get__User tried to access admin page without permission.',
         {
           metadata: {
             result: req.user
@@ -112,12 +112,12 @@ router.get('/', ensureAuthenticated, function (req, res, _next) {
         user: req.user,
         invoices: docs,
         supplier: filter,
-        alert: alert,
+        alert,
         csrfToken: req.csrfToken()
       })
     })
     .catch((err) => {
-      logger.error(`server.routes.payments.get__Failed to load payments.`, {
+      logger.error('server.routes.payments.get__Failed to load payments.', {
         metadata: {
           error: err.message
         }
@@ -130,15 +130,14 @@ router.get('/', ensureAuthenticated, function (req, res, _next) {
       }
       req.session.alert = alert
       res.redirect('/')
-      return
     })
 })
 
 // Form post - Handles Invoice "paid" status changes
-router.post('/', ensureAuthenticated, function (req, res, _next) {
+router.post('/', ensureAuthenticated, function (req, res) {
   if (!req.user.supplier) {
     logger.warn(
-      `server.routes.payments.post__User tried to access supplier page without permission.`,
+      'server.routes.payments.post__User tried to access supplier page without permission.',
       {
         metadata: {
           result: req.user
@@ -152,7 +151,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
   if (req.baseUrl === '/admin_payments') {
     if (!req.user.admin) {
       logger.warn(
-        `server.routes.payments.post__User tried to access admin page without permission.`,
+        'server.routes.payments.post__User tried to access admin page without permission.',
         {
           metadata: {
             result: req.user
@@ -163,7 +162,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
       return
     }
     logger.warn(
-      `server.routes.payments.post__Admin tried to modify payment from admin dashboard.`,
+      'server.routes.payments.post__Admin tried to modify payment from admin dashboard.',
       {
         metadata: {
           result: req.user
@@ -273,7 +272,6 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           }
           req.session.alert = alert
           res.redirect('/payments')
-          return
         })
     } else if (req.body.action === 'storno') {
       // Handles status change to 'paid: false'
@@ -321,7 +319,6 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           }
           req.session.alert = alert
           res.redirect('/payments')
-          return
         })
         .catch((err) => {
           logger.error(
@@ -340,7 +337,6 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           }
           req.session.alert = alert
           res.redirect('/payments')
-          return
         })
     } else {
       logger.warn(
@@ -351,7 +347,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           }
         }
       )
-      alert = {
+      const alert = {
         type: 'danger',
         component: 'web',
         message: 'Při zpracování došlo k chybě. Požadovaná akce neexistuje!',
@@ -359,16 +355,15 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
       }
       req.session.alert = alert
       res.redirect('/payments')
-      return
     }
   })
 })
 
 // API called from client to show QR code
-router.post('/qrcode', ensureAuthenticated, function (req, res, _next) {
+router.post('/qrcode', ensureAuthenticated, function (req, res) {
   if (!req.user.supplier) {
     logger.warn(
-      `server.routes.payments.qrcode.post__User tried to access supplier page without permission.`,
+      'server.routes.payments.qrcode.post__User tried to access supplier page without permission.',
       {
         metadata: {
           result: req.user

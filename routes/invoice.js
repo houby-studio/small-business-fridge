@@ -9,15 +9,15 @@ import Invoice from '../models/invoice.js'
 import { ensureAuthenticated } from '../functions/ensureAuthenticated.js'
 import { checkKiosk } from '../functions/checkKiosk.js'
 import logger from '../functions/logger.js'
-var router = Router()
+const router = Router()
 moment.locale('cs')
 // TODO: where is csrf
 
 // GET supplier invoice page.
-router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
+router.get('/', ensureAuthenticated, checkKiosk, function (req, res) {
   if (!req.user.supplier) {
     logger.warn(
-      `server.routes.invoice.get__User tried to access supplier page without permission.`,
+      'server.routes.invoice.get__User tried to access supplier page without permission.',
       {
         metadata: {
           result: req.user
@@ -32,7 +32,7 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
     var filter
     if (!req.user.admin) {
       logger.warn(
-        `server.routes.invoice.get__User tried to access admin page without permission.`,
+        'server.routes.invoice.get__User tried to access admin page without permission.',
         {
           metadata: {
             result: req.user
@@ -290,7 +290,7 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
               }
             }
           )
-          var graphColors
+          let graphColors
           if (groupByProduct[0]) {
             if (groupByProduct[0].stock.length > 64) {
               logger.debug(
@@ -301,7 +301,7 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
               graphColors = palette('mpn65', groupByProduct[0].stock.length)
             }
             let colorCount = 0
-            for (var i = 0; i < groupByProduct[0].stock.length; i++) {
+            for (let i = 0; i < groupByProduct[0].stock.length; i++) {
               groupByProduct[0].stock[i].color = graphColors[colorCount]
               colorCount++
               if (colorCount >= graphColors.length) {
@@ -322,7 +322,7 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
               graphColors = palette('mpn65', groupByUser.length)
             }
             let colorCount = 0
-            for (var y = 0; y < groupByUser.length; y++) {
+            for (let y = 0; y < groupByUser.length; y++) {
               groupByUser[y].color = graphColors[colorCount]
               colorCount++
               if (colorCount >= graphColors.length) {
@@ -350,7 +350,7 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
             productview: groupByProduct[0],
             userview: groupByUser,
             supplier: filter,
-            alert: alert
+            alert
           })
         })
         .catch((err) => {
@@ -370,7 +370,6 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
           }
           req.session.alert = alert
           res.redirect('/')
-          return
         })
     })
     .catch((err) => {
@@ -390,14 +389,13 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res, _next) {
       }
       req.session.alert = alert
       res.redirect('/')
-      return
     })
 })
 
-router.post('/', ensureAuthenticated, function (req, res, _next) {
+router.post('/', ensureAuthenticated, function (req, res) {
   if (!req.user.supplier) {
     logger.warn(
-      `server.routes.invoice.post__User tried to access supplier page without permission.`,
+      'server.routes.invoice.post__User tried to access supplier page without permission.',
       {
         metadata: {
           result: req.user
@@ -411,7 +409,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
   if (req.baseUrl === '/admin_invoice') {
     if (!req.user.admin) {
       logger.warn(
-        `server.routes.invoice.post__User tried to access admin page without permission.`,
+        'server.routes.invoice.post__User tried to access admin page without permission.',
         {
           metadata: {
             result: req.user
@@ -422,7 +420,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
       return
     }
     logger.warn(
-      `server.routes.invoice.post__Admin tried to create invoice from admin dashboard.`,
+      'server.routes.invoice.post__Admin tried to create invoice from admin dashboard.',
       {
         metadata: {
           result: req.user
@@ -604,7 +602,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
                   req.user.displayName,
                   function (qrImageData, qrText) {
                     logger.debug(
-                      `server.routes.invoice.post__QR code generated, sending invioce e-mail to customer.`,
+                      'server.routes.invoice.post__QR code generated, sending invioce e-mail to customer.',
                       {
                         metadata: {
                           result: bulkResult
@@ -651,7 +649,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
               })
               .catch((err) => {
                 logger.error(
-                  `server.routes.invoice.post__Failed to save invoice to database.`,
+                  'server.routes.invoice.post__Failed to save invoice to database.',
                   {
                     metadata: {
                       error: err.message
@@ -662,7 +660,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
           })
           .catch((err) => {
             logger.error(
-              `server.routes.invoice.post__Failed to bulk modify invoiced orders.`,
+              'server.routes.invoice.post__Failed to bulk modify invoiced orders.',
               {
                 metadata: {
                   error: err.message
@@ -682,7 +680,7 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
     })
     .catch((err) => {
       logger.error(
-        `server.routes.invoice.post__Failed to load orders grouped by users to invoice.`,
+        'server.routes.invoice.post__Failed to load orders grouped by users to invoice.',
         {
           metadata: {
             error: err.message
@@ -697,7 +695,6 @@ router.post('/', ensureAuthenticated, function (req, res, _next) {
       }
       req.session.alert = alert
       res.redirect('/')
-      return
     })
 })
 
