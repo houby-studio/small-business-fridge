@@ -46,7 +46,11 @@ router.get('/', ensureAuthenticatedAPI, function (req, res) {
         res.json('NOT_FOUND')
       } else {
         res.status(200)
-        responseJson = { display_name: user.displayName }
+        const orderId = user.card ? user.card : user.keypadId
+        responseJson = {
+          orderId: orderId,
+          display_name: user.displayName
+        }
         res.json(responseJson)
       }
     })
