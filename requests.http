@@ -49,3 +49,9 @@ sbf-API-secret: developmentsecret
 GET https://localhost/api/productList HTTP/1.1
 Content-Type: application/json
 sbf-API-secret: developmentsecret
+
+###
+
+GET https://localhost/api/productList?voicebot=1 HTTP/1.1
+Content-Type: application/json
+sbf-API-secret: developmentsecret

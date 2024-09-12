@@ -1,7 +1,6 @@
 import { Router } from 'express'
 import { ensureAuthenticatedAPI } from '../../functions/ensureAuthenticatedAPI.js'
 import Product from '../../models/product.js'
-import Category from '../../models/category.js'
 const router = Router()
 let responseJson
 
@@ -61,33 +60,34 @@ router.get('/', ensureAuthenticatedAPI, function (req, res) {
       }
     }
   ])
-    .then((docs) => {
-      Category.find({ disabled: { $in: [null, false] } })
-        .sort([['name', 1]])
-        .then((categories) => {
-          res.set('Content-Type', 'application/json')
-          if (!docs) {
-            res.status(404)
-            res.json('NOT_FOUND')
-          } else {
-            res.status(200)
-            responseJson = docs
-            console.log(categories)
-            res.json(responseJson)
-          }
-        })
-        .catch(() => {
-          res.status(400)
-          res.set('Content-Type', 'application/problem+json')
-          const responseJson = {
-            type: 'https://github.com/houby-studio/small-business-fridge/wiki/API-documentation#productList',
-            title: 'Failed to retrieve list of categories.',
-            status: 400
-          }
-          res.json(responseJson)
-        })
+    .then((products) => {
+      res.set('Content-Type', 'application/json')
+      if (!products) {
+        res.status(404)
+        res.json('NOT_FOUND')
+      } else {
+        res.status(200)
+        if (req.query.voicebot) {
+          responseJson = products.map((product) => {
+            return {
+              keypadId: product.keypadId,
+              displayName: product.displayName,
+              description: product.description,
+              category: product.category.some((a) => typeof a == 'object')
+                ? product.category[0].name
+                : '',
+              stockSum: product.stockSum,
+              price: product.stock[0].price
+            }
+          })
+        } else {
+          responseJson = products
+        }
+        res.json(responseJson)
+      }
     })
-    .catch(() => {
+    .catch((e) => {
+      console.log(e)
       res.status(400)
       res.set('Content-Type', 'application/problem+json')
       const responseJson = {
