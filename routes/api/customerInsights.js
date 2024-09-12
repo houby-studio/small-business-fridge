@@ -1,8 +1,98 @@
 import { Router } from 'express'
 import { ensureAuthenticatedAPI } from '../../functions/ensureAuthenticatedAPI.js'
 import User from '../../models/user.js'
+import Order from '../../models/order.js'
 const router = Router()
 let responseJson
+
+function getLastOrders(userId) {
+  return Order.aggregate([
+    {
+      $match: { buyerId: userId }
+    },
+    {
+      $sort: {
+        _id: -1
+      }
+    },
+    {
+      $lookup: {
+        from: 'deliveries',
+        localField: 'deliveryId',
+        foreignField: '_id',
+        as: 'deliveryInfo'
+      }
+    },
+    {
+      $unwind: '$deliveryInfo'
+    },
+    {
+      $lookup: {
+        from: 'products',
+        localField: 'deliveryInfo.productId',
+        foreignField: '_id',
+        as: 'productInfo'
+      }
+    },
+    {
+      $unwind: '$productInfo'
+    },
+    {
+      $limit: 5
+    },
+    {
+      $project: {
+        _id: 0,
+        keypadId: '$productInfo.keypadId',
+        productName: '$productInfo.displayName',
+        order_date: 1
+      }
+    }
+  ])
+}
+
+function getMonthlyProductCount(userId) {
+  return Order.aggregate([
+    {
+      $match: { buyerId: userId }
+    },
+    {
+      $sort: {
+        _id: -1
+      }
+    },
+    {
+      $lookup: {
+        from: 'deliveries',
+        localField: 'deliveryId',
+        foreignField: '_id',
+        as: 'deliveryInfo'
+      }
+    },
+    {
+      $unwind: '$deliveryInfo'
+    },
+    {
+      $lookup: {
+        from: 'products',
+        localField: 'deliveryInfo.productId',
+        foreignField: '_id',
+        as: 'productInfo'
+      }
+    },
+    {
+      $unwind: '$productInfo'
+    },
+    {
+      $group: {
+        _id: '$productInfo.displayName',
+        count: {
+          $sum: 1
+        }
+      }
+    }
+  ])
+}
 
 // GET /api/customerInsights - accepts customer's phone number and returns customer insights to be used by voice bot
 router.get('/', ensureAuthenticatedAPI, function (req, res) {
@@ -46,12 +136,18 @@ router.get('/', ensureAuthenticatedAPI, function (req, res) {
         res.json('NOT_FOUND')
       } else {
         res.status(200)
-        const orderId = user.card ? user.card : user.keypadId
-        responseJson = {
-          orderId: orderId,
-          display_name: user.displayName
-        }
-        res.json(responseJson)
+        getLastOrders(user._id).then((orders) => {
+          getMonthlyProductCount(user._id).then((monthlyProductCount) => {
+            const orderId = user.card ? user.card : user.keypadId
+            responseJson = {
+              orderId: orderId,
+              product_name: user.displayName,
+              last_five_products_bought: orders,
+              product_purchase_count_last_month: monthlyProductCount
+            }
+            res.json(responseJson)
+          })
+        })
       }
     })
     .catch(() => {
