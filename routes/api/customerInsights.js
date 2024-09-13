@@ -43,8 +43,8 @@ function getLastOrders(userId) {
     {
       $project: {
         _id: 0,
-        keypadId: '$productInfo.keypadId',
-        productName: '$productInfo.displayName',
+        product_id: '$productInfo.keypadId',
+        product_name: '$productInfo.displayName',
         order_date: 1
       }
     }
@@ -54,7 +54,12 @@ function getLastOrders(userId) {
 function getMonthlyProductCount(userId) {
   return Order.aggregate([
     {
-      $match: { buyerId: userId }
+      $match: {
+        buyerId: userId,
+        order_date: {
+          $gte: new Date(new Date().setMonth(new Date().getMonth() - 1))
+        }
+      }
     },
     {
       $sort: {
@@ -89,6 +94,13 @@ function getMonthlyProductCount(userId) {
         count: {
           $sum: 1
         }
+      }
+    },
+    {
+      $project: {
+        _id: 0,
+        product_name: '$_id',
+        purchase_count: '$count'
       }
     }
   ])
@@ -140,8 +152,8 @@ router.get('/', ensureAuthenticatedAPI, function (req, res) {
           getMonthlyProductCount(user._id).then((monthlyProductCount) => {
             const orderId = user.card ? user.card : user.keypadId
             responseJson = {
-              orderId: orderId,
-              product_name: user.displayName,
+              customer_id: orderId,
+              customer_name: user.displayName,
               last_five_products_bought: orders,
               product_purchase_count_last_month: monthlyProductCount
             }

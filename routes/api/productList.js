@@ -71,12 +71,12 @@ router.get('/', ensureAuthenticatedAPI, function (req, res) {
           responseJson = products.map((product) => {
             return {
               keypadId: product.keypadId,
-              displayName: product.displayName,
+              product_name: product.displayName,
               description: product.description,
               category: product.category.some((a) => typeof a == 'object')
                 ? product.category[0].name
                 : '',
-              stockSum: product.stockSum,
+              stock: product.stockSum,
               price: product.stock[0].price
             }
           })
