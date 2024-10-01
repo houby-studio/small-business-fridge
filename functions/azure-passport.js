@@ -109,7 +109,9 @@ passport.use(
                       }
                     }
                   )
-                  return done(1)
+                  return done(null, false, {
+                    message: 'User needs e-mail attribute.'
+                  })
                 }
                 const newUser = new User()
                 newUser.oid = profile.oid
