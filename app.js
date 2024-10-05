@@ -24,6 +24,7 @@ import './tasks/daily-backup.js'
 import './tasks/daily-unpaid-invoices-notice.js'
 import './tasks/daily-paid-invoices-needs-approval.js'
 import './tasks/daily-user-phones.js'
+import './tasks/continuous-products-aims-integration.js'
 import indexRouter from './routes/index.js'
 import aboutRouter from './routes/about.js'
 import docsRouter from './routes/docs.js'
@@ -39,6 +40,7 @@ import paymentsRouter from './routes/payments.js'
 import stockRouter from './routes/stock.js'
 import newProductRouter from './routes/new_product.js'
 import editProductRouter from './routes/edit_product.js'
+import eslMapping from './routes/esl_mapping.js'
 // Access for admins
 import dashboardRouter from './routes/admin/admin_dashboard.js'
 import newCategoryRouter from './routes/admin/new_category.js'
@@ -163,6 +165,7 @@ app.use('/payments', paymentsRouter)
 app.use('/stock', stockRouter)
 app.use('/new_product', newProductRouter)
 app.use('/edit_product', editProductRouter)
+app.use('/esl_mapping', eslMapping)
 // Access for admins
 app.use('/dashboard', dashboardRouter)
 app.use('/admin_orders', ordersRouter)

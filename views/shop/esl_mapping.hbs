@@ -1,0 +1,69 @@
+{{> confirm_deactivate_modal }}
+<div class="row my-3">
+  <div class="col">
+    <div class="table-responsive">
+      <table id="table-labels" class="table table-striped">
+        <thead>
+          <tr>
+            <th scope="col">ID cenovky</th>
+            <th scope="col">Typ cenovky</th>
+            <th scope="col">Online</th>
+            <th scope="col">Aktualizace</th>
+            <th scope="col">Teplota</th>
+            <th scope="col">Poslední změna</th>
+            <th scope="col">ID produktu</th>
+            <th scope="col">Název produktu</th>
+            <th scope="col">Akce</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{# each labels }}
+          <tr>
+            <td>
+              {{ this.labelCode }}
+            </td>
+            <td>
+              {{ this.type }}
+            </td>
+            <td>
+              {{ this.networkStatus }}
+            </td>
+            <td>
+              {{ this.updateStatus }}
+            </td>
+            <td>
+              {{ this.temperature }}
+            </td>
+            <td>
+              {{ this.requestDate }}
+            </td>
+            <td>
+              {{ this.articleId }}
+            </td>
+            <td>
+              {{ this.articleName }}
+            </td>
+            <td>
+              <form id="{{ this.id }}" class="needs-validation h-100" method="POST" action="/esl_mapping" novalidate>
+                <div class="btn-toolbar" role="toolbar" aria-label="Toolbar with button groups">
+                  <div class="btn-group me-2 w-100" role="group" aria-label="First group">
+                    <button type="button" class="btn btn-primary" onclick="void()"><i class="fa-solid fa-xmark"></i></button>
+                      <input type="hidden" name="action" value="storno">
+                      <input type="submit" class="btn btn-success float-right w-100" value="Vybrat produkt">
+                  </div>
+                </div>
+                <input type="hidden" name="label_id" value="{{ this.id }}">
+                <input type="hidden" name="_csrf" value="{{ ../csrfToken }}">
+              </form>
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{{> datatables }}
+
+<script src="/javascripts/admin_users.js"></script>
