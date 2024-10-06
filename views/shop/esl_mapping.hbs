@@ -1,4 +1,5 @@
 {{> confirm_unlink_label }}
+{{> select_link_product }}
 <div class="row my-3">
   <div class="col">
     <div class="table-responsive">
@@ -44,15 +45,24 @@
               {{ this.articleName }}
             </td>
             <td>
-              <form id="unlink_{{ this._id }}" class="needs-validation h-100" method="POST" action="/esl_mapping" novalidate>
+              <form id="link_{{ this.labelCode }}" class="needs-validation h-100" method="POST" action="/esl_mapping" novalidate>
                 <div class="btn-toolbar" role="toolbar" aria-label="Toolbar with button groups">
                   <div class="btn-group me-2 w-100" role="group" aria-label="First group">
-                    <button type="button" class="btn btn-danger" onclick="showUnlinkConfirm('{{ this._id }}')"><i class="fa-solid fa-xmark"></i></button>
-                      <input type="hidden" name="action" value="storno">
-                      <input type="submit" class="btn btn-success float-right w-100" value="Vybrat produkt">
+                    <button type="button" class="btn btn-danger" onclick="showUnlinkConfirm('{{ this.labelCode }}')" {{#unless this.articleId}}disabled{{/unless}}><i class="fa-solid fa-xmark"></i></button>
+                    <input type="hidden" name="action" value="link">
+                    {{!-- <input type="submit" class="btn btn-success float-right w-100" value="Vybrat produkt"> --}}
+                    <button type="button" class="btn btn-success float-right w-100 text-nowrap" onclick="showLinkConfirm('{{ this.labelCode }}')">Vybrat produkt</button>
                   </div>
                 </div>
-                <input type="hidden" name="label_id" value="{{ this.id }}">
+                <input type="hidden" name="name" value="link">
+                <input type="hidden" name="label_id" value="{{ this.labelCode }}">
+                <input type="hidden" name="product_id" id="product_id_{{ this.labelCode }}">
+                <input type="hidden" name="_csrf" value="{{ ../csrfToken }}">
+              </form>
+              <form id="unlink_{{ this.labelCode }}" class="needs-validation h-100" method="POST" action="/esl_mapping" novalidate>
+                <input type="hidden" name="action" value="unlink">
+                <input type="hidden" name="name" value="unlink">
+                <input type="hidden" name="label_id" value="{{ this.labelCode }}">
                 <input type="hidden" name="_csrf" value="{{ ../csrfToken }}">
               </form>
             </td>
@@ -67,3 +77,13 @@
 {{> datatables }}
 
 <script src="/javascripts/esl_mapping.js"></script>
+
+<script>
+  var json_data = {
+  {{#each products}}
+    "{{this._id}}": { "product_name": "{{this.product_name}}",
+    "product_price": "{{this.price}}", "product_image": "{{this.product_image}}",
+    "product_code": "{{this.code}}", "product_stock": "{{this.stock}}" },
+  {{/each}}
+  }
+</script>

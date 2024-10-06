@@ -51,14 +51,48 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res) {
     var alert = req.session.alert
     delete req.session.alert
   }
-  Product.find()
-    .then((docs) => {
-      if (docs) {
+  Product.aggregate([
+    {
+      $lookup: {
+        from: 'deliveries',
+        localField: '_id',
+        foreignField: 'productId',
+        as: 'stock'
+      }
+    },
+    {
+      $project: {
+        code: '$code',
+        displayName: '$displayName',
+        imagePath: '$imagePath',
+        stock: {
+          $filter: {
+            // We filter only the stock object from array where amount left is greater than 0
+            input: '$stock',
+            as: 'stock',
+            cond: {
+              $gt: ['$$stock.amount_left', 0]
+            }
+          }
+        },
+        stockSum: {
+          $sum: '$stock.amount_left'
+        }
+      }
+    },
+    {
+      $sort: {
+        displayName: 1
+      }
+    }
+  ])
+    .then((products) => {
+      if (products) {
         logger.debug(
-          `server.routes.eslmapping.get__Successfully loaded ${docs.length} products.`,
+          `server.routes.eslmapping.get__Successfully loaded ${products.length} products.`,
           {
             metadata: {
-              result: docs
+              result: products
             }
           }
         )
@@ -77,6 +111,16 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res) {
         }
       )
         .then((response) => {
+          const mappedProducts = products.map((product) => {
+            return {
+              _id: product._id,
+              code: product.code,
+              product_name: product.displayName,
+              product_image: product.imagePath,
+              stock: product.stockSum,
+              price: product.stock[0]?.price || 0
+            }
+          })
           response.json().then((json) => {
             const labels = json.labelList.map((item) => ({
               labelCode: item.labelCode,
@@ -92,7 +136,7 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res) {
             }))
             res.render('shop/esl_mapping', {
               title: 'Elektronické cenovky | Lednice IT',
-              products: docs,
+              products: mappedProducts,
               labels: labels,
               alert,
               user: req.user,
@@ -101,238 +145,223 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res) {
           })
         })
         .catch((err) => {
-          logger.error('server.routes.eslmapping.get__Failed to load labels.', {
-            metadata: {
-              error: err.message
+          logger.error(
+            'server.routes.eslmapping.get__Failed to load labels from AIMS.',
+            {
+              metadata: {
+                error: err.message
+              }
             }
-          })
+          )
         })
     })
     .catch((err) => {
-      logger.error('server.routes.eslmapping.get__Failed to load products.', {
-        metadata: {
-          error: err.message
+      logger.error(
+        'server.routes.eslmapping.get__Failed to load products from database.',
+        {
+          metadata: {
+            error: err.message
+          }
         }
-      })
+      )
     })
 })
 
-/* POST admin_users page. */
-// router.post('/', ensureAuthenticated, function (req, res) {
-//   if (!req.user.admin) {
-//     logger.warn(
-//       "server.routes.eslmapping.post__User tried to change user's properties on admin page without permission.",
-//       {
-//         metadata: {
-//           result: req.user
-//         }
-//       }
-//     )
-//     res.status(400).send()
-//     return
-//   }
-//   const newValue = req.body.value
-//   if (req.body.name === 'supplier') {
-//     User.findByIdAndUpdate(
-//       req.body.user,
-//       {
-//         supplier: newValue
-//       },
-//       {
-//         upsert: true
-//       }
-//     )
-//       .then(() => {
-//         logger.info(
-//           `server.routes.eslmapping.post__User:[${req.user.displayName}] changed property:[${req.body.name}] for user:[${req.body.user}] to new value:[${newValue}].`,
-//           {
-//             metadata: {
-//               result: req.user
-//             }
-//           }
-//         )
-//         res.status(200).send()
-//       })
-//       .catch((err) => {
-//         logger.error(
-//           `server.routes.eslmapping.post__Failed to set property:[${req.body.name}] for user:[${req.user.displayName}] to new value:[${newValue}].`,
-//           {
-//             metadata: {
-//               error: err.message
-//             }
-//           }
-//         )
-//         res.status(400).send()
-//       })
-//   } else if (req.body.name === 'admin') {
-//     User.findByIdAndUpdate(
-//       req.body.user,
-//       {
-//         admin: newValue
-//       },
-//       {
-//         upsert: true
-//       }
-//     )
-//       .then(() => {
-//         logger.info(
-//           `server.routes.eslmapping.post__User:[${req.user.displayName}] changed property:[${req.body.name}] for user:[${req.body.user}] to new value:[${newValue}].`,
-//           {
-//             metadata: {
-//               result: req.user
-//             }
-//           }
-//         )
-//         res.status(200).send()
-//       })
-//       .catch((err) => {
-//         logger.error(
-//           `server.routes.eslmapping.post__Failed to set property:[${req.body.name}] for user:[${req.user.displayName}] to new value:[${newValue}].`,
-//           {
-//             metadata: {
-//               error: err.message
-//             }
-//           }
-//         )
-//         res.status(400).send()
-//       })
-//   } else if (req.body.name === 'card') {
-//     if (/.{6,}/.test(newValue)) {
-//       User.findByIdAndUpdate(req.body.user, {
-//         card: newValue
-//       })
-//         .then(() => {
-//           logger.info(
-//             `server.routes.eslmapping.post__User:[${req.user.displayName}] changed property:[${req.body.name}] for user:[${req.body.user}] to new value:[${newValue}].`,
-//             {
-//               metadata: {
-//                 result: req.user
-//               }
-//             }
-//           )
-//           res.status(200).send()
-//         })
-//         .catch((err) => {
-//           logger.error(
-//             `server.routes.eslmapping.post__Failed to set property:[${req.body.name}] for user:[${req.user.displayName}] to new value:[${newValue}].`,
-//             {
-//               metadata: {
-//                 error: err.message
-//               }
-//             }
-//           )
-//           res.status(400).send()
-//         })
-//     } else {
-//       logger.warn(
-//         `server.routes.eslmapping.post__User:[${req.user.displayName}] tried to set invalid property:[${req.body.name}] for user:[${req.user.displayName}] to new value:[${newValue}].`,
-//         {
-//           metadata: {
-//             result: req.user
-//           }
-//         }
-//       )
-//       res.status(400).send()
-//     }
-//   } else if (req.body.name === 'keypad') {
-//     if (/^[0-9]{1,3}$/.test(newValue)) {
-//       User.findByIdAndUpdate(req.body.user, {
-//         keypadId: newValue
-//       })
-//         .then(() => {
-//           logger.info(
-//             `server.routes.eslmapping.post__User:[${req.user.displayName}] changed property:[${req.body.name}] for user:[${req.body.user}] to new value:[${newValue}].`,
-//             {
-//               metadata: {
-//                 result: req.user
-//               }
-//             }
-//           )
-//           res.status(200).send()
-//         })
-//         .catch((err) => {
-//           logger.error(
-//             `server.routes.eslmapping.post__Failed to set property:[${req.body.name}] for user:[${req.user.displayName}] to new value:[${newValue}].`,
-//             {
-//               metadata: {
-//                 error: err.message
-//               }
-//             }
-//           )
-//           res.status(400).send()
-//         })
-//     } else {
-//       logger.warn(
-//         `server.routes.eslmapping.post__User:[${req.user.displayName}] tried to set invalid property:[${req.body.name}] for user:[${req.user.displayName}] to new value:[${newValue}].`,
-//         {
-//           metadata: {
-//             result: req.user
-//           }
-//         }
-//       )
-//       res.status(400).send()
-//     }
-//   } else if (req.body.name === 'deactivate') {
-//     User.findByIdAndUpdate(req.body.user, {
-//       $set: {
-//         displayName: 'Bývalý uživatel',
-//         email: 'byvaly@uzivatel',
-//         admin: false,
-//         supplier: false,
-//         kiosk: false,
-//         showAllProducts: false,
-//         sendMailOnEshopPurchase: false,
-//         sendDailyReport: false,
-//         keypadDisabled: true,
-//         disabled: true
-//       },
-//       $unset: {
-//         keypadId: 1,
-//         favorites: 1,
-//         IBAN: 1,
-//         colorMode: 1,
-//         theme: 1,
-//         card: 1
-//       }
-//     })
-//       .then((user) => {
-//         logger.info(
-//           `server.routes.eslmapping.post__User:[${req.user.displayName}] deactivated user:[${req.body.user}].`,
-//           {
-//             metadata: {
-//               result: req.user
-//             }
-//           }
-//         )
-//         const alert = {
-//           type: 'success',
-//           message: `Uživatel ${user.email} byl deaktivován.`,
-//           success: 1
-//         }
-//         req.session.alert = alert
-//         res.redirect('/admin_users')
-//       })
-//       .catch((err) => {
-//         logger.error(
-//           `server.routes.eslmapping.post__Failed to deactivate user:[${req.user.displayName}].`,
-//           {
-//             metadata: {
-//               error: err.message
-//             }
-//           }
-//         )
-//         const alert = {
-//           type: 'danger',
-//           component: 'db',
-//           message: err.message,
-//           danger: 1
-//         }
-//         req.session.alert = alert
-//         res.redirect('/admin_users')
-//       })
-//   } else {
-//     res.status(400).send()
-//   }
-// })
+/* POST esl_mapping page. */
+router.post('/', ensureAuthenticated, function (req, res) {
+  if (!req.user.supplier) {
+    logger.warn(
+      'server.routes.eslmapping.post__User tried to change ESL tag on supplier page without permission.',
+      {
+        metadata: {
+          result: req.user
+        }
+      }
+    )
+    res.redirect('/')
+    return
+  }
+  if (req.body.name === 'link') {
+    const body = {
+      assignList: [
+        {
+          articleIdList: [req.body.product_id],
+          labelCode: req.body.label_id
+        }
+      ]
+    }
+    fetch(
+      process.env.ESL_AIMS_BASE_URL +
+        '/dashboardWeb/common/labels/link?store=' +
+        process.env.ESL_AIMS_STORE,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json;charset=UTF-8',
+          accept: 'application/json;charset=UTF-8'
+        },
+        body: JSON.stringify(body)
+      }
+    )
+      .then(() => {
+        // validateDeletion(req.body.label_id, () => {}) - If we want to wait for AIMS propagation, encapsulate in this.
+        const alert = {
+          type: 'success',
+          message: `Produkt ${req.body.product_id} navázán na elektronickou cenovku ${req.body.label_id}. Změny se brzy projeví.`,
+          success: 1
+        }
+        req.session.alert = alert
+        res.redirect('/esl_mapping')
+        logger.info(
+          `server.routes.eslmapping.post__Successfully set product ${req.body.product_id} to label ${req.body.label_id}.`,
+          {
+            metadata: {
+              label_id: req.body.label_id,
+              product_id: req.body.product_id
+            }
+          }
+        )
+        return
+      })
+      .catch((err) => {
+        const alert = {
+          type: 'danger',
+          component: 'web',
+          message: 'Nepodařilo se odstranit produkt z elektronické cenovky.',
+          danger: 1
+        }
+        req.session.alert = alert
+        res.redirect('/esl_mapping')
+        logger.error(
+          'server.routes.eslmapping.post__Failed to delete product from ESL.',
+          {
+            metadata: {
+              error: err.message
+            }
+          }
+        )
+      })
+  } else if (req.body.name === 'unlink') {
+    const body = { unAssignList: [req.body.label_id] }
+    fetch(
+      process.env.ESL_AIMS_BASE_URL +
+        '/dashboardWeb/common/labels/unlink?store=' +
+        process.env.ESL_AIMS_STORE,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json;charset=UTF-8',
+          accept: 'application/json;charset=UTF-8'
+        },
+        body: JSON.stringify(body)
+      }
+    )
+      .then(() => {
+        // validateDeletion(req.body.label_id, () => {}) - If we want to wait for AIMS propagation, encapsulate in this.
+        const alert = {
+          type: 'success',
+          message: `Odstranili jste produkt z elektronické cenovky ${req.body.label_id}. Změny se brzy projeví.`,
+          success: 1
+        }
+        req.session.alert = alert
+        res.redirect('/esl_mapping')
+        logger.info(
+          `server.routes.eslmapping.post__Successfully deleted product from label ${req.body.label_id}.`,
+          {
+            metadata: {
+              label_id: req.body.label_id,
+              product_id: req.body.product_id
+            }
+          }
+        )
+        return
+      })
+      .catch((err) => {
+        const alert = {
+          type: 'danger',
+          component: 'web',
+          message: 'Nepodařilo se odstranit produkt z elektronické cenovky.',
+          danger: 1
+        }
+        req.session.alert = alert
+        res.redirect('/esl_mapping')
+        logger.error(
+          'server.routes.eslmapping.post__Failed to delete product from ESL.',
+          {
+            metadata: {
+              error: err.message
+            }
+          }
+        )
+      })
+  } else {
+    const alert = {
+      type: 'danger',
+      component: 'web',
+      message: 'Pokusili jste se odeslat neplatný formulář.',
+      danger: 1
+    }
+    req.session.alert = alert
+    res.redirect('/esl_mapping')
+  }
+})
 
 export default router
+
+// * This function waits until the AIMS reports the label without product, but currently it takes about 25 seconds. *
+// function validateDeletion(labelId, callback) {
+//   logger.debug(`server.routes.eslmapping.post__Calling validate deletion.`, {
+//     metadata: {
+//       labelId: labelId
+//     }
+//   })
+//   setTimeout(() => {
+//     fetch(
+//       process.env.ESL_AIMS_BASE_URL +
+//         '/dashboardWeb/common/labels/detail?label=' +
+//         labelId +
+//         '&store=' +
+//         process.env.ESL_AIMS_STORE,
+//       {
+//         method: 'GET',
+//         headers: {
+//           'Content-Type': 'application/json;charset=UTF-8',
+//           accept: 'application/json;charset=UTF-8'
+//         }
+//       }
+//     )
+//       .then((result) => {
+//         result
+//           .json()
+//           .then((json) => {
+//             if (json.currentImage?.[0]) {
+//               validateDeletion(labelId, callback)
+//               return
+//             } else {
+//               callback()
+//             }
+//           })
+//           .catch((err) => {
+//             validateDeletion(labelId, callback)
+//             logger.error(
+//               'server.routes.eslmapping.post__Failed to validate deletion.',
+//               {
+//                 metadata: {
+//                   error: err.message
+//                 }
+//               }
+//             )
+//           })
+//       })
+//       .catch((err) => {
+//         logger.error(
+//           'server.routes.eslmapping.post__Failed to validate deletion.',
+//           {
+//             metadata: {
+//               error: err.message
+//             }
+//           }
+//         )
+//       })
+//   }, 200)
+// }

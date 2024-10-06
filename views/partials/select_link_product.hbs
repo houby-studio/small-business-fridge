@@ -1,0 +1,96 @@
+<div class='modal' id='link-modal' tabindex='-1'>
+  <div class='modal-dialog modal-dialog-centered modal-lg'>
+    <div class='modal-content'>
+      <div class='modal-header'>
+        <h5 class='modal-title'>Vybrat produkt pro elektronickou cenovku</h5>
+        <button
+          type='button'
+          class='btn-close'
+          data-bs-dismiss='modal'
+          aria-label='Close'
+        ></button>
+      </div>
+      <div class='modal-body mx-auto'>
+        <div class='row g-0'>
+          <div class='col-md-4 text-center'>
+            <img
+              src='/static_images/preview.png'
+              alt='Preview'
+              id='product_img'
+              class='img-fluid form-image-thumbnail'
+            />
+          </div>
+          <div class='col-md-8'>
+
+            {{! Product selection }}
+            <div class='input-group input-group-lg mb-3'>
+              <label for='product_id' class='input-group-text'>Produkt</label>
+              <select
+                name='product_id'
+                id='product_id'
+                class='form-select'
+                onchange='loadProductInfo()'
+                required
+              >
+                <option value='' selected>Vyberte ze seznamu..</option>
+                {{#each products}}
+                  <option value='{{this._id}}'>{{this.product_name}}</option>
+                {{/each}}
+              </select>
+            </div>
+
+            {{! Product amount }}
+            <div class='input-group input-group-lg mb-3'>
+              <input
+                id='product_stock'
+                type='number'
+                min='1'
+                step='1'
+                name='product_amount'
+                class='form-control'
+                placeholder='Skladem'
+                aria-label='Skladem'
+                aria-describedby='product_amount-addon'
+                value=''
+                readonly
+              />
+              <span class='input-group-text' id='product_amount-addon'>ks</span>
+            </div>
+
+            {{! Product price }}
+            <div class='input-group input-group-lg mb-3'>
+              <input
+                id='product_price'
+                type='number'
+                min='1'
+                step='1'
+                name='product_price'
+                class='form-control'
+                placeholder='Cena'
+                aria-label='Cena'
+                aria-describedby='product_price-addon'
+                readonly
+              />
+              <span class='input-group-text' id='product_price-addon'>Kč</span>
+            </div>
+
+          </div>
+        </div>
+      </div>
+      <div class='modal-footer'>
+        <button
+          type='button'
+          class='btn btn-secondary'
+          data-bs-dismiss='modal'
+        >Zavřít</button>
+        <button
+          id='modal_link'
+          type='button'
+          class='btn btn-success'
+          data-bs-dismiss='modal'
+          onclick='submitLinkFromModal(this)'
+        >Vybrat</button>
+      </div>
+    </div>
+  </div>
+</div>

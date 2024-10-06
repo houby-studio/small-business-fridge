@@ -1,41 +1,75 @@
-/*global bootstrap, $*/
+/*global bootstrap, $, json_data*/
 
-const myModal = new bootstrap.Modal('#confirm-modal')
+const unlinkModal = new bootstrap.Modal('#unlink-modal')
+const linkModal = new bootstrap.Modal('#link-modal')
 
-// Change settings when checkbox state changes
-const checkboxes = document.getElementsByClassName('realtime-checkbox')
-
-// eslint-disable-next-line no-unused-vars
-const _checkboxesEvent = [...checkboxes].forEach((element) => {
-  element.addEventListener('change', async function () {
-    await fetch('/admin_users', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        user: this.dataset.user,
-        name: this.dataset.property,
-        value: this.checked,
-        _csrf: document.getElementsByName('_csrf')[0].value
-      })
-    })
-  })
-})
-
-// Display confirmation dialog
+// Display dialog to unlink product from label
 // eslint-disable-next-line no-unused-vars
 async function showUnlinkConfirm(id) {
-  const submit = document.getElementById('modal_confirm')
+  const submit = document.getElementById('modal_unlink')
   submit.dataset.submit_id = 'unlink_' + id
-  myModal.show()
+  unlinkModal.show()
 }
 
-// Submit form from modal to confirm deactivation
+// Display dialog to link product to label
 // eslint-disable-next-line no-unused-vars
-function submitFromModal(ctx) {
+async function showLinkConfirm(id) {
+  const submit = document.getElementById('modal_link')
+  submit.dataset.submit_id = 'link_' + id
+  submit.dataset.product_id = 'product_id_' + id
+  linkModal.show()
+}
+
+// Submit form from modal to confirm product unlink from label
+// eslint-disable-next-line no-unused-vars
+function submitUnlinkFromModal(ctx) {
   document.getElementById(ctx.dataset.submit_id).submit()
 }
+
+// Submit form from modal to confirm product link to label
+// eslint-disable-next-line no-unused-vars
+function submitLinkFromModal(ctx) {
+  console.log(document.getElementById(ctx.dataset.product_id))
+  console.log(document.getElementById('product_id').value)
+
+  document.getElementById(ctx.dataset.product_id).value =
+    document.getElementById('product_id').value
+
+  document.getElementById(ctx.dataset.submit_id).submit()
+}
+
+function loadProductInfo() {
+  var productId = document.getElementById('product_id').value
+  var productStockId = document.getElementById('product_stock')
+  var productPriceId = document.getElementById('product_price')
+  var newImg = new Image()
+  newImg.onload = function () {
+    document.getElementById('product_img').src = this.src
+  }
+  if (productId === '') {
+    newImg.src = '/static_images/preview.png'
+  } else {
+    newImg.src = json_data[productId].product_image
+  }
+
+  if (productStockId === '') {
+    productStockId.value = null
+  } else {
+    productStockId.value = json_data[productId].product_stock
+  }
+
+  if (productPriceId === '') {
+    productPriceId.value = null
+  } else {
+    productPriceId.value = json_data[productId].product_price
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  if (document.getElementById('product_id').value) {
+    loadProductInfo()
+  }
+})
 
 // Initialize DataTables
 // dom customizes header paging, search and export
