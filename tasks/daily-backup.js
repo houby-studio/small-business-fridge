@@ -9,7 +9,7 @@ rule.minute = process.env.TASKS_DAILY_BACKUP_MINUTE
 
 const dailyBackup = scheduleJob(rule, function () {
   // This schedule can be disabled in the ENV
-  if (!process.env.TASKS_DAILY_BACKUP_ENABLED) {
+  if (process.env.TASKS_DAILY_BACKUP_ENABLED.toLowerCase() !== 'true') {
     return
   }
 

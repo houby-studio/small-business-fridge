@@ -8,7 +8,8 @@ moment.locale('cs')
 setGlobalDispatcher(
   new Agent({
     connect: {
-      rejectUnauthorized: false
+      rejectUnauthorized:
+        process.env.ESL_AIMS_VERIFY_TLS.toLocaleLowerCase() === 'true'
     }
   })
 )
@@ -17,7 +18,7 @@ const scheduledTask = scheduleJob(
   process.env.ESL_AIMS_INTEGRATION_CRON,
   function () {
     // This schedule can be disabled in the ENV
-    if (!process.env.ESL_AIMS_ENABLED) {
+    if (process.env.ESL_AIMS_ENABLED.toLowerCase() !== 'true') {
       return
     }
 
@@ -147,7 +148,7 @@ const scheduledTask = scheduleJob(
         )
           .then((msg) => {
             logger.info(
-              `server.tasks.continuousproductsaimsintegration__Uploaded all_articles.length products to AIMS.`,
+              `server.tasks.continuousproductsaimsintegration__Uploaded ${all_articles.length} products to AIMS.`,
               {
                 metadata: {
                   products_count: all_articles.length,

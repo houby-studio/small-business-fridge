@@ -1,4 +1,4 @@
-{{> confirm_deactivate_modal }}
+{{> confirm_unlink_label }}
 <div class="row my-3">
   <div class="col">
     <div class="table-responsive">
@@ -44,10 +44,10 @@
               {{ this.articleName }}
             </td>
             <td>
-              <form id="{{ this.id }}" class="needs-validation h-100" method="POST" action="/esl_mapping" novalidate>
+              <form id="unlink_{{ this._id }}" class="needs-validation h-100" method="POST" action="/esl_mapping" novalidate>
                 <div class="btn-toolbar" role="toolbar" aria-label="Toolbar with button groups">
                   <div class="btn-group me-2 w-100" role="group" aria-label="First group">
-                    <button type="button" class="btn btn-primary" onclick="void()"><i class="fa-solid fa-xmark"></i></button>
+                    <button type="button" class="btn btn-danger" onclick="showUnlinkConfirm('{{ this._id }}')"><i class="fa-solid fa-xmark"></i></button>
                       <input type="hidden" name="action" value="storno">
                       <input type="submit" class="btn btn-success float-right w-100" value="Vybrat produkt">
                   </div>
@@ -66,4 +66,4 @@
 
 {{> datatables }}
 
-<script src="/javascripts/admin_users.js"></script>
+<script src="/javascripts/esl_mapping.js"></script>

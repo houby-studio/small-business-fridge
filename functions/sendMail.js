@@ -2,12 +2,12 @@ import { createTransport } from 'nodemailer'
 import hbs from 'nodemailer-express-handlebars'
 import logger from './logger.js'
 
-export function sendMail (mailto, template, context, image) {
+export function sendMail(mailto, template, context, image) {
   // In case mail is destined for system administrator or we run in development environment, send all e-mails to system address obtained from config.
   if (
     mailto === 'system@system' ||
-    (process.env.NODE_ENV === 'development' &&
-      process.env.MAIL_DEV_SYSTEM === 'true')
+    (process.env.NODE_ENV.toLowerCase() === 'development' &&
+      process.env.MAIL_DEV_SYSTEM.toLowerCase() === 'true')
   ) {
     logger.warn(
       `server.functions.sendmail__Sending e-mail [${context.subject}] to system administrator.`,

@@ -47,7 +47,8 @@ passport.use(
       responseMode: process.env.CREDS_RESPONSE_MODE,
       redirectUrl: process.env.CREDS_REDIRECT_URL,
       allowHttpForRedirectUrl:
-        process.env.CREDS_ALLOW_HTTP_FOR_REDIRECT_URL === 'true' || false,
+        process.env.CREDS_ALLOW_HTTP_FOR_REDIRECT_URL.toLowerCase() ===
+          'true' || false,
       clientSecret: process.env.CREDS_CLIENT_SECRET,
       validateIssuer:
         process.env.CREDS_VALIDATE_ISSUER.toLowerCase() === 'true' || false,

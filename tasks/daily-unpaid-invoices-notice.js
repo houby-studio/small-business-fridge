@@ -13,7 +13,9 @@ rule.minute = process.env.TASKS_DAILY_INCOMPLETE_INVOICE_MINUTE
 
 const scheduledTask = scheduleJob(rule, function () {
   // This schedule can be disabled in the ENV
-  if (!process.env.TASKS_DAILY_INCOMPLETE_INVOICE_ENABLED) {
+  if (
+    process.env.TASKS_DAILY_INCOMPLETE_INVOICE_ENABLED.toLowerCase() !== 'true'
+  ) {
     return
   }
 

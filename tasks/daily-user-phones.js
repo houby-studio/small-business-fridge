@@ -13,7 +13,7 @@ rule.minute = process.env.TASKS_DAILY_USER_PHONES_MINUTE
 
 const scheduledTask = scheduleJob(rule, async function () {
   // This schedule can be disabled in the ENV
-  if (!process.env.TASKS_DAILY_USER_PHONES_ENABLED) {
+  if (process.env.TASKS_DAILY_USER_PHONES_ENABLED.toLowerCase() !== 'true') {
     return
   }
 

@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import moment from 'moment'
 import csrf from 'csurf'
 import { fetch, setGlobalDispatcher, Agent } from 'undici'
 import Product from '../models/product.js'
@@ -8,6 +9,7 @@ import logger from '../functions/logger.js'
 const router = Router()
 const csrfProtection = csrf()
 router.use(csrfProtection)
+moment.locale('cs')
 
 /* GET esl_mapping page. */
 router.get('/', ensureAuthenticated, checkKiosk, function (req, res) {
@@ -24,10 +26,23 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res) {
     return
   }
 
+  if (process.env.ESL_AIMS_ENABLED.toLowerCase() !== 'true') {
+    const alert = {
+      type: 'danger',
+      component: 'esl',
+      message: 'ESL cenovky nejsou v nastavení povolené.',
+      danger: 1
+    }
+    req.session.alert = alert
+    res.redirect('/')
+    return
+  }
+
   setGlobalDispatcher(
     new Agent({
       connect: {
-        rejectUnauthorized: false
+        rejectUnauthorized:
+          process.env.ESL_AIMS_VERIFY_TLS.toLocaleLowerCase() === 'true'
       }
     })
   )
@@ -62,16 +77,6 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res) {
         }
       )
         .then((response) => {
-          // const labels = response. {
-          //   labelCode: response,
-          //   type: ,
-          //   networkStatus: ,
-          //   updateStatus: ,
-          //   temperature: ,
-          //   requestDate: ,
-          //   articleId: ,
-          //   articleName:
-          // }
           response.json().then((json) => {
             const labels = json.labelList.map((item) => ({
               labelCode: item.labelCode,
@@ -79,7 +84,9 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res) {
               networkStatus: item.networkStatus,
               updateStatus: item.updateStatus,
               temperature: item.temperature,
-              requestDate: item.requestDate,
+              requestDate: item.requestDate
+                ? moment(item.requestDate).format('LLLL')
+                : null,
               articleId: item.articleList[0]?.articleId,
               articleName: item.articleList[0]?.articleName
             }))

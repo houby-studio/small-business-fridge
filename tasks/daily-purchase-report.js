@@ -27,7 +27,7 @@ rule.minute = process.env.TASKS_DAILY_REPORT_SEND_MINUTE || 30
 
 const scheduledTask = scheduleJob(rule, function () {
   // This schedule can be disabled in the ENV
-  if (!process.env.TASKS_DAILY_REPORT_ENABLED) {
+  if (process.env.TASKS_DAILY_REPORT_ENABLED.toLowerCase() !== 'true') {
     return
   }
 
