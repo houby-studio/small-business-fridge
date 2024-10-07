@@ -127,7 +127,7 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res) {
               type: item.type,
               networkStatus: item.networkStatus,
               updateStatus: item.updateStatus,
-              temperature: item.temperature,
+              temperature: (item.temperature << 24) >> 24,
               requestDate: item.requestDate
                 ? moment(item.requestDate).format('LLLL')
                 : null,
