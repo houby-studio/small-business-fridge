@@ -89,7 +89,7 @@ const scheduledTask = scheduleJob(
           const article = {
             articleId: products[i]._id.toString(),
             articleName: products[i].displayName,
-            nfcUrl: `${process.env.MAIL_BASE_URL}/shop?addfavorie=${products[
+            nfcUrl: `${process.env.MAIL_BASE_URL}/shop?addfavorite=${products[
               i
             ]._id.toString()}`,
             data: {
