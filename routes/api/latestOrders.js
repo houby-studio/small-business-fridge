@@ -70,12 +70,14 @@ router.get('/', ensureAuthenticatedDashboardAPI, function (req, res) {
           return {
             order_date: order.order_date,
             buyer_id: order.buyerInfo._id,
-            buyer_display_name: req.query.anonymize
-              ? order.buyerInfo._id
-              : order.buyerInfo.displayName,
-            buyer_email: req.query.anonymize
-              ? `${order.buyerInfo._id}@example.com`
-              : order.buyerInfo.email,
+            buyer_display_name:
+              process.env.DASHBOARD_API_ANONYMIZE_USERS.toLowerCase() === 'true'
+                ? order.buyerInfo._id
+                : order.buyerInfo.displayName,
+            buyer_email:
+              process.env.DASHBOARD_API_ANONYMIZE_USERS.toLowerCase() === 'true'
+                ? `${order.buyerInfo._id}@example.com`
+                : order.buyerInfo.email,
             product_name: order.productInfo.displayName,
             product_price: order.deliveryInfo.price
           }
