@@ -61,6 +61,7 @@ import scannerAuthUser from './routes/api/scannerAuthUser.js'
 import scannerProduct from './routes/api/scannerProduct.js'
 import scannerOrder from './routes/api/scannerOrder.js'
 import scannerValidate from './routes/api/scannerValidate.js'
+import latestOrders from './routes/api/latestOrders.js'
 // API routes for clientside javascript
 import promptGptRouter from './routes/api/promptGpt.js'
 // API routes for voice bot
@@ -189,6 +190,7 @@ app.use('/api/scannerAuthUser', scannerAuthUser)
 app.use('/api/scannerProduct', scannerProduct)
 app.use('/api/scannerOrder', scannerOrder)
 app.use('/api/scannerValidate', scannerValidate)
+app.use('/api/orders', latestOrders)
 // API routes for clientside javascript
 app.use('/api/promptGpt', promptGptRouter)
 // API routes for voice bot
