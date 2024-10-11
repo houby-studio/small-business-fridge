@@ -8,12 +8,12 @@ router.get('/', ensureAuthenticatedDashboardAPI, function (req, res) {
   // Find products in database
   Order.aggregate([
     {
-      $limit: parseInt(req.query.limit) || 25
-    },
-    {
       $sort: {
         _id: -1
       }
+    },
+    {
+      $limit: parseInt(req.query.limit) || 25
     },
     {
       $lookup: {
