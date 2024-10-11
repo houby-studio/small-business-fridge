@@ -190,7 +190,7 @@ app.use('/api/scannerAuthUser', scannerAuthUser)
 app.use('/api/scannerProduct', scannerProduct)
 app.use('/api/scannerOrder', scannerOrder)
 app.use('/api/scannerValidate', scannerValidate)
-app.use('/api/orders', latestOrders)
+app.use('/api/latestOrders', latestOrders)
 // API routes for clientside javascript
 app.use('/api/promptGpt', promptGptRouter)
 // API routes for voice bot
