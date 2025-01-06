@@ -46,6 +46,7 @@ import dashboardRouter from './routes/admin/admin_dashboard.js'
 import newCategoryRouter from './routes/admin/new_category.js'
 import editCategoryRouter from './routes/admin/edit_category.js'
 import usersRouter from './routes/admin/admin_users.js'
+import stornoRouter from './routes/admin/storno.js'
 // Access for kiosk
 import kioskKeypadRouter from './routes/kiosk_keypad.js'
 import kioskShopRouter from './routes/kiosk_shop.js'
@@ -175,6 +176,7 @@ app.use('/admin_payments', paymentsRouter)
 app.use('/new_category', newCategoryRouter)
 app.use('/edit_category', editCategoryRouter)
 app.use('/admin_users', usersRouter)
+app.use('/storno', stornoRouter)
 // Access for kiosk
 app.use('/kiosk_keypad', kioskKeypadRouter)
 app.use('/kiosk_shop', kioskShopRouter)
