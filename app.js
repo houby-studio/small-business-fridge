@@ -25,6 +25,7 @@ import './tasks/daily-unpaid-invoices-notice.js'
 import './tasks/daily-paid-invoices-needs-approval.js'
 import './tasks/daily-user-phones.js'
 import './tasks/continuous-products-aims-integration.js'
+import handlebarsHelpers from './functions/handlebarsHelpers.js'
 import indexRouter from './routes/index.js'
 import aboutRouter from './routes/about.js'
 import docsRouter from './routes/docs.js'
@@ -97,7 +98,8 @@ app.engine(
   engine({
     defaultLayout: 'layout',
     extname: '.hbs',
-    handlebars: allowInsecurePrototypeAccess(handlebars)
+    handlebars: allowInsecurePrototypeAccess(handlebars),
+    helpers: handlebarsHelpers
   })
 )
 app.enable('trust proxy')
