@@ -16,8 +16,7 @@
       <ul class='navbar-nav me-auto'>
         {{#if user}}
         <li class='nav-item'>
-          <a class='nav-link text-nowrap' href='/shop'><i class='fa-solid fa-shopping-basket'></i> Nakupovat <span
-              class='sr-only'></span></a>
+          <a class='nav-link text-nowrap' href='/shop'><i class='fa-solid fa-shopping-basket'></i> Nakupovat</a>
         </li>
         <li class='nav-item'>
           <a class='nav-link text-nowrap' href='/orders'><i class='fa-solid fa-shopping-cart'></i> Objednávky</a>
@@ -61,14 +60,12 @@
         {{/if}}
 
         <li class='nav-item'>
-          <a class='nav-link text-nowrap' href='/docs'><i class="fa-solid fa-book"></i> Dokumentace <span
-              class='sr-only'></span></a>
+          <a class='nav-link text-nowrap' href='/docs'><i class="fa-solid fa-book"></i> Dokumentace</a>
         </li>
 
-        {{#if feedbackUrl}}
+        {{#if (feedbackUrl)}}
         <li class='nav-item'>
-          <a class='nav-link text-nowrap' href='{{feedbackUrl}}'><i class="fa-solid fa-bullhorn"></i> Feedback <span
-              class='sr-only'></span></a>
+          <a class='nav-link text-nowrap' href='{{feedbackUrl}}'><i class="fa-solid fa-bullhorn"></i> Zpětná vazba</a>
         </li>
         {{/if}}
 
