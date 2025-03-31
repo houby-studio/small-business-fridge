@@ -12,6 +12,9 @@ const helpers = {
       return options.fn(this)
     }
     return options.inverse(this)
+  },
+  feedbackUrl: function () {
+    return process.env.FEEDBACK_URL ? process.env.FEEDBACK_URL : null
   }
 }
 
