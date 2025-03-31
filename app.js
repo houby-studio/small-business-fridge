@@ -25,6 +25,7 @@ import './tasks/daily-unpaid-invoices-notice.js'
 import './tasks/daily-paid-invoices-needs-approval.js'
 import './tasks/daily-user-phones.js'
 import './tasks/continuous-products-aims-integration.js'
+import handlebarsHelpers from './functions/handlebarsHelpers.js'
 import indexRouter from './routes/index.js'
 import aboutRouter from './routes/about.js'
 import docsRouter from './routes/docs.js'
@@ -46,6 +47,7 @@ import dashboardRouter from './routes/admin/admin_dashboard.js'
 import newCategoryRouter from './routes/admin/new_category.js'
 import editCategoryRouter from './routes/admin/edit_category.js'
 import usersRouter from './routes/admin/admin_users.js'
+import stornoRouter from './routes/admin/storno.js'
 // Access for kiosk
 import kioskKeypadRouter from './routes/kiosk_keypad.js'
 import kioskShopRouter from './routes/kiosk_shop.js'
@@ -97,11 +99,7 @@ app.engine(
     defaultLayout: 'layout',
     extname: '.hbs',
     handlebars: allowInsecurePrototypeAccess(handlebars),
-    helpers: {
-      feedbackUrl: function () {
-        return process.env.FEEDBACK_URL ? process.env.FEEDBACK_URL : null
-      }
-    }
+    helpers: handlebarsHelpers
   })
 )
 app.enable('trust proxy')
@@ -180,6 +178,7 @@ app.use('/admin_payments', paymentsRouter)
 app.use('/new_category', newCategoryRouter)
 app.use('/edit_category', editCategoryRouter)
 app.use('/admin_users', usersRouter)
+app.use('/storno', stornoRouter)
 // Access for kiosk
 app.use('/kiosk_keypad', kioskKeypadRouter)
 app.use('/kiosk_shop', kioskShopRouter)

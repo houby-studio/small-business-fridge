@@ -108,7 +108,10 @@ router.get('/', ensureAuthenticated, function (req, res) {
         delete req.session.alert
       }
       res.render('shop/payments', {
-        title: 'Platby | Lednice IT',
+        title:
+          req.baseUrl === '/admin_payments'
+            ? 'Všechny platby | Lednice IT'
+            : 'Platby | Lednice IT',
         user: req.user,
         invoices: docs,
         supplier: filter,

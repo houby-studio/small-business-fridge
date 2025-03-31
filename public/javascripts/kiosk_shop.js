@@ -53,7 +53,7 @@ function submitFromModal(ctx, keepShopping) {
 // On page load start timer, play background music and make product card clickable
 document.addEventListener('DOMContentLoaded', function () {
   var shopInterval
-  const randomNumber = Math.floor(Math.random() * 11)
+  const randomNumber = Math.floor(Math.random() * 12)
   const backgroundMusic = new Audio(
     `/audio/${randomNumber}_kiosk_shop_theme.mp3`
   )

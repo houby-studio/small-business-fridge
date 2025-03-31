@@ -1,22 +1,4 @@
-<div class="row my-3">
-  <div class="col">
-    <div class="card text-center mx-auto h-100">
-      <div class="card-body pb-0">
-        <div class="row">
-          <div class="col-lg">
-            <p>Celkem zakoupeno: {{#if orders.totalOrders}}{{orders.totalOrders}}{{else}}0{{/if}}ks</p>
-          </div>
-          <div class="col-lg">
-            <p>Celkem utraceno: {{#if orders.totalSpend}}{{orders.totalSpend}}{{else}}0{{/if}}Kč</p>
-          </div>
-          <div class="col-lg">
-            <p>Nefakturováno: {{#if orders.totalUnpaid}}{{orders.totalUnpaid}}{{else}}0{{/if}}Kč</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+{{> confirm_storno_modal }}
 <div class="row my-3">
   <div class="col">
     <div class="table-responsive">
@@ -28,18 +10,14 @@
             <th scope="col">Datum a čas</th>
             <th scope="col">Produkt</th>
             <th scope="col">Cena</th>
-            {{#unless admin.buyerId}}
             <th scope="col">Zákazník</th>
-            {{/unless}}
             <th scope="col">Dodavatel</th>
             <th scope="col">Způsob</th>
-            {{#if admin.buyerId}}
-            <th scope="col">Fakturováno</th>
-            {{/if}}
+            <th scope="col">Akce</th>
           </tr>
         </thead>
         <tbody>
-          {{# each orders.results }}
+          {{# each orders }}
           <tr>
             <td>
               {{ this._id }}
@@ -51,18 +29,16 @@
               {{ this.order_date_format }}
             </td>
             <td>
-              {{ this.productInfo.displayName}}
+              {{ this.productName}}
             </td>
             <td>
-              {{ this.deliveryInfo.price}}
+              {{ this.price}}
             </td>
-            {{#unless ../admin.buyerId}}
             <td>
-              {{ this.buyerInfo.displayName }}
+              {{ this.buyer }}
             </td>
-            {{/unless}}
             <td>
-              {{ this.supplierInfo.displayName }}
+              {{ this.supplier }}
             </td>
             <td>
               {{#if this.keypadOrder }}
@@ -73,15 +49,14 @@
               E-Shop
               {{/if}}
             </td>
-            {{#if ../admin.buyerId}}
             <td>
-              {{#if this.invoice }}
-              Ano
-              {{else}}
-              Ne
-              {{/if}}
+              <button type="button" class="btn btn-danger float-right w-100" onclick="showConfirm('{{ this._id }}')">Stornovat objednávku</button>
+              <form id="storno_{{ this._id }}" class="needs-validation h-100" method="POST" action="/storno" novalidate>
+                <input type="hidden" name="name" value="storno">
+                <input type="hidden" name="order" value="{{ this._id }}">
+                <input type="hidden" name="_csrf" value="{{ ../csrfToken }}">
+              </form>
             </td>
-            {{/if}}
           </tr>
           {{/each}}
         </tbody>
@@ -90,8 +65,7 @@
   </div>
 </div>
 
-{{#lt orders.results 2500}}
 {{> datatables }}
 
 <script src="/javascripts/orders.js"></script>
-{{/lt}}
+<script src="/javascripts/admin_orders.js"></script>

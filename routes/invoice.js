@@ -345,7 +345,10 @@ router.get('/', ensureAuthenticated, checkKiosk, function (req, res) {
             delete req.session.alert
           }
           res.render('shop/invoice', {
-            title: 'Fakturace | Lednice IT',
+            title:
+              req.baseUrl === '/admin_invoice'
+                ? 'Vše k fakturaci | Lednice IT'
+                : 'Fakturace | Lednice IT',
             user: req.user,
             productview: groupByProduct[0],
             userview: groupByUser,
