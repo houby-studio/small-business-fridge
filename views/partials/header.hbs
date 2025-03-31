@@ -64,6 +64,13 @@
               class='sr-only'></span></a>
         </li>
 
+        {{#if feedbackUrl}}
+        <li class='nav-item'>
+          <a class='nav-link text-nowrap' href='{{feedbackUrl}}'><i class="fa-solid fa-bullhorn"></i> Feedback <span
+              class='sr-only'></span></a>
+        </li>
+        {{/if}}
+
 
       </ul>
       <ul class='navbar-nav'>

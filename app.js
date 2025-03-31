@@ -96,7 +96,12 @@ app.engine(
   engine({
     defaultLayout: 'layout',
     extname: '.hbs',
-    handlebars: allowInsecurePrototypeAccess(handlebars)
+    handlebars: allowInsecurePrototypeAccess(handlebars),
+    helpers: {
+      feedbackUrl: function () {
+        return process.env.FEEDBACK_URL ? process.env.FEEDBACK_URL : null
+      }
+    }
   })
 )
 app.enable('trust proxy')
