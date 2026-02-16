@@ -1,4 +1,4 @@
-FROM houbystudio/base-small-business-fridge:2023-10-27
+FROM houbystudio/base-small-business-fridge:2026-02-16
 
 # Copy default .env
 COPY build-deps/defaults.env .env
