@@ -1,4 +1,4 @@
-FROM node:18.18.2-alpine3.17
+FROM node:24-alpine3.22
 
 RUN apk update && apk upgrade
 
