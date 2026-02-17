@@ -1,12 +1,199 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3'
+import { ref, computed } from 'vue'
+import { Head, router, usePage } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
+import Card from 'primevue/card'
+import Button from 'primevue/button'
+import Tag from 'primevue/tag'
+import SelectButton from 'primevue/selectbutton'
+import InputText from 'primevue/inputtext'
+import ConfirmDialog from 'primevue/confirmdialog'
+import { useConfirm } from 'primevue/useconfirm'
+import type { SharedProps } from '~/types'
+
+interface ShopProduct {
+  id: number
+  keypadId: number
+  displayName: string
+  description: string | null
+  imagePath: string | null
+  category: { id: number; name: string; color: string }
+  stockSum: number
+  price: number | null
+  deliveryId: number | null
+  isFavorite: boolean
+}
+
+interface ShopCategory {
+  id: number
+  name: string
+  color: string
+}
+
+const props = defineProps<{
+  products: ShopProduct[]
+  categories: ShopCategory[]
+}>()
+
+const page = usePage<SharedProps>()
+const confirm = useConfirm()
+
+const search = ref('')
+const selectedCategory = ref<number | null>(null)
+const showFavoritesOnly = ref(false)
+
+const categoryOptions = computed(() => [
+  { label: 'Vše', value: null },
+  ...props.categories.map((c) => ({ label: c.name, value: c.id })),
+])
+
+const filteredProducts = computed(() => {
+  return props.products.filter((p) => {
+    if (selectedCategory.value && p.category.id !== selectedCategory.value) return false
+    if (showFavoritesOnly.value && !p.isFavorite) return false
+    if (search.value) {
+      const s = search.value.toLowerCase()
+      if (
+        !p.displayName.toLowerCase().includes(s) &&
+        !p.keypadId.toString().includes(s) &&
+        !(p.description?.toLowerCase().includes(s))
+      ) {
+        return false
+      }
+    }
+    return true
+  })
+})
+
+function purchase(product: ShopProduct) {
+  confirm.require({
+    message: `Koupit ${product.displayName} za ${product.price} Kč?`,
+    header: 'Potvrdit nákup',
+    icon: 'pi pi-shopping-cart',
+    acceptLabel: 'Koupit',
+    rejectLabel: 'Zrušit',
+    accept: () => {
+      router.post('/shop/purchase', { deliveryId: product.deliveryId })
+    },
+  })
+}
+
+function toggleFavorite(productId: number) {
+  router.post(`/profile/favorites/${productId}`, {}, { preserveScroll: true })
+}
 </script>
 
 <template>
   <AppLayout>
     <Head title="Obchod" />
-    <h1 class="text-2xl font-bold text-gray-900">Obchod</h1>
-    <p class="mt-2 text-gray-500">Zde budou produkty k nákupu.</p>
+    <ConfirmDialog />
+
+    <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <h1 class="text-2xl font-bold text-gray-900">Obchod</h1>
+      <div class="flex flex-wrap items-center gap-3">
+        <InputText
+          v-model="search"
+          placeholder="Hledat..."
+          class="w-48"
+        />
+        <Button
+          :icon="showFavoritesOnly ? 'pi pi-star-fill' : 'pi pi-star'"
+          :severity="showFavoritesOnly ? 'warn' : 'secondary'"
+          :outlined="!showFavoritesOnly"
+          size="small"
+          @click="showFavoritesOnly = !showFavoritesOnly"
+          aria-label="Oblíbené"
+        />
+      </div>
+    </div>
+
+    <!-- Category filter -->
+    <div class="mb-6">
+      <SelectButton
+        v-model="selectedCategory"
+        :options="categoryOptions"
+        optionLabel="label"
+        optionValue="value"
+        :allowEmpty="false"
+      />
+    </div>
+
+    <!-- Product grid -->
+    <div
+      v-if="filteredProducts.length"
+      class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+    >
+      <Card
+        v-for="product in filteredProducts"
+        :key="product.id"
+        class="relative overflow-hidden"
+      >
+        <template #header>
+          <div
+            class="flex h-40 items-center justify-center bg-gray-100"
+            :style="{ borderTop: `3px solid ${product.category.color}` }"
+          >
+            <img
+              v-if="product.imagePath"
+              :src="product.imagePath"
+              :alt="product.displayName"
+              class="h-full w-full object-cover"
+            />
+            <span v-else class="pi pi-image text-4xl text-gray-300" />
+          </div>
+        </template>
+
+        <template #title>
+          <div class="flex items-start justify-between gap-2">
+            <span class="text-base">{{ product.displayName }}</span>
+            <button
+              @click.stop="toggleFavorite(product.id)"
+              class="shrink-0 text-lg"
+              :class="product.isFavorite ? 'text-yellow-500' : 'text-gray-300 hover:text-yellow-400'"
+            >
+              <span :class="product.isFavorite ? 'pi pi-star-fill' : 'pi pi-star'" />
+            </button>
+          </div>
+        </template>
+
+        <template #subtitle>
+          <div class="flex items-center gap-2">
+            <Tag
+              :value="product.category.name"
+              :style="{ backgroundColor: product.category.color, color: '#fff' }"
+              class="text-xs"
+            />
+            <span class="text-xs text-gray-400">#{{ product.keypadId }}</span>
+          </div>
+        </template>
+
+        <template #content>
+          <p v-if="product.description" class="mb-3 text-sm text-gray-500">
+            {{ product.description }}
+          </p>
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="text-xl font-bold text-gray-900">{{ product.price }} Kč</span>
+              <span class="ml-2 text-xs text-gray-400">Skladem: {{ product.stockSum }}</span>
+            </div>
+          </div>
+        </template>
+
+        <template #footer>
+          <Button
+            label="Koupit"
+            icon="pi pi-shopping-cart"
+            class="w-full"
+            :disabled="!product.deliveryId"
+            @click="purchase(product)"
+          />
+        </template>
+      </Card>
+    </div>
+
+    <div v-else class="py-12 text-center text-gray-500">
+      <span class="pi pi-inbox mb-4 text-5xl text-gray-300" />
+      <p class="mt-4">Žádné produkty k zobrazení.</p>
+    </div>
   </AppLayout>
 </template>

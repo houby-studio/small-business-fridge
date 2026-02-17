@@ -2,8 +2,9 @@ import type { HttpContext } from '@adonisjs/core/http'
 
 export default class ProfileController {
   async show({ inertia, auth }: HttpContext) {
-    // TODO: Phase 3 — Load full user profile
-    return inertia.render('profile/show', { user: auth.user })
+    const user = auth.user!
+    await user.load((loader) => loader.load('favoriteProducts'))
+    return inertia.render('profile/show', { user: user.serialize() })
   }
 
   async update({ response }: HttpContext) {
@@ -11,8 +12,23 @@ export default class ProfileController {
     return response.redirect('/profile')
   }
 
-  async toggleFavorite({ response }: HttpContext) {
-    // TODO: Phase 3 — Toggle product favorite
+  async toggleFavorite({ params, auth, response }: HttpContext) {
+    const user = auth.user!
+    const productId = Number(params.id)
+
+    // Check if already favorited
+    const existing = await user
+      .related('favoriteProducts')
+      .query()
+      .where('products.id', productId)
+      .first()
+
+    if (existing) {
+      await user.related('favoriteProducts').detach([productId])
+    } else {
+      await user.related('favoriteProducts').attach([productId])
+    }
+
     return response.redirect('/shop')
   }
 }
