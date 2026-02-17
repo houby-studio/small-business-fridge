@@ -1,0 +1,23 @@
+{
+  "unauthorized": "K této stránce nemáte přístup.",
+  "login_success": "Přihlášení proběhlo úspěšně.",
+  "login_failed": "Nesprávné přihlašovací údaje.",
+  "logout_success": "Odhlášení proběhlo úspěšně.",
+  "purchase_success": "Nákup byl úspěšně proveden.",
+  "purchase_failed": "Nákup se nezdařil. Produkt není skladem.",
+  "invoice_generated": "Faktury byly vygenerovány.",
+  "payment_requested": "Žádost o potvrzení platby byla odeslána.",
+  "payment_request_cancelled": "Žádost o potvrzení platby byla zrušena.",
+  "payment_approved": "Platba byla potvrzena.",
+  "payment_rejected": "Platba byla zamítnuta.",
+  "profile_updated": "Profil byl aktualizován.",
+  "product_created": "Produkt byl vytvořen.",
+  "product_updated": "Produkt byl aktualizován.",
+  "delivery_created": "Dodávka byla přidána.",
+  "category_created": "Kategorie byla vytvořena.",
+  "category_updated": "Kategorie byla aktualizována.",
+  "user_updated": "Uživatel byl aktualizován.",
+  "storno_success": "Objednávka byla stornována.",
+  "not_found": "Požadovaný záznam nebyl nalezen.",
+  "forbidden": "Tuto akci nemáte oprávnění provést."
+}

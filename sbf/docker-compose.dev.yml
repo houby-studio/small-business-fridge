@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: postgres:17
+    restart: always
+    ports:
+      - '5433:5432'
+    environment:
+      POSTGRES_USER: sbf
+      POSTGRES_PASSWORD: sbf
+      POSTGRES_DB: sbf
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - '6380:6379'
+
+  maildev:
+    image: maildev/maildev
+    restart: always
+    environment:
+      - TZ=Europe/Prague
+      - MAILDEV_WEB_PORT=1080
+      - MAILDEV_SMTP_PORT=1025
+    ports:
+      - '8082:1080'
+      - '1026:1025'
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '1m'
+
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: always
+    ports:
+      - '8083:80'
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@localhost.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    depends_on:
+      - postgres
+
+volumes:
+  pgdata:

@@ -1,0 +1,23 @@
+{
+  "unauthorized": "You do not have access to this page.",
+  "login_success": "Login successful.",
+  "login_failed": "Invalid credentials.",
+  "logout_success": "Logout successful.",
+  "purchase_success": "Purchase completed successfully.",
+  "purchase_failed": "Purchase failed. Product is out of stock.",
+  "invoice_generated": "Invoices have been generated.",
+  "payment_requested": "Payment confirmation request has been sent.",
+  "payment_request_cancelled": "Payment confirmation request has been cancelled.",
+  "payment_approved": "Payment has been confirmed.",
+  "payment_rejected": "Payment has been rejected.",
+  "profile_updated": "Profile has been updated.",
+  "product_created": "Product has been created.",
+  "product_updated": "Product has been updated.",
+  "delivery_created": "Delivery has been added.",
+  "category_created": "Category has been created.",
+  "category_updated": "Category has been updated.",
+  "user_updated": "User has been updated.",
+  "storno_success": "Order has been cancelled.",
+  "not_found": "The requested record was not found.",
+  "forbidden": "You do not have permission to perform this action."
+}
