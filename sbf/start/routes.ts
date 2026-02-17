@@ -24,8 +24,7 @@ const ShopController = () => import('#controllers/web/shop_controller')
 const OrdersController = () => import('#controllers/web/orders_controller')
 const InvoicesController = () => import('#controllers/web/invoices_controller')
 const ProfileController = () => import('#controllers/web/profile_controller')
-const SupplierDeliveriesController = () =>
-  import('#controllers/web/supplier/deliveries_controller')
+const SupplierDeliveriesController = () => import('#controllers/web/supplier/deliveries_controller')
 const SupplierInvoiceController = () => import('#controllers/web/supplier/invoice_controller')
 const SupplierPaymentsController = () => import('#controllers/web/supplier/payments_controller')
 const SupplierStockController = () => import('#controllers/web/supplier/stock_controller')
@@ -59,11 +58,10 @@ router.get('/', [HomeController, 'index'])
 |--------------------------------------------------------------------------
 */
 
-router
-  .group(() => {
-    router.get('/login', [LoginController, 'show']).use(middleware.guest())
-    router.post('/login', [LoginController, 'store']).use(middleware.guest())
-  })
+router.group(() => {
+  router.get('/login', [LoginController, 'show']).use(middleware.guest())
+  router.post('/login', [LoginController, 'store']).use(middleware.guest())
+})
 
 router.get('/auth/oidc/redirect', [OidcController, 'redirect'])
 router.get('/auth/oidc/callback', [OidcController, 'callback'])

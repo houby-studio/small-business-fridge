@@ -1,17 +1,32 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import User from '#models/user'
+import { loginValidator } from '#validators/auth'
+import env from '#start/env'
 
 export default class LoginController {
   async show({ inertia }: HttpContext) {
-    return inertia.render('auth/login')
+    return inertia.render('auth/login', {
+      oidcEnabled: env.get('OIDC_ENABLED', false),
+    })
   }
 
   async store({ request, auth, response, session }: HttpContext) {
-    const { username, password } = request.only(['username', 'password'])
-    const user = await User.verifyCredentials(username, password)
-    await auth.use('web').login(user)
-    session.flash('alert', { type: 'success', message: 'Login successful.' })
-    return response.redirect('/shop')
+    const { username, password } = await request.validateUsing(loginValidator)
+
+    try {
+      const user = await User.verifyCredentials(username, password)
+
+      if (user.isDisabled) {
+        session.flash('alert', { type: 'danger', message: 'Váš účet byl deaktivován.' })
+        return response.redirect('/login')
+      }
+
+      await auth.use('web').login(user)
+      return response.redirect('/shop')
+    } catch {
+      session.flash('alert', { type: 'danger', message: 'Nesprávné přihlašovací údaje.' })
+      return response.redirect('/login')
+    }
   }
 
   async destroy({ auth, response }: HttpContext) {

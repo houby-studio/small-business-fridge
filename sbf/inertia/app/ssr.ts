@@ -3,6 +3,8 @@ import { renderToString } from '@vue/server-renderer'
 import { createSSRApp, h, type DefineComponent } from 'vue'
 import PrimeVue from 'primevue/config'
 import Aura from '@primeuix/themes/aura'
+import ToastService from 'primevue/toastservice'
+import ConfirmationService from 'primevue/confirmationservice'
 
 export default function render(page: any) {
   return createInertiaApp({
@@ -26,6 +28,8 @@ export default function render(page: any) {
             },
           },
         })
+        .use(ToastService)
+        .use(ConfirmationService)
     },
   })
 }
