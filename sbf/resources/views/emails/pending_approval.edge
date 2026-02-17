@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h2 style="color: #FF9800;">{{ i18n.t('emails.pending_approval_heading') }}</h2>
+  <p>{{ i18n.t('emails.pending_approval_intro', { name: supplierName, count: invoices.length, total: totalPending }) }}</p>
+  <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+    <tr style="background: #FF9800; color: white;">
+      <th style="padding: 10px; text-align: left;">{{ i18n.t('emails.pending_approval_invoice') }}</th>
+      <th style="padding: 10px; text-align: left;">{{ i18n.t('common.customer') }}</th>
+      <th style="padding: 10px; text-align: right;">{{ i18n.t('emails.pending_approval_amount') }}</th>
+    </tr>
+    @each(inv in invoices)
+    <tr style="background: {{ $loop.isOdd ? '#f5f5f5' : '#fff' }};">
+      <td style="padding: 8px; border: 1px solid #ddd;">#{{ inv.id }}</td>
+      <td style="padding: 8px; border: 1px solid #ddd;">{{ inv.buyerName }}</td>
+      <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">{{ i18n.t('common.price_with_currency', { price: inv.totalCost }) }}</td>
+    </tr>
+    @end
+  </table>
+  <p>{{ i18n.t('emails.pending_approval_note') }}</p>
+  <p style="color: #666; font-size: 12px;">— {{ i18n.t('common.app_name') }}</p>
+</body>
+</html>

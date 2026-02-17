@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  @if(action === 'approved')
+  <h2 style="color: #4CAF50;">{{ i18n.t('emails.payment_approved_heading') }}</h2>
+  <p>{{ i18n.t('emails.payment_approved_intro', { buyerName, supplierName, id: invoiceId, amount: totalCost }) }}</p>
+  @else
+  <h2 style="color: #F44336;">{{ i18n.t('emails.payment_rejected_heading') }}</h2>
+  <p>{{ i18n.t('emails.payment_rejected_intro', { buyerName, supplierName, id: invoiceId, amount: totalCost }) }}</p>
+  <p>{{ i18n.t('emails.payment_rejected_note') }}</p>
+  @end
+  <p style="color: #666; font-size: 12px;">— {{ i18n.t('common.app_name') }}</p>
+</body>
+</html>

@@ -9,6 +9,7 @@
 
 import router from '@adonisjs/core/services/router'
 import { middleware } from '#start/kernel'
+import app from '@adonisjs/core/services/app'
 
 /*
 |--------------------------------------------------------------------------
@@ -51,6 +52,12 @@ const ApiHealthController = () => import('#controllers/api/health_controller')
 */
 
 router.get('/', [HomeController, 'index'])
+
+// Serve uploaded files from storage
+router.get('/uploads/*', async ({ request, response }) => {
+  const filePath = app.makePath('storage', request.url())
+  return response.download(filePath)
+})
 
 /*
 |--------------------------------------------------------------------------
@@ -167,6 +174,7 @@ router
   .group(() => {
     router.get('/kiosk', [KioskController, 'index'])
     router.get('/kiosk/shop', [KioskController, 'shop'])
+    router.post('/kiosk/purchase', [KioskController, 'purchase'])
   })
   .use(middleware.auth())
 
@@ -178,9 +186,9 @@ router
 
 router
   .group(() => {
-    // Auth - token issuance (no auth required)
-    router.post('/auth/login', [ApiAuthController, 'login'])
-    router.post('/auth/token', [ApiAuthController, 'token'])
+    // Auth - token issuance (no auth required, stricter rate limit)
+    router.post('/auth/login', [ApiAuthController, 'login']).use(middleware.throttle({ maxRequests: 10, windowMs: 60_000 }))
+    router.post('/auth/token', [ApiAuthController, 'token']).use(middleware.throttle({ maxRequests: 10, windowMs: 60_000 }))
 
     // Health (no auth required)
     router.get('/health', [ApiHealthController, 'index'])
@@ -203,3 +211,4 @@ router
       .use(middleware.auth({ guards: ['api'] }))
   })
   .prefix('/api/v1')
+  .use(middleware.throttle({ maxRequests: 60, windowMs: 60_000 }))

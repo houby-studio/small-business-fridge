@@ -1,0 +1,42 @@
+{
+  "purchase_subject": "Nákup: {product}",
+  "purchase_heading": "Potvrzení nákupu",
+  "purchase_intro": "Ahoj {name}, tvůj nákup byl úspěšně zaznamenán:",
+  "purchase_product": "Produkt",
+  "purchase_price": "Cena",
+  "purchase_supplier": "Dodavatel",
+  "purchase_date": "Datum",
+
+  "invoice_subject": "Faktura #{id} — {amount} Kč",
+  "invoice_heading": "Nová faktura #{id}",
+  "invoice_intro": "Ahoj {buyerName}, dodavatel {supplierName} vystavil fakturu za tvé nákupy:",
+  "invoice_total": "Celkem",
+  "invoice_iban": "Číslo účtu dodavatele:",
+  "invoice_note": "Po zaplacení prosím označ fakturu jako zaplacenou v aplikaci.",
+
+  "payment_approved_subject": "Platba schválena — Faktura #{id}",
+  "payment_rejected_subject": "Platba zamítnuta — Faktura #{id}",
+  "payment_approved_heading": "Platba schválena",
+  "payment_approved_intro": "Ahoj {buyerName}, dodavatel {supplierName} schválil tvou platbu za fakturu #{id} ({amount} Kč).",
+  "payment_rejected_heading": "Platba zamítnuta",
+  "payment_rejected_intro": "Ahoj {buyerName}, dodavatel {supplierName} zamítl platbu za fakturu #{id} ({amount} Kč).",
+  "payment_rejected_note": "Prosím zkontroluj platbu a zkus to znovu.",
+
+  "daily_report_subject": "Denní přehled nákupů — {count} ks, {total} Kč",
+  "daily_report_heading": "Denní přehled nákupů",
+  "daily_report_intro": "Ahoj {name}, dnes jsi nakoupil/a {count} položek za celkem {total} Kč:",
+  "daily_report_total": "Celkem",
+
+  "unpaid_reminder_subject": "Připomínka: Nezaplacená faktura #{id} — {amount} Kč",
+  "unpaid_reminder_heading": "Připomínka: Nezaplacená faktura",
+  "unpaid_reminder_intro": "Ahoj {buyerName}, faktura #{id} od dodavatele {supplierName} na {amount} Kč zatím nebyla zaplacena.",
+  "unpaid_reminder_iban": "Číslo účtu:",
+  "unpaid_reminder_note": "Po zaplacení prosím označ fakturu jako zaplacenou v aplikaci.",
+
+  "pending_approval_subject": "{count} plateb čeká na schválení — {total} Kč",
+  "pending_approval_heading": "Platby čekající na schválení",
+  "pending_approval_intro": "Ahoj {name}, máš {count} faktur v celkové výši {total} Kč, u kterých zákazníci označili platbu jako odeslanou:",
+  "pending_approval_invoice": "Faktura",
+  "pending_approval_amount": "Částka",
+  "pending_approval_note": "Zkontroluj platby na svém bankovním účtu a schval je v aplikaci."
+}

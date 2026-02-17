@@ -1,0 +1,42 @@
+{
+  "purchase_subject": "Purchase: {product}",
+  "purchase_heading": "Purchase Confirmation",
+  "purchase_intro": "Hi {name}, your purchase has been recorded:",
+  "purchase_product": "Product",
+  "purchase_price": "Price",
+  "purchase_supplier": "Supplier",
+  "purchase_date": "Date",
+
+  "invoice_subject": "Invoice #{id} — {amount} CZK",
+  "invoice_heading": "New Invoice #{id}",
+  "invoice_intro": "Hi {buyerName}, supplier {supplierName} has issued an invoice for your purchases:",
+  "invoice_total": "Total",
+  "invoice_iban": "Supplier's bank account:",
+  "invoice_note": "After payment, please mark the invoice as paid in the application.",
+
+  "payment_approved_subject": "Payment approved — Invoice #{id}",
+  "payment_rejected_subject": "Payment rejected — Invoice #{id}",
+  "payment_approved_heading": "Payment Approved",
+  "payment_approved_intro": "Hi {buyerName}, supplier {supplierName} has approved your payment for invoice #{id} ({amount} CZK).",
+  "payment_rejected_heading": "Payment Rejected",
+  "payment_rejected_intro": "Hi {buyerName}, supplier {supplierName} has rejected the payment for invoice #{id} ({amount} CZK).",
+  "payment_rejected_note": "Please check your payment and try again.",
+
+  "daily_report_subject": "Daily purchase report — {count} items, {total} CZK",
+  "daily_report_heading": "Daily Purchase Report",
+  "daily_report_intro": "Hi {name}, today you purchased {count} items for a total of {total} CZK:",
+  "daily_report_total": "Total",
+
+  "unpaid_reminder_subject": "Reminder: Unpaid invoice #{id} — {amount} CZK",
+  "unpaid_reminder_heading": "Reminder: Unpaid Invoice",
+  "unpaid_reminder_intro": "Hi {buyerName}, invoice #{id} from supplier {supplierName} for {amount} CZK has not been paid yet.",
+  "unpaid_reminder_iban": "Account number:",
+  "unpaid_reminder_note": "After payment, please mark the invoice as paid in the application.",
+
+  "pending_approval_subject": "{count} payments awaiting approval — {total} CZK",
+  "pending_approval_heading": "Payments Awaiting Approval",
+  "pending_approval_intro": "Hi {name}, you have {count} invoices totalling {total} CZK where customers have marked payment as sent:",
+  "pending_approval_invoice": "Invoice",
+  "pending_approval_amount": "Amount",
+  "pending_approval_note": "Check payments in your bank account and approve them in the application."
+}

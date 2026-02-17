@@ -10,21 +10,21 @@ export default class LoginController {
     })
   }
 
-  async store({ request, auth, response, session }: HttpContext) {
+  async store({ request, auth, response, session, i18n }: HttpContext) {
     const { username, password } = await request.validateUsing(loginValidator)
 
     try {
       const user = await User.verifyCredentials(username, password)
 
       if (user.isDisabled) {
-        session.flash('alert', { type: 'danger', message: 'Váš účet byl deaktivován.' })
+        session.flash('alert', { type: 'danger', message: i18n.t('messages.account_disabled') })
         return response.redirect('/login')
       }
 
       await auth.use('web').login(user)
       return response.redirect('/shop')
     } catch {
-      session.flash('alert', { type: 'danger', message: 'Nesprávné přihlašovací údaje.' })
+      session.flash('alert', { type: 'danger', message: i18n.t('messages.login_failed') })
       return response.redirect('/login')
     }
   }

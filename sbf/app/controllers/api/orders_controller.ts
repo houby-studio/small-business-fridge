@@ -1,6 +1,8 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import OrderService from '#services/order_service'
+import NotificationService from '#services/notification_service'
 import { apiOrderValidator } from '#validators/order'
+import logger from '@adonisjs/core/services/logger'
 
 export default class OrdersController {
   async store({ request, auth, response }: HttpContext) {
@@ -9,6 +11,13 @@ export default class OrdersController {
 
     try {
       const order = await orderService.purchase(auth.user!.id, deliveryId, channel)
+
+      // Send email notification (fire-and-forget)
+      const notificationService = new NotificationService()
+      notificationService.sendPurchaseConfirmation(order).catch((err) => {
+        logger.error({ err }, 'Failed to send purchase confirmation email')
+      })
+
       return response.created({ data: order.serialize() })
     } catch (error) {
       if (error instanceof Error && error.message === 'OUT_OF_STOCK') {

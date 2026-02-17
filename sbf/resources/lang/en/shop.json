@@ -1,0 +1,8 @@
+{
+  "title": "Shop",
+  "confirm_title": "Confirm purchase",
+  "confirm_message": "Buy {name} for {price} CZK?",
+  "confirm_accept": "Buy",
+  "no_products": "No products to display.",
+  "favorite": "Favorites"
+}

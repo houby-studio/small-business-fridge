@@ -1,8 +1,11 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import DeliveryService from '#services/delivery_service'
 
 export default class StockController {
-  async index({ inertia }: HttpContext) {
-    // TODO: Phase 5 — Stock overview with remaining amounts
-    return inertia.render('supplier/stock/index', { deliveries: [] })
+  async index({ inertia, auth }: HttpContext) {
+    const service = new DeliveryService()
+    const stock = await service.getStockForSupplier(auth.user!.id)
+
+    return inertia.render('supplier/stock/index', { stock })
   }
 }

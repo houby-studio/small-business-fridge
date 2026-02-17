@@ -7,10 +7,13 @@ import Password from 'primevue/password'
 import Button from 'primevue/button'
 import Divider from 'primevue/divider'
 import Message from 'primevue/message'
+import { useI18n } from '~/composables/useI18n'
 
 defineProps<{
   oidcEnabled?: boolean
 }>()
+
+const { t } = useI18n()
 
 const form = useForm({
   username: '',
@@ -26,7 +29,7 @@ function submit() {
 
 <template>
   <GuestLayout>
-    <Head title="Přihlášení" />
+    <Head :title="t('auth.title')" />
 
     <Card>
       <template #content>
@@ -37,7 +40,7 @@ function submit() {
 
           <div class="flex flex-col gap-2">
             <label for="username" class="text-sm font-medium text-gray-700">
-              Uživatelské jméno
+              {{ t('auth.username') }}
             </label>
             <InputText
               id="username"
@@ -45,13 +48,13 @@ function submit() {
               :invalid="!!form.errors.username"
               autocomplete="username"
               autofocus
-              placeholder="Zadejte uživatelské jméno"
+              :placeholder="t('auth.username_placeholder')"
             />
           </div>
 
           <div class="flex flex-col gap-2">
             <label for="password" class="text-sm font-medium text-gray-700">
-              Heslo
+              {{ t('auth.password') }}
             </label>
             <Password
               id="password"
@@ -60,7 +63,7 @@ function submit() {
               :feedback="false"
               toggleMask
               autocomplete="current-password"
-              placeholder="Zadejte heslo"
+              :placeholder="t('auth.password_placeholder')"
               inputClass="w-full"
               class="w-full"
             />
@@ -68,7 +71,7 @@ function submit() {
 
           <Button
             type="submit"
-            label="Přihlásit se"
+            :label="t('auth.submit')"
             icon="pi pi-sign-in"
             :loading="form.processing"
             class="w-full"
@@ -82,7 +85,7 @@ function submit() {
             <Button
               as="a"
               href="/auth/oidc/redirect"
-              label="Přihlásit přes Microsoft"
+              :label="t('auth.sign_in_microsoft')"
               icon="pi pi-microsoft"
               severity="secondary"
               outlined

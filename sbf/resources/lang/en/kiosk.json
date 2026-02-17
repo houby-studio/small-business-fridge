@@ -1,0 +1,13 @@
+{
+  "title": "Kiosk",
+  "heading": "Lednice IT",
+  "enter_number": "Enter your number on the keypad",
+  "shop_title": "Kiosk - Shop",
+  "greeting": "Hi, {name}!",
+  "purchase_confirm": "Buy {name} for {price} CZK?",
+  "purchase_confirm_title": "Confirm purchase",
+  "purchase_accept": "Buy",
+  "purchase_success": "Purchase completed successfully!",
+  "purchase_out_of_stock": "Product is out of stock.",
+  "no_products": "No products in stock."
+}

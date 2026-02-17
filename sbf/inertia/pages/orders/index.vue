@@ -5,6 +5,7 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Card from 'primevue/card'
+import { useI18n } from '~/composables/useI18n'
 
 interface OrderRow {
   id: number
@@ -37,6 +38,8 @@ const props = defineProps<{
   }
 }>()
 
+const { t } = useI18n()
+
 function onPageChange(event: any) {
   router.get('/orders', { page: event.page + 1 }, { preserveState: true })
 }
@@ -52,35 +55,35 @@ function formatDate(iso: string) {
 }
 
 function channelLabel(channel: string) {
-  const map: Record<string, string> = { web: 'Web', keypad: 'Klávesnice', scanner: 'Skener' }
-  return map[channel] || channel
+  const key = `common.channel_${channel}` as const
+  return t(key)
 }
 </script>
 
 <template>
   <AppLayout>
-    <Head title="Objednávky" />
+    <Head :title="t('orders.title')" />
 
-    <h1 class="mb-6 text-2xl font-bold text-gray-900">Moje objednávky</h1>
+    <h1 class="mb-6 text-2xl font-bold text-gray-900">{{ t('orders.my_orders') }}</h1>
 
     <!-- Stats cards -->
     <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
       <Card class="text-center">
         <template #content>
           <div class="text-3xl font-bold text-gray-900">{{ stats.totalOrders }}</div>
-          <div class="text-sm text-gray-500">Celkem objednávek</div>
+          <div class="text-sm text-gray-500">{{ t('orders.total_orders') }}</div>
         </template>
       </Card>
       <Card class="text-center">
         <template #content>
-          <div class="text-3xl font-bold text-gray-900">{{ stats.totalSpend }} Kč</div>
-          <div class="text-sm text-gray-500">Celková útrata</div>
+          <div class="text-3xl font-bold text-gray-900">{{ t('common.price_with_currency', { price: stats.totalSpend }) }}</div>
+          <div class="text-sm text-gray-500">{{ t('orders.total_spent') }}</div>
         </template>
       </Card>
       <Card class="text-center">
         <template #content>
-          <div class="text-3xl font-bold text-red-600">{{ stats.totalUnpaid }} Kč</div>
-          <div class="text-sm text-gray-500">Nezaplaceno</div>
+          <div class="text-3xl font-bold text-red-600">{{ t('common.price_with_currency', { price: stats.totalUnpaid }) }}</div>
+          <div class="text-sm text-gray-500">{{ t('orders.total_unpaid') }}</div>
         </template>
       </Card>
     </div>
@@ -97,32 +100,32 @@ function channelLabel(channel: string) {
       stripedRows
       class="rounded-lg border"
     >
-      <Column header="Datum" sortable>
+      <Column :header="t('common.date')" sortable>
         <template #body="{ data }">
           {{ formatDate(data.createdAt) }}
         </template>
       </Column>
-      <Column header="Produkt">
+      <Column :header="t('common.product')">
         <template #body="{ data }">
           {{ data.delivery?.product?.displayName ?? '—' }}
         </template>
       </Column>
-      <Column header="Cena">
+      <Column :header="t('common.price')">
         <template #body="{ data }">
-          <span class="font-semibold">{{ data.delivery?.price ?? '—' }} Kč</span>
+          <span class="font-semibold">{{ t('common.price_with_currency', { price: data.delivery?.price ?? '—' }) }}</span>
         </template>
       </Column>
-      <Column header="Dodavatel">
+      <Column :header="t('common.supplier')">
         <template #body="{ data }">
           {{ data.delivery?.supplier?.displayName ?? '—' }}
         </template>
       </Column>
-      <Column header="Kanál">
+      <Column :header="t('common.channel')">
         <template #body="{ data }">
           <Tag :value="channelLabel(data.channel)" severity="info" class="text-xs" />
         </template>
       </Column>
-      <Column header="Faktura">
+      <Column header="#">
         <template #body="{ data }">
           <Tag
             v-if="data.invoiceId"
@@ -130,13 +133,13 @@ function channelLabel(channel: string) {
             severity="success"
             class="text-xs"
           />
-          <Tag v-else value="Nefakturováno" severity="warn" class="text-xs" />
+          <Tag v-else :value="t('common.not_invoiced')" severity="warn" class="text-xs" />
         </template>
       </Column>
 
       <template #empty>
         <div class="py-8 text-center text-gray-500">
-          Zatím nemáte žádné objednávky.
+          {{ t('orders.no_orders') }}
         </div>
       </template>
     </DataTable>

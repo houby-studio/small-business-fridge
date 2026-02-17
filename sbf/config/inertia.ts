@@ -1,5 +1,28 @@
 import { defineConfig } from '@adonisjs/inertia'
 import type { InferSharedProps } from '@adonisjs/inertia/types'
+import { readFileSync, readdirSync } from 'node:fs'
+import app from '@adonisjs/core/services/app'
+
+/**
+ * Load all translation JSON files for a given locale.
+ * Returns a flat object keyed by namespace (filename without .json).
+ */
+function loadTranslations(locale: string): Record<string, Record<string, string>> {
+  const langDir = app.languageFilesPath(locale)
+  try {
+    const files = readdirSync(langDir).filter((f) => f.endsWith('.json'))
+    const translations: Record<string, Record<string, string>> = {}
+
+    for (const file of files) {
+      const namespace = file.replace('.json', '')
+      translations[namespace] = JSON.parse(readFileSync(`${langDir}/${file}`, 'utf-8'))
+    }
+
+    return translations
+  } catch {
+    return {}
+  }
+}
 
 const inertiaConfig = defineConfig({
   /**
@@ -26,6 +49,11 @@ const inertiaConfig = defineConfig({
     flash: (ctx) => ctx.inertia.always(() => {
       return ctx.session?.flashMessages.all() ?? {}
     }),
+    locale: (ctx) => ctx.i18n?.locale ?? 'cs',
+    translations: (ctx) => {
+      const locale = ctx.i18n?.locale ?? 'cs'
+      return loadTranslations(locale)
+    },
   },
 
   /**

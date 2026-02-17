@@ -9,6 +9,7 @@ import SelectButton from 'primevue/selectbutton'
 import InputText from 'primevue/inputtext'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
+import { useI18n } from '~/composables/useI18n'
 import type { SharedProps } from '~/types'
 
 interface ShopProduct {
@@ -37,13 +38,14 @@ const props = defineProps<{
 
 const page = usePage<SharedProps>()
 const confirm = useConfirm()
+const { t } = useI18n()
 
 const search = ref('')
 const selectedCategory = ref<number | null>(null)
 const showFavoritesOnly = ref(false)
 
 const categoryOptions = computed(() => [
-  { label: 'Vše', value: null },
+  { label: t('common.all'), value: null },
   ...props.categories.map((c) => ({ label: c.name, value: c.id })),
 ])
 
@@ -67,11 +69,11 @@ const filteredProducts = computed(() => {
 
 function purchase(product: ShopProduct) {
   confirm.require({
-    message: `Koupit ${product.displayName} za ${product.price} Kč?`,
-    header: 'Potvrdit nákup',
+    message: t('shop.confirm_message', { name: product.displayName, price: product.price ?? 0 }),
+    header: t('shop.confirm_title'),
     icon: 'pi pi-shopping-cart',
-    acceptLabel: 'Koupit',
-    rejectLabel: 'Zrušit',
+    acceptLabel: t('shop.confirm_accept'),
+    rejectLabel: t('common.cancel'),
     accept: () => {
       router.post('/shop/purchase', { deliveryId: product.deliveryId })
     },
@@ -85,15 +87,15 @@ function toggleFavorite(productId: number) {
 
 <template>
   <AppLayout>
-    <Head title="Obchod" />
+    <Head :title="t('shop.title')" />
     <ConfirmDialog />
 
     <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <h1 class="text-2xl font-bold text-gray-900">Obchod</h1>
+      <h1 class="text-2xl font-bold text-gray-900">{{ t('shop.title') }}</h1>
       <div class="flex flex-wrap items-center gap-3">
         <InputText
           v-model="search"
-          placeholder="Hledat..."
+          :placeholder="t('common.search') + '...'"
           class="w-48"
         />
         <Button
@@ -102,7 +104,7 @@ function toggleFavorite(productId: number) {
           :outlined="!showFavoritesOnly"
           size="small"
           @click="showFavoritesOnly = !showFavoritesOnly"
-          aria-label="Oblíbené"
+          :aria-label="t('shop.favorite')"
         />
       </div>
     </div>
@@ -173,15 +175,15 @@ function toggleFavorite(productId: number) {
           </p>
           <div class="flex items-center justify-between">
             <div>
-              <span class="text-xl font-bold text-gray-900">{{ product.price }} Kč</span>
-              <span class="ml-2 text-xs text-gray-400">Skladem: {{ product.stockSum }}</span>
+              <span class="text-xl font-bold text-gray-900">{{ t('common.price_with_currency', { price: product.price ?? 0 }) }}</span>
+              <span class="ml-2 text-xs text-gray-400">{{ t('common.pieces_in_stock', { count: product.stockSum }) }}</span>
             </div>
           </div>
         </template>
 
         <template #footer>
           <Button
-            label="Koupit"
+            :label="t('common.purchase')"
             icon="pi pi-shopping-cart"
             class="w-full"
             :disabled="!product.deliveryId"
@@ -193,7 +195,7 @@ function toggleFavorite(productId: number) {
 
     <div v-else class="py-12 text-center text-gray-500">
       <span class="pi pi-inbox mb-4 text-5xl text-gray-300" />
-      <p class="mt-4">Žádné produkty k zobrazení.</p>
+      <p class="mt-4">{{ t('shop.no_products') }}</p>
     </div>
   </AppLayout>
 </template>

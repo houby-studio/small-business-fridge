@@ -1,0 +1,36 @@
+{
+  "dashboard_title": "Admin Dashboard",
+  "dashboard_total_users": "Total users",
+  "dashboard_users_detail": "{customers} cust. / {suppliers} supp. / {admins} admin",
+  "dashboard_total_orders": "Total orders",
+  "dashboard_orders_detail": "{lastWeek} this week / {lastMonth} this month",
+  "dashboard_total_revenue": "Total revenue",
+  "dashboard_invoices_detail": "{paid} paid / {unpaid} unpaid",
+  "dashboard_recent_orders": "Recent orders",
+
+  "users_title": "User Management",
+  "users_heading": "User Management",
+  "users_name": "Name",
+  "users_kiosk": "Kiosk",
+  "users_disabled": "Disabled",
+
+  "categories_title": "Category Management",
+  "categories_heading": "Category Management",
+  "categories_new": "New category",
+  "categories_new_heading": "New category",
+  "categories_color": "Color",
+  "categories_name_placeholder": "Category name",
+
+  "orders_title": "All Orders",
+  "orders_heading": "All Orders",
+  "orders_no_orders": "No orders.",
+  "orders_storno": "Cancel",
+  "orders_storno_header": "Confirm cancellation",
+  "orders_storno_confirm": "Are you sure you want to cancel order #{id}? Items will be returned to stock.",
+  "orders_storno_accept": "Cancel order",
+  "orders_invoice": "Invoice",
+
+  "invoices_title": "All Invoices",
+  "invoices_heading": "All Invoices",
+  "invoices_no_invoices": "No invoices."
+}

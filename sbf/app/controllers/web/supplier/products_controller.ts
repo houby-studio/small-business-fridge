@@ -1,23 +1,78 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import ProductService from '#services/product_service'
+import { createProductValidator, updateProductValidator } from '#validators/product'
 
 export default class ProductsController {
   async create({ inertia }: HttpContext) {
-    // TODO: Phase 5 — New product form with categories
-    return inertia.render('supplier/products/create', { categories: [] })
+    const service = new ProductService()
+    const categories = await service.getCategories()
+
+    return inertia.render('supplier/products/create', {
+      categories: categories.map((c) => ({ id: c.id, name: c.name, color: c.color })),
+    })
   }
 
-  async store({ response }: HttpContext) {
-    // TODO: Phase 5 — Create product
+  async store({ request, response, session, i18n }: HttpContext) {
+    const data = await request.validateUsing(createProductValidator)
+
+    const service = new ProductService()
+    const product = await service.createProduct({
+      displayName: data.displayName,
+      description: data.description,
+      categoryId: data.categoryId,
+      barcode: data.barcode,
+      image: data.image,
+    })
+
+    session.flash('alert', {
+      type: 'success',
+      message: i18n.t('messages.product_created', { name: product.displayName }),
+    })
+
     return response.redirect('/supplier/stock')
   }
 
-  async edit({ inertia }: HttpContext) {
-    // TODO: Phase 5 — Edit product form
-    return inertia.render('supplier/products/edit', { product: null, categories: [] })
+  async edit({ params, inertia }: HttpContext) {
+    const service = new ProductService()
+    const [product, categories] = await Promise.all([
+      service.getProduct(params.id),
+      service.getCategories(),
+    ])
+
+    return inertia.render('supplier/products/edit', {
+      product: {
+        id: product.id,
+        keypadId: product.keypadId,
+        displayName: product.displayName,
+        description: product.description,
+        imagePath: product.imagePath,
+        barcode: product.barcode,
+        categoryId: product.categoryId,
+        category: product.category
+          ? { id: product.category.id, name: product.category.name }
+          : null,
+      },
+      categories: categories.map((c) => ({ id: c.id, name: c.name, color: c.color })),
+    })
   }
 
-  async update({ response }: HttpContext) {
-    // TODO: Phase 5 — Update product
+  async update({ params, request, response, session, i18n }: HttpContext) {
+    const data = await request.validateUsing(updateProductValidator)
+
+    const service = new ProductService()
+    const product = await service.updateProduct(params.id, {
+      displayName: data.displayName,
+      description: data.description,
+      categoryId: data.categoryId,
+      barcode: data.barcode,
+      image: data.image,
+    })
+
+    session.flash('alert', {
+      type: 'success',
+      message: i18n.t('messages.product_updated', { name: product.displayName }),
+    })
+
     return response.redirect('/supplier/stock')
   }
 }
