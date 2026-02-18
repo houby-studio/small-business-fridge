@@ -8,7 +8,7 @@ export default class ShopService {
    * Get all products with stock info, grouped by category.
    * Optionally filters to only in-stock products.
    */
-  async getProducts(options: { showAll?: boolean; userId?: number } = {}) {
+  async getProducts(options: { showAll?: boolean; userId?: number; categoryId?: number } = {}) {
     const query = Product.query()
       .preload('category')
       .preload('deliveries', (q) => {
@@ -18,6 +18,10 @@ export default class ShopService {
         q.where('isDisabled', false)
       })
       .orderBy('displayName', 'asc')
+
+    if (options.categoryId) {
+      query.where('categoryId', options.categoryId)
+    }
 
     const products = await query
 

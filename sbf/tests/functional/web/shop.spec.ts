@@ -57,6 +57,63 @@ test.group('Web Shop - index', (group) => {
   })
 })
 
+test.group('Web Shop - category filter', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('filter by category returns only products in that category', async ({ client, assert }) => {
+    const user = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').create()
+    const catA = await CategoryFactory.create()
+    const catB = await CategoryFactory.create()
+    const productA = await ProductFactory.merge({ categoryId: catA.id }).create()
+    const productB = await ProductFactory.merge({ categoryId: catB.id }).create()
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: productA.id,
+      amountLeft: 2,
+      price: 10,
+    }).create()
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: productB.id,
+      amountLeft: 2,
+      price: 10,
+    }).create()
+
+    const response = await client.get(`/shop?category=${catA.id}`).loginAs(user)
+    response.assertStatus(200)
+    response.assertTextIncludes(productA.displayName)
+    assert.notInclude(response.text(), productB.displayName)
+  })
+
+  test('no category filter returns all in-stock products', async ({ client, assert }) => {
+    const user = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').create()
+    const catA = await CategoryFactory.create()
+    const catB = await CategoryFactory.create()
+    const productA = await ProductFactory.merge({ categoryId: catA.id }).create()
+    const productB = await ProductFactory.merge({ categoryId: catB.id }).create()
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: productA.id,
+      amountLeft: 2,
+      price: 10,
+    }).create()
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: productB.id,
+      amountLeft: 2,
+      price: 10,
+    }).create()
+
+    const response = await client.get('/shop').loginAs(user)
+    response.assertStatus(200)
+    response.assertTextIncludes(productA.displayName)
+    response.assertTextIncludes(productB.displayName)
+  })
+})
+
 test.group('Web Shop - purchase', (group) => {
   group.each.setup(cleanAll)
   group.each.teardown(cleanAll)

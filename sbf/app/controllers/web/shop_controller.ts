@@ -6,19 +6,27 @@ import { purchaseValidator } from '#validators/order'
 import logger from '@adonisjs/core/services/logger'
 
 export default class ShopController {
-  async index({ inertia, auth }: HttpContext) {
+  async index({ inertia, auth, request }: HttpContext) {
     const shopService = new ShopService()
     const user = auth.user!
+
+    const rawCategory = request.input('category')
+    const categoryId = rawCategory ? Number(rawCategory) : undefined
 
     const [products, categories] = await Promise.all([
       shopService.getProducts({
         showAll: user.showAllProducts,
         userId: user.id,
+        categoryId,
       }),
       shopService.getCategories(),
     ])
 
-    return inertia.render('shop/index', { products, categories })
+    return inertia.render('shop/index', {
+      products,
+      categories,
+      filters: { category: categoryId ?? null },
+    })
   }
 
   async purchase({ request, auth, response, session, i18n }: HttpContext) {

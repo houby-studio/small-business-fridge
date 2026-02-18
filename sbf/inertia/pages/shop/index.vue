@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Head, router, usePage } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import Card from 'primevue/card'
@@ -34,6 +34,7 @@ interface ShopCategory {
 const props = defineProps<{
   products: ShopProduct[]
   categories: ShopCategory[]
+  filters: { category: number | null }
 }>()
 
 const page = usePage<SharedProps>()
@@ -41,8 +42,12 @@ const confirm = useConfirm()
 const { t } = useI18n()
 
 const search = ref('')
-const selectedCategory = ref<number | null>(null)
+const selectedCategory = ref<number | null>(props.filters.category)
 const showFavoritesOnly = ref(false)
+
+watch(selectedCategory, (categoryId) => {
+  router.get('/shop', categoryId ? { category: categoryId } : {})
+})
 
 const categoryOptions = computed(() => [
   { label: t('common.all'), value: null },
