@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { Head, router, usePage } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import Card from 'primevue/card'
@@ -41,9 +41,15 @@ const page = usePage<SharedProps>()
 const confirm = useConfirm()
 const { t } = useI18n()
 
+const INITIAL_COUNT = 48
+const PAGE_SIZE = 24
+
 const search = ref('')
 const selectedCategory = ref<number | null>(props.filters.category)
 const showFavoritesOnly = ref(false)
+const visibleCount = ref(INITIAL_COUNT)
+const sentinel = ref<HTMLElement | null>(null)
+let observer: IntersectionObserver | null = null
 
 watch(selectedCategory, (categoryId) => {
   router.get('/shop', categoryId ? { category: categoryId } : {})
@@ -71,6 +77,33 @@ const filteredProducts = computed(() => {
     return true
   })
 })
+
+const visibleProducts = computed(() => filteredProducts.value.slice(0, visibleCount.value))
+
+const hasMore = computed(() => visibleCount.value < filteredProducts.value.length)
+
+function setupObserver() {
+  observer?.disconnect()
+  if (!sentinel.value) return
+  observer = new IntersectionObserver(
+    ([entry]) => {
+      if (entry.isIntersecting && hasMore.value) {
+        visibleCount.value = Math.min(visibleCount.value + PAGE_SIZE, filteredProducts.value.length)
+      }
+    },
+    { rootMargin: '300px' }
+  )
+  observer.observe(sentinel.value)
+}
+
+// Reset visible count and re-observe when filters change
+watch(filteredProducts, () => {
+  visibleCount.value = INITIAL_COUNT
+  nextTick(setupObserver)
+})
+
+onMounted(setupObserver)
+onUnmounted(() => observer?.disconnect())
 
 function purchase(product: ShopProduct) {
   confirm.require({
@@ -127,7 +160,7 @@ function toggleFavorite(productId: number) {
       class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
     >
       <Card
-        v-for="product in filteredProducts"
+        v-for="product in visibleProducts"
         :key="product.id"
         class="relative flex h-full flex-col overflow-hidden"
         :pt="{
@@ -145,6 +178,7 @@ function toggleFavorite(productId: number) {
               :src="product.imagePath"
               :alt="product.displayName"
               class="h-full w-full object-contain"
+              loading="lazy"
             />
             <span v-else class="pi pi-image text-4xl text-gray-300" />
           </div>
@@ -204,7 +238,10 @@ function toggleFavorite(productId: number) {
       </Card>
     </div>
 
-    <div v-else class="py-12 text-center text-gray-500">
+    <!-- Sentinel for IntersectionObserver -->
+    <div v-if="filteredProducts.length" ref="sentinel" class="h-1" />
+
+    <div v-if="!filteredProducts.length" class="py-12 text-center text-gray-500">
       <span class="pi pi-inbox mb-4 text-5xl text-gray-300" />
       <p class="mt-4">{{ t('shop.no_products') }}</p>
     </div>
