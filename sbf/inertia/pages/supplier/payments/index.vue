@@ -95,7 +95,7 @@ function onPageChange(event: any) {
         <template #body="{ data }">
           <div class="flex gap-1">
             <Button
-              v-if="data.isPaymentRequested && !data.isPaid"
+              v-if="!data.isPaid"
               :label="t('supplier.payments_approve')"
               icon="pi pi-check"
               size="small"
@@ -112,12 +112,6 @@ function onPageChange(event: any) {
               @click="reject(data.id)"
             />
             <Tag v-if="data.isPaid" :value="t('common.approved')" severity="success" class="text-xs" />
-            <Tag
-              v-if="!data.isPaid && !data.isPaymentRequested"
-              :value="t('common.awaiting_payment')"
-              severity="secondary"
-              class="text-xs"
-            />
           </div>
         </template>
       </Column>

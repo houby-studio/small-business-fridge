@@ -36,6 +36,8 @@ const AdminCategoriesController = () => import('#controllers/web/admin/categorie
 const AdminOrdersController = () => import('#controllers/web/admin/orders_controller')
 const AdminInvoicesController = () => import('#controllers/web/admin/invoices_controller')
 const AdminStornoController = () => import('#controllers/web/admin/storno_controller')
+const AuditController = () => import('#controllers/web/audit_controller')
+const AdminAuditController = () => import('#controllers/web/admin/audit_controller')
 const KioskController = () => import('#controllers/web/kiosk_controller')
 
 // API controllers
@@ -100,6 +102,9 @@ router
     router.get('/profile', [ProfileController, 'show'])
     router.put('/profile', [ProfileController, 'update'])
     router.post('/profile/favorites/:id', [ProfileController, 'toggleFavorite'])
+
+    // Audit log (customer view)
+    router.get('/audit', [AuditController, 'index'])
   })
   .use([middleware.auth(), middleware.kiosk()])
 
@@ -127,6 +132,7 @@ router
     router.get('/stock', [SupplierStockController, 'index'])
 
     // Product management
+    router.get('/products', [SupplierProductsController, 'index'])
     router.get('/products/new', [SupplierProductsController, 'create'])
     router.post('/products', [SupplierProductsController, 'store'])
     router.get('/products/:id/edit', [SupplierProductsController, 'edit'])
@@ -160,6 +166,9 @@ router
 
     // Storno
     router.post('/storno/:id', [AdminStornoController, 'store'])
+
+    // Audit log
+    router.get('/audit', [AdminAuditController, 'index'])
   })
   .prefix('/admin')
   .use([middleware.auth(), middleware.role({ roles: ['admin'] })])

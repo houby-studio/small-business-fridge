@@ -7,3 +7,17 @@ export const updateUserValidator = vine.compile(
     isKiosk: vine.boolean().optional(),
   })
 )
+
+export const updateProfileValidator = vine.compile(
+  vine.object({
+    displayName: vine.string().trim().minLength(1).maxLength(255),
+    email: vine.string().trim().email({ require_tld: false }).maxLength(255),
+    phone: vine.string().trim().maxLength(20).optional().nullable(),
+    iban: vine.string().trim().maxLength(24).optional().nullable(),
+    showAllProducts: vine.boolean(),
+    sendMailOnPurchase: vine.boolean(),
+    sendDailyReport: vine.boolean(),
+    colorMode: vine.enum(['light', 'dark'] as const),
+    keypadDisabled: vine.boolean(),
+  })
+)

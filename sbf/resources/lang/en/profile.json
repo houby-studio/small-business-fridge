@@ -1,5 +1,25 @@
 {
   "title": "Profile",
   "heading": "Profile Settings",
-  "placeholder": "Your profile settings will be here."
+  "personal_info": "Personal Information",
+  "preferences": "Preferences",
+  "account_info": "Account Information",
+  "display_name": "Display Name",
+  "email": "Email",
+  "phone": "Phone",
+  "iban": "IBAN (for receiving payments)",
+  "show_all_products": "Show out-of-stock products",
+  "send_mail_on_purchase": "Send email on purchase",
+  "send_daily_report": "Send daily report",
+  "color_mode": "Color Mode",
+  "color_mode_light": "Light",
+  "color_mode_dark": "Dark",
+  "keypad_disabled": "Disable keypad login",
+  "username": "Username",
+  "keypad_id": "Keypad ID",
+  "card_id": "Card ID",
+  "role": "Role",
+  "created_at": "Registered",
+  "save": "Save Changes",
+  "update_success": "Profile updated successfully."
 }

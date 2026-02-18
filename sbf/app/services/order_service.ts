@@ -1,6 +1,7 @@
 import Delivery from '#models/delivery'
 import Order from '#models/order'
 import db from '@adonisjs/lucid/services/db'
+import AuditService from '#services/audit_service'
 
 type OrderChannel = 'web' | 'keypad' | 'scanner'
 
@@ -35,6 +36,13 @@ export default class OrderService {
         },
         { client: trx }
       )
+
+      // Audit log (fire-and-forget, outside transaction)
+      AuditService.log(buyerId, 'order.created', 'order', order.id, delivery.supplierId, {
+        productId: delivery.productId,
+        price: delivery.price,
+        channel,
+      })
 
       return order
     })

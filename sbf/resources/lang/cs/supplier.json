@@ -35,6 +35,9 @@
   "products_create_submit": "Vytvořit produkt",
   "products_edit_title": "Upravit produkt",
   "products_edit_heading": "Upravit produkt",
+  "products_list_title": "Produkty",
+  "products_list_heading": "Všechny produkty",
+  "products_list_empty": "Zatím nejsou žádné produkty.",
   "products_edit_submit": "Uložit změny",
 
   "invoice_title": "Fakturace",

@@ -35,6 +35,9 @@
   "products_create_submit": "Create product",
   "products_edit_title": "Edit product",
   "products_edit_heading": "Edit product",
+  "products_list_title": "Products",
+  "products_list_heading": "All Products",
+  "products_list_empty": "No products yet.",
   "products_edit_submit": "Save changes",
 
   "invoice_title": "Invoicing",

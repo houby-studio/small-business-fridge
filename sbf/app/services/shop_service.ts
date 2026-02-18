@@ -56,6 +56,10 @@ export default class ShopService {
         }
       })
       .filter((p) => options.showAll || p.stockSum > 0)
+      .sort((a, b) => {
+        if (a.isFavorite !== b.isFavorite) return a.isFavorite ? -1 : 1
+        return a.displayName.localeCompare(b.displayName, 'cs')
+      })
 
     return result
   }

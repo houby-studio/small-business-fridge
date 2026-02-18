@@ -3,6 +3,7 @@ import Category from '#models/category'
 import type { MultipartFile } from '@adonisjs/core/bodyparser'
 import app from '@adonisjs/core/services/app'
 import { cuid } from '@adonisjs/core/helpers'
+import AuditService from '#services/audit_service'
 
 export default class ProductService {
   /**
@@ -60,6 +61,15 @@ export default class ProductService {
 
     await product.save()
     return product
+  }
+
+  /**
+   * Get all products with category info.
+   */
+  async getAllProducts() {
+    return Product.query()
+      .preload('category')
+      .orderBy('displayName', 'asc')
   }
 
   /**

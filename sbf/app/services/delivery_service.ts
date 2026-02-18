@@ -1,6 +1,7 @@
 import Delivery from '#models/delivery'
 import Product from '#models/product'
 import db from '@adonisjs/lucid/services/db'
+import AuditService from '#services/audit_service'
 
 export default class DeliveryService {
   /**
@@ -19,6 +20,13 @@ export default class DeliveryService {
       amountLeft: amount,
       price,
     })
+
+    AuditService.log(supplierId, 'delivery.created', 'delivery', delivery.id, null, {
+      productId,
+      amount,
+      price,
+    })
+
     return delivery
   }
 

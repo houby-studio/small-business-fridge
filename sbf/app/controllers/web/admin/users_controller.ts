@@ -1,6 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import AdminService from '#services/admin_service'
 import { updateUserValidator } from '#validators/user'
+import AuditService from '#services/audit_service'
 
 export default class UsersController {
   async index({ inertia }: HttpContext) {
@@ -22,11 +23,15 @@ export default class UsersController {
     })
   }
 
-  async update({ params, request, response, session, i18n }: HttpContext) {
+  async update({ params, request, response, session, i18n, auth }: HttpContext) {
     const data = await request.validateUsing(updateUserValidator)
 
     const service = new AdminService()
     const user = await service.updateUser(params.id, data)
+
+    AuditService.log(auth.user!.id, 'user.updated', 'user', user.id, user.id, {
+      changes: data,
+    })
 
     session.flash('alert', {
       type: 'success',

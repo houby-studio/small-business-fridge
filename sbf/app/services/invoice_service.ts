@@ -1,6 +1,7 @@
 import Invoice from '#models/invoice'
 import Order from '#models/order'
 import db from '@adonisjs/lucid/services/db'
+import AuditService from '#services/audit_service'
 
 export default class InvoiceService {
   /**
@@ -60,6 +61,11 @@ export default class InvoiceService {
           .update({ invoiceId: invoice.id })
 
         invoices.push(invoice)
+
+        AuditService.log(supplierId, 'invoice.generated', 'invoice', invoice.id, buyerId, {
+          total: totalCost,
+          orderCount: orders.length,
+        })
       }
 
       return invoices
@@ -138,6 +144,9 @@ export default class InvoiceService {
 
     invoice.isPaymentRequested = true
     await invoice.save()
+
+    AuditService.log(buyerId, 'payment.requested', 'invoice', invoiceId, invoice.supplierId)
+
     return invoice
   }
 
@@ -171,6 +180,9 @@ export default class InvoiceService {
 
     invoice.isPaid = true
     await invoice.save()
+
+    AuditService.log(supplierId, 'payment.approved', 'invoice', invoiceId, invoice.buyerId)
+
     return invoice
   }
 
@@ -187,6 +199,9 @@ export default class InvoiceService {
     invoice.isPaid = false
     invoice.isPaymentRequested = false
     await invoice.save()
+
+    AuditService.log(supplierId, 'payment.rejected', 'invoice', invoiceId, invoice.buyerId)
+
     return invoice
   }
 }

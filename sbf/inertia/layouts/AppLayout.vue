@@ -22,6 +22,7 @@ const menuItems = computed(() => {
     { label: 'Obchod', icon: 'pi pi-shopping-cart', url: '/shop' },
     { label: 'Objednávky', icon: 'pi pi-list', url: '/orders' },
     { label: 'Faktury', icon: 'pi pi-file', url: '/invoices' },
+    { label: 'Aktivita', icon: 'pi pi-history', url: '/audit' },
   ]
 
   if (isSupplier.value) {
@@ -31,7 +32,7 @@ const menuItems = computed(() => {
       items: [
         { label: 'Naskladnit', icon: 'pi pi-plus', url: '/supplier/deliveries' },
         { label: 'Sklad', icon: 'pi pi-warehouse', url: '/supplier/stock' },
-        { label: 'Produkty', icon: 'pi pi-tags', url: '/supplier/products/new' },
+        { label: 'Produkty', icon: 'pi pi-tags', url: '/supplier/products' },
         { label: 'Fakturace', icon: 'pi pi-file-export', url: '/supplier/invoice' },
         { label: 'Platby', icon: 'pi pi-credit-card', url: '/supplier/payments' },
       ],
@@ -48,6 +49,7 @@ const menuItems = computed(() => {
         { label: 'Kategorie', icon: 'pi pi-palette', url: '/admin/categories' },
         { label: 'Objednávky', icon: 'pi pi-list-check', url: '/admin/orders' },
         { label: 'Faktury', icon: 'pi pi-file-check', url: '/admin/invoices' },
+        { label: 'Audit log', icon: 'pi pi-history', url: '/admin/audit' },
       ],
     })
   }

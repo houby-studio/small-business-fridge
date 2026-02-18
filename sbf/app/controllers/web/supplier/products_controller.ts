@@ -1,8 +1,25 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import ProductService from '#services/product_service'
 import { createProductValidator, updateProductValidator } from '#validators/product'
+import AuditService from '#services/audit_service'
 
 export default class ProductsController {
+  async index({ inertia }: HttpContext) {
+    const service = new ProductService()
+    const products = await service.getAllProducts()
+
+    return inertia.render('supplier/products/index', {
+      products: products.map((p) => ({
+        id: p.id,
+        keypadId: p.keypadId,
+        displayName: p.displayName,
+        imagePath: p.imagePath,
+        barcode: p.barcode,
+        category: p.category ? { id: p.category.id, name: p.category.name, color: p.category.color } : null,
+      })),
+    })
+  }
+
   async create({ inertia }: HttpContext) {
     const service = new ProductService()
     const categories = await service.getCategories()
@@ -12,7 +29,7 @@ export default class ProductsController {
     })
   }
 
-  async store({ request, response, session, i18n }: HttpContext) {
+  async store({ request, response, session, i18n, auth }: HttpContext) {
     const data = await request.validateUsing(createProductValidator)
 
     const service = new ProductService()
@@ -22,6 +39,10 @@ export default class ProductsController {
       categoryId: data.categoryId,
       barcode: data.barcode,
       image: data.image,
+    })
+
+    AuditService.log(auth.user!.id, 'product.created', 'product', product.id, null, {
+      name: product.displayName,
     })
 
     session.flash('alert', {
@@ -56,7 +77,7 @@ export default class ProductsController {
     })
   }
 
-  async update({ params, request, response, session, i18n }: HttpContext) {
+  async update({ params, request, response, session, i18n, auth }: HttpContext) {
     const data = await request.validateUsing(updateProductValidator)
 
     const service = new ProductService()
@@ -66,6 +87,10 @@ export default class ProductsController {
       categoryId: data.categoryId,
       barcode: data.barcode,
       image: data.image,
+    })
+
+    AuditService.log(auth.user!.id, 'product.updated', 'product', product.id, null, {
+      name: product.displayName,
     })
 
     session.flash('alert', {
