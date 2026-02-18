@@ -2,6 +2,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import logger from '@adonisjs/core/services/logger'
 import User from '#models/user'
 import { loginValidator } from '#validators/auth'
+import AuditService from '#services/audit_service'
 import env from '#start/env'
 
 export default class LoginController {
@@ -25,6 +26,7 @@ export default class LoginController {
 
       await auth.use('web').login(user)
       logger.info({ userId: user.id, username }, 'Password login success')
+      AuditService.log(user.id, 'user.login', 'user', user.id, null, { via: 'password' })
       return response.redirect('/shop')
     } catch {
       logger.warn({ username }, 'Password login failed: invalid credentials')

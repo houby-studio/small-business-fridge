@@ -1,6 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import logger from '@adonisjs/core/services/logger'
 import User from '#models/user'
+import AuditService from '#services/audit_service'
 import env from '#start/env'
 
 export default class OidcController {
@@ -65,7 +66,14 @@ export default class OidcController {
         keypadId: nextKeypadId,
       })
 
-      logger.info({ userId: user.id, email }, 'OIDC auto-registered new user')
+      // First user on a fresh deployment becomes admin
+      if (user.id === 1) {
+        user.role = 'admin'
+        await user.save()
+      }
+
+      logger.info({ userId: user.id, email, role: user.role }, 'OIDC auto-registered new user')
+      AuditService.log(user.id, 'user.registered', 'user', user.id, null, { via: 'oidc' })
       session.flash('alert', { type: 'success', message: i18n.t('messages.login_auto_registered') })
     }
 
@@ -89,6 +97,7 @@ export default class OidcController {
 
     await auth.use('web').login(user)
     logger.info({ userId: user.id, email }, 'OIDC login success')
+    AuditService.log(user.id, 'user.login', 'user', user.id, null, { via: 'oidc' })
     return response.redirect('/shop')
   }
 }
