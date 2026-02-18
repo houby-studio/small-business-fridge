@@ -3,7 +3,6 @@ import Category from '#models/category'
 import type { MultipartFile } from '@adonisjs/core/bodyparser'
 import app from '@adonisjs/core/services/app'
 import { cuid } from '@adonisjs/core/helpers'
-import AuditService from '#services/audit_service'
 
 export default class ProductService {
   /**

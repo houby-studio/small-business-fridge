@@ -31,5 +31,8 @@
   "kiosk_customer_not_found": "Zákazník s tímto číslem nebyl nalezen.",
   "not_found": "Požadovaný záznam nebyl nalezen.",
   "forbidden": "Tuto akci nemáte oprávnění provést.",
-  "profile_updated": "Profil byl aktualizován."
+  "profile_updated": "Profil byl aktualizován.",
+  "login_cancelled": "Přihlášení bylo zrušeno.",
+  "login_state_mismatch": "Chyba zabezpečení při přihlašování. Zkuste to prosím znovu.",
+  "login_not_registered": "Váš účet Microsoft není registrován v aplikaci. Kontaktujte správce."
 }

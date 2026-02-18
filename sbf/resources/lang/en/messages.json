@@ -31,5 +31,8 @@
   "kiosk_customer_not_found": "Customer with this number was not found.",
   "not_found": "The requested record was not found.",
   "forbidden": "You do not have permission to perform this action.",
-  "profile_updated": "Profile has been updated."
+  "profile_updated": "Profile has been updated.",
+  "login_cancelled": "Login was cancelled.",
+  "login_state_mismatch": "Security error during login. Please try again.",
+  "login_not_registered": "Your Microsoft account is not registered in this app. Contact your administrator."
 }

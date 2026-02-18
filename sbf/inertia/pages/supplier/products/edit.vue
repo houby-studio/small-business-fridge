@@ -56,9 +56,7 @@ function submit() {
   if (imageFile.value) {
     formData.append('image', imageFile.value)
   }
-  formData.append('_method', 'PUT')
-
-  router.post(`/supplier/products/${props.product.id}`, formData, {
+  router.post(`/supplier/products/${props.product.id}?_method=PUT`, formData, {
     onFinish: () => (submitting.value = false),
   })
 }
