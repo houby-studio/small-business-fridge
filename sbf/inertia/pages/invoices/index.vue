@@ -7,8 +7,8 @@ import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
-import { useI18n } from '~/composables/useI18n'
-import { formatDate } from '~/composables/useFormatDate'
+import { useI18n } from '~/composables/use_i18n'
+import { formatDate } from '~/composables/use_format_date'
 
 interface InvoiceOrder {
   id: number
@@ -68,9 +68,7 @@ async function showQr(id: number) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-XSRF-TOKEN': decodeURIComponent(
-          document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] || ''
-        ),
+        'X-XSRF-TOKEN': decodeURIComponent(document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] || ''),
       },
     })
     const data = await res.json()
@@ -120,7 +118,9 @@ function onPageChange(event: any) {
       </Column>
       <Column :header="t('common.total')">
         <template #body="{ data }">
-          <span class="font-semibold">{{ t('common.price_with_currency', { price: data.totalCost }) }}</span>
+          <span class="font-semibold">{{
+            t('common.price_with_currency', { price: data.totalCost })
+          }}</span>
         </template>
       </Column>
       <Column :header="t('common.status')">

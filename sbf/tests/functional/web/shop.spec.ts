@@ -3,7 +3,6 @@ import { UserFactory } from '#database/factories/user_factory'
 import { ProductFactory } from '#database/factories/product_factory'
 import { DeliveryFactory } from '#database/factories/delivery_factory'
 import { CategoryFactory } from '#database/factories/category_factory'
-import Delivery from '#models/delivery'
 import Order from '#models/order'
 import db from '@adonisjs/lucid/services/db'
 
@@ -62,7 +61,10 @@ test.group('Web Shop - purchase', (group) => {
   group.each.setup(cleanAll)
   group.each.teardown(cleanAll)
 
-  test('successful purchase redirects to /shop and decrements stock', async ({ client, assert }) => {
+  test('successful purchase redirects to /shop and decrements stock', async ({
+    client,
+    assert,
+  }) => {
     const buyer = await UserFactory.create()
     const supplier = await UserFactory.apply('supplier').create()
     const category = await CategoryFactory.create()
@@ -123,10 +125,7 @@ test.group('Web Shop - purchase', (group) => {
   })
 
   test('purchase requires authentication', async ({ client }) => {
-    const response = await client
-      .post('/shop/purchase')
-      .json({ deliveryId: 1 })
-      .redirects(0)
+    const response = await client.post('/shop/purchase').json({ deliveryId: 1 }).redirects(0)
 
     response.assertStatus(302)
   })

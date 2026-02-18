@@ -8,7 +8,7 @@ import Select from 'primevue/select'
 import FileUpload from 'primevue/fileupload'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
-import { useI18n } from '~/composables/useI18n'
+import { useI18n } from '~/composables/use_i18n'
 
 interface CategoryOption {
   id: number
@@ -76,17 +76,23 @@ function submit() {
           </div>
 
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{ t('supplier.products_name_label') }}</label>
+            <label class="mb-1 block text-sm font-medium text-gray-700">{{
+              t('supplier.products_name_label')
+            }}</label>
             <InputText v-model="form.displayName" class="w-full" />
           </div>
 
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{ t('supplier.products_description_label') }}</label>
+            <label class="mb-1 block text-sm font-medium text-gray-700">{{
+              t('supplier.products_description_label')
+            }}</label>
             <Textarea v-model="form.description" rows="3" class="w-full" />
           </div>
 
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{ t('supplier.products_category_label') }}</label>
+            <label class="mb-1 block text-sm font-medium text-gray-700">{{
+              t('supplier.products_category_label')
+            }}</label>
             <Select
               v-model="form.categoryId"
               :options="categories"
@@ -98,14 +104,22 @@ function submit() {
           </div>
 
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{ t('supplier.products_barcode_label') }}</label>
+            <label class="mb-1 block text-sm font-medium text-gray-700">{{
+              t('supplier.products_barcode_label')
+            }}</label>
             <InputText v-model="form.barcode" class="w-full" />
           </div>
 
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{ t('supplier.products_image_label') }}</label>
+            <label class="mb-1 block text-sm font-medium text-gray-700">{{
+              t('supplier.products_image_label')
+            }}</label>
             <div v-if="product.imagePath" class="mb-2">
-              <img :src="product.imagePath" :alt="product.displayName" class="h-20 w-20 rounded object-cover" />
+              <img
+                :src="product.imagePath"
+                :alt="product.displayName"
+                class="h-20 w-20 rounded object-cover"
+              />
             </div>
             <FileUpload
               mode="basic"

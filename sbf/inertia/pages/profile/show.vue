@@ -7,8 +7,8 @@ import ToggleSwitch from 'primevue/toggleswitch'
 import SelectButton from 'primevue/selectbutton'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
-import { useI18n } from '~/composables/useI18n'
-import { formatDate } from '~/composables/useFormatDate'
+import { useI18n } from '~/composables/use_i18n'
+import { formatDate } from '~/composables/use_format_date'
 
 interface UserData {
   id: number
@@ -54,21 +54,24 @@ function submit() {
   if (!form.value.displayName || !form.value.email) return
   submitting.value = true
 
-  router.put('/profile', {
-    displayName: form.value.displayName,
-    email: form.value.email,
-    phone: form.value.phone || null,
-    iban: form.value.iban || null,
-    showAllProducts: form.value.showAllProducts,
-    sendMailOnPurchase: form.value.sendMailOnPurchase,
-    sendDailyReport: form.value.sendDailyReport,
-    colorMode: form.value.colorMode,
-    keypadDisabled: form.value.keypadDisabled,
-  }, {
-    onFinish: () => (submitting.value = false),
-  })
+  router.put(
+    '/profile',
+    {
+      displayName: form.value.displayName,
+      email: form.value.email,
+      phone: form.value.phone || null,
+      iban: form.value.iban || null,
+      showAllProducts: form.value.showAllProducts,
+      sendMailOnPurchase: form.value.sendMailOnPurchase,
+      sendDailyReport: form.value.sendDailyReport,
+      colorMode: form.value.colorMode,
+      keypadDisabled: form.value.keypadDisabled,
+    },
+    {
+      onFinish: () => (submitting.value = false),
+    }
+  )
 }
-
 </script>
 
 <template>
@@ -84,22 +87,30 @@ function submit() {
         <template #content>
           <form @submit.prevent="submit" class="flex flex-col gap-5">
             <div>
-              <label class="mb-1 block text-sm font-medium text-gray-700">{{ t('profile.display_name') }}</label>
+              <label class="mb-1 block text-sm font-medium text-gray-700">{{
+                t('profile.display_name')
+              }}</label>
               <InputText v-model="form.displayName" class="w-full" />
             </div>
 
             <div>
-              <label class="mb-1 block text-sm font-medium text-gray-700">{{ t('profile.email') }}</label>
+              <label class="mb-1 block text-sm font-medium text-gray-700">{{
+                t('profile.email')
+              }}</label>
               <InputText v-model="form.email" type="email" class="w-full" />
             </div>
 
             <div>
-              <label class="mb-1 block text-sm font-medium text-gray-700">{{ t('profile.phone') }}</label>
+              <label class="mb-1 block text-sm font-medium text-gray-700">{{
+                t('profile.phone')
+              }}</label>
               <InputText v-model="form.phone" class="w-full" />
             </div>
 
             <div>
-              <label class="mb-1 block text-sm font-medium text-gray-700">{{ t('profile.iban') }}</label>
+              <label class="mb-1 block text-sm font-medium text-gray-700">{{
+                t('profile.iban')
+              }}</label>
               <InputText v-model="form.iban" class="w-full" maxlength="24" />
             </div>
 
@@ -126,8 +137,15 @@ function submit() {
             </div>
 
             <div>
-              <label class="mb-1 block text-sm font-medium text-gray-700">{{ t('profile.color_mode') }}</label>
-              <SelectButton v-model="form.colorMode" :options="colorModeOptions" optionLabel="label" optionValue="value" />
+              <label class="mb-1 block text-sm font-medium text-gray-700">{{
+                t('profile.color_mode')
+              }}</label>
+              <SelectButton
+                v-model="form.colorMode"
+                :options="colorModeOptions"
+                optionLabel="label"
+                optionValue="value"
+              />
             </div>
 
             <div class="pt-2">

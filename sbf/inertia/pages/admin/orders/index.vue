@@ -7,8 +7,8 @@ import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
-import { useI18n } from '~/composables/useI18n'
-import { formatDate } from '~/composables/useFormatDate'
+import { useI18n } from '~/composables/use_i18n'
+import { formatDate } from '~/composables/use_format_date'
 
 interface OrderRow {
   id: number
@@ -82,7 +82,9 @@ function onPageChange(event: any) {
         <template #body="{ data }">{{ data.delivery?.product?.displayName ?? '—' }}</template>
       </Column>
       <Column :header="t('common.price')" style="width: 80px">
-        <template #body="{ data }">{{ t('common.price_with_currency', { price: data.delivery?.price ?? 0 }) }}</template>
+        <template #body="{ data }">{{
+          t('common.price_with_currency', { price: data.delivery?.price ?? 0 })
+        }}</template>
       </Column>
       <Column :header="t('common.supplier')">
         <template #body="{ data }">{{ data.delivery?.supplier?.displayName ?? '—' }}</template>

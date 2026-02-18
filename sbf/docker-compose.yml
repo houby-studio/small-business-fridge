@@ -2,7 +2,7 @@ services:
   app:
     build: .
     ports:
-      - "3000:3000"
+      - '3000:3000'
     environment:
       - NODE_ENV=production
       - HOST=0.0.0.0
@@ -43,7 +43,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U sbf"]
+      test: ['CMD-SHELL', 'pg_isready -U sbf']
       interval: 5s
       timeout: 5s
       retries: 5

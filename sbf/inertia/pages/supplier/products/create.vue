@@ -8,7 +8,7 @@ import Select from 'primevue/select'
 import FileUpload from 'primevue/fileupload'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
-import { useI18n } from '~/composables/useI18n'
+import { useI18n } from '~/composables/use_i18n'
 
 interface CategoryOption {
   id: number
@@ -63,7 +63,9 @@ function submit() {
       <template #content>
         <form @submit.prevent="submit" class="flex flex-col gap-5">
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{ t('supplier.products_name_label') }}</label>
+            <label class="mb-1 block text-sm font-medium text-gray-700">{{
+              t('supplier.products_name_label')
+            }}</label>
             <InputText
               v-model="form.displayName"
               :placeholder="t('supplier.products_name_placeholder')"
@@ -72,7 +74,9 @@ function submit() {
           </div>
 
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{ t('supplier.products_description_label') }}</label>
+            <label class="mb-1 block text-sm font-medium text-gray-700">{{
+              t('supplier.products_description_label')
+            }}</label>
             <Textarea
               v-model="form.description"
               rows="3"
@@ -82,7 +86,9 @@ function submit() {
           </div>
 
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{ t('supplier.products_category_label') }}</label>
+            <label class="mb-1 block text-sm font-medium text-gray-700">{{
+              t('supplier.products_category_label')
+            }}</label>
             <Select
               v-model="form.categoryId"
               :options="categories"
@@ -94,7 +100,9 @@ function submit() {
           </div>
 
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{ t('supplier.products_barcode_label') }}</label>
+            <label class="mb-1 block text-sm font-medium text-gray-700">{{
+              t('supplier.products_barcode_label')
+            }}</label>
             <InputText
               v-model="form.barcode"
               :placeholder="t('supplier.products_barcode_placeholder')"
@@ -103,7 +111,9 @@ function submit() {
           </div>
 
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{ t('supplier.products_image_label') }}</label>
+            <label class="mb-1 block text-sm font-medium text-gray-700">{{
+              t('supplier.products_image_label')
+            }}</label>
             <FileUpload
               mode="basic"
               accept="image/*"

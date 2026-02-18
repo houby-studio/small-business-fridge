@@ -8,7 +8,7 @@ import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Message from 'primevue/message'
-import { useI18n } from '~/composables/useI18n'
+import { useI18n } from '~/composables/use_i18n'
 
 interface StockRow {
   productId: number
@@ -48,7 +48,12 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
           <Button :label="t('supplier.stock_new_product')" icon="pi pi-plus" size="small" />
         </Link>
         <Link href="/supplier/deliveries">
-          <Button :label="t('supplier.deliveries_submit')" icon="pi pi-box" size="small" severity="secondary" />
+          <Button
+            :label="t('supplier.deliveries_submit')"
+            icon="pi pi-box"
+            size="small"
+            severity="secondary"
+          />
         </Link>
       </div>
     </div>
@@ -74,7 +79,9 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
         </Card>
         <Card class="text-center">
           <template #content>
-            <div class="text-3xl font-bold">{{ t('common.price_with_currency', { price: totalRevenue }) }}</div>
+            <div class="text-3xl font-bold">
+              {{ t('common.price_with_currency', { price: totalRevenue }) }}
+            </div>
             <div class="text-sm text-gray-500">{{ t('supplier.stock_total_revenue') }}</div>
           </template>
         </Card>
@@ -120,7 +127,9 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
         </Column>
         <Column :header="t('supplier.stock_total_revenue')" style="width: 120px">
           <template #body="{ data }">
-            <span class="font-semibold">{{ t('common.price_with_currency', { price: data.totalRevenue }) }}</span>
+            <span class="font-semibold">{{
+              t('common.price_with_currency', { price: data.totalRevenue })
+            }}</span>
           </template>
         </Column>
         <Column :header="t('common.actions')" style="width: 100px">

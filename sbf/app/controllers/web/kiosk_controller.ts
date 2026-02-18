@@ -87,7 +87,9 @@ export default class KioskController {
       return response.redirect(`/kiosk/shop?keypadId=${customer?.keypadId ?? ''}&success=1`)
     } catch {
       const customer = await User.find(customerId)
-      return response.redirect(`/kiosk/shop?keypadId=${customer?.keypadId ?? ''}&error=out_of_stock`)
+      return response.redirect(
+        `/kiosk/shop?keypadId=${customer?.keypadId ?? ''}&error=out_of_stock`
+      )
     }
   }
 }

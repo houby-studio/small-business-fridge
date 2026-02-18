@@ -116,7 +116,15 @@ export default async function globalSetup() {
         password = EXCLUDED.password,
         role = EXCLUDED.role
     `,
-      [user.username, user.email, user.display_name, user.password, user.role, user.keypad_id, user.iban]
+      [
+        user.username,
+        user.email,
+        user.display_name,
+        user.password,
+        user.role,
+        user.keypad_id,
+        user.iban,
+      ]
     )
   }
 
@@ -142,11 +150,41 @@ export default async function globalSetup() {
 
   // 5. Seed products (matching dev seeder, keypad IDs 1-5)
   const products = [
-    { keypadId: 1, displayName: 'Coca-Cola 0.5L', description: 'Osvěžující nápoj', category: 'Nealko', price: 15 },
-    { keypadId: 2, displayName: 'Mattoni 0.5L', description: 'Přírodní minerální voda', category: 'Nealko', price: 15 },
-    { keypadId: 3, displayName: 'Plzeň 0.5L', description: 'České pivo', category: 'Alko', price: 25 },
-    { keypadId: 4, displayName: 'Snickers', description: 'Čokoládová tyčinka', category: 'Sladkosti', price: 15 },
-    { keypadId: 5, displayName: "Chipsy Lay's", description: 'Bramborové lupínky', category: 'Jídlo', price: 15 },
+    {
+      keypadId: 1,
+      displayName: 'Coca-Cola 0.5L',
+      description: 'Osvěžující nápoj',
+      category: 'Nealko',
+      price: 15,
+    },
+    {
+      keypadId: 2,
+      displayName: 'Mattoni 0.5L',
+      description: 'Přírodní minerální voda',
+      category: 'Nealko',
+      price: 15,
+    },
+    {
+      keypadId: 3,
+      displayName: 'Plzeň 0.5L',
+      description: 'České pivo',
+      category: 'Alko',
+      price: 25,
+    },
+    {
+      keypadId: 4,
+      displayName: 'Snickers',
+      description: 'Čokoládová tyčinka',
+      category: 'Sladkosti',
+      price: 15,
+    },
+    {
+      keypadId: 5,
+      displayName: "Chipsy Lay's",
+      description: 'Bramborové lupínky',
+      category: 'Jídlo',
+      price: 15,
+    },
   ]
 
   const productIds: number[] = []
@@ -164,7 +202,9 @@ export default async function globalSetup() {
   }
 
   // 6. Get supplier ID
-  const supplierResult = await client.query('SELECT id FROM users WHERE username = $1', ['supplier'])
+  const supplierResult = await client.query('SELECT id FROM users WHERE username = $1', [
+    'supplier',
+  ])
   const supplierId = supplierResult.rows[0].id
 
   // 7. Ensure each product has stock:
@@ -190,11 +230,11 @@ export default async function globalSetup() {
     [testKeypadIds]
   )
 
-  for (let i = 0; i < products.length; i++) {
+  for (const [i, product] of products.entries()) {
     await client.query(
       `INSERT INTO deliveries (supplier_id, product_id, amount_supplied, amount_left, price, created_at, updated_at)
        VALUES ($1, $2, 10, 10, $3, NOW(), NOW())`,
-      [supplierId, productIds[i], products[i].price]
+      [supplierId, productIds[i], product.price]
     )
   }
 

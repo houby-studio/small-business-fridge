@@ -11,7 +11,11 @@ export default class HealthController {
       await db.rawQuery('SELECT 1')
       checks.database = { status: 'ok', latency: Date.now() - dbStart }
     } catch (err) {
-      checks.database = { status: 'error', latency: Date.now() - dbStart, error: (err as Error).message }
+      checks.database = {
+        status: 'error',
+        latency: Date.now() - dbStart,
+        error: (err as Error).message,
+      }
     }
 
     const allOk = Object.values(checks).every((c) => c.status === 'ok')

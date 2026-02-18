@@ -49,9 +49,7 @@ export default class DeliveryService {
         'categories.color as category_color',
         db.rawQuery('SUM(deliveries.amount_supplied)::int as total_supplied'),
         db.rawQuery('SUM(deliveries.amount_left)::int as total_remaining'),
-        db.rawQuery(
-          'SUM(deliveries.amount_supplied - deliveries.amount_left)::int as total_sold'
-        ),
+        db.rawQuery('SUM(deliveries.amount_supplied - deliveries.amount_left)::int as total_sold'),
         db.rawQuery('COUNT(deliveries.id)::int as delivery_count'),
         db.rawQuery(
           'SUM(deliveries.price * (deliveries.amount_supplied - deliveries.amount_left))::numeric as total_revenue'
@@ -95,8 +93,6 @@ export default class DeliveryService {
    * Get all products (for the delivery form dropdown).
    */
   async getAllProducts() {
-    return Product.query()
-      .preload('category')
-      .orderBy('displayName', 'asc')
+    return Product.query().preload('category').orderBy('displayName', 'asc')
   }
 }

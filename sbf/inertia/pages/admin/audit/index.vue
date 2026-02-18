@@ -8,8 +8,8 @@ import Tag from 'primevue/tag'
 import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
 import Button from 'primevue/button'
-import { useI18n } from '~/composables/useI18n'
-import { formatDateTime } from '~/composables/useFormatDate'
+import { useI18n } from '~/composables/use_i18n'
+import { formatDateTime } from '~/composables/use_format_date'
 
 interface AuditRow {
   id: number
@@ -80,7 +80,6 @@ function actionLabel(action: string | undefined) {
   return t(actionLabels[action] ?? action)
 }
 
-
 function formatMetadata(meta: Record<string, any> | null) {
   if (!meta) return ''
   return Object.entries(meta)
@@ -89,11 +88,15 @@ function formatMetadata(meta: Record<string, any> | null) {
 }
 
 function applyFilters() {
-  router.get('/admin/audit', {
-    action: filterAction.value || undefined,
-    entityType: filterEntity.value || undefined,
-    userId: filterUserId.value || undefined,
-  }, { preserveState: true })
+  router.get(
+    '/admin/audit',
+    {
+      action: filterAction.value || undefined,
+      entityType: filterEntity.value || undefined,
+      userId: filterUserId.value || undefined,
+    },
+    { preserveState: true }
+  )
 }
 
 function clearFilters() {
@@ -104,12 +107,16 @@ function clearFilters() {
 }
 
 function onPageChange(event: any) {
-  router.get('/admin/audit', {
-    page: event.page + 1,
-    action: filterAction.value || undefined,
-    entityType: filterEntity.value || undefined,
-    userId: filterUserId.value || undefined,
-  }, { preserveState: true })
+  router.get(
+    '/admin/audit',
+    {
+      page: event.page + 1,
+      action: filterAction.value || undefined,
+      entityType: filterEntity.value || undefined,
+      userId: filterUserId.value || undefined,
+    },
+    { preserveState: true }
+  )
 }
 </script>
 
@@ -123,18 +130,41 @@ function onPageChange(event: any) {
     <div class="mb-4 flex flex-wrap items-end gap-3">
       <div>
         <label class="mb-1 block text-sm text-gray-600">{{ t('audit.filter_action') }}</label>
-        <Select v-model="filterAction" :options="actionOptions" optionLabel="label" optionValue="value" class="w-48" />
+        <Select
+          v-model="filterAction"
+          :options="actionOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="w-48"
+        />
       </div>
       <div>
         <label class="mb-1 block text-sm text-gray-600">{{ t('audit.filter_entity') }}</label>
-        <Select v-model="filterEntity" :options="entityOptions" optionLabel="label" optionValue="value" class="w-36" />
+        <Select
+          v-model="filterEntity"
+          :options="entityOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="w-36"
+        />
       </div>
       <div>
         <label class="mb-1 block text-sm text-gray-600">{{ t('audit.filter_user') }}</label>
         <InputText v-model="filterUserId" class="w-24" />
       </div>
-      <Button :label="t('audit.filter_apply')" icon="pi pi-filter" size="small" @click="applyFilters" />
-      <Button :label="t('audit.filter_clear')" size="small" severity="secondary" text @click="clearFilters" />
+      <Button
+        :label="t('audit.filter_apply')"
+        icon="pi pi-filter"
+        size="small"
+        @click="applyFilters"
+      />
+      <Button
+        :label="t('audit.filter_clear')"
+        size="small"
+        severity="secondary"
+        text
+        @click="clearFilters"
+      />
     </div>
 
     <DataTable

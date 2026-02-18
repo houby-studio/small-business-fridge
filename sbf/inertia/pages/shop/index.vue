@@ -9,7 +9,7 @@ import SelectButton from 'primevue/selectbutton'
 import InputText from 'primevue/inputtext'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
-import { useI18n } from '~/composables/useI18n'
+import { useI18n } from '~/composables/use_i18n'
 import type { SharedProps } from '~/types'
 
 interface ShopProduct {
@@ -58,7 +58,7 @@ const filteredProducts = computed(() => {
       if (
         !p.displayName.toLowerCase().includes(s) &&
         !p.keypadId.toString().includes(s) &&
-        !(p.description?.toLowerCase().includes(s))
+        !p.description?.toLowerCase().includes(s)
       ) {
         return false
       }
@@ -93,11 +93,7 @@ function toggleFavorite(productId: number) {
     <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <h1 class="text-2xl font-bold text-gray-900">{{ t('shop.title') }}</h1>
       <div class="flex flex-wrap items-center gap-3">
-        <InputText
-          v-model="search"
-          :placeholder="t('common.search') + '...'"
-          class="w-48"
-        />
+        <InputText v-model="search" :placeholder="t('common.search') + '...'" class="w-48" />
         <Button
           :icon="showFavoritesOnly ? 'pi pi-star-fill' : 'pi pi-star'"
           :severity="showFavoritesOnly ? 'warn' : 'secondary'"
@@ -125,11 +121,7 @@ function toggleFavorite(productId: number) {
       v-if="filteredProducts.length"
       class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
     >
-      <Card
-        v-for="product in filteredProducts"
-        :key="product.id"
-        class="relative overflow-hidden"
-      >
+      <Card v-for="product in filteredProducts" :key="product.id" class="relative overflow-hidden">
         <template #header>
           <div
             class="flex h-40 items-center justify-center bg-gray-100"
@@ -151,7 +143,9 @@ function toggleFavorite(productId: number) {
             <button
               @click.stop="toggleFavorite(product.id)"
               class="shrink-0 text-lg"
-              :class="product.isFavorite ? 'text-yellow-500' : 'text-gray-300 hover:text-yellow-400'"
+              :class="
+                product.isFavorite ? 'text-yellow-500' : 'text-gray-300 hover:text-yellow-400'
+              "
             >
               <span :class="product.isFavorite ? 'pi pi-star-fill' : 'pi pi-star'" />
             </button>
@@ -175,8 +169,12 @@ function toggleFavorite(productId: number) {
           </p>
           <div class="flex items-center justify-between">
             <div>
-              <span class="text-xl font-bold text-gray-900">{{ t('common.price_with_currency', { price: product.price ?? 0 }) }}</span>
-              <span class="ml-2 text-xs text-gray-400">{{ t('common.pieces_in_stock', { count: product.stockSum }) }}</span>
+              <span class="text-xl font-bold text-gray-900">{{
+                t('common.price_with_currency', { price: product.price ?? 0 })
+              }}</span>
+              <span class="ml-2 text-xs text-gray-400">{{
+                t('common.pieces_in_stock', { count: product.stockSum })
+              }}</span>
             </div>
           </div>
         </template>

@@ -16,7 +16,9 @@ export default class ProductsController {
         displayName: p.displayName,
         imagePath: normalizeImagePath(p.imagePath),
         barcode: p.barcode,
-        category: p.category ? { id: p.category.id, name: p.category.name, color: p.category.color } : null,
+        category: p.category
+          ? { id: p.category.id, name: p.category.name, color: p.category.color }
+          : null,
       })),
     })
   }

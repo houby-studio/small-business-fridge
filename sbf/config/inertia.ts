@@ -34,21 +34,23 @@ const inertiaConfig = defineConfig({
    * Data that should be shared with all rendered pages
    */
   sharedData: {
-    user: (ctx) => ctx.inertia.always(() => {
-      if (!ctx.auth?.user) return null
-      return {
-        id: ctx.auth.user.id,
-        displayName: ctx.auth.user.displayName,
-        email: ctx.auth.user.email,
-        role: ctx.auth.user.role,
-        isKiosk: ctx.auth.user.isKiosk,
-        colorMode: ctx.auth.user.colorMode,
-        keypadId: ctx.auth.user.keypadId,
-      }
-    }),
-    flash: (ctx) => ctx.inertia.always(() => {
-      return ctx.session?.flashMessages.all() ?? {}
-    }),
+    user: (ctx) =>
+      ctx.inertia.always(() => {
+        if (!ctx.auth?.user) return null
+        return {
+          id: ctx.auth.user.id,
+          displayName: ctx.auth.user.displayName,
+          email: ctx.auth.user.email,
+          role: ctx.auth.user.role,
+          isKiosk: ctx.auth.user.isKiosk,
+          colorMode: ctx.auth.user.colorMode,
+          keypadId: ctx.auth.user.keypadId,
+        }
+      }),
+    flash: (ctx) =>
+      ctx.inertia.always(() => {
+        return ctx.session?.flashMessages.all() ?? {}
+      }),
     locale: (ctx) => ctx.i18n?.locale ?? 'cs',
     translations: (ctx) => {
       const locale = ctx.i18n?.locale ?? 'cs'

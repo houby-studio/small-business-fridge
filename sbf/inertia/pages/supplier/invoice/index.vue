@@ -9,7 +9,7 @@ import Card from 'primevue/card'
 import Message from 'primevue/message'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
-import { useI18n } from '~/composables/useI18n'
+import { useI18n } from '~/composables/use_i18n'
 
 interface UninvoicedGroup {
   buyerId: number
@@ -75,7 +75,9 @@ function generateInvoices() {
         </Card>
         <Card class="text-center">
           <template #content>
-            <div class="text-3xl font-bold">{{ t('common.price_with_currency', { price: totalCost }) }}</div>
+            <div class="text-3xl font-bold">
+              {{ t('common.price_with_currency', { price: totalCost }) }}
+            </div>
             <div class="text-sm text-gray-500">{{ t('common.total') }}</div>
           </template>
         </Card>
@@ -87,7 +89,9 @@ function generateInvoices() {
         <Column :header="t('supplier.invoice_orders')" field="orderCount" style="width: 130px" />
         <Column :header="t('common.total')" style="width: 130px">
           <template #body="{ data }">
-            <span class="font-semibold">{{ t('common.price_with_currency', { price: data.totalCost }) }}</span>
+            <span class="font-semibold">{{
+              t('common.price_with_currency', { price: data.totalCost })
+            }}</span>
           </template>
         </Column>
       </DataTable>

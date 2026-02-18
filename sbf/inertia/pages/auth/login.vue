@@ -7,7 +7,7 @@ import Password from 'primevue/password'
 import Button from 'primevue/button'
 import Divider from 'primevue/divider'
 import Message from 'primevue/message'
-import { useI18n } from '~/composables/useI18n'
+import { useI18n } from '~/composables/use_i18n'
 
 defineProps<{
   oidcEnabled?: boolean
@@ -34,7 +34,11 @@ function submit() {
     <Card>
       <template #content>
         <form @submit.prevent="submit" class="space-y-5">
-          <Message v-if="form.errors.username || form.errors.password" severity="error" :closable="false">
+          <Message
+            v-if="form.errors.username || form.errors.password"
+            severity="error"
+            :closable="false"
+          >
             {{ form.errors.username || form.errors.password }}
           </Message>
 

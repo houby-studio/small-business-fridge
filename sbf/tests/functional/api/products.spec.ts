@@ -30,7 +30,10 @@ test.group('API Products', (group) => {
 
     const category = await CategoryFactory.create()
     const supplier = await UserFactory.apply('supplier').create()
-    const product = await ProductFactory.merge({ categoryId: category.id, barcode: 'ABC123' }).create()
+    const product = await ProductFactory.merge({
+      categoryId: category.id,
+      barcode: 'ABC123',
+    }).create()
     await DeliveryFactory.merge({
       supplierId: supplier.id,
       productId: product.id,
@@ -55,7 +58,10 @@ test.group('API Products', (group) => {
 
     const category = await CategoryFactory.create()
     const supplier = await UserFactory.apply('supplier').create()
-    const product = await ProductFactory.merge({ categoryId: category.id, barcode: 'SCAN001' }).create()
+    const product = await ProductFactory.merge({
+      categoryId: category.id,
+      barcode: 'SCAN001',
+    }).create()
     await DeliveryFactory.merge({
       supplierId: supplier.id,
       productId: product.id,

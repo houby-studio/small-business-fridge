@@ -6,7 +6,7 @@ import Card from 'primevue/card'
 import Message from 'primevue/message'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
-import { useI18n } from '~/composables/useI18n'
+import { useI18n } from '~/composables/use_i18n'
 
 interface CustomerInfo {
   id: number
@@ -78,15 +78,28 @@ function purchase(product: ProductItem) {
       </Message>
 
       <!-- Success message from URL params -->
-      <Message v-if="$page.url.includes('success=1')" severity="success" :closable="false" class="mb-6">
+      <Message
+        v-if="$page.url.includes('success=1')"
+        severity="success"
+        :closable="false"
+        class="mb-6"
+      >
         {{ t('kiosk.purchase_success') }}
       </Message>
-      <Message v-if="$page.url.includes('error=out_of_stock')" severity="error" :closable="false" class="mb-6">
+      <Message
+        v-if="$page.url.includes('error=out_of_stock')"
+        severity="error"
+        :closable="false"
+        class="mb-6"
+      >
         {{ t('kiosk.purchase_out_of_stock') }}
       </Message>
 
       <!-- Products grid -->
-      <div v-if="customer && products.length > 0" class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      <div
+        v-if="customer && products.length > 0"
+        class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
+      >
         <Card
           v-for="product in products"
           :key="product.id"
@@ -108,8 +121,12 @@ function purchase(product: ProductItem) {
                 <i class="pi pi-box text-3xl text-gray-500" />
               </div>
               <h3 class="text-sm font-semibold">{{ product.displayName }}</h3>
-              <div class="mt-1 text-lg font-bold text-green-400">{{ t('common.price_with_currency', { price: product.price ?? 0 }) }}</div>
-              <div class="mt-0.5 text-xs text-gray-400">{{ t('common.pieces_in_stock', { count: product.stockSum }) }}</div>
+              <div class="mt-1 text-lg font-bold text-green-400">
+                {{ t('common.price_with_currency', { price: product.price ?? 0 }) }}
+              </div>
+              <div class="mt-0.5 text-xs text-gray-400">
+                {{ t('common.pieces_in_stock', { count: product.stockSum }) }}
+              </div>
             </div>
           </template>
         </Card>

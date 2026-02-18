@@ -167,7 +167,7 @@ test.group('Web Supplier - payments (approve/reject)', (group) => {
     assert.isFalse(invoice.isPaymentRequested)
   })
 
-  test('supplier cannot approve another supplier\'s invoice', async ({ client, assert }) => {
+  test("supplier cannot approve another supplier's invoice", async ({ client, assert }) => {
     const supplier = await UserFactory.apply('supplier').create()
     const otherSupplier = await UserFactory.apply('supplier').create()
     const buyer = await UserFactory.create()

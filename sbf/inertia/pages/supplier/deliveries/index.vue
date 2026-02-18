@@ -8,8 +8,8 @@ import Button from 'primevue/button'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Card from 'primevue/card'
-import { useI18n } from '~/composables/useI18n'
-import { formatDate } from '~/composables/useFormatDate'
+import { useI18n } from '~/composables/use_i18n'
+import { formatDate } from '~/composables/use_format_date'
 
 interface ProductOption {
   id: number
@@ -81,7 +81,9 @@ function onPageChange(event: any) {
       <template #content>
         <form @submit.prevent="submit" class="flex flex-wrap items-end gap-4">
           <div class="min-w-[250px] flex-1">
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{ t('supplier.deliveries_product') }}</label>
+            <label class="mb-1 block text-sm font-medium text-gray-700">{{
+              t('supplier.deliveries_product')
+            }}</label>
             <Select
               v-model="selectedProduct"
               :options="products"
@@ -93,7 +95,9 @@ function onPageChange(event: any) {
             />
           </div>
           <div class="w-32">
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{ t('supplier.deliveries_amount') }}</label>
+            <label class="mb-1 block text-sm font-medium text-gray-700">{{
+              t('supplier.deliveries_amount')
+            }}</label>
             <InputNumber
               v-model="amount"
               :min="1"
@@ -102,7 +106,9 @@ function onPageChange(event: any) {
             />
           </div>
           <div class="w-32">
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{ t('supplier.deliveries_price') }}</label>
+            <label class="mb-1 block text-sm font-medium text-gray-700">{{
+              t('supplier.deliveries_price')
+            }}</label>
             <InputNumber
               v-model="price"
               :min="1"
@@ -148,7 +154,9 @@ function onPageChange(event: any) {
         <template #body="{ data }">{{ data.amountLeft }} {{ t('common.pieces') }}</template>
       </Column>
       <Column :header="t('common.price')" style="width: 100px">
-        <template #body="{ data }">{{ t('common.price_with_currency', { price: data.price }) }}</template>
+        <template #body="{ data }">{{
+          t('common.price_with_currency', { price: data.price })
+        }}</template>
       </Column>
 
       <template #empty>

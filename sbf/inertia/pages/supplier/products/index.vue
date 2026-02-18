@@ -5,7 +5,7 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
-import { useI18n } from '~/composables/useI18n'
+import { useI18n } from '~/composables/use_i18n'
 
 interface ProductRow {
   id: number
@@ -33,11 +33,7 @@ const { t } = useI18n()
       />
     </div>
 
-    <DataTable
-      :value="products"
-      stripedRows
-      class="rounded-lg border"
-    >
+    <DataTable :value="products" stripedRows class="rounded-lg border">
       <Column header="#" style="width: 60px">
         <template #body="{ data }">{{ data.keypadId }}</template>
       </Column>
@@ -57,7 +53,12 @@ const { t } = useI18n()
       </Column>
       <Column :header="t('supplier.products_category_label')">
         <template #body="{ data }">
-          <Tag v-if="data.category" :value="data.category.name" :style="{ background: data.category.color }" class="text-xs text-white" />
+          <Tag
+            v-if="data.category"
+            :value="data.category.name"
+            :style="{ background: data.category.color }"
+            class="text-xs text-white"
+          />
           <span v-else class="text-gray-400">—</span>
         </template>
       </Column>

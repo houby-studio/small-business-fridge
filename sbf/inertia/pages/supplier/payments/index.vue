@@ -5,8 +5,8 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
-import { useI18n } from '~/composables/useI18n'
-import { formatDate } from '~/composables/useFormatDate'
+import { useI18n } from '~/composables/use_i18n'
+import { formatDate } from '~/composables/use_format_date'
 
 interface InvoiceRow {
   id: number
@@ -78,7 +78,9 @@ function onPageChange(event: any) {
       </Column>
       <Column :header="t('common.total')">
         <template #body="{ data }">
-          <span class="font-semibold">{{ t('common.price_with_currency', { price: data.totalCost }) }}</span>
+          <span class="font-semibold">{{
+            t('common.price_with_currency', { price: data.totalCost })
+          }}</span>
         </template>
       </Column>
       <Column :header="t('common.status')">
@@ -106,7 +108,12 @@ function onPageChange(event: any) {
               outlined
               @click="reject(data.id)"
             />
-            <Tag v-if="data.isPaid" :value="t('common.approved')" severity="success" class="text-xs" />
+            <Tag
+              v-if="data.isPaid"
+              :value="t('common.approved')"
+              severity="success"
+              class="text-xs"
+            />
           </div>
         </template>
       </Column>

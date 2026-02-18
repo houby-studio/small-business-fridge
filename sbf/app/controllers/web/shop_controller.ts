@@ -36,7 +36,10 @@ export default class ShopController {
       })
     } catch (error) {
       if (error instanceof Error && error.message === 'OUT_OF_STOCK') {
-        session.flash('alert', { type: 'danger', message: i18n.t('messages.purchase_out_of_stock') })
+        session.flash('alert', {
+          type: 'danger',
+          message: i18n.t('messages.purchase_out_of_stock'),
+        })
       } else {
         session.flash('alert', { type: 'danger', message: i18n.t('messages.purchase_failed') })
       }

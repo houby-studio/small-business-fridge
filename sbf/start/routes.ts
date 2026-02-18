@@ -196,8 +196,12 @@ router
 router
   .group(() => {
     // Auth - token issuance (no auth required, stricter rate limit)
-    router.post('/auth/login', [ApiAuthController, 'login']).use(middleware.throttle({ maxRequests: 10, windowMs: 60_000 }))
-    router.post('/auth/token', [ApiAuthController, 'token']).use(middleware.throttle({ maxRequests: 10, windowMs: 60_000 }))
+    router
+      .post('/auth/login', [ApiAuthController, 'login'])
+      .use(middleware.throttle({ maxRequests: 10, windowMs: 60_000 }))
+    router
+      .post('/auth/token', [ApiAuthController, 'token'])
+      .use(middleware.throttle({ maxRequests: 10, windowMs: 60_000 }))
 
     // Health (no auth required)
     router.get('/health', [ApiHealthController, 'index'])

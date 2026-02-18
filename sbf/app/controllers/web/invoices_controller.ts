@@ -37,7 +37,10 @@ export default class InvoicesController {
 
     try {
       await invoiceService.cancelPaymentRequest(Number(params.id), auth.user!.id)
-      session.flash('alert', { type: 'success', message: i18n.t('messages.payment_request_cancelled') })
+      session.flash('alert', {
+        type: 'success',
+        message: i18n.t('messages.payment_request_cancelled'),
+      })
     } catch (error) {
       if (error instanceof Error && error.message === 'FORBIDDEN') {
         session.flash('alert', { type: 'danger', message: i18n.t('messages.invoice_forbidden') })

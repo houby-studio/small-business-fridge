@@ -1,7 +1,6 @@
 import { test } from '@japa/runner'
 import { UserFactory } from '#database/factories/user_factory'
 import { InvoiceFactory } from '#database/factories/invoice_factory'
-import Invoice from '#models/invoice'
 import db from '@adonisjs/lucid/services/db'
 
 const cleanAll = async () => {
@@ -39,7 +38,10 @@ test.group('Web Invoices - requestPaid', (group) => {
   test('buyer can request payment on their invoice', async ({ client, assert }) => {
     const buyer = await UserFactory.create()
     const supplier = await UserFactory.apply('supplier').create()
-    const invoice = await InvoiceFactory.merge({ buyerId: buyer.id, supplierId: supplier.id }).create()
+    const invoice = await InvoiceFactory.merge({
+      buyerId: buyer.id,
+      supplierId: supplier.id,
+    }).create()
 
     const response = await client
       .post(`/invoices/${invoice.id}/request-paid`)
@@ -54,11 +56,14 @@ test.group('Web Invoices - requestPaid', (group) => {
     assert.isTrue(invoice.isPaymentRequested)
   })
 
-  test('buyer cannot request payment on another buyer\'s invoice', async ({ client, assert }) => {
+  test("buyer cannot request payment on another buyer's invoice", async ({ client, assert }) => {
     const buyer = await UserFactory.create()
     const otherBuyer = await UserFactory.create()
     const supplier = await UserFactory.apply('supplier').create()
-    const invoice = await InvoiceFactory.merge({ buyerId: buyer.id, supplierId: supplier.id }).create()
+    const invoice = await InvoiceFactory.merge({
+      buyerId: buyer.id,
+      supplierId: supplier.id,
+    }).create()
 
     const response = await client
       .post(`/invoices/${invoice.id}/request-paid`)
@@ -73,7 +78,10 @@ test.group('Web Invoices - requestPaid', (group) => {
     assert.isFalse(invoice.isPaymentRequested)
   })
 
-  test('requestPaid on already-paid invoice redirects with info flash', async ({ client, assert }) => {
+  test('requestPaid on already-paid invoice redirects with info flash', async ({
+    client,
+    assert,
+  }) => {
     const buyer = await UserFactory.create()
     const supplier = await UserFactory.apply('supplier').create()
     const invoice = await InvoiceFactory.apply('paid')
@@ -124,7 +132,7 @@ test.group('Web Invoices - cancelPaid', (group) => {
     assert.isFalse(invoice.isPaymentRequested)
   })
 
-  test('buyer cannot cancel another buyer\'s payment request', async ({ client, assert }) => {
+  test("buyer cannot cancel another buyer's payment request", async ({ client, assert }) => {
     const buyer = await UserFactory.create()
     const otherBuyer = await UserFactory.create()
     const supplier = await UserFactory.apply('supplier').create()

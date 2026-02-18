@@ -6,7 +6,7 @@ import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Select from 'primevue/select'
 import ToggleSwitch from 'primevue/toggleswitch'
-import { useI18n } from '~/composables/useI18n'
+import { useI18n } from '~/composables/use_i18n'
 
 interface UserRow {
   id: number
@@ -54,7 +54,14 @@ function toggleKiosk(userId: number, isKiosk: boolean) {
 
     <h1 class="mb-6 text-2xl font-bold text-gray-900">{{ t('admin.users_heading') }}</h1>
 
-    <DataTable :value="users" stripedRows class="rounded-lg border" :rowsPerPageOptions="[10, 20, 50]" :paginator="users.length > 10" :rows="20">
+    <DataTable
+      :value="users"
+      stripedRows
+      class="rounded-lg border"
+      :rowsPerPageOptions="[10, 20, 50]"
+      :paginator="users.length > 10"
+      :rows="20"
+    >
       <Column header="ID" field="keypadId" style="width: 60px" sortable />
       <Column :header="t('admin.users_name')" field="displayName" sortable />
       <Column header="Email" field="email" />

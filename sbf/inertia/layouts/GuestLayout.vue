@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import Toast from 'primevue/toast'
-import { useFlash } from '~/composables/useFlash'
+import { useFlash } from '~/composables/use_flash'
 
 useFlash()
 </script>

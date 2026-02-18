@@ -4,8 +4,8 @@ import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
-import { useI18n } from '~/composables/useI18n'
-import { formatDateTime } from '~/composables/useFormatDate'
+import { useI18n } from '~/composables/use_i18n'
+import { formatDateTime } from '~/composables/use_format_date'
 
 interface AuditRow {
   id: number
@@ -44,7 +44,6 @@ function actionLabel(action: string | undefined) {
   if (!action) return ''
   return t(actionLabels[action] ?? action)
 }
-
 
 function formatMetadata(meta: Record<string, any> | null) {
   if (!meta) return ''

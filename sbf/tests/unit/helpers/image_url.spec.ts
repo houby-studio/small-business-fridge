@@ -19,7 +19,10 @@ test.group('normalizeImagePath', () => {
   })
 
   test('handles ./images/ paths with subdirectory-like filenames', ({ assert }) => {
-    assert.equal(normalizeImagePath('./images/some-product.jpg'), '/uploads/products/some-product.jpg')
+    assert.equal(
+      normalizeImagePath('./images/some-product.jpg'),
+      '/uploads/products/some-product.jpg'
+    )
   })
 
   test('returns null for old default placeholder /images/default-product.png', ({ assert }) => {

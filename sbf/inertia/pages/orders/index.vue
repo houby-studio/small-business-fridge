@@ -5,8 +5,8 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Card from 'primevue/card'
-import { useI18n } from '~/composables/useI18n'
-import { formatDate } from '~/composables/useFormatDate'
+import { useI18n } from '~/composables/use_i18n'
+import { formatDate } from '~/composables/use_format_date'
 
 interface OrderRow {
   id: number
@@ -67,13 +67,17 @@ function channelLabel(channel: string) {
       </Card>
       <Card class="text-center">
         <template #content>
-          <div class="text-3xl font-bold text-gray-900">{{ t('common.price_with_currency', { price: stats.totalSpend }) }}</div>
+          <div class="text-3xl font-bold text-gray-900">
+            {{ t('common.price_with_currency', { price: stats.totalSpend }) }}
+          </div>
           <div class="text-sm text-gray-500">{{ t('orders.total_spent') }}</div>
         </template>
       </Card>
       <Card class="text-center">
         <template #content>
-          <div class="text-3xl font-bold text-red-600">{{ t('common.price_with_currency', { price: stats.totalUnpaid }) }}</div>
+          <div class="text-3xl font-bold text-red-600">
+            {{ t('common.price_with_currency', { price: stats.totalUnpaid }) }}
+          </div>
           <div class="text-sm text-gray-500">{{ t('orders.total_unpaid') }}</div>
         </template>
       </Card>
@@ -103,7 +107,9 @@ function channelLabel(channel: string) {
       </Column>
       <Column :header="t('common.price')">
         <template #body="{ data }">
-          <span class="font-semibold">{{ t('common.price_with_currency', { price: data.delivery?.price ?? '—' }) }}</span>
+          <span class="font-semibold">{{
+            t('common.price_with_currency', { price: data.delivery?.price ?? '—' })
+          }}</span>
         </template>
       </Column>
       <Column :header="t('common.supplier')">

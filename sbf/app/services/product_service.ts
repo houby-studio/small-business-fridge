@@ -66,19 +66,14 @@ export default class ProductService {
    * Get all products with category info.
    */
   async getAllProducts() {
-    return Product.query()
-      .preload('category')
-      .orderBy('displayName', 'asc')
+    return Product.query().preload('category').orderBy('displayName', 'asc')
   }
 
   /**
    * Get a product by ID with relationships.
    */
   async getProduct(productId: number) {
-    return Product.query()
-      .where('id', productId)
-      .preload('category')
-      .firstOrFail()
+    return Product.query().where('id', productId).preload('category').firstOrFail()
   }
 
   /**
