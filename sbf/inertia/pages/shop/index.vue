@@ -126,17 +126,25 @@ function toggleFavorite(productId: number) {
       v-if="filteredProducts.length"
       class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
     >
-      <Card v-for="product in filteredProducts" :key="product.id" class="relative overflow-hidden">
+      <Card
+        v-for="product in filteredProducts"
+        :key="product.id"
+        class="relative flex h-full flex-col overflow-hidden"
+        :pt="{
+          body: { class: 'flex flex-col flex-1' },
+          content: { class: 'flex-1' },
+        }"
+      >
         <template #header>
           <div
-            class="flex h-40 items-center justify-center bg-gray-100"
+            class="flex h-50 items-center justify-center bg-gray-100 p-2"
             :style="{ borderTop: `3px solid ${product.category.color}` }"
           >
             <img
               v-if="product.imagePath"
               :src="product.imagePath"
               :alt="product.displayName"
-              class="h-full w-full object-cover"
+              class="h-full w-full object-contain"
             />
             <span v-else class="pi pi-image text-4xl text-gray-300" />
           </div>
