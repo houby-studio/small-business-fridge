@@ -1,0 +1,13 @@
+{
+  "title": "Kiosk",
+  "heading": "Lednice IT",
+  "enter_number": "Zadejte své číslo na klávesnici",
+  "shop_title": "Kiosk - Obchod",
+  "greeting": "Ahoj, {name}!",
+  "purchase_confirm": "Koupit {name} za {price} Kč?",
+  "purchase_confirm_title": "Potvrdit nákup",
+  "purchase_accept": "Koupit",
+  "purchase_success": "Nákup proběhl úspěšně!",
+  "purchase_out_of_stock": "Produkt není skladem.",
+  "no_products": "Žádné produkty skladem."
+}

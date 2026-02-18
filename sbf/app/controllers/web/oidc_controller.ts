@@ -1,0 +1,67 @@
+import type { HttpContext } from '@adonisjs/core/http'
+import User from '#models/user'
+
+export default class OidcController {
+  async redirect({ ally }: HttpContext) {
+    return ally.use('microsoft').redirect()
+  }
+
+  async callback({ ally, auth, response, session, i18n }: HttpContext) {
+    const microsoft = ally.use('microsoft')
+
+    // Handle user cancelling or errors from Microsoft
+    if (microsoft.accessDenied()) {
+      session.flash('alert', { type: 'warning', message: i18n.t('messages.login_cancelled') })
+      return response.redirect('/login')
+    }
+
+    if (microsoft.stateMisMatch()) {
+      session.flash('alert', { type: 'danger', message: i18n.t('messages.login_state_mismatch') })
+      return response.redirect('/login')
+    }
+
+    if (microsoft.hasError()) {
+      session.flash('alert', { type: 'danger', message: i18n.t('messages.login_failed') })
+      return response.redirect('/login')
+    }
+
+    // Get user info from Microsoft
+    const msUser = await microsoft.user()
+    const oid = msUser.id // Azure AD object ID (unique, stable)
+    const email = msUser.email ?? msUser.original?.userPrincipalName ?? ''
+    const displayName = msUser.name ?? email.split('@')[0]
+
+    // Find existing user by OID (preferred) or email fallback
+    let user = await User.query().where('oid', oid).first()
+
+    if (!user && email) {
+      user = await User.query().where('email', email).first()
+    }
+
+    if (!user) {
+      // User exists in Entra ID but not in the app — deny access
+      session.flash('alert', { type: 'danger', message: i18n.t('messages.login_not_registered') })
+      return response.redirect('/login')
+    }
+
+    if (user.isDisabled) {
+      session.flash('alert', { type: 'danger', message: i18n.t('messages.account_disabled') })
+      return response.redirect('/login')
+    }
+
+    // Sync OID and display name if changed
+    let dirty = false
+    if (!user.oid) {
+      user.oid = oid
+      dirty = true
+    }
+    if (displayName && user.displayName !== displayName) {
+      user.displayName = displayName
+      dirty = true
+    }
+    if (dirty) await user.save()
+
+    await auth.use('web').login(user)
+    return response.redirect('/shop')
+  }
+}

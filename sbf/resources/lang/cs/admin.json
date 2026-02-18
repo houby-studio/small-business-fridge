@@ -1,0 +1,36 @@
+{
+  "dashboard_title": "Panel administrace",
+  "dashboard_total_users": "Uživatelů celkem",
+  "dashboard_users_detail": "{customers} zák. / {suppliers} dod. / {admins} admin",
+  "dashboard_total_orders": "Objednávek celkem",
+  "dashboard_orders_detail": "{lastWeek} za týden / {lastMonth} za měsíc",
+  "dashboard_total_revenue": "Celkový obrat",
+  "dashboard_invoices_detail": "{paid} zaplacených / {unpaid} nezaplacených",
+  "dashboard_recent_orders": "Poslední objednávky",
+
+  "users_title": "Správa uživatelů",
+  "users_heading": "Správa uživatelů",
+  "users_name": "Jméno",
+  "users_kiosk": "Kiosk",
+  "users_disabled": "Zablokován",
+
+  "categories_title": "Správa kategorií",
+  "categories_heading": "Správa kategorií",
+  "categories_new": "Nová kategorie",
+  "categories_new_heading": "Nová kategorie",
+  "categories_color": "Barva",
+  "categories_name_placeholder": "Název kategorie",
+
+  "orders_title": "Všechny objednávky",
+  "orders_heading": "Všechny objednávky",
+  "orders_no_orders": "Žádné objednávky.",
+  "orders_storno": "Storno",
+  "orders_storno_header": "Potvrdit storno",
+  "orders_storno_confirm": "Opravdu chcete stornovat objednávku #{id}? Zboží bude vráceno na sklad.",
+  "orders_storno_accept": "Stornovat",
+  "orders_invoice": "Faktura",
+
+  "invoices_title": "Všechny faktury",
+  "invoices_heading": "Všechny faktury",
+  "invoices_no_invoices": "Žádné faktury."
+}

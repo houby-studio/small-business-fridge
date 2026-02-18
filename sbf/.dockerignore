@@ -1,0 +1,14 @@
+node_modules
+build
+tmp
+.env
+.env.test
+.env.*.local
+docker-compose.dev.yml
+docker-compose.yml
+Dockerfile
+.git
+.github
+.vscode
+tests
+*.md

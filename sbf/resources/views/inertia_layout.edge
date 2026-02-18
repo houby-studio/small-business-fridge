@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="cs">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title inertia>Lednice IT</title>
+
+  <link rel="preconnect" href="https://fonts.bunny.net">
+  <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet" />
+
+  @vite(['inertia/app/app.ts', `inertia/pages/${page.component}.vue`])
+  @inertiaHead()
+</head>
+
+<body class="min-h-screen bg-gray-50 font-sans antialiased">
+  @inertia()
+</body>
+
+</html>

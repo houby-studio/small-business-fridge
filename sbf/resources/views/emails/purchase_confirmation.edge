@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h2 style="color: #cf112a;">{{ i18n.t('emails.purchase_heading') }}</h2>
+  <p>{{ i18n.t('emails.purchase_intro', { name: buyerName }) }}</p>
+  <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+    <tr style="background: #f5f5f5;">
+      <td style="padding: 10px; border: 1px solid #ddd;"><strong>{{ i18n.t('emails.purchase_product') }}</strong></td>
+      <td style="padding: 10px; border: 1px solid #ddd;">{{ productName }}</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd;"><strong>{{ i18n.t('emails.purchase_price') }}</strong></td>
+      <td style="padding: 10px; border: 1px solid #ddd;">{{ i18n.t('common.price_with_currency', { price }) }}</td>
+    </tr>
+    <tr style="background: #f5f5f5;">
+      <td style="padding: 10px; border: 1px solid #ddd;"><strong>{{ i18n.t('emails.purchase_supplier') }}</strong></td>
+      <td style="padding: 10px; border: 1px solid #ddd;">{{ supplierName }}</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd;"><strong>{{ i18n.t('emails.purchase_date') }}</strong></td>
+      <td style="padding: 10px; border: 1px solid #ddd;">{{ date }}</td>
+    </tr>
+  </table>
+  <p style="color: #666; font-size: 12px;">— {{ i18n.t('common.app_name') }}</p>
+</body>
+</html>

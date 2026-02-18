@@ -1,0 +1,8 @@
+{
+  "title": "Faktury",
+  "my_invoices": "Moje faktury",
+  "mark_paid": "Zaplaceno",
+  "cancel_paid": "Zrušit",
+  "qr_error": "Chyba při generování QR kódu.",
+  "no_invoices": "Zatím nemáte žádné faktury."
+}

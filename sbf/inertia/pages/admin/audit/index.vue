@@ -1,0 +1,182 @@
+<script setup lang="ts">
+import { ref } from 'vue'
+import { Head, router } from '@inertiajs/vue3'
+import AppLayout from '~/layouts/AppLayout.vue'
+import DataTable from 'primevue/datatable'
+import Column from 'primevue/column'
+import Tag from 'primevue/tag'
+import InputText from 'primevue/inputtext'
+import Select from 'primevue/select'
+import Button from 'primevue/button'
+import { useI18n } from '~/composables/useI18n'
+import { formatDateTime } from '~/composables/useFormatDate'
+
+interface AuditRow {
+  id: number
+  action: string
+  entityType: string
+  entityId: number | null
+  metadata: Record<string, any> | null
+  user: { id: number; displayName: string } | null
+  targetUser: { id: number; displayName: string } | null
+  createdAt: string
+}
+
+interface PaginatedLogs {
+  data: AuditRow[]
+  meta: { total: number; perPage: number; currentPage: number; lastPage: number }
+}
+
+const props = defineProps<{
+  logs: PaginatedLogs
+  filters: { action: string; entityType: string; userId: string }
+}>()
+const { t } = useI18n()
+
+const filterAction = ref(props.filters.action)
+const filterEntity = ref(props.filters.entityType)
+const filterUserId = ref(props.filters.userId)
+
+const actionOptions = [
+  { label: '—', value: '' },
+  { label: t('audit.action_order_created'), value: 'order.created' },
+  { label: t('audit.action_invoice_generated'), value: 'invoice.generated' },
+  { label: t('audit.action_payment_requested'), value: 'payment.requested' },
+  { label: t('audit.action_payment_approved'), value: 'payment.approved' },
+  { label: t('audit.action_payment_rejected'), value: 'payment.rejected' },
+  { label: t('audit.action_delivery_created'), value: 'delivery.created' },
+  { label: t('audit.action_product_created'), value: 'product.created' },
+  { label: t('audit.action_product_updated'), value: 'product.updated' },
+  { label: t('audit.action_profile_updated'), value: 'profile.updated' },
+  { label: t('audit.action_user_updated'), value: 'user.updated' },
+  { label: t('audit.action_order_storno'), value: 'order.storno' },
+]
+
+const entityOptions = [
+  { label: '—', value: '' },
+  { label: 'order', value: 'order' },
+  { label: 'invoice', value: 'invoice' },
+  { label: 'delivery', value: 'delivery' },
+  { label: 'product', value: 'product' },
+  { label: 'user', value: 'user' },
+]
+
+const actionLabels: Record<string, string> = {
+  'order.created': 'audit.action_order_created',
+  'invoice.generated': 'audit.action_invoice_generated',
+  'payment.requested': 'audit.action_payment_requested',
+  'payment.approved': 'audit.action_payment_approved',
+  'payment.rejected': 'audit.action_payment_rejected',
+  'delivery.created': 'audit.action_delivery_created',
+  'product.created': 'audit.action_product_created',
+  'product.updated': 'audit.action_product_updated',
+  'profile.updated': 'audit.action_profile_updated',
+  'user.updated': 'audit.action_user_updated',
+  'order.storno': 'audit.action_order_storno',
+}
+
+function actionLabel(action: string | undefined) {
+  if (!action) return ''
+  return t(actionLabels[action] ?? action)
+}
+
+
+function formatMetadata(meta: Record<string, any> | null) {
+  if (!meta) return ''
+  return Object.entries(meta)
+    .map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`)
+    .join(', ')
+}
+
+function applyFilters() {
+  router.get('/admin/audit', {
+    action: filterAction.value || undefined,
+    entityType: filterEntity.value || undefined,
+    userId: filterUserId.value || undefined,
+  }, { preserveState: true })
+}
+
+function clearFilters() {
+  filterAction.value = ''
+  filterEntity.value = ''
+  filterUserId.value = ''
+  router.get('/admin/audit', {}, { preserveState: true })
+}
+
+function onPageChange(event: any) {
+  router.get('/admin/audit', {
+    page: event.page + 1,
+    action: filterAction.value || undefined,
+    entityType: filterEntity.value || undefined,
+    userId: filterUserId.value || undefined,
+  }, { preserveState: true })
+}
+</script>
+
+<template>
+  <AppLayout>
+    <Head :title="t('audit.admin_title')" />
+
+    <h1 class="mb-6 text-2xl font-bold text-gray-900">{{ t('audit.admin_heading') }}</h1>
+
+    <!-- Filters -->
+    <div class="mb-4 flex flex-wrap items-end gap-3">
+      <div>
+        <label class="mb-1 block text-sm text-gray-600">{{ t('audit.filter_action') }}</label>
+        <Select v-model="filterAction" :options="actionOptions" optionLabel="label" optionValue="value" class="w-48" />
+      </div>
+      <div>
+        <label class="mb-1 block text-sm text-gray-600">{{ t('audit.filter_entity') }}</label>
+        <Select v-model="filterEntity" :options="entityOptions" optionLabel="label" optionValue="value" class="w-36" />
+      </div>
+      <div>
+        <label class="mb-1 block text-sm text-gray-600">{{ t('audit.filter_user') }}</label>
+        <InputText v-model="filterUserId" class="w-24" />
+      </div>
+      <Button :label="t('audit.filter_apply')" icon="pi pi-filter" size="small" @click="applyFilters" />
+      <Button :label="t('audit.filter_clear')" size="small" severity="secondary" text @click="clearFilters" />
+    </div>
+
+    <DataTable
+      :value="logs.data"
+      :paginator="logs.meta.lastPage > 1"
+      :rows="logs.meta.perPage"
+      :totalRecords="logs.meta.total"
+      :lazy="true"
+      :first="(logs.meta.currentPage - 1) * logs.meta.perPage"
+      @page="onPageChange"
+      stripedRows
+      class="rounded-lg border"
+    >
+      <Column :header="t('audit.date')" style="width: 160px">
+        <template #body="{ data }">{{ formatDateTime(data.createdAt) }}</template>
+      </Column>
+      <Column :header="t('audit.user')">
+        <template #body="{ data }">{{ data.user?.displayName ?? '—' }}</template>
+      </Column>
+      <Column :header="t('audit.action')">
+        <template #body="{ data }">
+          <Tag :value="actionLabel(data.action)" severity="info" class="text-xs" />
+        </template>
+      </Column>
+      <Column :header="t('audit.entity')">
+        <template #body="{ data }">
+          {{ data.entityType }}
+          <span v-if="data.entityId" class="text-gray-400">#{{ data.entityId }}</span>
+        </template>
+      </Column>
+      <Column :header="t('audit.target')">
+        <template #body="{ data }">{{ data.targetUser?.displayName ?? '—' }}</template>
+      </Column>
+      <Column :header="t('audit.details')">
+        <template #body="{ data }">
+          <span class="text-sm text-gray-600">{{ formatMetadata(data.metadata) }}</span>
+        </template>
+      </Column>
+
+      <template #empty>
+        <div class="py-8 text-center text-gray-500">{{ t('audit.no_logs') }}</div>
+      </template>
+    </DataTable>
+  </AppLayout>
+</template>

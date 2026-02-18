@@ -1,0 +1,8 @@
+{
+  "title": "Orders",
+  "my_orders": "My orders",
+  "total_orders": "Total orders",
+  "total_spent": "Total spent",
+  "total_unpaid": "Unpaid",
+  "no_orders": "You don't have any orders yet."
+}

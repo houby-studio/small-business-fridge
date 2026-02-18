@@ -1,0 +1,54 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - HOST=0.0.0.0
+      - PORT=3000
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=sbf
+      - DB_PASSWORD=${DB_PASSWORD:-changeme}
+      - DB_DATABASE=sbf
+      - SESSION_DRIVER=cookie
+      - APP_KEY=${APP_KEY:?APP_KEY is required}
+      - APP_URL=${APP_URL:-http://localhost:3000}
+      - SMTP_HOST=${SMTP_HOST:-localhost}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USERNAME=${SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_FROM_ADDRESS=${SMTP_FROM_ADDRESS:-noreply@example.com}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME:-Lednice IT}
+      - OIDC_ENABLED=${OIDC_ENABLED:-false}
+      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID:-}
+      - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET:-}
+      - OIDC_TENANT_ID=${OIDC_TENANT_ID:-}
+      - OIDC_REDIRECT_URI=${OIDC_REDIRECT_URI:-}
+      - API_SECRET=${API_SECRET:-changeme}
+    volumes:
+      - app_uploads:/app/storage/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: sbf
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      POSTGRES_DB: sbf
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sbf"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  app_uploads:

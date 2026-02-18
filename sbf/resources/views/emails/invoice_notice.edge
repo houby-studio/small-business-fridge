@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h2 style="color: #cf112a;">{{ i18n.t('emails.invoice_heading', { id: invoiceId }) }}</h2>
+  <p>{{ i18n.t('emails.invoice_intro', { buyerName, supplierName }) }}</p>
+  <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+    <tr style="background: #cf112a; color: white;">
+      <th style="padding: 10px; text-align: left;">{{ i18n.t('emails.purchase_product') }}</th>
+      <th style="padding: 10px; text-align: right;">{{ i18n.t('emails.purchase_price') }}</th>
+      <th style="padding: 10px; text-align: center;">{{ i18n.t('emails.purchase_date') }}</th>
+    </tr>
+    @each((order, orderIndex) in orders)
+    <tr style="background: {{ orderIndex % 2 !== 0 ? '#f5f5f5' : '#fff' }};">
+      <td style="padding: 8px; border: 1px solid #ddd;">{{ order.productName }}</td>
+      <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">{{ i18n.t('common.price_with_currency', { price: order.price }) }}</td>
+      <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">{{ order.date }}</td>
+    </tr>
+    @end
+    <tr style="background: #333; color: white;">
+      <td style="padding: 10px;"><strong>{{ i18n.t('emails.invoice_total') }}</strong></td>
+      <td style="padding: 10px; text-align: right;" colspan="2"><strong>{{ i18n.t('common.price_with_currency', { price: totalCost }) }}</strong></td>
+    </tr>
+  </table>
+  @if(supplierIban)
+  <p>{{ i18n.t('emails.invoice_iban') }} <strong>{{ supplierIban }}</strong></p>
+  @end
+  <p>{{ i18n.t('emails.invoice_note') }}</p>
+  <p style="color: #666; font-size: 12px;">— {{ i18n.t('common.app_name') }}</p>
+</body>
+</html>
