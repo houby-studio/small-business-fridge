@@ -31,11 +31,13 @@ export default class OidcController {
       return response.redirect('/login')
     }
 
-    // Get user info from Microsoft
+    // Get user info from Microsoft Graph (/me response — raw fields, no Ally normalization)
     const msUser = await microsoft.user()
-    const oid = msUser.id // Azure AD object ID (unique, stable)
-    const email = msUser.email ?? msUser.original?.userPrincipalName ?? ''
-    const displayName = msUser.name ?? email.split('@')[0]
+    const oid = msUser.id as string // Azure AD object ID (unique, stable)
+    const email =
+      (msUser.mail as string | null) || (msUser.userPrincipalName as string | null) || ''
+    const displayName = (msUser.displayName as string | null) || email.split('@')[0]
+    const phone = (msUser.mobilePhone as string | null) || null
 
     // Find existing user by OID (preferred) or email fallback
     let user = await User.query().where('oid', oid).first()
@@ -62,6 +64,7 @@ export default class OidcController {
         oid,
         email,
         displayName,
+        phone,
         role: 'customer',
         keypadId: nextKeypadId,
       })
@@ -83,7 +86,7 @@ export default class OidcController {
       return response.redirect('/login')
     }
 
-    // Sync OID and display name if changed
+    // Sync fields from Microsoft if missing or changed
     let dirty = false
     if (!user.oid) {
       user.oid = oid
@@ -91,6 +94,14 @@ export default class OidcController {
     }
     if (displayName && user.displayName !== displayName) {
       user.displayName = displayName
+      dirty = true
+    }
+    if (email && user.email !== email) {
+      user.email = email
+      dirty = true
+    }
+    if (phone && !user.phone) {
+      user.phone = phone
       dirty = true
     }
     if (dirty) await user.save()
