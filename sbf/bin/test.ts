@@ -43,7 +43,7 @@ new Ignitor(APP_ROOT, { importer: IMPORTER })
   })
   .testRunner()
   .configure(async (app) => {
-    const { runnerHooks, ...config } = await import('../tests/bootstrap.js')
+    const { runnerHooks, ...config } = await import('../tests/bootstrap.ts')
 
     processCLIArgs(process.argv.splice(2))
     configure({

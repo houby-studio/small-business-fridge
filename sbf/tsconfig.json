@@ -2,7 +2,9 @@
   "extends": "@adonisjs/tsconfig/tsconfig.app.json",
   "compilerOptions": {
     "rootDir": "./",
-    "outDir": "./build"
+    "outDir": "./build",
+    "allowImportingTsExtensions": true,
+    "noEmit": true
   },
-  "exclude": ["./inertia/**/*", "node_modules", "build"]
+  "exclude": ["./inertia/**/*", "./bin/test.ts", "./tests/**/*", "node_modules", "build"]
 }
