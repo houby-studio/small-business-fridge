@@ -2,7 +2,7 @@ name: Build and push sbf
 
 on:
   push:
-    branches: ['dev/rewrite']
+    branches: ['v3/*', 'master']
     paths:
       - 'sbf/**'
 
