@@ -4,5 +4,9 @@
   "total_orders": "Total orders",
   "total_spent": "Total spent",
   "total_unpaid": "Unpaid",
-  "no_orders": "You don't have any orders yet."
+  "no_orders": "You don't have any orders yet.",
+  "filter_channel": "Channel",
+  "filter_invoiced": "Invoiced",
+  "filter_invoiced_yes": "Invoiced",
+  "filter_invoiced_no": "Not invoiced"
 }

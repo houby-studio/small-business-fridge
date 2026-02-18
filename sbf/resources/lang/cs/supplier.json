@@ -52,5 +52,11 @@
   "payments_heading": "Správa plateb",
   "payments_approve": "Schválit",
   "payments_reject": "Zamítnout",
-  "payments_no_invoices": "Zatím nemáte žádné faktury."
+  "payments_no_invoices": "Zatím nemáte žádné faktury.",
+  "payments_filter_status": "Stav",
+
+  "deliveries_filter_product": "Filtrovat produkt",
+
+  "products_search": "Hledat produkt",
+  "products_filter_category": "Kategorie"
 }

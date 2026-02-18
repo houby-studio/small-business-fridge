@@ -1,10 +1,13 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Card from 'primevue/card'
+import Select from 'primevue/select'
+import Button from 'primevue/button'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDate } from '~/composables/use_format_date'
 
@@ -37,12 +40,46 @@ const props = defineProps<{
     totalSpend: number
     totalUnpaid: number
   }
+  filters: { channel: string; invoiced: string }
 }>()
 
 const { t } = useI18n()
 
+const filterChannel = ref(props.filters.channel)
+const filterInvoiced = ref(props.filters.invoiced)
+
+const channelOptions = [
+  { label: t('common.all'), value: '' },
+  { label: t('common.channel_web'), value: 'web' },
+  { label: t('common.channel_keypad'), value: 'keypad' },
+  { label: t('common.channel_scanner'), value: 'scanner' },
+]
+
+const invoicedOptions = [
+  { label: t('common.all'), value: '' },
+  { label: t('orders.filter_invoiced_yes'), value: 'yes' },
+  { label: t('orders.filter_invoiced_no'), value: 'no' },
+]
+
+function buildFilterParams() {
+  return {
+    channel: filterChannel.value || undefined,
+    invoiced: filterInvoiced.value || undefined,
+  }
+}
+
+function applyFilters() {
+  router.get('/orders', { ...buildFilterParams(), page: 1 }, { preserveState: true })
+}
+
+function clearFilters() {
+  filterChannel.value = ''
+  filterInvoiced.value = ''
+  router.get('/orders', {}, { preserveState: true })
+}
+
 function onPageChange(event: any) {
-  router.get('/orders', { page: event.page + 1 }, { preserveState: true })
+  router.get('/orders', { ...buildFilterParams(), page: event.page + 1 }, { preserveState: true })
 }
 
 function channelLabel(channel: string) {
@@ -83,6 +120,43 @@ function channelLabel(channel: string) {
       </Card>
     </div>
 
+    <!-- Filter bar -->
+    <div class="mb-4 flex flex-wrap items-end gap-3">
+      <div>
+        <label class="mb-1 block text-sm text-gray-600">{{ t('orders.filter_channel') }}</label>
+        <Select
+          v-model="filterChannel"
+          :options="channelOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="w-36"
+        />
+      </div>
+      <div>
+        <label class="mb-1 block text-sm text-gray-600">{{ t('orders.filter_invoiced') }}</label>
+        <Select
+          v-model="filterInvoiced"
+          :options="invoicedOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="w-36"
+        />
+      </div>
+      <Button
+        :label="t('common.filter_apply')"
+        icon="pi pi-filter"
+        size="small"
+        @click="applyFilters"
+      />
+      <Button
+        :label="t('common.filter_clear')"
+        size="small"
+        severity="secondary"
+        text
+        @click="clearFilters"
+      />
+    </div>
+
     <!-- Orders table -->
     <DataTable
       :value="orders.data"
@@ -95,7 +169,7 @@ function channelLabel(channel: string) {
       stripedRows
       class="rounded-lg border"
     >
-      <Column :header="t('common.date')" sortable>
+      <Column :header="t('common.date')">
         <template #body="{ data }">
           {{ formatDate(data.createdAt) }}
         </template>

@@ -108,6 +108,43 @@ test.group('Web Invoices - requestPaid', (group) => {
   })
 })
 
+test.group('Web Invoices - status filter', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('filter by status=paid returns 200', async ({ client }) => {
+    const buyer = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').create()
+    await InvoiceFactory.apply('paid')
+      .merge({ buyerId: buyer.id, supplierId: supplier.id })
+      .create()
+    await InvoiceFactory.merge({ buyerId: buyer.id, supplierId: supplier.id }).create()
+
+    const response = await client.get('/invoices?status=paid').loginAs(buyer)
+    response.assertStatus(200)
+  })
+
+  test('filter by status=unpaid returns 200', async ({ client }) => {
+    const buyer = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').create()
+    await InvoiceFactory.merge({ buyerId: buyer.id, supplierId: supplier.id }).create()
+
+    const response = await client.get('/invoices?status=unpaid').loginAs(buyer)
+    response.assertStatus(200)
+  })
+
+  test('filter by status=awaiting returns 200', async ({ client }) => {
+    const buyer = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').create()
+    await InvoiceFactory.apply('paymentRequested')
+      .merge({ buyerId: buyer.id, supplierId: supplier.id })
+      .create()
+
+    const response = await client.get('/invoices?status=awaiting').loginAs(buyer)
+    response.assertStatus(200)
+  })
+})
+
 test.group('Web Invoices - cancelPaid', (group) => {
   group.each.setup(cleanAll)
   group.each.teardown(cleanAll)

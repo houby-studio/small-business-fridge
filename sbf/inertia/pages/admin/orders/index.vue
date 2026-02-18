@@ -1,10 +1,13 @@
 <script setup lang="ts">
+import { ref, computed } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
+import Select from 'primevue/select'
+import InputText from 'primevue/inputtext'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from '~/composables/use_i18n'
@@ -28,9 +31,78 @@ interface PaginatedOrders {
   meta: { total: number; perPage: number; currentPage: number; lastPage: number }
 }
 
-const props = defineProps<{ orders: PaginatedOrders }>()
+const props = defineProps<{
+  orders: PaginatedOrders
+  filters: { search: string; channel: string; invoiced: string; sortBy: string; sortOrder: string }
+}>()
 const confirm = useConfirm()
 const { t } = useI18n()
+
+const filterSearch = ref(props.filters.search)
+const filterChannel = ref(props.filters.channel)
+const filterInvoiced = ref(props.filters.invoiced)
+const filterSortBy = ref(props.filters.sortBy || 'createdAt')
+const filterSortOrder = ref(props.filters.sortOrder || 'desc')
+const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
+
+const channelOptions = [
+  { label: t('common.all'), value: '' },
+  { label: t('common.channel_web'), value: 'web' },
+  { label: t('common.channel_keypad'), value: 'keypad' },
+  { label: t('common.channel_scanner'), value: 'scanner' },
+]
+
+const invoicedOptions = [
+  { label: t('common.all'), value: '' },
+  { label: t('orders.filter_invoiced_yes'), value: 'yes' },
+  { label: t('orders.filter_invoiced_no'), value: 'no' },
+]
+
+function buildFilterParams() {
+  return {
+    search: filterSearch.value || undefined,
+    channel: filterChannel.value || undefined,
+    invoiced: filterInvoiced.value || undefined,
+    sortBy: filterSortBy.value || undefined,
+    sortOrder: filterSortOrder.value || undefined,
+  }
+}
+
+function applyFilters() {
+  router.get('/admin/orders', { ...buildFilterParams(), page: 1 }, { preserveState: true })
+}
+
+function clearFilters() {
+  filterSearch.value = ''
+  filterChannel.value = ''
+  filterInvoiced.value = ''
+  filterSortBy.value = 'createdAt'
+  filterSortOrder.value = 'desc'
+  router.get('/admin/orders', {}, { preserveState: true })
+}
+
+function onPageChange(event: any) {
+  router.get(
+    '/admin/orders',
+    { ...buildFilterParams(), page: event.page + 1 },
+    { preserveState: true }
+  )
+}
+
+function onSort(event: any) {
+  filterSortBy.value = event.sortField
+  filterSortOrder.value = event.sortOrder === 1 ? 'asc' : 'desc'
+  router.get(
+    '/admin/orders',
+    {
+      ...buildFilterParams(),
+      sortBy: event.sortField,
+      sortOrder: event.sortOrder === 1 ? 'asc' : 'desc',
+      page: 1,
+    },
+    { preserveState: true }
+  )
+}
 
 function storno(orderId: number) {
   confirm.require({
@@ -45,10 +117,6 @@ function storno(orderId: number) {
     },
   })
 }
-
-function onPageChange(event: any) {
-  router.get('/admin/orders', { page: event.page + 1 }, { preserveState: true })
-}
 </script>
 
 <template>
@@ -58,6 +126,53 @@ function onPageChange(event: any) {
 
     <h1 class="mb-6 text-2xl font-bold text-gray-900">{{ t('admin.orders_heading') }}</h1>
 
+    <!-- Filter bar -->
+    <div class="mb-4 flex flex-wrap items-end gap-3">
+      <div>
+        <label class="mb-1 block text-sm text-gray-600">{{
+          t('admin.orders_filter_search')
+        }}</label>
+        <InputText v-model="filterSearch" class="w-48" @keydown.enter="applyFilters" />
+      </div>
+      <div>
+        <label class="mb-1 block text-sm text-gray-600">{{
+          t('admin.orders_filter_channel')
+        }}</label>
+        <Select
+          v-model="filterChannel"
+          :options="channelOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="w-36"
+        />
+      </div>
+      <div>
+        <label class="mb-1 block text-sm text-gray-600">{{
+          t('admin.orders_filter_invoiced')
+        }}</label>
+        <Select
+          v-model="filterInvoiced"
+          :options="invoicedOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="w-36"
+        />
+      </div>
+      <Button
+        :label="t('common.filter_apply')"
+        icon="pi pi-filter"
+        size="small"
+        @click="applyFilters"
+      />
+      <Button
+        :label="t('common.filter_clear')"
+        size="small"
+        severity="secondary"
+        text
+        @click="clearFilters"
+      />
+    </div>
+
     <DataTable
       :value="orders.data"
       :paginator="orders.meta.lastPage > 1"
@@ -65,14 +180,17 @@ function onPageChange(event: any) {
       :totalRecords="orders.meta.total"
       :lazy="true"
       :first="(orders.meta.currentPage - 1) * orders.meta.perPage"
+      :sortField="filterSortBy"
+      :sortOrder="sortOrderNum"
       @page="onPageChange"
+      @sort="onSort"
       stripedRows
       class="rounded-lg border"
     >
       <Column header="#" style="width: 60px">
         <template #body="{ data }">{{ data.id }}</template>
       </Column>
-      <Column :header="t('common.date')">
+      <Column :header="t('common.date')" field="createdAt" sortable>
         <template #body="{ data }">{{ formatDate(data.createdAt) }}</template>
       </Column>
       <Column :header="t('common.customer')">

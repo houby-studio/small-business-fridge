@@ -4,5 +4,9 @@
   "total_orders": "Celkem objednávek",
   "total_spent": "Celková útrata",
   "total_unpaid": "Nezaplaceno",
-  "no_orders": "Zatím nemáte žádné objednávky."
+  "no_orders": "Zatím nemáte žádné objednávky.",
+  "filter_channel": "Kanál",
+  "filter_invoiced": "Fakturováno",
+  "filter_invoiced_yes": "Fakturováno",
+  "filter_invoiced_no": "Nefakturováno"
 }

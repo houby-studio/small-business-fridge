@@ -6,6 +6,7 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
+import Select from 'primevue/select'
 import Dialog from 'primevue/dialog'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDate } from '~/composables/use_format_date'
@@ -31,9 +32,21 @@ interface PaginatedInvoices {
   meta: { total: number; perPage: number; currentPage: number; lastPage: number }
 }
 
-const props = defineProps<{ invoices: PaginatedInvoices }>()
+const props = defineProps<{
+  invoices: PaginatedInvoices
+  filters: { status: string }
+}>()
 
 const { t } = useI18n()
+
+const filterStatus = ref(props.filters.status)
+
+const statusOptions = [
+  { label: t('common.all'), value: '' },
+  { label: t('invoices.filter_paid'), value: 'paid' },
+  { label: t('invoices.filter_unpaid'), value: 'unpaid' },
+  { label: t('invoices.filter_awaiting'), value: 'awaiting' },
+]
 
 const qrDialog = ref(false)
 const qrImage = ref('')
@@ -82,8 +95,25 @@ async function showQr(id: number) {
   }
 }
 
+function applyFilters() {
+  router.get(
+    '/invoices',
+    { status: filterStatus.value || undefined, page: 1 },
+    { preserveState: true }
+  )
+}
+
+function clearFilters() {
+  filterStatus.value = ''
+  router.get('/invoices', {}, { preserveState: true })
+}
+
 function onPageChange(event: any) {
-  router.get('/invoices', { page: event.page + 1 }, { preserveState: true })
+  router.get(
+    '/invoices',
+    { status: filterStatus.value || undefined, page: event.page + 1 },
+    { preserveState: true }
+  )
 }
 </script>
 
@@ -92,6 +122,33 @@ function onPageChange(event: any) {
     <Head :title="t('invoices.title')" />
 
     <h1 class="mb-6 text-2xl font-bold text-gray-900">{{ t('invoices.my_invoices') }}</h1>
+
+    <!-- Filter bar -->
+    <div class="mb-4 flex flex-wrap items-end gap-3">
+      <div>
+        <label class="mb-1 block text-sm text-gray-600">{{ t('invoices.filter_status') }}</label>
+        <Select
+          v-model="filterStatus"
+          :options="statusOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="w-44"
+        />
+      </div>
+      <Button
+        :label="t('common.filter_apply')"
+        icon="pi pi-filter"
+        size="small"
+        @click="applyFilters"
+      />
+      <Button
+        :label="t('common.filter_clear')"
+        size="small"
+        severity="secondary"
+        text
+        @click="clearFilters"
+      />
+    </div>
 
     <DataTable
       :value="invoices.data"

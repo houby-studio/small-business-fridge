@@ -1,10 +1,13 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
+import InputText from 'primevue/inputtext'
+import Select from 'primevue/select'
 import { useI18n } from '~/composables/use_i18n'
 
 interface ProductRow {
@@ -16,8 +19,61 @@ interface ProductRow {
   category: { id: number; name: string; color: string } | null
 }
 
-defineProps<{ products: ProductRow[] }>()
+interface PaginatedProducts {
+  data: ProductRow[]
+  meta: { total: number; perPage: number; currentPage: number; lastPage: number }
+}
+
+interface CategoryOption {
+  id: number
+  name: string
+  color: string
+}
+
+const props = defineProps<{
+  products: PaginatedProducts
+  categories: CategoryOption[]
+  filters: { search: string; categoryId: string }
+}>()
 const { t } = useI18n()
+
+const filterSearch = ref(props.filters.search)
+const filterCategoryId = ref(props.filters.categoryId)
+
+const categoryOptions = ref([
+  { label: t('common.all'), value: '' },
+  ...props.categories.map((c) => ({ label: c.name, value: String(c.id) })),
+])
+
+function applyFilters() {
+  router.get(
+    '/supplier/products',
+    {
+      search: filterSearch.value || undefined,
+      categoryId: filterCategoryId.value || undefined,
+      page: 1,
+    },
+    { preserveState: true }
+  )
+}
+
+function clearFilters() {
+  filterSearch.value = ''
+  filterCategoryId.value = ''
+  router.get('/supplier/products', {}, { preserveState: true })
+}
+
+function onPageChange(event: any) {
+  router.get(
+    '/supplier/products',
+    {
+      search: filterSearch.value || undefined,
+      categoryId: filterCategoryId.value || undefined,
+      page: event.page + 1,
+    },
+    { preserveState: true }
+  )
+}
 </script>
 
 <template>
@@ -33,7 +89,50 @@ const { t } = useI18n()
       />
     </div>
 
-    <DataTable :value="products" stripedRows class="rounded-lg border">
+    <!-- Filter bar -->
+    <div class="mb-4 flex flex-wrap items-end gap-3">
+      <div>
+        <label class="mb-1 block text-sm text-gray-600">{{ t('supplier.products_search') }}</label>
+        <InputText v-model="filterSearch" class="w-56" @keydown.enter="applyFilters" />
+      </div>
+      <div>
+        <label class="mb-1 block text-sm text-gray-600">{{
+          t('supplier.products_filter_category')
+        }}</label>
+        <Select
+          v-model="filterCategoryId"
+          :options="categoryOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="w-44"
+        />
+      </div>
+      <Button
+        :label="t('common.filter_apply')"
+        icon="pi pi-filter"
+        size="small"
+        @click="applyFilters"
+      />
+      <Button
+        :label="t('common.filter_clear')"
+        size="small"
+        severity="secondary"
+        text
+        @click="clearFilters"
+      />
+    </div>
+
+    <DataTable
+      :value="products.data"
+      :paginator="products.meta.lastPage > 1"
+      :rows="products.meta.perPage"
+      :totalRecords="products.meta.total"
+      :lazy="true"
+      :first="(products.meta.currentPage - 1) * products.meta.perPage"
+      @page="onPageChange"
+      stripedRows
+      class="rounded-lg border"
+    >
       <Column header="#" style="width: 60px">
         <template #body="{ data }">{{ data.keypadId }}</template>
       </Column>

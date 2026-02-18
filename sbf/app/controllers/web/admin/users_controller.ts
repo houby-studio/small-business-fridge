@@ -4,22 +4,33 @@ import { updateUserValidator } from '#validators/user'
 import AuditService from '#services/audit_service'
 
 export default class UsersController {
-  async index({ inertia }: HttpContext) {
+  async index({ inertia, request }: HttpContext) {
+    const page = request.input('page', 1)
+    const search = request.input('search')
+    const role = request.input('role')
+
     const service = new AdminService()
-    const users = await service.getUsers()
+    const paginator = await service.getUsers(page, 20, {
+      search: search || undefined,
+      role: role || undefined,
+    })
 
     return inertia.render('admin/users/index', {
-      users: users.map((u) => ({
-        id: u.id,
-        displayName: u.displayName,
-        email: u.email,
-        username: u.username,
-        role: u.role,
-        isKiosk: u.isKiosk,
-        isDisabled: u.isDisabled,
-        keypadId: u.keypadId,
-        createdAt: u.createdAt.toISO(),
-      })),
+      users: {
+        data: paginator.all().map((u) => ({
+          id: u.id,
+          displayName: u.displayName,
+          email: u.email,
+          username: u.username,
+          role: u.role,
+          isKiosk: u.isKiosk,
+          isDisabled: u.isDisabled,
+          keypadId: u.keypadId,
+          createdAt: u.createdAt.toISO(),
+        })),
+        meta: paginator.getMeta(),
+      },
+      filters: { search: search || '', role: role || '' },
     })
   }
 

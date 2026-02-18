@@ -54,5 +54,7 @@
   "role_admin": "Administrator",
   "no_data": "No data to display.",
   "price_with_currency": "{price} CZK",
-  "per_piece": "{price} CZK/pc"
+  "per_piece": "{price} CZK/pc",
+  "filter_apply": "Apply filters",
+  "filter_clear": "Clear filters"
 }

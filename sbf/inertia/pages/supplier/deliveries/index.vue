@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import Select from 'primevue/select'
@@ -35,6 +35,7 @@ interface PaginatedDeliveries {
 const props = defineProps<{
   products: ProductOption[]
   recentDeliveries: PaginatedDeliveries
+  filters: { productId: string; sortBy: string; sortOrder: string }
 }>()
 
 const { t } = useI18n()
@@ -43,6 +44,16 @@ const selectedProduct = ref<number | null>(null)
 const amount = ref<number | null>(null)
 const price = ref<number | null>(null)
 const submitting = ref(false)
+
+const filterProductId = ref(props.filters.productId)
+const filterSortBy = ref(props.filters.sortBy || 'createdAt')
+const filterSortOrder = ref(props.filters.sortOrder || 'desc')
+const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
+
+const productFilterOptions = computed(() => [
+  { label: t('common.all'), value: '' },
+  ...props.products.map((p) => ({ label: p.displayName, value: String(p.id) })),
+])
 
 function submit() {
   if (!selectedProduct.value || !amount.value || !price.value) return
@@ -65,8 +76,46 @@ function submit() {
   )
 }
 
+function buildFilterParams() {
+  return {
+    productId: filterProductId.value || undefined,
+    sortBy: filterSortBy.value || undefined,
+    sortOrder: filterSortOrder.value || undefined,
+  }
+}
+
+function applyFilters() {
+  router.get('/supplier/deliveries', { ...buildFilterParams(), page: 1 }, { preserveState: true })
+}
+
+function clearFilters() {
+  filterProductId.value = ''
+  filterSortBy.value = 'createdAt'
+  filterSortOrder.value = 'desc'
+  router.get('/supplier/deliveries', {}, { preserveState: true })
+}
+
 function onPageChange(event: any) {
-  router.get('/supplier/deliveries', { page: event.page + 1 }, { preserveState: true })
+  router.get(
+    '/supplier/deliveries',
+    { ...buildFilterParams(), page: event.page + 1 },
+    { preserveState: true }
+  )
+}
+
+function onSort(event: any) {
+  filterSortBy.value = event.sortField
+  filterSortOrder.value = event.sortOrder === 1 ? 'asc' : 'desc'
+  router.get(
+    '/supplier/deliveries',
+    {
+      ...buildFilterParams(),
+      sortBy: event.sortField,
+      sortOrder: event.sortOrder === 1 ? 'asc' : 'desc',
+      page: 1,
+    },
+    { preserveState: true }
+  )
 }
 </script>
 
@@ -130,6 +179,36 @@ function onPageChange(event: any) {
 
     <!-- Recent deliveries -->
     <h2 class="mb-4 text-lg font-semibold text-gray-800">{{ t('supplier.deliveries_recent') }}</h2>
+
+    <!-- Filter bar -->
+    <div class="mb-4 flex flex-wrap items-end gap-3">
+      <div>
+        <label class="mb-1 block text-sm text-gray-600">{{
+          t('supplier.deliveries_filter_product')
+        }}</label>
+        <Select
+          v-model="filterProductId"
+          :options="productFilterOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="w-52"
+        />
+      </div>
+      <Button
+        :label="t('common.filter_apply')"
+        icon="pi pi-filter"
+        size="small"
+        @click="applyFilters"
+      />
+      <Button
+        :label="t('common.filter_clear')"
+        size="small"
+        severity="secondary"
+        text
+        @click="clearFilters"
+      />
+    </div>
+
     <DataTable
       :value="recentDeliveries.data"
       :paginator="recentDeliveries.meta.lastPage > 1"
@@ -137,11 +216,14 @@ function onPageChange(event: any) {
       :totalRecords="recentDeliveries.meta.total"
       :lazy="true"
       :first="(recentDeliveries.meta.currentPage - 1) * recentDeliveries.meta.perPage"
+      :sortField="filterSortBy"
+      :sortOrder="sortOrderNum"
       @page="onPageChange"
+      @sort="onSort"
       stripedRows
       class="rounded-lg border"
     >
-      <Column :header="t('common.date')">
+      <Column :header="t('common.date')" field="createdAt" sortable>
         <template #body="{ data }">{{ formatDate(data.createdAt) }}</template>
       </Column>
       <Column :header="t('common.product')">
@@ -153,7 +235,7 @@ function onPageChange(event: any) {
       <Column :header="t('supplier.deliveries_remaining')" style="width: 100px">
         <template #body="{ data }">{{ data.amountLeft }} {{ t('common.pieces') }}</template>
       </Column>
-      <Column :header="t('common.price')" style="width: 100px">
+      <Column :header="t('common.price')" field="price" sortable style="width: 100px">
         <template #body="{ data }">{{
           t('common.price_with_currency', { price: data.price })
         }}</template>

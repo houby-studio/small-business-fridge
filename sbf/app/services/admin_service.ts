@@ -95,10 +95,29 @@ export default class AdminService {
   }
 
   /**
-   * Get all users for admin management.
+   * Get paginated users for admin management with optional search and role filter.
    */
-  async getUsers() {
-    return User.query().orderBy('displayName', 'asc')
+  async getUsers(
+    page: number = 1,
+    perPage: number = 20,
+    filters?: { search?: string; role?: string }
+  ) {
+    const query = User.query().orderBy('displayName', 'asc')
+
+    if (filters?.search) {
+      const term = `%${filters.search}%`
+      query.where((q) => {
+        q.whereRaw('display_name ILIKE ?', [term])
+          .orWhereRaw('email ILIKE ?', [term])
+          .orWhereRaw('username ILIKE ?', [term])
+      })
+    }
+
+    if (filters?.role) {
+      query.where('role', filters.role)
+    }
+
+    return query.paginate(page, perPage)
   }
 
   /**
@@ -154,28 +173,74 @@ export default class AdminService {
   }
 
   /**
-   * Get all orders (admin view).
+   * Get all orders (admin view) with optional search, channel, invoiced and sort filters.
    */
-  async getAllOrders(page: number = 1, perPage: number = 20) {
-    return Order.query()
+  async getAllOrders(
+    page: number = 1,
+    perPage: number = 20,
+    filters?: {
+      search?: string
+      channel?: string
+      invoiced?: string
+      sortBy?: string
+      sortOrder?: string
+    }
+  ) {
+    const SORT_WHITELIST = ['createdAt']
+    const safeSort = SORT_WHITELIST.includes(filters?.sortBy ?? '') ? filters!.sortBy! : 'createdAt'
+    const sortDir: 'asc' | 'desc' = filters?.sortOrder === 'asc' ? 'asc' : 'desc'
+
+    const query = Order.query()
       .preload('buyer')
       .preload('delivery', (q) => {
         q.preload('product')
         q.preload('supplier')
       })
-      .orderBy('createdAt', 'desc')
-      .paginate(page, perPage)
+      .orderBy(safeSort, sortDir)
+
+    if (filters?.search) {
+      const term = `%${filters.search}%`
+      query.whereHas('buyer', (q) => {
+        q.whereRaw('display_name ILIKE ?', [term])
+      })
+    }
+
+    if (filters?.channel) {
+      query.where('channel', filters.channel)
+    }
+
+    if (filters?.invoiced === 'yes') {
+      query.whereNotNull('invoiceId')
+    } else if (filters?.invoiced === 'no') {
+      query.whereNull('invoiceId')
+    }
+
+    return query.paginate(page, perPage)
   }
 
   /**
-   * Get all invoices (admin view).
+   * Get all invoices (admin view) with optional status and sort filters.
    */
-  async getAllInvoices(page: number = 1, perPage: number = 20) {
-    return Invoice.query()
-      .preload('buyer')
-      .preload('supplier')
-      .orderBy('createdAt', 'desc')
-      .paginate(page, perPage)
+  async getAllInvoices(
+    page: number = 1,
+    perPage: number = 20,
+    filters?: { status?: string; sortBy?: string; sortOrder?: string }
+  ) {
+    const SORT_WHITELIST = ['createdAt', 'totalCost']
+    const safeSort = SORT_WHITELIST.includes(filters?.sortBy ?? '') ? filters!.sortBy! : 'createdAt'
+    const sortDir: 'asc' | 'desc' = filters?.sortOrder === 'asc' ? 'asc' : 'desc'
+
+    const query = Invoice.query().preload('buyer').preload('supplier').orderBy(safeSort, sortDir)
+
+    if (filters?.status === 'paid') {
+      query.where('isPaid', true)
+    } else if (filters?.status === 'unpaid') {
+      query.where('isPaid', false).where('isPaymentRequested', false)
+    } else if (filters?.status === 'awaiting') {
+      query.where('isPaid', false).where('isPaymentRequested', true)
+    }
+
+    return query.paginate(page, perPage)
   }
 
   /**

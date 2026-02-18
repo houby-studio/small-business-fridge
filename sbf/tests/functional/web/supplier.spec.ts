@@ -114,6 +114,33 @@ test.group('Web Supplier - invoice index and generate', (group) => {
   })
 })
 
+test.group('Web Supplier - payments status filter', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('filter by status=awaiting returns 200', async ({ client }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+    await InvoiceFactory.apply('paymentRequested')
+      .merge({ buyerId: buyer.id, supplierId: supplier.id })
+      .create()
+
+    const response = await client.get('/supplier/payments?status=awaiting').loginAs(supplier)
+    response.assertStatus(200)
+  })
+
+  test('filter by status=paid returns 200', async ({ client }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+    await InvoiceFactory.apply('paid')
+      .merge({ buyerId: buyer.id, supplierId: supplier.id })
+      .create()
+
+    const response = await client.get('/supplier/payments?status=paid').loginAs(supplier)
+    response.assertStatus(200)
+  })
+})
+
 test.group('Web Supplier - payments (approve/reject)', (group) => {
   group.each.setup(cleanAll)
   group.each.teardown(cleanAll)

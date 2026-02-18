@@ -70,6 +70,30 @@ export default class ProductService {
   }
 
   /**
+   * Get paginated products with optional search and category filter.
+   */
+  async getProductsPaginated(
+    page: number = 1,
+    perPage: number = 20,
+    filters?: { search?: string; categoryId?: number }
+  ) {
+    const query = Product.query().preload('category').orderBy('displayName', 'asc')
+
+    if (filters?.search) {
+      const term = `%${filters.search}%`
+      query.where((q) => {
+        q.whereRaw('display_name ILIKE ?', [term]).orWhereRaw('barcode ILIKE ?', [term])
+      })
+    }
+
+    if (filters?.categoryId) {
+      query.where('categoryId', filters.categoryId)
+    }
+
+    return query.paginate(page, perPage)
+  }
+
+  /**
    * Get a product by ID with relationships.
    */
   async getProduct(productId: number) {

@@ -5,12 +5,21 @@ export default class OrdersController {
   async index({ inertia, auth, request }: HttpContext) {
     const orderService = new OrderService()
     const page = request.input('page', 1)
+    const channel = request.input('channel')
+    const invoiced = request.input('invoiced')
 
-    const { orders, stats } = await orderService.getOrdersForUser(auth.user!.id, page)
+    const { orders, stats } = await orderService.getOrdersForUser(auth.user!.id, page, 20, {
+      channel: channel || undefined,
+      invoiced: invoiced || undefined,
+    })
 
     return inertia.render('orders/index', {
       orders: orders.serialize(),
       stats,
+      filters: {
+        channel: channel || '',
+        invoiced: invoiced || '',
+      },
     })
   }
 }

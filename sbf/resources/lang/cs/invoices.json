@@ -4,5 +4,9 @@
   "mark_paid": "Zaplaceno",
   "cancel_paid": "Zrušit",
   "qr_error": "Chyba při generování QR kódu.",
-  "no_invoices": "Zatím nemáte žádné faktury."
+  "no_invoices": "Zatím nemáte žádné faktury.",
+  "filter_status": "Stav",
+  "filter_paid": "Zaplaceno",
+  "filter_unpaid": "Nezaplaceno",
+  "filter_awaiting": "Čeká na schválení"
 }

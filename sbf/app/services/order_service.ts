@@ -49,17 +49,33 @@ export default class OrderService {
   }
 
   /**
-   * Get paginated orders for a specific user.
+   * Get paginated orders for a specific user with optional channel and invoiced filters.
    */
-  async getOrdersForUser(userId: number, page: number = 1, perPage: number = 20) {
-    const orders = await Order.query()
+  async getOrdersForUser(
+    userId: number,
+    page: number = 1,
+    perPage: number = 20,
+    filters?: { channel?: string; invoiced?: string }
+  ) {
+    const ordersQuery = Order.query()
       .where('buyerId', userId)
       .preload('delivery', (q) => {
         q.preload('product')
         q.preload('supplier')
       })
       .orderBy('createdAt', 'desc')
-      .paginate(page, perPage)
+
+    if (filters?.channel) {
+      ordersQuery.where('channel', filters.channel)
+    }
+
+    if (filters?.invoiced === 'yes') {
+      ordersQuery.whereNotNull('invoiceId')
+    } else if (filters?.invoiced === 'no') {
+      ordersQuery.whereNull('invoiceId')
+    }
+
+    const orders = await ordersQuery.paginate(page, perPage)
 
     // Get summary stats
     const stats = await Order.query()

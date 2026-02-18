@@ -79,14 +79,28 @@ export default class DeliveryService {
   }
 
   /**
-   * Get recent deliveries for a supplier (individual delivery records).
+   * Get recent deliveries for a supplier with optional product filter and sort.
    */
-  async getRecentDeliveries(supplierId: number, page: number = 1, perPage: number = 20) {
-    return Delivery.query()
+  async getRecentDeliveries(
+    supplierId: number,
+    page: number = 1,
+    perPage: number = 20,
+    filters?: { productId?: number; sortBy?: string; sortOrder?: string }
+  ) {
+    const SORT_WHITELIST = ['createdAt', 'price']
+    const safeSort = SORT_WHITELIST.includes(filters?.sortBy ?? '') ? filters!.sortBy! : 'createdAt'
+    const sortDir: 'asc' | 'desc' = filters?.sortOrder === 'asc' ? 'asc' : 'desc'
+
+    const query = Delivery.query()
       .where('supplierId', supplierId)
       .preload('product', (q) => q.preload('category'))
-      .orderBy('createdAt', 'desc')
-      .paginate(page, perPage)
+      .orderBy(safeSort, sortDir)
+
+    if (filters?.productId) {
+      query.where('productId', filters.productId)
+    }
+
+    return query.paginate(page, perPage)
   }
 
   /**

@@ -8,10 +8,14 @@ export default class PaymentsController {
   async index({ inertia, auth, request }: HttpContext) {
     const invoiceService = new InvoiceService()
     const page = request.input('page', 1)
-    const invoices = await invoiceService.getInvoicesForSupplier(auth.user!.id, page)
+    const status = request.input('status')
+    const invoices = await invoiceService.getInvoicesForSupplier(auth.user!.id, page, 20, {
+      status: status || undefined,
+    })
 
     return inertia.render('supplier/payments/index', {
       invoices: invoices.serialize(),
+      filters: { status: status || '' },
     })
   }
 
