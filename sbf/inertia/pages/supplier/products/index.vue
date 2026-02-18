@@ -44,10 +44,12 @@ const { t } = useI18n()
       <Column :header="t('supplier.products_image_label')" style="width: 60px">
         <template #body="{ data }">
           <img
-            :src="data.imagePath ?? '/images/default-product.png'"
+            v-if="data.imagePath"
+            :src="data.imagePath"
             :alt="data.displayName"
             class="h-10 w-10 rounded object-cover"
           />
+          <span v-else class="pi pi-image text-2xl text-gray-300" />
         </template>
       </Column>
       <Column :header="t('supplier.products_name_label')">

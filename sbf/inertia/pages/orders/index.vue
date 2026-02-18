@@ -6,6 +6,7 @@ import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Card from 'primevue/card'
 import { useI18n } from '~/composables/useI18n'
+import { formatDate } from '~/composables/useFormatDate'
 
 interface OrderRow {
   id: number
@@ -42,16 +43,6 @@ const { t } = useI18n()
 
 function onPageChange(event: any) {
   router.get('/orders', { page: event.page + 1 }, { preserveState: true })
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('cs-CZ', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 }
 
 function channelLabel(channel: string) {

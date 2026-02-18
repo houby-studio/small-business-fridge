@@ -6,6 +6,7 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import { useI18n } from '~/composables/useI18n'
+import { formatDate } from '~/composables/useFormatDate'
 
 interface RecentOrder {
   id: number
@@ -26,16 +27,6 @@ interface Stats {
 
 const props = defineProps<{ stats: Stats }>()
 const { t } = useI18n()
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('cs-CZ', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
 
 function channelSeverity(ch: string): 'info' | 'success' | 'warn' {
   if (ch === 'web') return 'info'

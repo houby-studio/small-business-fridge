@@ -1,6 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import DeliveryService from '#services/delivery_service'
 import { createDeliveryValidator } from '#validators/delivery'
+import { normalizeImagePath } from '#helpers/image_url'
 
 export default class DeliveriesController {
   async index({ inertia, auth, request }: HttpContext) {
@@ -16,7 +17,7 @@ export default class DeliveriesController {
       products: products.map((p) => ({
         id: p.id,
         displayName: p.displayName,
-        imagePath: p.imagePath,
+        imagePath: normalizeImagePath(p.imagePath),
         category: p.category ? { name: p.category.name, color: p.category.color } : null,
       })),
       recentDeliveries: recentDeliveries.serialize(),

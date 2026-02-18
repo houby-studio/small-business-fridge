@@ -5,6 +5,7 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import { useI18n } from '~/composables/useI18n'
+import { formatDate } from '~/composables/useFormatDate'
 
 interface InvoiceRow {
   id: number
@@ -23,14 +24,6 @@ interface PaginatedInvoices {
 
 const props = defineProps<{ invoices: PaginatedInvoices }>()
 const { t } = useI18n()
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('cs-CZ', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  })
-}
 
 function statusSeverity(inv: InvoiceRow) {
   if (inv.isPaid) return 'success'

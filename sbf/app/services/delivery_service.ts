@@ -2,6 +2,7 @@ import Delivery from '#models/delivery'
 import Product from '#models/product'
 import db from '@adonisjs/lucid/services/db'
 import AuditService from '#services/audit_service'
+import { normalizeImagePath } from '#helpers/image_url'
 
 export default class DeliveryService {
   /**
@@ -68,7 +69,7 @@ export default class DeliveryService {
     return rows.map((r) => ({
       productId: r.product_id,
       productName: r.product_name,
-      imagePath: r.image_path,
+      imagePath: normalizeImagePath(r.image_path),
       categoryName: r.category_name,
       categoryColor: r.category_color,
       totalSupplied: r.total_supplied,

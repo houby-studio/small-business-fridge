@@ -1,6 +1,7 @@
 import Product from '#models/product'
 import Category from '#models/category'
 import db from '@adonisjs/lucid/services/db'
+import { normalizeImagePath } from '#helpers/image_url'
 
 export default class ShopService {
   /**
@@ -42,7 +43,7 @@ export default class ShopService {
           keypadId: product.keypadId,
           displayName: product.displayName,
           description: product.description,
-          imagePath: product.imagePath,
+          imagePath: normalizeImagePath(product.imagePath),
           barcode: product.barcode,
           category: {
             id: product.category.id,

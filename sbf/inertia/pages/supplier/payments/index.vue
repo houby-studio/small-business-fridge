@@ -6,6 +6,7 @@ import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import { useI18n } from '~/composables/useI18n'
+import { formatDate } from '~/composables/useFormatDate'
 
 interface InvoiceRow {
   id: number
@@ -34,12 +35,6 @@ function statusLabel(invoice: InvoiceRow) {
   if (invoice.isPaid) return t('common.paid')
   if (invoice.isPaymentRequested) return t('common.awaiting_approval')
   return t('common.unpaid')
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('cs-CZ', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-  })
 }
 
 function approve(id: number) {

@@ -57,7 +57,7 @@ function submit() {
               {{ t('auth.password') }}
             </label>
             <Password
-              id="password"
+              inputId="password"
               v-model="form.password"
               :invalid="!!form.errors.password"
               :feedback="false"

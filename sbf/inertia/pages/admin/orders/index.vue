@@ -8,6 +8,7 @@ import Button from 'primevue/button'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from '~/composables/useI18n'
+import { formatDate } from '~/composables/useFormatDate'
 
 interface OrderRow {
   id: number
@@ -30,16 +31,6 @@ interface PaginatedOrders {
 const props = defineProps<{ orders: PaginatedOrders }>()
 const confirm = useConfirm()
 const { t } = useI18n()
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('cs-CZ', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
 
 function storno(orderId: number) {
   confirm.require({

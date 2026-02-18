@@ -9,6 +9,7 @@ import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
 import Button from 'primevue/button'
 import { useI18n } from '~/composables/useI18n'
+import { formatDateTime } from '~/composables/useFormatDate'
 
 interface AuditRow {
   id: number
@@ -79,13 +80,6 @@ function actionLabel(action: string | undefined) {
   return t(actionLabels[action] ?? action)
 }
 
-function formatDate(iso: string | undefined) {
-  if (!iso) return ''
-  return new Date(iso).toLocaleString('cs-CZ', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
-}
 
 function formatMetadata(meta: Record<string, any> | null) {
   if (!meta) return ''
@@ -155,7 +149,7 @@ function onPageChange(event: any) {
       class="rounded-lg border"
     >
       <Column :header="t('audit.date')" style="width: 160px">
-        <template #body="{ data }">{{ formatDate(data.createdAt) }}</template>
+        <template #body="{ data }">{{ formatDateTime(data.createdAt) }}</template>
       </Column>
       <Column :header="t('audit.user')">
         <template #body="{ data }">{{ data.user?.displayName ?? '—' }}</template>

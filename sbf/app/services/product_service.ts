@@ -19,7 +19,7 @@ export default class ProductService {
     const maxKeypad = await Product.query().max('keypad_id as max').first()
     const nextKeypadId = (maxKeypad?.$extras.max ?? 0) + 1
 
-    let imagePath = '/images/default-product.png'
+    let imagePath: string | null = null
     if (data.image) {
       imagePath = await this.saveImage(data.image)
     }

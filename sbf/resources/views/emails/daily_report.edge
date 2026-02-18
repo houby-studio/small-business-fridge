@@ -10,8 +10,8 @@
       <th style="padding: 10px; text-align: right;">{{ i18n.t('emails.purchase_price') }}</th>
       <th style="padding: 10px; text-align: center;">{{ i18n.t('common.time') }}</th>
     </tr>
-    @each(order in orders)
-    <tr style="background: {{ $loop.index % 2 !== 0 ? '#f5f5f5' : '#fff' }};">
+    @each((order, orderIndex) in orders)
+    <tr style="background: {{ orderIndex % 2 !== 0 ? '#f5f5f5' : '#fff' }};">
       <td style="padding: 8px; border: 1px solid #ddd;">{{ order.productName }}</td>
       <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">{{ i18n.t('common.price_with_currency', { price: order.price }) }}</td>
       <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">{{ order.time }}</td>

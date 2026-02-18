@@ -8,6 +8,7 @@ import SelectButton from 'primevue/selectbutton'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import { useI18n } from '~/composables/useI18n'
+import { formatDate } from '~/composables/useFormatDate'
 
 interface UserData {
   id: number
@@ -68,13 +69,6 @@ function submit() {
   })
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('cs-CZ', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  })
-}
 </script>
 
 <template>

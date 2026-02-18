@@ -2,6 +2,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import ProductService from '#services/product_service'
 import { createProductValidator, updateProductValidator } from '#validators/product'
 import AuditService from '#services/audit_service'
+import { normalizeImagePath } from '#helpers/image_url'
 
 export default class ProductsController {
   async index({ inertia }: HttpContext) {
@@ -13,7 +14,7 @@ export default class ProductsController {
         id: p.id,
         keypadId: p.keypadId,
         displayName: p.displayName,
-        imagePath: p.imagePath,
+        imagePath: normalizeImagePath(p.imagePath),
         barcode: p.barcode,
         category: p.category ? { id: p.category.id, name: p.category.name, color: p.category.color } : null,
       })),
@@ -66,7 +67,7 @@ export default class ProductsController {
         keypadId: product.keypadId,
         displayName: product.displayName,
         description: product.description,
-        imagePath: product.imagePath,
+        imagePath: normalizeImagePath(product.imagePath),
         barcode: product.barcode,
         categoryId: product.categoryId,
         category: product.category
