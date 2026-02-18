@@ -1,0 +1,95 @@
+name: SBF Quality Checks
+
+on:
+  push:
+    branches: ['v3/*', 'master']
+    paths:
+      - 'sbf/**'
+  pull_request:
+    branches: ['master']
+    paths:
+      - 'sbf/**'
+
+jobs:
+  quality:
+    name: Lint, Format, Typecheck, Test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: sbf
+          POSTGRES_PASSWORD: sbf
+          POSTGRES_DB: sbf_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: sbf
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: sbf/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npx prettier --check .
+
+      - name: TypeScript typecheck
+        run: npm run typecheck
+
+      - name: Run migrations
+        run: node ace migration:run --force
+        env:
+          TZ: UTC
+          NODE_ENV: test
+          APP_KEY: test-app-key-for-ci-only-123456789
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5433
+          DB_USER: sbf
+          DB_PASSWORD: sbf
+          DB_DATABASE: sbf_test
+          SESSION_DRIVER: memory
+          LOG_LEVEL: error
+          SMTP_HOST: localhost
+          SMTP_PORT: 1025
+          OIDC_ENABLED: 'false'
+          API_SECRET: test-api-secret
+          APP_URL: http://localhost:3334
+
+      - name: Run unit and functional tests
+        run: node ace test --no-color
+        env:
+          TZ: UTC
+          NODE_ENV: test
+          APP_KEY: test-app-key-for-ci-only-123456789
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5433
+          DB_USER: sbf
+          DB_PASSWORD: sbf
+          DB_DATABASE: sbf_test
+          SESSION_DRIVER: memory
+          LOG_LEVEL: error
+          SMTP_HOST: localhost
+          SMTP_PORT: 1025
+          OIDC_ENABLED: 'false'
+          API_SECRET: test-api-secret
+          APP_URL: http://localhost:3334
