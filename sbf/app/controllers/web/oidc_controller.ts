@@ -1,5 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import logger from '@adonisjs/core/services/logger'
 import User from '#models/user'
+import env from '#start/env'
 
 export default class OidcController {
   async redirect({ ally }: HttpContext) {
@@ -11,16 +13,19 @@ export default class OidcController {
 
     // Handle user cancelling or errors from Microsoft
     if (microsoft.accessDenied()) {
+      logger.warn('OIDC login cancelled by user')
       session.flash('alert', { type: 'warning', message: i18n.t('messages.login_cancelled') })
       return response.redirect('/login')
     }
 
     if (microsoft.stateMisMatch()) {
+      logger.warn('OIDC state mismatch')
       session.flash('alert', { type: 'danger', message: i18n.t('messages.login_state_mismatch') })
       return response.redirect('/login')
     }
 
     if (microsoft.hasError()) {
+      logger.error('OIDC provider error')
       session.flash('alert', { type: 'danger', message: i18n.t('messages.login_failed') })
       return response.redirect('/login')
     }
@@ -39,12 +44,33 @@ export default class OidcController {
     }
 
     if (!user) {
-      // User exists in Entra ID but not in the app — deny access
-      session.flash('alert', { type: 'danger', message: i18n.t('messages.login_not_registered') })
-      return response.redirect('/login')
+      if (!env.get('OIDC_AUTO_REGISTER', false)) {
+        logger.warn({ email }, 'OIDC login denied: user not found in app')
+        session.flash('alert', {
+          type: 'danger',
+          message: i18n.t('messages.login_not_registered'),
+        })
+        return response.redirect('/login')
+      }
+
+      // Auto-register new user
+      const maxKeypad = await User.query().max('keypad_id as max').first()
+      const nextKeypadId = (maxKeypad?.$extras.max ?? 0) + 1
+
+      user = await User.create({
+        oid,
+        email,
+        displayName,
+        role: 'customer',
+        keypadId: nextKeypadId,
+      })
+
+      logger.info({ userId: user.id, email }, 'OIDC auto-registered new user')
+      session.flash('alert', { type: 'success', message: i18n.t('messages.login_auto_registered') })
     }
 
     if (user.isDisabled) {
+      logger.warn({ oid, email }, 'OIDC login denied: account disabled')
       session.flash('alert', { type: 'danger', message: i18n.t('messages.account_disabled') })
       return response.redirect('/login')
     }
@@ -62,6 +88,7 @@ export default class OidcController {
     if (dirty) await user.save()
 
     await auth.use('web').login(user)
+    logger.info({ userId: user.id, email }, 'OIDC login success')
     return response.redirect('/shop')
   }
 }

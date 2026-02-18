@@ -34,5 +34,6 @@
   "profile_updated": "Profil byl aktualizován.",
   "login_cancelled": "Přihlášení bylo zrušeno.",
   "login_state_mismatch": "Chyba zabezpečení při přihlašování. Zkuste to prosím znovu.",
-  "login_not_registered": "Váš účet Microsoft není registrován v aplikaci. Kontaktujte správce."
+  "login_not_registered": "Váš účet Microsoft není registrován v aplikaci. Kontaktujte správce.",
+  "login_auto_registered": "Váš účet byl automaticky vytvořen. Vítejte!"
 }
