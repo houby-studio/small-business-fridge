@@ -1,5 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import AuditService from '#services/audit_service'
+import User from '#models/user'
 
 export default class AdminAuditController {
   async index({ inertia, request }: HttpContext) {
@@ -8,11 +9,14 @@ export default class AdminAuditController {
     const entityType = request.input('entityType')
     const userId = request.input('userId')
 
-    const logs = await AuditService.getAll(page, 20, {
-      action: action || undefined,
-      entityType: entityType || undefined,
-      userId: userId ? Number(userId) : undefined,
-    })
+    const [logs, users] = await Promise.all([
+      AuditService.getAll(page, 20, {
+        action: action || undefined,
+        entityType: entityType || undefined,
+        userId: userId ? Number(userId) : undefined,
+      }),
+      User.query().select('id', 'displayName').orderBy('displayName', 'asc'),
+    ])
 
     return inertia.render('admin/audit/index', {
       logs: {
@@ -31,6 +35,7 @@ export default class AdminAuditController {
         meta: logs.getMeta(),
       },
       filters: { action: action || '', entityType: entityType || '', userId: userId || '' },
+      users: users.map((u) => ({ id: u.id, displayName: u.displayName })),
     })
   }
 }

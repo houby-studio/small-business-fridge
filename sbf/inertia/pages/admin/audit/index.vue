@@ -5,7 +5,6 @@ import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
-import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
 import Button from 'primevue/button'
 import { useI18n } from '~/composables/use_i18n'
@@ -30,12 +29,15 @@ interface PaginatedLogs {
 const props = defineProps<{
   logs: PaginatedLogs
   filters: { action: string; entityType: string; userId: string }
+  users: { id: number; displayName: string }[]
 }>()
 const { t } = useI18n()
 
 const filterAction = ref(props.filters.action)
 const filterEntity = ref(props.filters.entityType)
-const filterUserId = ref(props.filters.userId)
+const filterUserId = ref(props.filters.userId ? Number(props.filters.userId) : null)
+
+const userOptions = [{ id: null, displayName: '—' }, ...props.users]
 
 const actionOptions = [
   { label: '—', value: '' },
@@ -93,7 +95,7 @@ function applyFilters() {
     {
       action: filterAction.value || undefined,
       entityType: filterEntity.value || undefined,
-      userId: filterUserId.value || undefined,
+      userId: filterUserId.value ?? undefined,
     },
     { preserveState: true }
   )
@@ -102,7 +104,7 @@ function applyFilters() {
 function clearFilters() {
   filterAction.value = ''
   filterEntity.value = ''
-  filterUserId.value = ''
+  filterUserId.value = null
   router.get('/admin/audit', {}, { preserveState: true })
 }
 
@@ -113,7 +115,7 @@ function onPageChange(event: any) {
       page: event.page + 1,
       action: filterAction.value || undefined,
       entityType: filterEntity.value || undefined,
-      userId: filterUserId.value || undefined,
+      userId: filterUserId.value ?? undefined,
     },
     { preserveState: true }
   )
@@ -150,7 +152,14 @@ function onPageChange(event: any) {
       </div>
       <div>
         <label class="mb-1 block text-sm text-gray-600">{{ t('audit.filter_user') }}</label>
-        <InputText v-model="filterUserId" class="w-24" />
+        <Select
+          v-model="filterUserId"
+          :options="userOptions"
+          optionLabel="displayName"
+          optionValue="id"
+          filter
+          class="w-48"
+        />
       </div>
       <Button
         :label="t('audit.filter_apply')"
