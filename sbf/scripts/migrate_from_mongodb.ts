@@ -86,6 +86,17 @@ function deriveChannel(doc: any): 'web' | 'keypad' | 'scanner' {
   return 'web'
 }
 
+function migrateImagePath(imagePath: unknown): string | null {
+  if (!imagePath || typeof imagePath !== 'string') return null
+  if (imagePath.startsWith('./images/')) {
+    return `/uploads/products/${imagePath.slice('./images/'.length)}`
+  }
+  if (imagePath === '/images/default-product.png' || imagePath === 'preview.png') {
+    return null
+  }
+  return imagePath
+}
+
 function log(emoji: string, msg: string) {
   console.log(`${emoji}  ${msg}`)
 }
@@ -269,7 +280,7 @@ async function migrateProducts(mongo: Db, pgDb: pg.Client) {
         doc.keypadId,
         doc.displayName,
         doc.description ?? null,
-        doc.imagePath ?? 'preview.png', // default image if missing
+        migrateImagePath(doc.imagePath), // normalize from ./images/ to /uploads/products/
         categoryId,
         doc.code ?? null, // old field "code" → new field "barcode"
       ]
