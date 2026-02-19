@@ -102,31 +102,71 @@ export default class InvoiceService {
   }
 
   /**
-   * Get invoices for a specific buyer (customer view).
+   * Get invoices for a specific buyer (customer view) with optional status filter.
    */
-  async getInvoicesForBuyer(buyerId: number, page: number = 1, perPage: number = 20) {
-    return Invoice.query()
+  async getInvoicesForBuyer(
+    buyerId: number,
+    page: number = 1,
+    perPage: number = 20,
+    filters?: { status?: string; sortBy?: string; sortOrder?: string }
+  ) {
+    const sortByWhitelist = ['createdAt', 'totalCost']
+    const sortBy = sortByWhitelist.includes(filters?.sortBy ?? '') ? filters!.sortBy! : 'createdAt'
+    const sortOrder = filters?.sortOrder === 'asc' ? 'asc' : 'desc'
+
+    const query = Invoice.query()
       .where('buyerId', buyerId)
       .preload('supplier')
       .preload('orders', (q) => {
         q.preload('delivery', (dq) => dq.preload('product'))
       })
-      .orderBy('createdAt', 'desc')
-      .paginate(page, perPage)
+      .orderBy(sortBy, sortOrder)
+
+    if (filters?.status === 'paid') {
+      query.where('isPaid', true)
+    } else if (filters?.status === 'unpaid') {
+      query.where('isPaid', false).where('isPaymentRequested', false)
+    } else if (filters?.status === 'awaiting') {
+      query.where('isPaid', false).where('isPaymentRequested', true)
+    }
+
+    return query.paginate(page, perPage)
   }
 
   /**
-   * Get invoices issued by a supplier (supplier payment view).
+   * Get invoices issued by a supplier (supplier payment view) with optional status, sort, and buyer filters.
    */
-  async getInvoicesForSupplier(supplierId: number, page: number = 1, perPage: number = 20) {
-    return Invoice.query()
+  async getInvoicesForSupplier(
+    supplierId: number,
+    page: number = 1,
+    perPage: number = 20,
+    filters?: { status?: string; sortBy?: string; sortOrder?: string; buyerId?: number }
+  ) {
+    const sortByWhitelist = ['createdAt', 'totalCost']
+    const sortBy = sortByWhitelist.includes(filters?.sortBy ?? '') ? filters!.sortBy! : 'createdAt'
+    const sortOrder = filters?.sortOrder === 'asc' ? 'asc' : 'desc'
+
+    const query = Invoice.query()
       .where('supplierId', supplierId)
       .preload('buyer')
       .preload('orders', (q) => {
         q.preload('delivery', (dq) => dq.preload('product'))
       })
-      .orderBy('createdAt', 'desc')
-      .paginate(page, perPage)
+      .orderBy(sortBy, sortOrder)
+
+    if (filters?.status === 'paid') {
+      query.where('isPaid', true)
+    } else if (filters?.status === 'unpaid') {
+      query.where('isPaid', false).where('isPaymentRequested', false)
+    } else if (filters?.status === 'awaiting') {
+      query.where('isPaid', false).where('isPaymentRequested', true)
+    }
+
+    if (filters?.buyerId) {
+      query.where('buyerId', filters.buyerId)
+    }
+
+    return query.paginate(page, perPage)
   }
 
   /**

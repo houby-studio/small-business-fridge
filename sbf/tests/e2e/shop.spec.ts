@@ -7,11 +7,7 @@ import { test, expect } from '@playwright/test'
  * Purchase flows are covered by Japa functional tests (faster, no browser needed).
  */
 
-async function loginAs(
-  page: import('@playwright/test').Page,
-  username: string,
-  password: string
-) {
+async function loginAs(page: import('@playwright/test').Page, username: string, password: string) {
   await page.goto('/login')
   await page.locator('#username').fill(username)
   await page.locator('#password').fill(password)

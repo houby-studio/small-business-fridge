@@ -15,9 +15,9 @@ type TranslationsMap = Record<string, Record<string, string>>
 export function useI18n() {
   const page = usePage()
 
-  const locale = computed(() => (page.props as any).locale as string ?? 'cs')
+  const locale = computed(() => ((page.props as any).locale as string) ?? 'cs')
 
-  const translations = computed(() => (page.props as any).translations as TranslationsMap ?? {})
+  const translations = computed(() => ((page.props as any).translations as TranslationsMap) ?? {})
 
   /**
    * Translate a key with optional parameter substitution.

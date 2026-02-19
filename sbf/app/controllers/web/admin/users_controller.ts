@@ -1,37 +1,68 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import AdminService from '#services/admin_service'
+import User from '#models/user'
 import { updateUserValidator } from '#validators/user'
 import AuditService from '#services/audit_service'
 
 export default class UsersController {
-  async index({ inertia }: HttpContext) {
+  async index({ inertia, request }: HttpContext) {
+    const page = request.input('page', 1)
+    const search = request.input('search')
+    const role = request.input('role')
+
     const service = new AdminService()
-    const users = await service.getUsers()
+    const paginator = await service.getUsers(page, 20, {
+      search: search || undefined,
+      role: role || undefined,
+    })
 
     return inertia.render('admin/users/index', {
-      users: users.map((u) => ({
-        id: u.id,
-        displayName: u.displayName,
-        email: u.email,
-        username: u.username,
-        role: u.role,
-        isKiosk: u.isKiosk,
-        isDisabled: u.isDisabled,
-        keypadId: u.keypadId,
-        createdAt: u.createdAt.toISO(),
-      })),
+      users: {
+        data: paginator.all().map((u) => ({
+          id: u.id,
+          displayName: u.displayName,
+          email: u.email,
+          username: u.username,
+          role: u.role,
+          isKiosk: u.isKiosk,
+          isDisabled: u.isDisabled,
+          keypadId: u.keypadId,
+          createdAt: u.createdAt.toISO(),
+        })),
+        meta: paginator.getMeta(),
+      },
+      filters: { search: search || '', role: role || '' },
     })
   }
 
   async update({ params, request, response, session, i18n, auth }: HttpContext) {
     const data = await request.validateUsing(updateUserValidator)
 
+    const userBefore = await User.findOrFail(params.id)
+    const before = {
+      role: userBefore.role,
+      isDisabled: userBefore.isDisabled,
+      isKiosk: userBefore.isKiosk,
+    }
+
     const service = new AdminService()
     const user = await service.updateUser(params.id, data)
 
-    AuditService.log(auth.user!.id, 'user.updated', 'user', user.id, user.id, {
-      changes: data,
-    })
+    const changes: Record<string, { from: unknown; to: unknown }> = {}
+    for (const key of ['role', 'isDisabled', 'isKiosk'] as const) {
+      if (data[key] !== undefined && before[key] !== data[key]) {
+        changes[key] = { from: before[key], to: data[key] }
+      }
+    }
+
+    AuditService.log(
+      auth.user!.id,
+      'user.updated',
+      'user',
+      user.id,
+      user.id,
+      Object.keys(changes).length ? changes : null
+    )
 
     session.flash('alert', {
       type: 'success',

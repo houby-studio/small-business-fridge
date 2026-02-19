@@ -4,5 +4,9 @@
   "mark_paid": "Mark as paid",
   "cancel_paid": "Cancel",
   "qr_error": "Error generating QR code.",
-  "no_invoices": "You don't have any invoices yet."
+  "no_invoices": "You don't have any invoices yet.",
+  "filter_status": "Status",
+  "filter_paid": "Paid",
+  "filter_unpaid": "Unpaid",
+  "filter_awaiting": "Awaiting approval"
 }

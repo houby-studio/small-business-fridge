@@ -5,8 +5,8 @@ import Card from 'primevue/card'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
-import { useI18n } from '~/composables/useI18n'
-import { formatDate } from '~/composables/useFormatDate'
+import { useI18n } from '~/composables/use_i18n'
+import { formatDate } from '~/composables/use_format_date'
 
 interface RecentOrder {
   id: number
@@ -48,7 +48,13 @@ function channelSeverity(ch: string): 'info' | 'success' | 'warn' {
           <div class="text-3xl font-bold">{{ stats.users.total }}</div>
           <div class="text-sm text-gray-500">{{ t('admin.dashboard_total_users') }}</div>
           <div class="mt-1 text-xs text-gray-400">
-            {{ t('admin.dashboard_users_detail', { customers: stats.users.customers, suppliers: stats.users.suppliers, admins: stats.users.admins }) }}
+            {{
+              t('admin.dashboard_users_detail', {
+                customers: stats.users.customers,
+                suppliers: stats.users.suppliers,
+                admins: stats.users.admins,
+              })
+            }}
           </div>
         </template>
       </Card>
@@ -57,29 +63,45 @@ function channelSeverity(ch: string): 'info' | 'success' | 'warn' {
           <div class="text-3xl font-bold">{{ stats.orders.total }}</div>
           <div class="text-sm text-gray-500">{{ t('admin.dashboard_total_orders') }}</div>
           <div class="mt-1 text-xs text-gray-400">
-            {{ t('admin.dashboard_orders_detail', { lastWeek: stats.orders.lastWeek, lastMonth: stats.orders.lastMonth }) }}
+            {{
+              t('admin.dashboard_orders_detail', {
+                lastWeek: stats.orders.lastWeek,
+                lastMonth: stats.orders.lastMonth,
+              })
+            }}
           </div>
         </template>
       </Card>
       <Card class="text-center">
         <template #content>
-          <div class="text-3xl font-bold">{{ t('common.price_with_currency', { price: stats.orders.totalRevenue }) }}</div>
+          <div class="text-3xl font-bold">
+            {{ t('common.price_with_currency', { price: stats.orders.totalRevenue }) }}
+          </div>
           <div class="text-sm text-gray-500">{{ t('admin.dashboard_total_revenue') }}</div>
         </template>
       </Card>
       <Card class="text-center">
         <template #content>
-          <div class="text-3xl font-bold text-orange-600">{{ t('common.price_with_currency', { price: stats.invoices.unpaidAmount }) }}</div>
+          <div class="text-3xl font-bold text-orange-600">
+            {{ t('common.price_with_currency', { price: stats.invoices.unpaidAmount }) }}
+          </div>
           <div class="text-sm text-gray-500">{{ t('common.unpaid') }}</div>
           <div class="mt-1 text-xs text-gray-400">
-            {{ t('admin.dashboard_invoices_detail', { paid: stats.invoices.paid, unpaid: stats.invoices.unpaid }) }}
+            {{
+              t('admin.dashboard_invoices_detail', {
+                paid: stats.invoices.paid,
+                unpaid: stats.invoices.unpaid,
+              })
+            }}
           </div>
         </template>
       </Card>
     </div>
 
     <!-- Recent orders -->
-    <h2 class="mb-4 text-lg font-semibold text-gray-800">{{ t('admin.dashboard_recent_orders') }}</h2>
+    <h2 class="mb-4 text-lg font-semibold text-gray-800">
+      {{ t('admin.dashboard_recent_orders') }}
+    </h2>
     <DataTable :value="stats.recentOrders" stripedRows class="rounded-lg border">
       <Column header="#" style="width: 60px">
         <template #body="{ data }">{{ data.id }}</template>
@@ -94,11 +116,17 @@ function channelSeverity(ch: string): 'info' | 'success' | 'warn' {
         <template #body="{ data }">{{ data.productName }}</template>
       </Column>
       <Column :header="t('common.price')" style="width: 100px">
-        <template #body="{ data }">{{ t('common.price_with_currency', { price: data.price }) }}</template>
+        <template #body="{ data }">{{
+          t('common.price_with_currency', { price: data.price })
+        }}</template>
       </Column>
       <Column :header="t('common.channel')" style="width: 100px">
         <template #body="{ data }">
-          <Tag :value="t(`common.channel_${data.channel}`)" :severity="channelSeverity(data.channel)" class="text-xs" />
+          <Tag
+            :value="t(`common.channel_${data.channel}`)"
+            :severity="channelSeverity(data.channel)"
+            class="text-xs"
+          />
         </template>
       </Column>
     </DataTable>

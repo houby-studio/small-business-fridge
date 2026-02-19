@@ -5,19 +5,36 @@ import AuditService from '#services/audit_service'
 import { normalizeImagePath } from '#helpers/image_url'
 
 export default class ProductsController {
-  async index({ inertia }: HttpContext) {
+  async index({ inertia, request }: HttpContext) {
     const service = new ProductService()
-    const products = await service.getAllProducts()
+    const page = request.input('page', 1)
+    const search = request.input('search')
+    const categoryId = request.input('categoryId')
+
+    const [paginator, categories] = await Promise.all([
+      service.getProductsPaginated(page, 20, {
+        search: search || undefined,
+        categoryId: categoryId ? Number(categoryId) : undefined,
+      }),
+      service.getCategories(),
+    ])
 
     return inertia.render('supplier/products/index', {
-      products: products.map((p) => ({
-        id: p.id,
-        keypadId: p.keypadId,
-        displayName: p.displayName,
-        imagePath: normalizeImagePath(p.imagePath),
-        barcode: p.barcode,
-        category: p.category ? { id: p.category.id, name: p.category.name, color: p.category.color } : null,
-      })),
+      products: {
+        data: paginator.all().map((p) => ({
+          id: p.id,
+          keypadId: p.keypadId,
+          displayName: p.displayName,
+          imagePath: normalizeImagePath(p.imagePath),
+          barcode: p.barcode,
+          category: p.category
+            ? { id: p.category.id, name: p.category.name, color: p.category.color }
+            : null,
+        })),
+        meta: paginator.getMeta(),
+      },
+      categories: categories.map((c) => ({ id: c.id, name: c.name, color: c.color })),
+      filters: { search: search || '', categoryId: categoryId || '' },
     })
   }
 

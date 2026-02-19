@@ -6,10 +6,18 @@ export default class InvoicesController {
   async index({ inertia, auth, request }: HttpContext) {
     const invoiceService = new InvoiceService()
     const page = request.input('page', 1)
-    const invoices = await invoiceService.getInvoicesForBuyer(auth.user!.id, page)
+    const status = request.input('status')
+    const sortBy = request.input('sortBy')
+    const sortOrder = request.input('sortOrder')
+    const invoices = await invoiceService.getInvoicesForBuyer(auth.user!.id, page, 20, {
+      status: status || undefined,
+      sortBy: sortBy || undefined,
+      sortOrder: sortOrder || undefined,
+    })
 
     return inertia.render('invoices/index', {
       invoices: invoices.serialize(),
+      filters: { status: status || '', sortBy: sortBy || '', sortOrder: sortOrder || '' },
     })
   }
 
@@ -37,7 +45,10 @@ export default class InvoicesController {
 
     try {
       await invoiceService.cancelPaymentRequest(Number(params.id), auth.user!.id)
-      session.flash('alert', { type: 'success', message: i18n.t('messages.payment_request_cancelled') })
+      session.flash('alert', {
+        type: 'success',
+        message: i18n.t('messages.payment_request_cancelled'),
+      })
     } catch (error) {
       if (error instanceof Error && error.message === 'FORBIDDEN') {
         session.flash('alert', { type: 'danger', message: i18n.t('messages.invoice_forbidden') })
@@ -55,7 +66,7 @@ export default class InvoicesController {
 
     // Load invoice with supplier info
     const invoices = await invoiceService.getInvoicesForBuyer(auth.user!.id, 1, 1000)
-    const invoice = invoices.find((i) => i.id === Number(params.id))
+    const invoice = invoices.all().find((i) => i.id === Number(params.id))
 
     if (!invoice) {
       return response.notFound({ error: i18n.t('messages.invoice_not_found') })

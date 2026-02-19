@@ -29,14 +29,26 @@ export default class AuditService {
   /**
    * Get audit logs for a specific user (where they are actor or target).
    */
-  static async getForUser(userId: number, page: number = 1, perPage: number = 20) {
-    return AuditLog.query()
-      .where('userId', userId)
-      .orWhere('targetUserId', userId)
+  static async getForUser(
+    userId: number,
+    page: number = 1,
+    perPage: number = 20,
+    filters?: { action?: string; sortOrder?: 'asc' | 'desc' }
+  ) {
+    const sortOrder = filters?.sortOrder === 'asc' ? 'asc' : 'desc'
+    const query = AuditLog.query()
+      .where((q) => {
+        q.where('userId', userId).orWhere('targetUserId', userId)
+      })
       .preload('user')
       .preload('targetUser')
-      .orderBy('createdAt', 'desc')
-      .paginate(page, perPage)
+      .orderBy('createdAt', sortOrder)
+
+    if (filters?.action) {
+      query.where('action', filters.action)
+    }
+
+    return query.paginate(page, perPage)
   }
 
   /**
@@ -45,12 +57,13 @@ export default class AuditService {
   static async getAll(
     page: number = 1,
     perPage: number = 20,
-    filters?: { action?: string; entityType?: string; userId?: number }
+    filters?: { action?: string; entityType?: string; userId?: number; sortOrder?: 'asc' | 'desc' }
   ) {
+    const sortOrder = filters?.sortOrder === 'asc' ? 'asc' : 'desc'
     const query = AuditLog.query()
       .preload('user')
       .preload('targetUser')
-      .orderBy('createdAt', 'desc')
+      .orderBy('createdAt', sortOrder)
 
     if (filters?.action) {
       query.where('action', filters.action)

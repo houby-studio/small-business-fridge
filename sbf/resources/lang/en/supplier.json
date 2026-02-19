@@ -52,5 +52,15 @@
   "payments_heading": "Payment Management",
   "payments_approve": "Approve",
   "payments_reject": "Reject",
-  "payments_no_invoices": "You don't have any invoices yet."
+  "payments_no_invoices": "You don't have any invoices yet.",
+  "payments_filter_status": "Status",
+  "payments_filter_customer": "Customer",
+
+  "deliveries_filter_product": "Filter by product",
+
+  "products_search": "Search product",
+  "products_filter_category": "Category",
+
+  "stock_filter_name": "Search by name",
+  "stock_filter_in_stock": "In stock only"
 }

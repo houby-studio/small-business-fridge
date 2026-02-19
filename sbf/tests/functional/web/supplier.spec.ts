@@ -20,6 +20,56 @@ const cleanAll = async () => {
   await db.from('users').delete()
 }
 
+test.group('Web Supplier - stock index', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('supplier can view stock page', async ({ client }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const response = await client.get('/supplier/stock').loginAs(supplier)
+    response.assertStatus(200)
+  })
+
+  test('customer cannot access stock page', async ({ client }) => {
+    const customer = await UserFactory.create()
+    const response = await client.get('/supplier/stock').loginAs(customer).redirects(0)
+    response.assertStatus(302)
+  })
+
+  test('stock page returns paginated stock with filters', async ({ client }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({
+      categoryId: category.id,
+      displayName: 'Cola Zero',
+    }).create()
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountSupplied: 10,
+      amountLeft: 5,
+      price: 25,
+    }).create()
+
+    const response = await client.get('/supplier/stock?name=Cola').loginAs(supplier)
+    response.assertStatus(200)
+  })
+
+  test('stock page inStock filter returns 200', async ({ client }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const response = await client.get('/supplier/stock?inStock=1').loginAs(supplier)
+    response.assertStatus(200)
+  })
+
+  test('stock page sortBy totalRemaining returns 200', async ({ client }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const response = await client
+      .get('/supplier/stock?sortBy=totalRemaining&sortOrder=asc')
+      .loginAs(supplier)
+    response.assertStatus(200)
+  })
+})
+
 test.group('Web Supplier - invoice index and generate', (group) => {
   group.each.setup(cleanAll)
   group.each.teardown(cleanAll)
@@ -114,6 +164,33 @@ test.group('Web Supplier - invoice index and generate', (group) => {
   })
 })
 
+test.group('Web Supplier - payments status filter', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('filter by status=awaiting returns 200', async ({ client }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+    await InvoiceFactory.apply('paymentRequested')
+      .merge({ buyerId: buyer.id, supplierId: supplier.id })
+      .create()
+
+    const response = await client.get('/supplier/payments?status=awaiting').loginAs(supplier)
+    response.assertStatus(200)
+  })
+
+  test('filter by status=paid returns 200', async ({ client }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+    await InvoiceFactory.apply('paid')
+      .merge({ buyerId: buyer.id, supplierId: supplier.id })
+      .create()
+
+    const response = await client.get('/supplier/payments?status=paid').loginAs(supplier)
+    response.assertStatus(200)
+  })
+})
+
 test.group('Web Supplier - payments (approve/reject)', (group) => {
   group.each.setup(cleanAll)
   group.each.teardown(cleanAll)
@@ -167,7 +244,7 @@ test.group('Web Supplier - payments (approve/reject)', (group) => {
     assert.isFalse(invoice.isPaymentRequested)
   })
 
-  test('supplier cannot approve another supplier\'s invoice', async ({ client, assert }) => {
+  test("supplier cannot approve another supplier's invoice", async ({ client, assert }) => {
     const supplier = await UserFactory.apply('supplier').create()
     const otherSupplier = await UserFactory.apply('supplier').create()
     const buyer = await UserFactory.create()

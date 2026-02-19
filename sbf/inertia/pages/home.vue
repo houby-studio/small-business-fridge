@@ -2,7 +2,7 @@
 import { Head } from '@inertiajs/vue3'
 import GuestLayout from '~/layouts/GuestLayout.vue'
 import Button from 'primevue/button'
-import { useI18n } from '~/composables/useI18n'
+import { useI18n } from '~/composables/use_i18n'
 
 const { t } = useI18n()
 </script>

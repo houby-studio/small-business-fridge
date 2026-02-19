@@ -1,6 +1,6 @@
 {
   "name": "sbf",
-  "version": "0.0.0",
+  "version": "3.0.0-alpha.0",
   "private": true,
   "type": "module",
   "license": "UNLICENSED",
@@ -11,6 +11,7 @@
     "test": "node ace test",
     "test:e2e": "playwright test",
     "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit"
   },
@@ -48,6 +49,7 @@
     "@types/luxon": "^3.7.1",
     "@types/node": "^22.15.18",
     "@types/pg": "^8.16.0",
+    "@types/qrcode": "^1.5.6",
     "@vitejs/plugin-vue": "^6.0.4",
     "dotenv": "^17.3.1",
     "eslint": "^9.26.0",
@@ -87,6 +89,7 @@
     "pg": "^8.18.0",
     "primeicons": "^7.0.0",
     "primevue": "^4.5.4",
+    "qrcode": "^1.5.4",
     "reflect-metadata": "^0.2.2",
     "vue": "^3.5.28"
   },

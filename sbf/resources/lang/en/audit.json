@@ -26,5 +26,8 @@
   "action_product_updated": "Product updated",
   "action_profile_updated": "Profile updated",
   "action_user_updated": "User updated",
-  "action_order_storno": "Order cancelled"
+  "action_order_storno": "Order cancelled",
+  "action_user_login": "Login",
+  "action_user_registered": "Registration",
+  "action_user_logout": "Logout"
 }

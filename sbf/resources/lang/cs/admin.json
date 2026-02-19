@@ -32,5 +32,13 @@
 
   "invoices_title": "Všechny faktury",
   "invoices_heading": "Všechny faktury",
-  "invoices_no_invoices": "Žádné faktury."
+  "invoices_no_invoices": "Žádné faktury.",
+  "invoices_filter_status": "Stav",
+
+  "users_search": "Hledat uživatele",
+  "users_filter_role": "Role",
+
+  "orders_filter_search": "Hledat zákazníka",
+  "orders_filter_channel": "Kanál",
+  "orders_filter_invoiced": "Fakturováno"
 }

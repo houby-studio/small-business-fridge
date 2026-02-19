@@ -35,7 +35,9 @@ test.group('API Auth - Token', (group) => {
   })
 
   test('returns 401 for disabled user', async ({ client }) => {
-    await UserFactory.merge({ username: 'disabled3', password: 'password123' }).apply('disabled').create()
+    await UserFactory.merge({ username: 'disabled3', password: 'password123' })
+      .apply('disabled')
+      .create()
 
     const response = await client.post('/api/v1/auth/token').json({
       username: 'disabled3',

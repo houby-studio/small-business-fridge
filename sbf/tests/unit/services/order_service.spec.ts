@@ -67,19 +67,13 @@ test.group('OrderService', (group) => {
       .with('product', 1, (p) => p.with('category'))
       .create()
 
-    await assert.rejects(
-      () => orderService.purchase(buyer.id, delivery.id, 'web'),
-      'OUT_OF_STOCK'
-    )
+    await assert.rejects(() => orderService.purchase(buyer.id, delivery.id, 'web'), 'OUT_OF_STOCK')
   })
 
   test('purchase throws for non-existent delivery', async ({ assert }) => {
     const buyer = await UserFactory.create()
 
-    await assert.rejects(
-      () => orderService.purchase(buyer.id, 99999, 'web'),
-      'OUT_OF_STOCK'
-    )
+    await assert.rejects(() => orderService.purchase(buyer.id, 99999, 'web'), 'OUT_OF_STOCK')
   })
 
   test('multiple purchases decrement stock correctly', async ({ assert }) => {
@@ -97,10 +91,7 @@ test.group('OrderService', (group) => {
     assert.equal(delivery.amountLeft, 0)
 
     // Fourth purchase should fail
-    await assert.rejects(
-      () => orderService.purchase(buyer.id, delivery.id, 'web'),
-      'OUT_OF_STOCK'
-    )
+    await assert.rejects(() => orderService.purchase(buyer.id, delivery.id, 'web'), 'OUT_OF_STOCK')
   })
 
   test('getOrdersForUser returns paginated orders with stats', async ({ assert }) => {

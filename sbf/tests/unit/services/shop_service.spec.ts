@@ -123,11 +123,23 @@ test.group('ShopService', (group) => {
     const product1 = await ProductFactory.merge({ categoryId: category.id }).create()
     const product2 = await ProductFactory.merge({ categoryId: category.id }).create()
 
-    await DeliveryFactory.merge({ supplierId: supplier.id, productId: product1.id, amountLeft: 5, price: 10 }).create()
-    await DeliveryFactory.merge({ supplierId: supplier.id, productId: product2.id, amountLeft: 5, price: 10 }).create()
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product1.id,
+      amountLeft: 5,
+      price: 10,
+    }).create()
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product2.id,
+      amountLeft: 5,
+      price: 10,
+    }).create()
 
     // Mark product1 as favorite
-    await db.table('user_favorites').insert({ user_id: buyer.id, product_id: product1.id, created_at: new Date() })
+    await db
+      .table('user_favorites')
+      .insert({ user_id: buyer.id, product_id: product1.id, created_at: new Date() })
 
     const products = await shopService.getProducts({ userId: buyer.id })
 

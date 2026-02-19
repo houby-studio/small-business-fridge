@@ -26,5 +26,8 @@
   "action_product_updated": "Produkt upraven",
   "action_profile_updated": "Profil upraven",
   "action_user_updated": "Uživatel upraven",
-  "action_order_storno": "Storno objednávky"
+  "action_order_storno": "Storno objednávky",
+  "action_user_login": "Přihlášení",
+  "action_user_registered": "Registrace",
+  "action_user_logout": "Odhlášení"
 }

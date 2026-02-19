@@ -11,7 +11,13 @@ export default class StornoController {
       const order = await Order.find(params.id)
       await service.stornoOrder(params.id)
 
-      AuditService.log(auth.user!.id, 'order.storno', 'order', Number(params.id), order?.buyerId ?? null)
+      AuditService.log(
+        auth.user!.id,
+        'order.storno',
+        'order',
+        Number(params.id),
+        order?.buyerId ?? null
+      )
 
       session.flash('alert', {
         type: 'success',

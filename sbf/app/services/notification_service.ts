@@ -1,5 +1,6 @@
 import mail from '@adonisjs/mail/services/main'
 import i18nManager from '@adonisjs/i18n/services/main'
+import env from '#start/env'
 import User from '#models/user'
 import Order from '#models/order'
 import Invoice from '#models/invoice'
@@ -23,10 +24,22 @@ export default class NotificationService {
     const buyer = order.buyer
     if (!buyer.sendMailOnPurchase) return
 
+    const productId = order.delivery.product.id
+    const isFavorite = await db
+      .from('user_favorites')
+      .where('user_id', buyer.id)
+      .where('product_id', productId)
+      .first()
+
+    const appUrl = env.get('APP_URL') || `http://${env.get('HOST')}:${env.get('PORT')}`
+    const addFavoriteUrl = isFavorite ? null : `${appUrl}/shop?add_favorite=${productId}`
+
     await mail.send((message) => {
       message
         .to(buyer.email)
-        .subject(this.i18n.t('emails.purchase_subject', { product: order.delivery.product.displayName }))
+        .subject(
+          this.i18n.t('emails.purchase_subject', { product: order.delivery.product.displayName })
+        )
         .htmlView('emails/purchase_confirmation', {
           i18n: this.i18n,
           buyerName: buyer.displayName,
@@ -34,6 +47,7 @@ export default class NotificationService {
           price: order.delivery.price,
           supplierName: order.delivery.supplier.displayName,
           date: order.createdAt.toFormat('dd.MM.yyyy HH:mm'),
+          addFavoriteUrl,
         })
     })
   }
@@ -53,7 +67,9 @@ export default class NotificationService {
     await mail.send((message) => {
       message
         .to(buyer.email)
-        .subject(this.i18n.t('emails.invoice_subject', { id: invoice.id, amount: invoice.totalCost }))
+        .subject(
+          this.i18n.t('emails.invoice_subject', { id: invoice.id, amount: invoice.totalCost })
+        )
         .htmlView('emails/invoice_notice', {
           i18n: this.i18n,
           buyerName: buyer.displayName,
@@ -78,7 +94,8 @@ export default class NotificationService {
     await invoice.load('supplier')
 
     const buyer = invoice.buyer
-    const subjectKey = action === 'approved' ? 'emails.payment_approved_subject' : 'emails.payment_rejected_subject'
+    const subjectKey =
+      action === 'approved' ? 'emails.payment_approved_subject' : 'emails.payment_rejected_subject'
 
     await mail.send((message) => {
       message
@@ -104,7 +121,7 @@ export default class NotificationService {
     for (const user of users) {
       const todayOrders = await Order.query()
         .where('buyerId', user.id)
-        .whereRaw("created_at >= CURRENT_DATE")
+        .whereRaw('created_at >= CURRENT_DATE')
         .preload('delivery', (q) => q.preload('product'))
         .orderBy('createdAt', 'desc')
 
@@ -115,7 +132,12 @@ export default class NotificationService {
       await mail.send((message) => {
         message
           .to(user.email)
-          .subject(this.i18n.t('emails.daily_report_subject', { count: todayOrders.length, total: totalSpent }))
+          .subject(
+            this.i18n.t('emails.daily_report_subject', {
+              count: todayOrders.length,
+              total: totalSpent,
+            })
+          )
           .htmlView('emails/daily_report', {
             i18n: this.i18n,
             userName: user.displayName,
@@ -148,7 +170,12 @@ export default class NotificationService {
       await mail.send((message) => {
         message
           .to(buyer.email)
-          .subject(this.i18n.t('emails.unpaid_reminder_subject', { id: invoice.id, amount: invoice.totalCost }))
+          .subject(
+            this.i18n.t('emails.unpaid_reminder_subject', {
+              id: invoice.id,
+              amount: invoice.totalCost,
+            })
+          )
           .htmlView('emails/unpaid_reminder', {
             i18n: this.i18n,
             buyerName: buyer.displayName,
@@ -191,7 +218,12 @@ export default class NotificationService {
       await mail.send((message) => {
         message
           .to(supplier.email)
-          .subject(this.i18n.t('emails.pending_approval_subject', { count: invoices.length, total: totalPending }))
+          .subject(
+            this.i18n.t('emails.pending_approval_subject', {
+              count: invoices.length,
+              total: totalPending,
+            })
+          )
           .htmlView('emails/pending_approval', {
             i18n: this.i18n,
             supplierName: supplier.displayName,
@@ -213,8 +245,12 @@ export default class NotificationService {
     const result = await db
       .from('invoices')
       .select(
-        db.rawQuery('COUNT(*) FILTER (WHERE is_paid = false AND is_payment_requested = false)::int as unpaid_count'),
-        db.rawQuery('COUNT(*) FILTER (WHERE is_paid = false AND is_payment_requested = true)::int as pending_count')
+        db.rawQuery(
+          'COUNT(*) FILTER (WHERE is_paid = false AND is_payment_requested = false)::int as unpaid_count'
+        ),
+        db.rawQuery(
+          'COUNT(*) FILTER (WHERE is_paid = false AND is_payment_requested = true)::int as pending_count'
+        )
       )
       .first()
 

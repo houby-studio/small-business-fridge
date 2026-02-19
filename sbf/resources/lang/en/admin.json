@@ -32,5 +32,13 @@
 
   "invoices_title": "All Invoices",
   "invoices_heading": "All Invoices",
-  "invoices_no_invoices": "No invoices."
+  "invoices_no_invoices": "No invoices.",
+  "invoices_filter_status": "Status",
+
+  "users_search": "Search users",
+  "users_filter_role": "Role",
+
+  "orders_filter_search": "Search customer",
+  "orders_filter_channel": "Channel",
+  "orders_filter_invoiced": "Invoiced"
 }

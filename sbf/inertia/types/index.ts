@@ -20,6 +20,7 @@ export interface FlashMessages {
 export interface SharedProps {
   user: User | null
   flash: FlashMessages
+  [key: string]: unknown
 }
 
 export interface Category {

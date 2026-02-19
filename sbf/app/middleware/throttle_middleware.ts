@@ -73,9 +73,7 @@ export default class ThrottleMiddleware {
     const userId = ctx.auth?.user?.id
     if (userId) return `throttle:user:${userId}`
 
-    const ip =
-      ctx.request.header('x-forwarded-for')?.split(',')[0]?.trim() ??
-      ctx.request.ip()
+    const ip = ctx.request.header('x-forwarded-for')?.split(',')[0]?.trim() ?? ctx.request.ip()
 
     return `throttle:ip:${ip}`
   }

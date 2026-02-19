@@ -7,10 +7,18 @@ export default class DeliveriesController {
   async index({ inertia, auth, request }: HttpContext) {
     const service = new DeliveryService()
     const page = request.input('page', 1)
+    const productId = request.input('productId')
+    const sortBy = request.input('sortBy')
+    const sortOrder = request.input('sortOrder')
+    const preselect = request.input('preselect')
 
     const [products, recentDeliveries] = await Promise.all([
       service.getAllProducts(),
-      service.getRecentDeliveries(auth.user!.id, page),
+      service.getRecentDeliveries(auth.user!.id, page, 20, {
+        productId: productId ? Number(productId) : undefined,
+        sortBy: sortBy || undefined,
+        sortOrder: sortOrder || undefined,
+      }),
     ])
 
     return inertia.render('supplier/deliveries/index', {
@@ -21,6 +29,12 @@ export default class DeliveriesController {
         category: p.category ? { name: p.category.name, color: p.category.color } : null,
       })),
       recentDeliveries: recentDeliveries.serialize(),
+      filters: {
+        productId: productId || '',
+        sortBy: sortBy || '',
+        sortOrder: sortOrder || '',
+      },
+      preselect: preselect ? Number(preselect) : null,
     })
   }
 

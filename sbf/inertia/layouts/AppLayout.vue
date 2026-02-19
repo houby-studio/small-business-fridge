@@ -4,7 +4,7 @@ import { Link, usePage, router } from '@inertiajs/vue3'
 import Toast from 'primevue/toast'
 import Button from 'primevue/button'
 import Menubar from 'primevue/menubar'
-import { useFlash } from '~/composables/useFlash'
+import { useFlash } from '~/composables/use_flash'
 import type { SharedProps } from '~/types'
 
 useFlash()
@@ -12,9 +12,7 @@ useFlash()
 const page = usePage<SharedProps>()
 const user = computed(() => page.props.user)
 
-const isSupplier = computed(
-  () => user.value?.role === 'supplier' || user.value?.role === 'admin'
-)
+const isSupplier = computed(() => user.value?.role === 'supplier' || user.value?.role === 'admin')
 const isAdmin = computed(() => user.value?.role === 'admin')
 
 const menuItems = computed(() => {
@@ -69,9 +67,7 @@ function logout() {
     <!-- Navigation -->
     <Menubar :model="menuItems" class="rounded-none border-x-0 border-t-0">
       <template #start>
-        <Link href="/shop" class="mr-4 text-xl font-bold text-primary">
-          Lednice IT
-        </Link>
+        <Link href="/shop" class="mr-4 text-xl font-bold text-primary"> Lednice IT </Link>
       </template>
       <template #item="{ item, props }">
         <Link v-if="item.url && !item.items" v-bind="props.action" :href="item.url">
@@ -90,13 +86,7 @@ function logout() {
             <span class="pi pi-user mr-1" />
             {{ user?.displayName }}
           </Link>
-          <Button
-            icon="pi pi-sign-out"
-            severity="secondary"
-            text
-            size="small"
-            @click="logout"
-          />
+          <Button icon="pi pi-sign-out" severity="secondary" text size="small" @click="logout" />
         </div>
       </template>
     </Menubar>

@@ -54,5 +54,7 @@
   "role_admin": "Administrátor",
   "no_data": "Žádná data k zobrazení.",
   "price_with_currency": "{price} Kč",
-  "per_piece": "{price} Kč/ks"
+  "per_piece": "{price} Kč/ks",
+  "filter_apply": "Použít filtry",
+  "filter_clear": "Zrušit filtry"
 }

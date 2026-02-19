@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
+import Select from 'primevue/select'
 import Dialog from 'primevue/dialog'
-import { useI18n } from '~/composables/useI18n'
-import { formatDate } from '~/composables/useFormatDate'
+import { useI18n } from '~/composables/use_i18n'
+import { formatDate } from '~/composables/use_format_date'
 
 interface InvoiceOrder {
   id: number
@@ -31,9 +32,24 @@ interface PaginatedInvoices {
   meta: { total: number; perPage: number; currentPage: number; lastPage: number }
 }
 
-const props = defineProps<{ invoices: PaginatedInvoices }>()
+const props = defineProps<{
+  invoices: PaginatedInvoices
+  filters: { status: string; sortBy: string; sortOrder: string }
+}>()
 
 const { t } = useI18n()
+
+const filterStatus = ref(props.filters.status)
+const filterSortBy = ref(props.filters.sortBy || 'createdAt')
+const filterSortOrder = ref(props.filters.sortOrder || 'desc')
+const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
+
+const statusOptions = [
+  { label: t('common.all'), value: '' },
+  { label: t('invoices.filter_paid'), value: 'paid' },
+  { label: t('invoices.filter_unpaid'), value: 'unpaid' },
+  { label: t('invoices.filter_awaiting'), value: 'awaiting' },
+]
 
 const qrDialog = ref(false)
 const qrImage = ref('')
@@ -68,9 +84,7 @@ async function showQr(id: number) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-XSRF-TOKEN': decodeURIComponent(
-          document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] || ''
-        ),
+        'X-XSRF-TOKEN': decodeURIComponent(document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] || ''),
       },
     })
     const data = await res.json()
@@ -84,8 +98,50 @@ async function showQr(id: number) {
   }
 }
 
+function buildFilterParams() {
+  return {
+    status: filterStatus.value || undefined,
+    sortBy: filterSortBy.value || undefined,
+    sortOrder: filterSortOrder.value || undefined,
+  }
+}
+
+function applyFilters() {
+  router.get(
+    '/invoices',
+    { ...buildFilterParams(), page: 1 },
+    { preserveState: true, only: ['invoices', 'filters'] }
+  )
+}
+
+function clearFilters() {
+  filterStatus.value = ''
+  filterSortBy.value = 'createdAt'
+  filterSortOrder.value = 'desc'
+  router.get('/invoices', {}, { preserveState: true, only: ['invoices', 'filters'] })
+}
+
 function onPageChange(event: any) {
-  router.get('/invoices', { page: event.page + 1 }, { preserveState: true })
+  router.get(
+    '/invoices',
+    { ...buildFilterParams(), page: event.page + 1 },
+    { preserveState: true, only: ['invoices', 'filters'] }
+  )
+}
+
+function onSort(event: any) {
+  filterSortBy.value = event.sortField
+  filterSortOrder.value = event.sortOrder === 1 ? 'asc' : 'desc'
+  router.get(
+    '/invoices',
+    {
+      ...buildFilterParams(),
+      sortBy: event.sortField,
+      sortOrder: event.sortOrder === 1 ? 'asc' : 'desc',
+      page: 1,
+    },
+    { preserveState: true, only: ['invoices', 'filters'] }
+  )
 }
 </script>
 
@@ -95,6 +151,33 @@ function onPageChange(event: any) {
 
     <h1 class="mb-6 text-2xl font-bold text-gray-900">{{ t('invoices.my_invoices') }}</h1>
 
+    <!-- Filter bar -->
+    <div class="mb-4 flex flex-wrap items-end gap-3">
+      <div>
+        <label class="mb-1 block text-sm text-gray-600">{{ t('invoices.filter_status') }}</label>
+        <Select
+          v-model="filterStatus"
+          :options="statusOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="w-44"
+        />
+      </div>
+      <Button
+        :label="t('common.filter_apply')"
+        icon="pi pi-filter"
+        size="small"
+        @click="applyFilters"
+      />
+      <Button
+        :label="t('common.filter_clear')"
+        size="small"
+        severity="secondary"
+        text
+        @click="clearFilters"
+      />
+    </div>
+
     <DataTable
       :value="invoices.data"
       :paginator="invoices.meta.lastPage > 1"
@@ -102,14 +185,17 @@ function onPageChange(event: any) {
       :totalRecords="invoices.meta.total"
       :lazy="true"
       :first="(invoices.meta.currentPage - 1) * invoices.meta.perPage"
+      :sortField="filterSortBy"
+      :sortOrder="sortOrderNum"
       @page="onPageChange"
+      @sort="onSort"
       stripedRows
       class="rounded-lg border"
     >
       <Column header="#" style="width: 60px">
         <template #body="{ data }">{{ data.id }}</template>
       </Column>
-      <Column :header="t('common.date')">
+      <Column :header="t('common.date')" field="createdAt" sortable>
         <template #body="{ data }">{{ formatDate(data.createdAt) }}</template>
       </Column>
       <Column :header="t('common.supplier')">
@@ -118,9 +204,11 @@ function onPageChange(event: any) {
       <Column :header="t('common.items')">
         <template #body="{ data }">{{ data.orders?.length ?? 0 }}</template>
       </Column>
-      <Column :header="t('common.total')">
+      <Column :header="t('common.total')" field="totalCost" sortable>
         <template #body="{ data }">
-          <span class="font-semibold">{{ t('common.price_with_currency', { price: data.totalCost }) }}</span>
+          <span class="font-semibold">{{
+            t('common.price_with_currency', { price: data.totalCost })
+          }}</span>
         </template>
       </Column>
       <Column :header="t('common.status')">

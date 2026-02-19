@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import KioskLayout from '~/layouts/KioskLayout.vue'
 import Button from 'primevue/button'
-import { useI18n } from '~/composables/useI18n'
+import { useI18n } from '~/composables/use_i18n'
 
 const { t } = useI18n()
 
@@ -42,7 +42,9 @@ const keys = [
       <p class="mb-8 text-lg text-gray-400">{{ t('kiosk.enter_number') }}</p>
 
       <!-- Display -->
-      <div class="mb-8 flex h-20 w-80 items-center justify-center rounded-xl border-2 border-gray-600 bg-gray-800 text-5xl font-bold tracking-widest text-white">
+      <div
+        class="mb-8 flex h-20 w-80 items-center justify-center rounded-xl border-2 border-gray-600 bg-gray-800 text-5xl font-bold tracking-widest text-white"
+      >
         {{ keypadInput || '—' }}
       </div>
 

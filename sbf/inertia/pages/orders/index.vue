@@ -1,12 +1,15 @@
 <script setup lang="ts">
+import { ref, computed } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Card from 'primevue/card'
-import { useI18n } from '~/composables/useI18n'
-import { formatDate } from '~/composables/useFormatDate'
+import Select from 'primevue/select'
+import Button from 'primevue/button'
+import { useI18n } from '~/composables/use_i18n'
+import { formatDate } from '~/composables/use_format_date'
 
 interface OrderRow {
   id: number
@@ -37,12 +40,76 @@ const props = defineProps<{
     totalSpend: number
     totalUnpaid: number
   }
+  filters: { channel: string; invoiced: string; sortBy: string; sortOrder: string }
 }>()
 
 const { t } = useI18n()
 
+const filterChannel = ref(props.filters.channel)
+const filterInvoiced = ref(props.filters.invoiced)
+const filterSortBy = ref(props.filters.sortBy || 'createdAt')
+const filterSortOrder = ref(props.filters.sortOrder || 'desc')
+const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
+
+const channelOptions = [
+  { label: t('common.all'), value: '' },
+  { label: t('common.channel_web'), value: 'web' },
+  { label: t('common.channel_keypad'), value: 'keypad' },
+  { label: t('common.channel_scanner'), value: 'scanner' },
+]
+
+const invoicedOptions = [
+  { label: t('common.all'), value: '' },
+  { label: t('orders.filter_invoiced_yes'), value: 'yes' },
+  { label: t('orders.filter_invoiced_no'), value: 'no' },
+]
+
+function buildFilterParams() {
+  return {
+    channel: filterChannel.value || undefined,
+    invoiced: filterInvoiced.value || undefined,
+    sortBy: filterSortBy.value || undefined,
+    sortOrder: filterSortOrder.value || undefined,
+  }
+}
+
+function applyFilters() {
+  router.get(
+    '/orders',
+    { ...buildFilterParams(), page: 1 },
+    { preserveState: true, only: ['orders', 'filters'] }
+  )
+}
+
+function clearFilters() {
+  filterChannel.value = ''
+  filterInvoiced.value = ''
+  filterSortBy.value = 'createdAt'
+  filterSortOrder.value = 'desc'
+  router.get('/orders', {}, { preserveState: true, only: ['orders', 'filters'] })
+}
+
 function onPageChange(event: any) {
-  router.get('/orders', { page: event.page + 1 }, { preserveState: true })
+  router.get(
+    '/orders',
+    { ...buildFilterParams(), page: event.page + 1 },
+    { preserveState: true, only: ['orders', 'filters'] }
+  )
+}
+
+function onSort(event: any) {
+  filterSortBy.value = event.sortField
+  filterSortOrder.value = event.sortOrder === 1 ? 'asc' : 'desc'
+  router.get(
+    '/orders',
+    {
+      ...buildFilterParams(),
+      sortBy: event.sortField,
+      sortOrder: event.sortOrder === 1 ? 'asc' : 'desc',
+      page: 1,
+    },
+    { preserveState: true, only: ['orders', 'filters'] }
+  )
 }
 
 function channelLabel(channel: string) {
@@ -67,16 +134,57 @@ function channelLabel(channel: string) {
       </Card>
       <Card class="text-center">
         <template #content>
-          <div class="text-3xl font-bold text-gray-900">{{ t('common.price_with_currency', { price: stats.totalSpend }) }}</div>
+          <div class="text-3xl font-bold text-gray-900">
+            {{ t('common.price_with_currency', { price: stats.totalSpend }) }}
+          </div>
           <div class="text-sm text-gray-500">{{ t('orders.total_spent') }}</div>
         </template>
       </Card>
       <Card class="text-center">
         <template #content>
-          <div class="text-3xl font-bold text-red-600">{{ t('common.price_with_currency', { price: stats.totalUnpaid }) }}</div>
+          <div class="text-3xl font-bold text-red-600">
+            {{ t('common.price_with_currency', { price: stats.totalUnpaid }) }}
+          </div>
           <div class="text-sm text-gray-500">{{ t('orders.total_unpaid') }}</div>
         </template>
       </Card>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="mb-4 flex flex-wrap items-end gap-3">
+      <div>
+        <label class="mb-1 block text-sm text-gray-600">{{ t('orders.filter_channel') }}</label>
+        <Select
+          v-model="filterChannel"
+          :options="channelOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="w-36"
+        />
+      </div>
+      <div>
+        <label class="mb-1 block text-sm text-gray-600">{{ t('orders.filter_invoiced') }}</label>
+        <Select
+          v-model="filterInvoiced"
+          :options="invoicedOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="w-36"
+        />
+      </div>
+      <Button
+        :label="t('common.filter_apply')"
+        icon="pi pi-filter"
+        size="small"
+        @click="applyFilters"
+      />
+      <Button
+        :label="t('common.filter_clear')"
+        size="small"
+        severity="secondary"
+        text
+        @click="clearFilters"
+      />
     </div>
 
     <!-- Orders table -->
@@ -87,11 +195,14 @@ function channelLabel(channel: string) {
       :totalRecords="orders.meta.total"
       :lazy="true"
       :first="(orders.meta.currentPage - 1) * orders.meta.perPage"
+      :sortField="filterSortBy"
+      :sortOrder="sortOrderNum"
       @page="onPageChange"
+      @sort="onSort"
       stripedRows
       class="rounded-lg border"
     >
-      <Column :header="t('common.date')" sortable>
+      <Column :header="t('common.date')" field="createdAt" sortable>
         <template #body="{ data }">
           {{ formatDate(data.createdAt) }}
         </template>
@@ -103,7 +214,9 @@ function channelLabel(channel: string) {
       </Column>
       <Column :header="t('common.price')">
         <template #body="{ data }">
-          <span class="font-semibold">{{ t('common.price_with_currency', { price: data.delivery?.price ?? '—' }) }}</span>
+          <span class="font-semibold">{{
+            t('common.price_with_currency', { price: data.delivery?.price ?? '—' })
+          }}</span>
         </template>
       </Column>
       <Column :header="t('common.supplier')">

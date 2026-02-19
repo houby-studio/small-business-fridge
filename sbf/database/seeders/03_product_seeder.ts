@@ -47,7 +47,7 @@ export default class extends BaseSeeder {
       },
       {
         keypadId: 5,
-        displayName: 'Chipsy Lay\'s',
+        displayName: "Chipsy Lay's",
         description: 'Bramborové lupínky',
         imagePath: '/images/products/default.png',
         categoryId: categoryMap.get('Jídlo'),

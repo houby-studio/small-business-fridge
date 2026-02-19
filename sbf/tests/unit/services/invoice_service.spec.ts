@@ -4,8 +4,6 @@ import { DeliveryFactory } from '#database/factories/delivery_factory'
 import { InvoiceFactory } from '#database/factories/invoice_factory'
 import { OrderFactory } from '#database/factories/order_factory'
 import InvoiceService from '#services/invoice_service'
-import Invoice from '#models/invoice'
-import Order from '#models/order'
 import db from '@adonisjs/lucid/services/db'
 
 const invoiceService = new InvoiceService()
@@ -94,7 +92,10 @@ test.group('InvoiceService - generateInvoices', (group) => {
       .create()
 
     // Create an already-invoiced order
-    const existingInvoice = await InvoiceFactory.merge({ buyerId: buyer.id, supplierId: supplier.id }).create()
+    const existingInvoice = await InvoiceFactory.merge({
+      buyerId: buyer.id,
+      supplierId: supplier.id,
+    }).create()
     await OrderFactory.merge({
       buyerId: buyer.id,
       deliveryId: delivery.id,
@@ -130,7 +131,10 @@ test.group('InvoiceService - requestPayment / cancelPaymentRequest', (group) => 
   test('buyer can request payment on their own invoice', async ({ assert }) => {
     const buyer = await UserFactory.create()
     const supplier = await UserFactory.apply('supplier').create()
-    const invoice = await InvoiceFactory.merge({ buyerId: buyer.id, supplierId: supplier.id }).create()
+    const invoice = await InvoiceFactory.merge({
+      buyerId: buyer.id,
+      supplierId: supplier.id,
+    }).create()
 
     await invoiceService.requestPayment(invoice.id, buyer.id)
 
@@ -143,7 +147,10 @@ test.group('InvoiceService - requestPayment / cancelPaymentRequest', (group) => 
     const buyer = await UserFactory.create()
     const otherUser = await UserFactory.create()
     const supplier = await UserFactory.apply('supplier').create()
-    const invoice = await InvoiceFactory.merge({ buyerId: buyer.id, supplierId: supplier.id }).create()
+    const invoice = await InvoiceFactory.merge({
+      buyerId: buyer.id,
+      supplierId: supplier.id,
+    }).create()
 
     await assert.rejects(() => invoiceService.requestPayment(invoice.id, otherUser.id), 'FORBIDDEN')
   })
@@ -246,6 +253,82 @@ test.group('InvoiceService - approvePayment / rejectPayment', (group) => {
   })
 })
 
+test.group('InvoiceService - getInvoicesForBuyer status filter', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('filter by paid returns only paid invoices', async ({ assert }) => {
+    const buyer = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').create()
+
+    await InvoiceFactory.apply('paid')
+      .merge({ buyerId: buyer.id, supplierId: supplier.id })
+      .create()
+    await InvoiceFactory.merge({ buyerId: buyer.id, supplierId: supplier.id }).create()
+    await InvoiceFactory.apply('paymentRequested')
+      .merge({ buyerId: buyer.id, supplierId: supplier.id })
+      .create()
+
+    const result = await invoiceService.getInvoicesForBuyer(buyer.id, 1, 20, { status: 'paid' })
+    assert.equal(result.all().length, 1)
+    assert.isTrue(result.all()[0].isPaid)
+  })
+
+  test('filter by unpaid returns only unpaid invoices (not requested)', async ({ assert }) => {
+    const buyer = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').create()
+
+    await InvoiceFactory.apply('paid')
+      .merge({ buyerId: buyer.id, supplierId: supplier.id })
+      .create()
+    await InvoiceFactory.merge({ buyerId: buyer.id, supplierId: supplier.id }).create()
+    await InvoiceFactory.apply('paymentRequested')
+      .merge({ buyerId: buyer.id, supplierId: supplier.id })
+      .create()
+
+    const result = await invoiceService.getInvoicesForBuyer(buyer.id, 1, 20, { status: 'unpaid' })
+    assert.equal(result.all().length, 1)
+    assert.isFalse(result.all()[0].isPaid)
+    assert.isFalse(result.all()[0].isPaymentRequested)
+  })
+
+  test('filter by awaiting returns only payment-requested invoices', async ({ assert }) => {
+    const buyer = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').create()
+
+    await InvoiceFactory.apply('paid')
+      .merge({ buyerId: buyer.id, supplierId: supplier.id })
+      .create()
+    await InvoiceFactory.merge({ buyerId: buyer.id, supplierId: supplier.id }).create()
+    await InvoiceFactory.apply('paymentRequested')
+      .merge({ buyerId: buyer.id, supplierId: supplier.id })
+      .create()
+
+    const result = await invoiceService.getInvoicesForBuyer(buyer.id, 1, 20, {
+      status: 'awaiting',
+    })
+    assert.equal(result.all().length, 1)
+    assert.isTrue(result.all()[0].isPaymentRequested)
+    assert.isFalse(result.all()[0].isPaid)
+  })
+
+  test('no filter returns all invoices', async ({ assert }) => {
+    const buyer = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').create()
+
+    await InvoiceFactory.apply('paid')
+      .merge({ buyerId: buyer.id, supplierId: supplier.id })
+      .create()
+    await InvoiceFactory.merge({ buyerId: buyer.id, supplierId: supplier.id }).create()
+    await InvoiceFactory.apply('paymentRequested')
+      .merge({ buyerId: buyer.id, supplierId: supplier.id })
+      .create()
+
+    const result = await invoiceService.getInvoicesForBuyer(buyer.id, 1, 20)
+    assert.equal(result.all().length, 3)
+  })
+})
+
 test.group('InvoiceService - getUninvoicedSummary', (group) => {
   group.each.setup(cleanAll)
   group.each.teardown(cleanAll)
@@ -274,7 +357,10 @@ test.group('InvoiceService - getUninvoicedSummary', (group) => {
       .merge({ supplierId: supplier.id, amountSupplied: 10, amountLeft: 8, price: 10 })
       .create()
 
-    const invoice = await InvoiceFactory.merge({ buyerId: buyer.id, supplierId: supplier.id }).create()
+    const invoice = await InvoiceFactory.merge({
+      buyerId: buyer.id,
+      supplierId: supplier.id,
+    }).create()
     await OrderFactory.merge({
       buyerId: buyer.id,
       deliveryId: delivery.id,

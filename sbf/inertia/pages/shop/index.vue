@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { Head, router, usePage } from '@inertiajs/vue3'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import Card from 'primevue/card'
 import Button from 'primevue/button'
@@ -9,8 +9,7 @@ import SelectButton from 'primevue/selectbutton'
 import InputText from 'primevue/inputtext'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
-import { useI18n } from '~/composables/useI18n'
-import type { SharedProps } from '~/types'
+import { useI18n } from '~/composables/use_i18n'
 
 interface ShopProduct {
   id: number
@@ -34,15 +33,21 @@ interface ShopCategory {
 const props = defineProps<{
   products: ShopProduct[]
   categories: ShopCategory[]
+  filters: { category: number | null }
 }>()
 
-const page = usePage<SharedProps>()
 const confirm = useConfirm()
 const { t } = useI18n()
 
+const INITIAL_COUNT = 48
+const PAGE_SIZE = 24
+
 const search = ref('')
-const selectedCategory = ref<number | null>(null)
+const selectedCategory = ref<number | null>(props.filters.category)
 const showFavoritesOnly = ref(false)
+const visibleCount = ref(INITIAL_COUNT)
+const sentinel = ref<HTMLElement | null>(null)
+let observer: IntersectionObserver | null = null
 
 const categoryOptions = computed(() => [
   { label: t('common.all'), value: null },
@@ -58,7 +63,7 @@ const filteredProducts = computed(() => {
       if (
         !p.displayName.toLowerCase().includes(s) &&
         !p.keypadId.toString().includes(s) &&
-        !(p.description?.toLowerCase().includes(s))
+        !p.description?.toLowerCase().includes(s)
       ) {
         return false
       }
@@ -66,6 +71,33 @@ const filteredProducts = computed(() => {
     return true
   })
 })
+
+const visibleProducts = computed(() => filteredProducts.value.slice(0, visibleCount.value))
+
+const hasMore = computed(() => visibleCount.value < filteredProducts.value.length)
+
+function setupObserver() {
+  observer?.disconnect()
+  if (!sentinel.value) return
+  observer = new IntersectionObserver(
+    ([entry]) => {
+      if (entry.isIntersecting && hasMore.value) {
+        visibleCount.value = Math.min(visibleCount.value + PAGE_SIZE, filteredProducts.value.length)
+      }
+    },
+    { rootMargin: '300px' }
+  )
+  observer.observe(sentinel.value)
+}
+
+// Reset visible count and re-observe when filters change
+watch(filteredProducts, () => {
+  visibleCount.value = INITIAL_COUNT
+  nextTick(setupObserver)
+})
+
+onMounted(setupObserver)
+onUnmounted(() => observer?.disconnect())
 
 function purchase(product: ShopProduct) {
   confirm.require({
@@ -93,11 +125,7 @@ function toggleFavorite(productId: number) {
     <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <h1 class="text-2xl font-bold text-gray-900">{{ t('shop.title') }}</h1>
       <div class="flex flex-wrap items-center gap-3">
-        <InputText
-          v-model="search"
-          :placeholder="t('common.search') + '...'"
-          class="w-48"
-        />
+        <InputText v-model="search" :placeholder="t('common.search') + '...'" class="w-48" />
         <Button
           :icon="showFavoritesOnly ? 'pi pi-star-fill' : 'pi pi-star'"
           :severity="showFavoritesOnly ? 'warn' : 'secondary'"
@@ -126,20 +154,25 @@ function toggleFavorite(productId: number) {
       class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
     >
       <Card
-        v-for="product in filteredProducts"
+        v-for="product in visibleProducts"
         :key="product.id"
-        class="relative overflow-hidden"
+        class="relative flex h-full flex-col overflow-hidden"
+        :pt="{
+          body: { class: 'flex flex-col flex-1' },
+          content: { class: 'flex-1' },
+        }"
       >
         <template #header>
           <div
-            class="flex h-40 items-center justify-center bg-gray-100"
+            class="flex h-50 items-center justify-center bg-gray-100 p-2"
             :style="{ borderTop: `3px solid ${product.category.color}` }"
           >
             <img
               v-if="product.imagePath"
               :src="product.imagePath"
               :alt="product.displayName"
-              class="h-full w-full object-cover"
+              class="h-full w-full object-contain"
+              loading="lazy"
             />
             <span v-else class="pi pi-image text-4xl text-gray-300" />
           </div>
@@ -151,7 +184,9 @@ function toggleFavorite(productId: number) {
             <button
               @click.stop="toggleFavorite(product.id)"
               class="shrink-0 text-lg"
-              :class="product.isFavorite ? 'text-yellow-500' : 'text-gray-300 hover:text-yellow-400'"
+              :class="
+                product.isFavorite ? 'text-yellow-500' : 'text-gray-300 hover:text-yellow-400'
+              "
             >
               <span :class="product.isFavorite ? 'pi pi-star-fill' : 'pi pi-star'" />
             </button>
@@ -175,8 +210,12 @@ function toggleFavorite(productId: number) {
           </p>
           <div class="flex items-center justify-between">
             <div>
-              <span class="text-xl font-bold text-gray-900">{{ t('common.price_with_currency', { price: product.price ?? 0 }) }}</span>
-              <span class="ml-2 text-xs text-gray-400">{{ t('common.pieces_in_stock', { count: product.stockSum }) }}</span>
+              <span class="text-xl font-bold text-gray-900">{{
+                t('common.price_with_currency', { price: product.price ?? 0 })
+              }}</span>
+              <span class="ml-2 text-xs text-gray-400">{{
+                t('common.pieces_in_stock', { count: product.stockSum })
+              }}</span>
             </div>
           </div>
         </template>
@@ -193,7 +232,10 @@ function toggleFavorite(productId: number) {
       </Card>
     </div>
 
-    <div v-else class="py-12 text-center text-gray-500">
+    <!-- Sentinel for IntersectionObserver -->
+    <div v-if="filteredProducts.length" ref="sentinel" class="h-1" />
+
+    <div v-if="!filteredProducts.length" class="py-12 text-center text-gray-500">
       <span class="pi pi-inbox mb-4 text-5xl text-gray-300" />
       <p class="mt-4">{{ t('shop.no_products') }}</p>
     </div>

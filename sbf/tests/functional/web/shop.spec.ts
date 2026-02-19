@@ -3,8 +3,8 @@ import { UserFactory } from '#database/factories/user_factory'
 import { ProductFactory } from '#database/factories/product_factory'
 import { DeliveryFactory } from '#database/factories/delivery_factory'
 import { CategoryFactory } from '#database/factories/category_factory'
-import Delivery from '#models/delivery'
 import Order from '#models/order'
+import User from '#models/user'
 import db from '@adonisjs/lucid/services/db'
 
 const cleanAll = async () => {
@@ -58,11 +58,75 @@ test.group('Web Shop - index', (group) => {
   })
 })
 
+test.group('Web Shop - category filter', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('category param returns all products (filtering is client-side only)', async ({
+    client,
+    assert,
+  }) => {
+    const user = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').create()
+    const catA = await CategoryFactory.create()
+    const catB = await CategoryFactory.create()
+    const productA = await ProductFactory.merge({ categoryId: catA.id }).create()
+    const productB = await ProductFactory.merge({ categoryId: catB.id }).create()
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: productA.id,
+      amountLeft: 2,
+      price: 10,
+    }).create()
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: productB.id,
+      amountLeft: 2,
+      price: 10,
+    }).create()
+
+    // Server always returns all products; category filtering is done client-side
+    const response = await client.get(`/shop?category=${catA.id}`).loginAs(user)
+    response.assertStatus(200)
+    response.assertTextIncludes(productA.displayName)
+    assert.include(response.text(), productB.displayName)
+  })
+
+  test('no category filter returns all in-stock products', async ({ client, assert }) => {
+    const user = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').create()
+    const catA = await CategoryFactory.create()
+    const catB = await CategoryFactory.create()
+    const productA = await ProductFactory.merge({ categoryId: catA.id }).create()
+    const productB = await ProductFactory.merge({ categoryId: catB.id }).create()
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: productA.id,
+      amountLeft: 2,
+      price: 10,
+    }).create()
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: productB.id,
+      amountLeft: 2,
+      price: 10,
+    }).create()
+
+    const response = await client.get('/shop').loginAs(user)
+    response.assertStatus(200)
+    response.assertTextIncludes(productA.displayName)
+    response.assertTextIncludes(productB.displayName)
+  })
+})
+
 test.group('Web Shop - purchase', (group) => {
   group.each.setup(cleanAll)
   group.each.teardown(cleanAll)
 
-  test('successful purchase redirects to /shop and decrements stock', async ({ client, assert }) => {
+  test('successful purchase redirects to /shop and decrements stock', async ({
+    client,
+    assert,
+  }) => {
     const buyer = await UserFactory.create()
     const supplier = await UserFactory.apply('supplier').create()
     const category = await CategoryFactory.create()
@@ -123,10 +187,7 @@ test.group('Web Shop - purchase', (group) => {
   })
 
   test('purchase requires authentication', async ({ client }) => {
-    const response = await client
-      .post('/shop/purchase')
-      .json({ deliveryId: 1 })
-      .redirects(0)
+    const response = await client.post('/shop/purchase').json({ deliveryId: 1 }).redirects(0)
 
     response.assertStatus(302)
   })
@@ -185,5 +246,60 @@ test.group('Web Shop - purchase', (group) => {
 
     const orderCount = await Order.query().where('buyerId', buyer.id).count('* as total')
     assert.equal(Number(orderCount[0].$extras.total), 3)
+  })
+})
+
+test.group('Web Shop - add_favorite', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('?add_favorite adds product to favorites and redirects to /shop', async ({
+    client,
+    assert,
+  }) => {
+    const user = await UserFactory.create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+
+    const response = await client.get(`/shop?add_favorite=${product.id}`).loginAs(user).redirects(0)
+
+    response.assertStatus(302)
+    assert.equal(response.header('location'), '/shop')
+
+    const freshUser = await User.find(user.id)
+    await freshUser!.load((loader) => loader.load('favoriteProducts'))
+    assert.isTrue(freshUser!.favoriteProducts.some((p) => p.id === product.id))
+  })
+
+  test('?add_favorite when already a favorite does not duplicate and redirects', async ({
+    client,
+    assert,
+  }) => {
+    const user = await UserFactory.create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+
+    await db
+      .table('user_favorites')
+      .insert({ user_id: user.id, product_id: product.id, created_at: new Date() })
+
+    const response = await client.get(`/shop?add_favorite=${product.id}`).loginAs(user).redirects(0)
+
+    response.assertStatus(302)
+
+    const count = await db.from('user_favorites').where('user_id', user.id).count('* as total')
+    assert.equal(Number(count[0].total), 1)
+  })
+
+  test('?add_favorite with non-existent product redirects gracefully', async ({
+    client,
+    assert,
+  }) => {
+    const user = await UserFactory.create()
+
+    const response = await client.get('/shop?add_favorite=999999').loginAs(user).redirects(0)
+
+    response.assertStatus(302)
+    assert.equal(response.header('location'), '/shop')
   })
 })

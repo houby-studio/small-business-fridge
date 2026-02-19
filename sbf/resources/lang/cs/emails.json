@@ -38,5 +38,6 @@
   "pending_approval_intro": "Ahoj {name}, máš {count} faktur v celkové výši {total} Kč, u kterých zákazníci označili platbu jako odeslanou:",
   "pending_approval_invoice": "Faktura",
   "pending_approval_amount": "Částka",
-  "pending_approval_note": "Zkontroluj platby na svém bankovním účtu a schval je v aplikaci."
+  "pending_approval_note": "Zkontroluj platby na svém bankovním účtu a schval je v aplikaci.",
+  "purchase_add_favorite": "Přidat do oblíbených"
 }
