@@ -54,6 +54,7 @@
   "payments_reject": "Reject",
   "payments_no_invoices": "You don't have any invoices yet.",
   "payments_filter_status": "Status",
+  "payments_filter_customer": "Customer",
 
   "deliveries_filter_product": "Filter by product",
 

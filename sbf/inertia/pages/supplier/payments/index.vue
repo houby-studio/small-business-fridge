@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
@@ -26,11 +26,18 @@ interface PaginatedInvoices {
 
 const props = defineProps<{
   invoices: PaginatedInvoices
-  filters: { status: string }
+  filters: { status: string; sortBy: string; sortOrder: string; buyerId: string }
+  buyers: { id: number; displayName: string }[]
 }>()
 const { t } = useI18n()
 
 const filterStatus = ref(props.filters.status)
+const filterSortBy = ref(props.filters.sortBy || 'createdAt')
+const filterSortOrder = ref(props.filters.sortOrder || 'desc')
+const filterBuyerId = ref(props.filters.buyerId ? Number(props.filters.buyerId) : null)
+const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
+
+const buyerOptions = [{ id: null, displayName: '—' }, ...props.buyers]
 
 const statusOptions = [
   { label: t('common.all'), value: '' },
@@ -59,23 +66,50 @@ function reject(id: number) {
   router.post(`/supplier/payments/${id}`, { action: 'reject' })
 }
 
+function buildFilterParams() {
+  return {
+    status: filterStatus.value || undefined,
+    sortBy: filterSortBy.value || undefined,
+    sortOrder: filterSortOrder.value || undefined,
+    buyerId: filterBuyerId.value ?? undefined,
+  }
+}
+
 function applyFilters() {
   router.get(
     '/supplier/payments',
-    { status: filterStatus.value || undefined, page: 1 },
+    { ...buildFilterParams(), page: 1 },
     { preserveState: true, only: ['invoices', 'filters'] }
   )
 }
 
 function clearFilters() {
   filterStatus.value = ''
+  filterSortBy.value = 'createdAt'
+  filterSortOrder.value = 'desc'
+  filterBuyerId.value = null
   router.get('/supplier/payments', {}, { preserveState: true, only: ['invoices', 'filters'] })
 }
 
 function onPageChange(event: any) {
   router.get(
     '/supplier/payments',
-    { status: filterStatus.value || undefined, page: event.page + 1 },
+    { ...buildFilterParams(), page: event.page + 1 },
+    { preserveState: true, only: ['invoices', 'filters'] }
+  )
+}
+
+function onSort(event: any) {
+  filterSortBy.value = event.sortField
+  filterSortOrder.value = event.sortOrder === 1 ? 'asc' : 'desc'
+  router.get(
+    '/supplier/payments',
+    {
+      ...buildFilterParams(),
+      sortBy: event.sortField,
+      sortOrder: event.sortOrder === 1 ? 'asc' : 'desc',
+      page: 1,
+    },
     { preserveState: true, only: ['invoices', 'filters'] }
   )
 }
@@ -101,6 +135,19 @@ function onPageChange(event: any) {
           class="w-44"
         />
       </div>
+      <div>
+        <label class="mb-1 block text-sm text-gray-600">{{
+          t('supplier.payments_filter_customer')
+        }}</label>
+        <Select
+          v-model="filterBuyerId"
+          :options="buyerOptions"
+          optionLabel="displayName"
+          optionValue="id"
+          filter
+          class="w-48"
+        />
+      </div>
       <Button
         :label="t('common.filter_apply')"
         icon="pi pi-filter"
@@ -123,20 +170,23 @@ function onPageChange(event: any) {
       :totalRecords="invoices.meta.total"
       :lazy="true"
       :first="(invoices.meta.currentPage - 1) * invoices.meta.perPage"
+      :sortField="filterSortBy"
+      :sortOrder="sortOrderNum"
       @page="onPageChange"
+      @sort="onSort"
       stripedRows
       class="rounded-lg border"
     >
       <Column header="#" style="width: 60px">
         <template #body="{ data }">{{ data.id }}</template>
       </Column>
-      <Column :header="t('common.date')">
+      <Column :header="t('common.date')" field="createdAt" sortable>
         <template #body="{ data }">{{ formatDate(data.createdAt) }}</template>
       </Column>
       <Column :header="t('common.customer')">
         <template #body="{ data }">{{ data.buyer?.displayName ?? '—' }}</template>
       </Column>
-      <Column :header="t('common.total')">
+      <Column :header="t('common.total')" field="totalCost" sortable style="width: 120px">
         <template #body="{ data }">
           <span class="font-semibold">{{
             t('common.price_with_currency', { price: data.totalCost })

@@ -134,21 +134,25 @@ export default class InvoiceService {
   }
 
   /**
-   * Get invoices issued by a supplier (supplier payment view) with optional status filter.
+   * Get invoices issued by a supplier (supplier payment view) with optional status, sort, and buyer filters.
    */
   async getInvoicesForSupplier(
     supplierId: number,
     page: number = 1,
     perPage: number = 20,
-    filters?: { status?: string }
+    filters?: { status?: string; sortBy?: string; sortOrder?: string; buyerId?: number }
   ) {
+    const sortByWhitelist = ['createdAt', 'totalCost']
+    const sortBy = sortByWhitelist.includes(filters?.sortBy ?? '') ? filters!.sortBy! : 'createdAt'
+    const sortOrder = filters?.sortOrder === 'asc' ? 'asc' : 'desc'
+
     const query = Invoice.query()
       .where('supplierId', supplierId)
       .preload('buyer')
       .preload('orders', (q) => {
         q.preload('delivery', (dq) => dq.preload('product'))
       })
-      .orderBy('createdAt', 'desc')
+      .orderBy(sortBy, sortOrder)
 
     if (filters?.status === 'paid') {
       query.where('isPaid', true)
@@ -156,6 +160,10 @@ export default class InvoiceService {
       query.where('isPaid', false).where('isPaymentRequested', false)
     } else if (filters?.status === 'awaiting') {
       query.where('isPaid', false).where('isPaymentRequested', true)
+    }
+
+    if (filters?.buyerId) {
+      query.where('buyerId', filters.buyerId)
     }
 
     return query.paginate(page, perPage)

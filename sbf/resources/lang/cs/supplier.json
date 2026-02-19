@@ -54,6 +54,7 @@
   "payments_reject": "Zamítnout",
   "payments_no_invoices": "Zatím nemáte žádné faktury.",
   "payments_filter_status": "Stav",
+  "payments_filter_customer": "Zákazník",
 
   "deliveries_filter_product": "Filtrovat produkt",
 
