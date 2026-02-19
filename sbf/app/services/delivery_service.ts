@@ -34,9 +34,29 @@ export default class DeliveryService {
   /**
    * Get stock overview for a supplier — all their deliveries with product info.
    * Groups by product, shows supplied/remaining/sold amounts.
+   * Supports filtering by name, category, inStock, sorting, and pagination.
    */
-  async getStockForSupplier(supplierId: number) {
-    const rows = await db
+  async getStockForSupplier(
+    supplierId: number,
+    page: number = 1,
+    perPage: number = 20,
+    filters?: {
+      name?: string
+      categoryId?: number
+      inStock?: boolean
+      sortBy?: string
+      sortOrder?: string
+    }
+  ) {
+    const sortByMap: Record<string, string> = {
+      productName: 'product_name',
+      totalRemaining: 'total_remaining',
+      totalSold: 'total_sold',
+    }
+    const safeSort = sortByMap[filters?.sortBy ?? ''] ?? 'product_name'
+    const sortDir: 'asc' | 'desc' = filters?.sortOrder === 'asc' ? 'asc' : 'desc'
+
+    let query = db
       .from('deliveries')
       .join('products', 'deliveries.product_id', 'products.id')
       .leftJoin('categories', 'products.category_id', 'categories.id')
@@ -45,6 +65,7 @@ export default class DeliveryService {
         'products.id as product_id',
         'products.display_name as product_name',
         'products.image_path',
+        'categories.id as category_id',
         'categories.name as category_name',
         'categories.color as category_color',
         db.rawQuery('SUM(deliveries.amount_supplied)::int as total_supplied'),
@@ -59,12 +80,26 @@ export default class DeliveryService {
         'products.id',
         'products.display_name',
         'products.image_path',
+        'categories.id',
         'categories.name',
         'categories.color'
       )
-      .orderBy('products.display_name', 'asc')
 
-    return rows.map((r) => ({
+    if (filters?.name) {
+      query = query.whereRaw('products.display_name ILIKE ?', [`%${filters.name}%`])
+    }
+    if (filters?.categoryId) {
+      query = query.where('products.category_id', filters.categoryId)
+    }
+    if (filters?.inStock) {
+      query = query.havingRaw('SUM(deliveries.amount_left)::int > 0')
+    }
+
+    query = query.orderByRaw(`${safeSort} ${sortDir}`)
+
+    const allRows = await query
+
+    const allMapped = allRows.map((r) => ({
       productId: r.product_id,
       productName: r.product_name,
       imagePath: normalizeImagePath(r.image_path),
@@ -76,6 +111,21 @@ export default class DeliveryService {
       deliveryCount: r.delivery_count,
       totalRevenue: Number(r.total_revenue),
     }))
+
+    const total = allMapped.length
+    const lastPage = Math.max(1, Math.ceil(total / perPage))
+    const start = (page - 1) * perPage
+    const data = allMapped.slice(start, start + perPage)
+
+    return {
+      data,
+      meta: { total, perPage, currentPage: page, lastPage },
+      totals: {
+        totalProducts: total,
+        totalRemaining: allMapped.reduce((s, r) => s + r.totalRemaining, 0),
+        totalRevenue: allMapped.reduce((s, r) => s + r.totalRevenue, 0),
+      },
+    }
   }
 
   /**

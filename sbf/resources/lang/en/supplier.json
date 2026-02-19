@@ -58,5 +58,8 @@
   "deliveries_filter_product": "Filter by product",
 
   "products_search": "Search product",
-  "products_filter_category": "Category"
+  "products_filter_category": "Category",
+
+  "stock_filter_name": "Search by name",
+  "stock_filter_in_stock": "In stock only"
 }

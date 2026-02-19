@@ -36,11 +36,12 @@ const props = defineProps<{
   products: ProductOption[]
   recentDeliveries: PaginatedDeliveries
   filters: { productId: string; sortBy: string; sortOrder: string }
+  preselect: number | null
 }>()
 
 const { t } = useI18n()
 
-const selectedProduct = ref<number | null>(null)
+const selectedProduct = ref<number | null>(props.preselect ?? null)
 const amount = ref<number | null>(null)
 const price = ref<number | null>(null)
 const submitting = ref(false)

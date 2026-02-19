@@ -10,6 +10,7 @@ export default class DeliveriesController {
     const productId = request.input('productId')
     const sortBy = request.input('sortBy')
     const sortOrder = request.input('sortOrder')
+    const preselect = request.input('preselect')
 
     const [products, recentDeliveries] = await Promise.all([
       service.getAllProducts(),
@@ -33,6 +34,7 @@ export default class DeliveriesController {
         sortBy: sortBy || '',
         sortOrder: sortOrder || '',
       },
+      preselect: preselect ? Number(preselect) : null,
     })
   }
 
