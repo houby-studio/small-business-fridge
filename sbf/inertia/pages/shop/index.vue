@@ -157,6 +157,7 @@ function toggleFavorite(productId: number) {
         v-for="product in visibleProducts"
         :key="product.id"
         class="sbf-card relative flex h-full flex-col overflow-hidden"
+        :class="{ 'sbf-card-favorite': product.isFavorite }"
         :pt="{
           body: { class: 'flex flex-col flex-1' },
           content: { class: 'flex-1' },
@@ -164,7 +165,7 @@ function toggleFavorite(productId: number) {
       >
         <template #header>
           <div
-            class="flex h-50 items-center justify-center bg-gray-100 p-2 dark:bg-zinc-800"
+            class="sbf-img-zoom flex h-50 items-center justify-center bg-gray-100 p-2 dark:bg-zinc-800"
             :style="{ borderTop: `3px solid ${product.category.color}` }"
           >
             <img
@@ -215,7 +216,17 @@ function toggleFavorite(productId: number) {
               <span class="text-xl font-bold text-gray-900 dark:text-zinc-100">{{
                 t('common.price_with_currency', { price: product.price ?? 0 })
               }}</span>
-              <span class="ml-2 text-xs text-gray-400 dark:text-zinc-500">{{
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span
+                class="inline-block h-2 w-2 rounded-full"
+                :class="{
+                  'bg-green-500': product.stockSum >= 5,
+                  'sbf-stock-low bg-red-500': product.stockSum > 0 && product.stockSum < 5,
+                  'bg-gray-400 dark:bg-zinc-600': product.stockSum === 0,
+                }"
+              />
+              <span class="text-xs text-gray-400 dark:text-zinc-500">{{
                 t('common.pieces_in_stock', { count: product.stockSum })
               }}</span>
             </div>

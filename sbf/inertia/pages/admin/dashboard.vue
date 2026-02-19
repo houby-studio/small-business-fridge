@@ -45,62 +45,105 @@ function channelSeverity(ch: string): 'info' | 'success' | 'warn' {
 
     <!-- Stats grid -->
     <div class="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <Card class="text-center">
+      <Card class="sbf-stat sbf-stat-blue">
         <template #content>
-          <div class="text-3xl font-bold">{{ stats.users.total }}</div>
-          <div class="text-sm text-gray-500 dark:text-zinc-400">
-            {{ t('admin.dashboard_total_users') }}
-          </div>
-          <div class="mt-1 text-xs text-gray-400 dark:text-zinc-500">
-            {{
-              t('admin.dashboard_users_detail', {
-                customers: stats.users.customers,
-                suppliers: stats.users.suppliers,
-                admins: stats.users.admins,
-              })
-            }}
+          <div class="flex items-center gap-4">
+            <div
+              class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-950/50"
+            >
+              <span class="pi pi-users text-xl text-blue-600 dark:text-blue-400" />
+            </div>
+            <div class="min-w-0">
+              <div class="text-3xl font-bold text-gray-900 dark:text-zinc-100">
+                {{ stats.users.total }}
+              </div>
+              <div class="text-sm text-gray-500 dark:text-zinc-400">
+                {{ t('admin.dashboard_total_users') }}
+              </div>
+              <div class="mt-0.5 truncate text-xs text-gray-400 dark:text-zinc-500">
+                {{
+                  t('admin.dashboard_users_detail', {
+                    customers: stats.users.customers,
+                    suppliers: stats.users.suppliers,
+                    admins: stats.users.admins,
+                  })
+                }}
+              </div>
+            </div>
           </div>
         </template>
       </Card>
-      <Card class="text-center">
+
+      <Card class="sbf-stat sbf-stat-green">
         <template #content>
-          <div class="text-3xl font-bold">{{ stats.orders.total }}</div>
-          <div class="text-sm text-gray-500 dark:text-zinc-400">
-            {{ t('admin.dashboard_total_orders') }}
-          </div>
-          <div class="mt-1 text-xs text-gray-400 dark:text-zinc-500">
-            {{
-              t('admin.dashboard_orders_detail', {
-                lastWeek: stats.orders.lastWeek,
-                lastMonth: stats.orders.lastMonth,
-              })
-            }}
+          <div class="flex items-center gap-4">
+            <div
+              class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-green-100 dark:bg-green-950/50"
+            >
+              <span class="pi pi-shopping-cart text-xl text-green-600 dark:text-green-400" />
+            </div>
+            <div class="min-w-0">
+              <div class="text-3xl font-bold text-gray-900 dark:text-zinc-100">
+                {{ stats.orders.total }}
+              </div>
+              <div class="text-sm text-gray-500 dark:text-zinc-400">
+                {{ t('admin.dashboard_total_orders') }}
+              </div>
+              <div class="mt-0.5 text-xs text-gray-400 dark:text-zinc-500">
+                {{
+                  t('admin.dashboard_orders_detail', {
+                    lastWeek: stats.orders.lastWeek,
+                    lastMonth: stats.orders.lastMonth,
+                  })
+                }}
+              </div>
+            </div>
           </div>
         </template>
       </Card>
-      <Card class="text-center">
+
+      <Card class="sbf-stat sbf-stat-purple">
         <template #content>
-          <div class="text-3xl font-bold">
-            {{ t('common.price_with_currency', { price: stats.orders.totalRevenue }) }}
-          </div>
-          <div class="text-sm text-gray-500 dark:text-zinc-400">
-            {{ t('admin.dashboard_total_revenue') }}
+          <div class="flex items-center gap-4">
+            <div
+              class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-purple-100 dark:bg-purple-950/50"
+            >
+              <span class="pi pi-chart-bar text-xl text-purple-600 dark:text-purple-400" />
+            </div>
+            <div class="min-w-0">
+              <div class="text-2xl font-bold text-gray-900 dark:text-zinc-100">
+                {{ t('common.price_with_currency', { price: stats.orders.totalRevenue }) }}
+              </div>
+              <div class="text-sm text-gray-500 dark:text-zinc-400">
+                {{ t('admin.dashboard_total_revenue') }}
+              </div>
+            </div>
           </div>
         </template>
       </Card>
-      <Card class="text-center">
+
+      <Card class="sbf-stat sbf-stat-amber">
         <template #content>
-          <div class="text-3xl font-bold text-orange-600">
-            {{ t('common.price_with_currency', { price: stats.invoices.unpaidAmount }) }}
-          </div>
-          <div class="text-sm text-gray-500 dark:text-zinc-400">{{ t('common.unpaid') }}</div>
-          <div class="mt-1 text-xs text-gray-400 dark:text-zinc-500">
-            {{
-              t('admin.dashboard_invoices_detail', {
-                paid: stats.invoices.paid,
-                unpaid: stats.invoices.unpaid,
-              })
-            }}
+          <div class="flex items-center gap-4">
+            <div
+              class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-950/50"
+            >
+              <span class="pi pi-exclamation-triangle text-xl text-amber-600 dark:text-amber-400" />
+            </div>
+            <div class="min-w-0">
+              <div class="text-2xl font-bold text-orange-600">
+                {{ t('common.price_with_currency', { price: stats.invoices.unpaidAmount }) }}
+              </div>
+              <div class="text-sm text-gray-500 dark:text-zinc-400">{{ t('common.unpaid') }}</div>
+              <div class="mt-0.5 text-xs text-gray-400 dark:text-zinc-500">
+                {{
+                  t('admin.dashboard_invoices_detail', {
+                    paid: stats.invoices.paid,
+                    unpaid: stats.invoices.unpaid,
+                  })
+                }}
+              </div>
+            </div>
           </div>
         </template>
       </Card>

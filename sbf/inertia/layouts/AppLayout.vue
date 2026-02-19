@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, onMounted } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { Link, usePage, router } from '@inertiajs/vue3'
 import Toast from 'primevue/toast'
 import Button from 'primevue/button'
@@ -16,7 +16,6 @@ const isSupplier = computed(() => user.value?.role === 'supplier' || user.value?
 const isAdmin = computed(() => user.value?.role === 'admin')
 
 // ─── Dark mode ───────────────────────────────────────────────────────────────
-// localIsDark mirrors user.colorMode but allows instant client-side toggle
 const localIsDark = ref(user.value?.colorMode === 'dark')
 
 watch(
@@ -26,7 +25,6 @@ watch(
   }
 )
 
-// Keep <html> data-theme in sync (PrimeVue reads from here too)
 watch(
   localIsDark,
   (dark) => {
@@ -35,9 +33,28 @@ watch(
   { immediate: false }
 )
 
+// ─── Scroll shadow ───────────────────────────────────────────────────────────
+const isScrolled = ref(false)
+
+function handleScroll() {
+  isScrolled.value = window.scrollY > 8
+}
+
+// ─── Active nav link ─────────────────────────────────────────────────────────
+const currentPath = computed(() => page.url.split('?')[0])
+
+function isActive(url: string | undefined): boolean {
+  if (!url) return false
+  return currentPath.value === url || currentPath.value.startsWith(url + '/')
+}
+
 onMounted(() => {
-  // Set initial data-theme from persisted user preference
   document.documentElement.setAttribute('data-theme', localIsDark.value ? 'dark' : 'light')
+  window.addEventListener('scroll', handleScroll, { passive: true })
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
 })
 
 function toggleColorMode() {
@@ -104,7 +121,8 @@ function logout() {
 
     <!-- Sticky glassmorphism navbar -->
     <div
-      class="sbf-nav sticky top-0 z-50 border-b border-slate-200/70 bg-white/80 dark:border-zinc-800/60 dark:bg-zinc-900/80"
+      class="sbf-nav sticky top-0 z-50 border-b border-slate-200/70 bg-white/82 dark:border-zinc-800/60 dark:bg-zinc-900/82"
+      :class="{ 'sbf-nav-scrolled': isScrolled }"
     >
       <Menubar
         :model="menuItems"
@@ -115,15 +133,16 @@ function logout() {
       >
         <template #start>
           <Link href="/shop" class="mr-6 flex items-center gap-2">
-            <span
-              class="text-xl font-bold tracking-tight text-primary transition-opacity hover:opacity-80"
-            >
-              Lednice IT
-            </span>
+            <span class="sbf-brand text-xl font-bold tracking-tight"> Lednice IT </span>
           </Link>
         </template>
         <template #item="{ item, props }">
-          <Link v-if="item.url && !item.items" v-bind="props.action" :href="item.url">
+          <Link
+            v-if="item.url && !item.items"
+            v-bind="props.action"
+            :href="item.url"
+            :class="{ 'sbf-nav-active': isActive(item.url) }"
+          >
             <span :class="item.icon" class="mr-2" />
             <span>{{ item.label }}</span>
           </Link>
@@ -164,8 +183,8 @@ function logout() {
       </Menubar>
     </div>
 
-    <!-- Main content -->
-    <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <!-- Main content with entrance animation -->
+    <main class="sbf-main mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       <slot />
     </main>
   </div>
