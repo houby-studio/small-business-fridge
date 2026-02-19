@@ -1,5 +1,6 @@
 import mail from '@adonisjs/mail/services/main'
 import i18nManager from '@adonisjs/i18n/services/main'
+import env from '#start/env'
 import User from '#models/user'
 import Order from '#models/order'
 import Invoice from '#models/invoice'
@@ -23,6 +24,16 @@ export default class NotificationService {
     const buyer = order.buyer
     if (!buyer.sendMailOnPurchase) return
 
+    const productId = order.delivery.product.id
+    const isFavorite = await db
+      .from('user_favorites')
+      .where('user_id', buyer.id)
+      .where('product_id', productId)
+      .first()
+
+    const appUrl = env.get('APP_URL') || `http://${env.get('HOST')}:${env.get('PORT')}`
+    const addFavoriteUrl = isFavorite ? null : `${appUrl}/shop?add_favorite=${productId}`
+
     await mail.send((message) => {
       message
         .to(buyer.email)
@@ -36,6 +47,7 @@ export default class NotificationService {
           price: order.delivery.price,
           supplierName: order.delivery.supplier.displayName,
           date: order.createdAt.toFormat('dd.MM.yyyy HH:mm'),
+          addFavoriteUrl,
         })
     })
   }

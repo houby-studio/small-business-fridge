@@ -4,11 +4,38 @@ import OrderService from '#services/order_service'
 import NotificationService from '#services/notification_service'
 import { purchaseValidator } from '#validators/order'
 import logger from '@adonisjs/core/services/logger'
+import Product from '#models/product'
 
 export default class ShopController {
-  async index({ inertia, auth, request }: HttpContext) {
+  async index({ inertia, auth, request, response, session, i18n }: HttpContext) {
     const shopService = new ShopService()
     const user = auth.user!
+
+    // Handle ?add_favorite=X param (used in purchase confirmation email links)
+    const addFavoriteRaw = request.input('add_favorite')
+    if (addFavoriteRaw) {
+      const productId = Number(addFavoriteRaw)
+      if (!Number.isNaN(productId) && productId > 0) {
+        const product = await Product.find(productId)
+        if (product) {
+          const existing = await user
+            .related('favoriteProducts')
+            .query()
+            .where('products.id', productId)
+            .first()
+          if (!existing) {
+            await user.related('favoriteProducts').attach([productId])
+            session.flash('alert', { type: 'success', message: i18n.t('messages.favorite_added') })
+          } else {
+            session.flash('alert', {
+              type: 'info',
+              message: i18n.t('messages.favorite_already_added'),
+            })
+          }
+        }
+      }
+      return response.redirect('/shop')
+    }
 
     const rawCategory = request.input('category')
     const categoryId = rawCategory ? Number(rawCategory) : undefined
@@ -17,7 +44,6 @@ export default class ShopController {
       shopService.getProducts({
         showAll: user.showAllProducts,
         userId: user.id,
-        categoryId,
       }),
       shopService.getCategories(),
     ])

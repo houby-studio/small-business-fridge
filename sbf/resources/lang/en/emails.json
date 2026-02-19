@@ -38,5 +38,6 @@
   "pending_approval_intro": "Hi {name}, you have {count} invoices totalling {total} CZK where customers have marked payment as sent:",
   "pending_approval_invoice": "Invoice",
   "pending_approval_amount": "Amount",
-  "pending_approval_note": "Check payments in your bank account and approve them in the application."
+  "pending_approval_note": "Check payments in your bank account and approve them in the application.",
+  "purchase_add_favorite": "Add to Favorites"
 }

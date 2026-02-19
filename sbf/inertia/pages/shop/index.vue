@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { Head, router, usePage } from '@inertiajs/vue3'
+import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import Card from 'primevue/card'
 import Button from 'primevue/button'
@@ -10,7 +10,6 @@ import InputText from 'primevue/inputtext'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from '~/composables/use_i18n'
-import type { SharedProps } from '~/types'
 
 interface ShopProduct {
   id: number
@@ -37,7 +36,6 @@ const props = defineProps<{
   filters: { category: number | null }
 }>()
 
-const page = usePage<SharedProps>()
 const confirm = useConfirm()
 const { t } = useI18n()
 
@@ -50,10 +48,6 @@ const showFavoritesOnly = ref(false)
 const visibleCount = ref(INITIAL_COUNT)
 const sentinel = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null
-
-watch(selectedCategory, (categoryId) => {
-  router.get('/shop', categoryId ? { category: categoryId } : {}, { only: ['products', 'filters'] })
-})
 
 const categoryOptions = computed(() => [
   { label: t('common.all'), value: null },
