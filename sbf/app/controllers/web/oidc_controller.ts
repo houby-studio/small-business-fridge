@@ -9,7 +9,7 @@ export default class OidcController {
     return ally.use('microsoft').redirect()
   }
 
-  async callback({ ally, auth, response, session, i18n }: HttpContext) {
+  async callback({ ally, auth, request, response, session, i18n }: HttpContext) {
     const microsoft = ally.use('microsoft')
 
     // Handle user cancelling or errors from Microsoft
@@ -76,7 +76,11 @@ export default class OidcController {
       }
 
       logger.info({ userId: user.id, email, role: user.role }, 'OIDC auto-registered new user')
-      AuditService.log(user.id, 'user.registered', 'user', user.id, null, { via: 'oidc' })
+      AuditService.log(user.id, 'user.registered', 'user', user.id, null, {
+        via: 'oidc',
+        ip: request.ip(),
+        ua: request.header('user-agent') ?? null,
+      })
       session.flash('alert', { type: 'success', message: i18n.t('messages.login_auto_registered') })
     }
 
@@ -108,7 +112,11 @@ export default class OidcController {
 
     await auth.use('web').login(user)
     logger.info({ userId: user.id, email }, 'OIDC login success')
-    AuditService.log(user.id, 'user.login', 'user', user.id, null, { via: 'oidc' })
+    AuditService.log(user.id, 'user.login', 'user', user.id, null, {
+      via: 'oidc',
+      ip: request.ip(),
+      ua: request.header('user-agent') ?? null,
+    })
     return response.redirect('/shop')
   }
 }

@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
+import Select from 'primevue/select'
+import Button from 'primevue/button'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDateTime } from '~/composables/use_format_date'
 
@@ -23,8 +26,32 @@ interface PaginatedLogs {
   meta: { total: number; perPage: number; currentPage: number; lastPage: number }
 }
 
-defineProps<{ logs: PaginatedLogs }>()
+const props = defineProps<{
+  logs: PaginatedLogs
+  filters: { action: string; sortOrder: string }
+}>()
 const { t } = useI18n()
+
+const filterAction = ref(props.filters.action)
+const filterSortOrder = ref(props.filters.sortOrder || 'desc')
+
+const actionOptions = [
+  { label: '—', value: '' },
+  { label: t('audit.action_order_created'), value: 'order.created' },
+  { label: t('audit.action_invoice_generated'), value: 'invoice.generated' },
+  { label: t('audit.action_payment_requested'), value: 'payment.requested' },
+  { label: t('audit.action_payment_approved'), value: 'payment.approved' },
+  { label: t('audit.action_payment_rejected'), value: 'payment.rejected' },
+  { label: t('audit.action_delivery_created'), value: 'delivery.created' },
+  { label: t('audit.action_product_created'), value: 'product.created' },
+  { label: t('audit.action_product_updated'), value: 'product.updated' },
+  { label: t('audit.action_profile_updated'), value: 'profile.updated' },
+  { label: t('audit.action_user_updated'), value: 'user.updated' },
+  { label: t('audit.action_order_storno'), value: 'order.storno' },
+  { label: t('audit.action_user_login'), value: 'user.login' },
+  { label: t('audit.action_user_registered'), value: 'user.registered' },
+  { label: t('audit.action_user_logout'), value: 'user.logout' },
+]
 
 const actionLabels: Record<string, string> = {
   'order.created': 'audit.action_order_created',
@@ -38,6 +65,9 @@ const actionLabels: Record<string, string> = {
   'profile.updated': 'audit.action_profile_updated',
   'user.updated': 'audit.action_user_updated',
   'order.storno': 'audit.action_order_storno',
+  'user.login': 'audit.action_user_login',
+  'user.registered': 'audit.action_user_registered',
+  'user.logout': 'audit.action_user_logout',
 }
 
 function actionLabel(action: string | undefined) {
@@ -45,15 +75,47 @@ function actionLabel(action: string | undefined) {
   return t(actionLabels[action] ?? action)
 }
 
-function formatMetadata(meta: Record<string, any> | null) {
+function formatMetadata(meta: Record<string, any> | null): string {
   if (!meta) return ''
   return Object.entries(meta)
-    .map(([k, v]) => `${k}: ${v}`)
+    .filter(([, v]) => v !== null && v !== undefined)
+    .map(([k, v]) => {
+      if (typeof v === 'object' && !Array.isArray(v) && v !== null) {
+        if ('from' in v && 'to' in v) return `${k}: ${v.from ?? '—'} → ${v.to ?? '—'}`
+        return `${k}: ${JSON.stringify(v)}`
+      }
+      return `${k}: ${v}`
+    })
     .join(', ')
 }
 
+function buildParams() {
+  return {
+    action: filterAction.value || undefined,
+    sortOrder: filterSortOrder.value || undefined,
+  }
+}
+
+function applyFilters() {
+  router.get(
+    '/audit',
+    { ...buildParams(), page: 1 },
+    { preserveState: true, only: ['logs', 'filters'] }
+  )
+}
+
+function clearFilters() {
+  filterAction.value = ''
+  filterSortOrder.value = 'desc'
+  router.get('/audit', {}, { preserveState: true, only: ['logs', 'filters'] })
+}
+
 function onPageChange(event: any) {
-  router.get('/audit', { page: event.page + 1 }, { preserveState: true, only: ['logs'] })
+  router.get(
+    '/audit',
+    { ...buildParams(), page: event.page + 1 },
+    { preserveState: true, only: ['logs', 'filters'] }
+  )
 }
 </script>
 
@@ -62,6 +124,33 @@ function onPageChange(event: any) {
     <Head :title="t('audit.title')" />
 
     <h1 class="mb-6 text-2xl font-bold text-gray-900">{{ t('audit.heading') }}</h1>
+
+    <!-- Filters -->
+    <div class="mb-4 flex flex-wrap items-end gap-3">
+      <div>
+        <label class="mb-1 block text-sm text-gray-600">{{ t('audit.filter_action') }}</label>
+        <Select
+          v-model="filterAction"
+          :options="actionOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="w-48"
+        />
+      </div>
+      <Button
+        :label="t('audit.filter_apply')"
+        icon="pi pi-filter"
+        size="small"
+        @click="applyFilters"
+      />
+      <Button
+        :label="t('audit.filter_clear')"
+        size="small"
+        severity="secondary"
+        text
+        @click="clearFilters"
+      />
+    </div>
 
     <DataTable
       :value="logs.data"
@@ -74,8 +163,27 @@ function onPageChange(event: any) {
       stripedRows
       class="rounded-lg border"
     >
-      <Column :header="t('audit.date')">
+      <Column :header="t('audit.date')" style="width: 160px">
         <template #body="{ data }">{{ formatDateTime(data.createdAt) }}</template>
+        <template #header>
+          <span
+            class="cursor-pointer select-none"
+            @click="
+              () => {
+                filterSortOrder = filterSortOrder === 'asc' ? 'desc' : 'asc'
+                applyFilters()
+              }
+            "
+          >
+            {{ t('audit.date') }}
+            <i
+              :class="
+                filterSortOrder === 'asc' ? 'pi pi-sort-amount-up-alt' : 'pi pi-sort-amount-down'
+              "
+              class="ml-1 text-xs"
+            />
+          </span>
+        </template>
       </Column>
       <Column :header="t('audit.action')">
         <template #body="{ data }">

@@ -216,7 +216,7 @@ router.get('/orders', { ...params, page: 2 }, { preserveState: true })
 | `/admin/invoices`         | `['invoices', 'filters']`         |
 | `/admin/users`            | `['users', 'filters']`            |
 | `/admin/audit`            | `['logs', 'filters']`             |
-| `/audit`                  | `['logs']`                        |
+| `/audit`                  | `['logs', 'filters']`             |
 | `/supplier/payments`      | `['invoices', 'filters']`         |
 | `/supplier/deliveries`    | `['recentDeliveries', 'filters']` |
 | `/supplier/products`      | `['products', 'filters']`         |

@@ -28,7 +28,7 @@ interface PaginatedLogs {
 
 const props = defineProps<{
   logs: PaginatedLogs
-  filters: { action: string; entityType: string; userId: string }
+  filters: { action: string; entityType: string; userId: string; sortOrder: string }
   users: { id: number; displayName: string }[]
 }>()
 const { t } = useI18n()
@@ -36,6 +36,7 @@ const { t } = useI18n()
 const filterAction = ref(props.filters.action)
 const filterEntity = ref(props.filters.entityType)
 const filterUserId = ref(props.filters.userId ? Number(props.filters.userId) : null)
+const filterSortOrder = ref(props.filters.sortOrder || 'desc')
 
 const userOptions = [{ id: null, displayName: '—' }, ...props.users]
 
@@ -52,6 +53,9 @@ const actionOptions = [
   { label: t('audit.action_profile_updated'), value: 'profile.updated' },
   { label: t('audit.action_user_updated'), value: 'user.updated' },
   { label: t('audit.action_order_storno'), value: 'order.storno' },
+  { label: t('audit.action_user_login'), value: 'user.login' },
+  { label: t('audit.action_user_registered'), value: 'user.registered' },
+  { label: t('audit.action_user_logout'), value: 'user.logout' },
 ]
 
 const entityOptions = [
@@ -75,6 +79,9 @@ const actionLabels: Record<string, string> = {
   'profile.updated': 'audit.action_profile_updated',
   'user.updated': 'audit.action_user_updated',
   'order.storno': 'audit.action_order_storno',
+  'user.login': 'audit.action_user_login',
+  'user.registered': 'audit.action_user_registered',
+  'user.logout': 'audit.action_user_logout',
 }
 
 function actionLabel(action: string | undefined) {
@@ -82,21 +89,33 @@ function actionLabel(action: string | undefined) {
   return t(actionLabels[action] ?? action)
 }
 
-function formatMetadata(meta: Record<string, any> | null) {
+function formatMetadata(meta: Record<string, any> | null): string {
   if (!meta) return ''
   return Object.entries(meta)
-    .map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`)
+    .filter(([, v]) => v !== null && v !== undefined)
+    .map(([k, v]) => {
+      if (typeof v === 'object' && !Array.isArray(v) && v !== null) {
+        if ('from' in v && 'to' in v) return `${k}: ${v.from ?? '—'} → ${v.to ?? '—'}`
+        return `${k}: ${JSON.stringify(v)}`
+      }
+      return `${k}: ${v}`
+    })
     .join(', ')
+}
+
+function buildParams() {
+  return {
+    action: filterAction.value || undefined,
+    entityType: filterEntity.value || undefined,
+    userId: filterUserId.value ?? undefined,
+    sortOrder: filterSortOrder.value || undefined,
+  }
 }
 
 function applyFilters() {
   router.get(
     '/admin/audit',
-    {
-      action: filterAction.value || undefined,
-      entityType: filterEntity.value || undefined,
-      userId: filterUserId.value ?? undefined,
-    },
+    { ...buildParams(), page: 1 },
     { preserveState: true, only: ['logs', 'filters'] }
   )
 }
@@ -105,18 +124,14 @@ function clearFilters() {
   filterAction.value = ''
   filterEntity.value = ''
   filterUserId.value = null
+  filterSortOrder.value = 'desc'
   router.get('/admin/audit', {}, { preserveState: true, only: ['logs', 'filters'] })
 }
 
 function onPageChange(event: any) {
   router.get(
     '/admin/audit',
-    {
-      page: event.page + 1,
-      action: filterAction.value || undefined,
-      entityType: filterEntity.value || undefined,
-      userId: filterUserId.value ?? undefined,
-    },
+    { ...buildParams(), page: event.page + 1 },
     { preserveState: true, only: ['logs', 'filters'] }
   )
 }
@@ -187,7 +202,26 @@ function onPageChange(event: any) {
       stripedRows
       class="rounded-lg border"
     >
-      <Column :header="t('audit.date')" style="width: 160px">
+      <Column style="width: 160px">
+        <template #header>
+          <span
+            class="cursor-pointer select-none"
+            @click="
+              () => {
+                filterSortOrder = filterSortOrder === 'asc' ? 'desc' : 'asc'
+                applyFilters()
+              }
+            "
+          >
+            {{ t('audit.date') }}
+            <i
+              :class="
+                filterSortOrder === 'asc' ? 'pi pi-sort-amount-up-alt' : 'pi pi-sort-amount-down'
+              "
+              class="ml-1 text-xs"
+            />
+          </span>
+        </template>
         <template #body="{ data }">{{ formatDateTime(data.createdAt) }}</template>
       </Column>
       <Column :header="t('audit.user')">

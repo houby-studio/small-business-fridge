@@ -4,7 +4,13 @@ import AuditService from '#services/audit_service'
 export default class AuditController {
   async index({ inertia, auth, request }: HttpContext) {
     const page = request.input('page', 1)
-    const logs = await AuditService.getForUser(auth.user!.id, page, 20)
+    const action = request.input('action')
+    const sortOrder = request.input('sortOrder')
+
+    const logs = await AuditService.getForUser(auth.user!.id, page, 20, {
+      action: action || undefined,
+      sortOrder: sortOrder === 'asc' ? 'asc' : 'desc',
+    })
 
     return inertia.render('audit/index', {
       logs: {
@@ -20,6 +26,7 @@ export default class AuditController {
         })),
         meta: logs.getMeta(),
       },
+      filters: { action: action || '', sortOrder: sortOrder || 'desc' },
     })
   }
 }

@@ -26,7 +26,11 @@ export default class LoginController {
 
       await auth.use('web').login(user)
       logger.info({ userId: user.id, username }, 'Password login success')
-      AuditService.log(user.id, 'user.login', 'user', user.id, null, { via: 'password' })
+      AuditService.log(user.id, 'user.login', 'user', user.id, null, {
+        via: 'password',
+        ip: request.ip(),
+        ua: request.header('user-agent') ?? null,
+      })
       return response.redirect('/shop')
     } catch {
       logger.warn({ username }, 'Password login failed: invalid credentials')
@@ -35,8 +39,15 @@ export default class LoginController {
     }
   }
 
-  async destroy({ auth, response }: HttpContext) {
+  async destroy({ auth, request, response }: HttpContext) {
+    const userId = auth.user?.id ?? null
     await auth.use('web').logout()
+    if (userId) {
+      AuditService.log(userId, 'user.logout', 'user', userId, null, {
+        ip: request.ip(),
+        ua: request.header('user-agent') ?? null,
+      })
+    }
     return response.redirect('/login')
   }
 }

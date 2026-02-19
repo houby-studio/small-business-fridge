@@ -8,12 +8,14 @@ export default class AdminAuditController {
     const action = request.input('action')
     const entityType = request.input('entityType')
     const userId = request.input('userId')
+    const sortOrder = request.input('sortOrder')
 
     const [logs, users] = await Promise.all([
       AuditService.getAll(page, 20, {
         action: action || undefined,
         entityType: entityType || undefined,
         userId: userId ? Number(userId) : undefined,
+        sortOrder: sortOrder === 'asc' ? 'asc' : 'desc',
       }),
       User.query().select('id', 'displayName').orderBy('displayName', 'asc'),
     ])
@@ -34,7 +36,12 @@ export default class AdminAuditController {
         })),
         meta: logs.getMeta(),
       },
-      filters: { action: action || '', entityType: entityType || '', userId: userId || '' },
+      filters: {
+        action: action || '',
+        entityType: entityType || '',
+        userId: userId || '',
+        sortOrder: sortOrder || 'desc',
+      },
       users: users.map((u) => ({ id: u.id, displayName: u.displayName })),
     })
   }
