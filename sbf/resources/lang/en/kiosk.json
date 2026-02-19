@@ -9,5 +9,7 @@
   "purchase_accept": "Buy",
   "purchase_success": "Purchase completed successfully!",
   "purchase_out_of_stock": "Product is out of stock.",
-  "no_products": "No products in stock."
+  "no_products": "No products in stock.",
+  "clear": "Clear",
+  "backspace": "Delete last"
 }

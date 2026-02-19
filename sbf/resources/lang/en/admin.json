@@ -40,5 +40,9 @@
 
   "orders_filter_search": "Search customer",
   "orders_filter_channel": "Channel",
-  "orders_filter_invoiced": "Invoiced"
+  "orders_filter_invoiced": "Invoiced",
+
+  "users_col_id": "ID",
+  "users_col_email": "Email",
+  "users_col_role": "Role"
 }

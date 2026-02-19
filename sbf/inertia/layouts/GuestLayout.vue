@@ -8,12 +8,7 @@ useFlash()
 <template>
   <!-- Subtle gradient background — two-tone from primary tint to neutral -->
   <div
-    class="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-12"
-    style="
-      background:
-        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(207, 17, 42, 0.08) 0%, transparent 70%),
-        linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-    "
+    class="sbf-guest-bg relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-12"
   >
     <Toast position="top-right" />
 

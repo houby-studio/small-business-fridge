@@ -131,7 +131,7 @@ function channelSeverity(ch: string): 'info' | 'success' | 'warn' {
               <span class="pi pi-exclamation-triangle text-xl text-amber-600 dark:text-amber-400" />
             </div>
             <div class="min-w-0">
-              <div class="text-2xl font-bold text-orange-600">
+              <div class="text-2xl font-bold text-orange-600 dark:text-orange-400">
                 {{ t('common.price_with_currency', { price: stats.invoices.unpaidAmount }) }}
               </div>
               <div class="text-sm text-gray-500 dark:text-zinc-400">{{ t('common.unpaid') }}</div>

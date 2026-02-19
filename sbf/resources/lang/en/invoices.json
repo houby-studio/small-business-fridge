@@ -8,5 +8,6 @@
   "filter_status": "Status",
   "filter_paid": "Paid",
   "filter_unpaid": "Unpaid",
-  "filter_awaiting": "Awaiting approval"
+  "filter_awaiting": "Awaiting approval",
+  "qr_header": "QR payment"
 }

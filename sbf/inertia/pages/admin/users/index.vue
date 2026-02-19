@@ -153,16 +153,16 @@ function onPageChange(event: any) {
       stripedRows
       class="rounded-lg border"
     >
-      <Column header="ID" style="width: 60px">
+      <Column :header="t('admin.users_col_id')" style="width: 60px">
         <template #body="{ data }">{{ data.keypadId }}</template>
       </Column>
       <Column :header="t('admin.users_name')">
         <template #body="{ data }">{{ data.displayName }}</template>
       </Column>
-      <Column header="Email">
+      <Column :header="t('admin.users_col_email')">
         <template #body="{ data }">{{ data.email }}</template>
       </Column>
-      <Column header="Role" style="width: 170px">
+      <Column :header="t('admin.users_col_role')" style="width: 170px">
         <template #body="{ data }">
           <Select
             :modelValue="data.role"

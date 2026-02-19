@@ -261,7 +261,12 @@ function onSort(event: any) {
     </DataTable>
 
     <!-- QR Code Dialog -->
-    <Dialog v-model:visible="qrDialog" header="QR platba" modal :style="{ width: '400px' }">
+    <Dialog
+      v-model:visible="qrDialog"
+      :header="t('invoices.qr_header')"
+      modal
+      :style="{ width: '400px' }"
+    >
       <div class="text-center">
         <div v-if="qrLoading" class="py-8">
           <span class="pi pi-spin pi-spinner text-3xl text-gray-400 dark:text-zinc-500" />

@@ -8,5 +8,6 @@
   "filter_status": "Stav",
   "filter_paid": "Zaplaceno",
   "filter_unpaid": "Nezaplaceno",
-  "filter_awaiting": "Čeká na schválení"
+  "filter_awaiting": "Čeká na schválení",
+  "qr_header": "QR platba"
 }

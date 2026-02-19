@@ -249,7 +249,7 @@ function toggleFavorite(productId: number) {
     <div v-if="filteredProducts.length" ref="sentinel" class="h-1" />
 
     <div v-if="!filteredProducts.length" class="py-12 text-center text-gray-500 dark:text-zinc-400">
-      <span class="pi pi-inbox mb-4 text-5xl text-gray-300 dark:text-zinc-600" />
+      <span class="pi pi-inbox mb-4 block text-5xl text-gray-300 dark:text-zinc-600" />
       <p class="mt-4">{{ t('shop.no_products') }}</p>
     </div>
   </AppLayout>
