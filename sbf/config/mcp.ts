@@ -1,0 +1,5 @@
+import { defineConfig } from '@7nohe/adonis-mcp'
+
+export default defineConfig({
+  path: '/mcp',
+})
