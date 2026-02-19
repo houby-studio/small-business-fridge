@@ -2,7 +2,6 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
-import Card from 'primevue/card'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import SelectButton from 'primevue/selectbutton'
@@ -115,6 +114,12 @@ function purchase(product: ShopProduct) {
 function toggleFavorite(productId: number) {
   router.post(`/profile/favorites/${productId}`, {}, { preserveScroll: true })
 }
+
+function nameClass(name: string): string {
+  if (name.length > 40) return 'text-sm leading-snug'
+  if (name.length > 22) return 'text-base leading-snug'
+  return 'text-lg leading-tight'
+}
 </script>
 
 <template>
@@ -153,70 +158,79 @@ function toggleFavorite(productId: number) {
       v-if="filteredProducts.length"
       class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
     >
-      <Card
+      <div
         v-for="product in visibleProducts"
         :key="product.id"
-        class="sbf-card relative flex h-full flex-col overflow-hidden"
+        class="sbf-card relative flex flex-col overflow-hidden rounded-xl bg-white shadow-sm dark:bg-zinc-900"
         :class="{ 'sbf-card-favorite': product.isFavorite }"
-        :pt="{
-          body: { class: 'flex flex-col flex-1' },
-          content: { class: 'flex-1' },
-        }"
       >
-        <template #header>
+        <!-- Image area -->
+        <div
+          class="sbf-img-zoom flex h-48 items-center justify-center bg-gray-100 p-2 dark:bg-zinc-800"
+        >
+          <img
+            v-if="product.imagePath"
+            :src="product.imagePath"
+            :alt="product.displayName"
+            class="h-full w-full object-contain"
+            loading="lazy"
+          />
+          <span v-else class="pi pi-image text-4xl text-gray-300" />
+        </div>
+
+        <!-- Category divider: thin colored line with badge overlapping it -->
+        <div class="relative flex h-8 items-center">
           <div
-            class="sbf-img-zoom flex h-50 items-center justify-center bg-gray-100 p-2 dark:bg-zinc-800"
-            :style="{ borderTop: `3px solid ${product.category.color}` }"
-          >
-            <img
-              v-if="product.imagePath"
-              :src="product.imagePath"
-              :alt="product.displayName"
-              class="h-full w-full object-contain"
-              loading="lazy"
-            />
-            <span v-else class="pi pi-image text-4xl text-gray-300" />
-          </div>
-        </template>
-
-        <template #title>
-          <div class="flex items-start justify-between gap-2">
-            <span class="text-base">{{ product.displayName }}</span>
-            <button
-              @click.stop="toggleFavorite(product.id)"
-              class="shrink-0 text-lg"
-              :class="
-                product.isFavorite
-                  ? 'text-yellow-500'
-                  : 'text-gray-300 hover:text-yellow-400 dark:text-zinc-600 dark:hover:text-yellow-400'
-              "
-            >
-              <span :class="product.isFavorite ? 'pi pi-star-fill' : 'pi pi-star'" />
-            </button>
-          </div>
-        </template>
-
-        <template #subtitle>
-          <div class="flex items-center gap-2">
+            class="absolute inset-x-0 top-1/2 h-px -translate-y-1/2"
+            :style="{ backgroundColor: product.category.color }"
+          />
+          <div class="relative z-10 ml-4">
             <Tag
               :value="product.category.name"
               :style="{ backgroundColor: product.category.color, color: '#fff' }"
               class="text-xs"
             />
-            <span class="text-xs text-gray-400">#{{ product.keypadId }}</span>
           </div>
-        </template>
+        </div>
 
-        <template #content>
-          <p v-if="product.description" class="mb-3 text-sm text-gray-500 dark:text-zinc-400">
-            {{ product.description }}
-          </p>
-          <div class="flex items-center justify-between">
-            <div>
-              <span class="text-xl font-bold text-gray-900 dark:text-zinc-100">{{
-                t('common.price_with_currency', { price: product.price ?? 0 })
-              }}</span>
-            </div>
+        <!-- Card body -->
+        <div class="flex flex-1 flex-col px-4 pb-4 pt-1">
+          <!-- Name + favorite -->
+          <div class="mb-2 flex items-start justify-between gap-2">
+            <span
+              :class="[
+                'font-semibold text-gray-900 dark:text-zinc-100',
+                nameClass(product.displayName),
+              ]"
+            >
+              {{ product.displayName }}
+            </span>
+            <button
+              @click.stop="toggleFavorite(product.id)"
+              class="mt-0.5 shrink-0 text-lg"
+              :class="
+                product.isFavorite
+                  ? 'text-yellow-500'
+                  : 'text-gray-300 hover:text-yellow-400 dark:text-zinc-600 dark:hover:text-yellow-400'
+              "
+              :aria-label="t('shop.favorite')"
+            >
+              <span :class="product.isFavorite ? 'pi pi-star-fill' : 'pi pi-star'" />
+            </button>
+          </div>
+
+          <!-- Description with flex spacer to push price/button to bottom -->
+          <div class="flex-1">
+            <p v-if="product.description" class="text-sm text-gray-500 dark:text-zinc-400">
+              {{ product.description }}
+            </p>
+          </div>
+
+          <!-- Price + stock (pinned above button) -->
+          <div class="mb-3 mt-3 flex items-center justify-between">
+            <span class="text-xl font-bold text-gray-900 dark:text-zinc-100">{{
+              t('common.price_with_currency', { price: product.price ?? 0 })
+            }}</span>
             <div class="flex items-center gap-1.5">
               <span
                 class="inline-block h-2 w-2 rounded-full"
@@ -231,9 +245,8 @@ function toggleFavorite(productId: number) {
               }}</span>
             </div>
           </div>
-        </template>
 
-        <template #footer>
+          <!-- Buy button -->
           <Button
             :label="t('common.purchase')"
             icon="pi pi-shopping-cart"
@@ -241,8 +254,8 @@ function toggleFavorite(productId: number) {
             :disabled="!product.deliveryId"
             @click="purchase(product)"
           />
-        </template>
-      </Card>
+        </div>
+      </div>
     </div>
 
     <!-- Sentinel for IntersectionObserver -->
