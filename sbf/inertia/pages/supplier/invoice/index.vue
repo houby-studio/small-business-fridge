@@ -45,7 +45,9 @@ function generateInvoices() {
     <ConfirmDialog />
 
     <div class="mb-6 flex items-center justify-between">
-      <h1 class="text-2xl font-bold text-gray-900">{{ t('supplier.invoice_heading') }}</h1>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-zinc-100">
+        {{ t('supplier.invoice_heading') }}
+      </h1>
       <Button
         v-if="uninvoiced.length > 0"
         :label="t('supplier.invoice_generate')"
@@ -64,13 +66,17 @@ function generateInvoices() {
         <Card class="text-center">
           <template #content>
             <div class="text-3xl font-bold">{{ uninvoiced.length }}</div>
-            <div class="text-sm text-gray-500">{{ t('supplier.invoice_customers') }}</div>
+            <div class="text-sm text-gray-500 dark:text-zinc-400">
+              {{ t('supplier.invoice_customers') }}
+            </div>
           </template>
         </Card>
         <Card class="text-center">
           <template #content>
             <div class="text-3xl font-bold">{{ totalOrders }}</div>
-            <div class="text-sm text-gray-500">{{ t('supplier.invoice_orders') }}</div>
+            <div class="text-sm text-gray-500 dark:text-zinc-400">
+              {{ t('supplier.invoice_orders') }}
+            </div>
           </template>
         </Card>
         <Card class="text-center">
@@ -78,7 +84,7 @@ function generateInvoices() {
             <div class="text-3xl font-bold">
               {{ t('common.price_with_currency', { price: totalCost }) }}
             </div>
-            <div class="text-sm text-gray-500">{{ t('common.total') }}</div>
+            <div class="text-sm text-gray-500 dark:text-zinc-400">{{ t('common.total') }}</div>
           </template>
         </Card>
       </div>

@@ -141,12 +141,16 @@ function onPageChange(event: any) {
   <AppLayout>
     <Head :title="t('audit.admin_title')" />
 
-    <h1 class="mb-6 text-2xl font-bold text-gray-900">{{ t('audit.admin_heading') }}</h1>
+    <h1 class="mb-6 text-2xl font-bold text-gray-900 dark:text-zinc-100">
+      {{ t('audit.admin_heading') }}
+    </h1>
 
     <!-- Filters -->
     <div class="mb-4 flex flex-wrap items-end gap-3">
       <div>
-        <label class="mb-1 block text-sm text-gray-600">{{ t('audit.filter_action') }}</label>
+        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
+          t('audit.filter_action')
+        }}</label>
         <Select
           v-model="filterAction"
           :options="actionOptions"
@@ -156,7 +160,9 @@ function onPageChange(event: any) {
         />
       </div>
       <div>
-        <label class="mb-1 block text-sm text-gray-600">{{ t('audit.filter_entity') }}</label>
+        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
+          t('audit.filter_entity')
+        }}</label>
         <Select
           v-model="filterEntity"
           :options="entityOptions"
@@ -166,7 +172,9 @@ function onPageChange(event: any) {
         />
       </div>
       <div>
-        <label class="mb-1 block text-sm text-gray-600">{{ t('audit.filter_user') }}</label>
+        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
+          t('audit.filter_user')
+        }}</label>
         <Select
           v-model="filterUserId"
           :options="userOptions"
@@ -235,7 +243,9 @@ function onPageChange(event: any) {
       <Column :header="t('audit.entity')">
         <template #body="{ data }">
           {{ data.entityType }}
-          <span v-if="data.entityId" class="text-gray-400">#{{ data.entityId }}</span>
+          <span v-if="data.entityId" class="text-gray-400 dark:text-zinc-500"
+            >#{{ data.entityId }}</span
+          >
         </template>
       </Column>
       <Column :header="t('audit.target')">
@@ -243,12 +253,16 @@ function onPageChange(event: any) {
       </Column>
       <Column :header="t('audit.details')">
         <template #body="{ data }">
-          <span class="text-sm text-gray-600">{{ formatMetadata(data.metadata) }}</span>
+          <span class="text-sm text-gray-600 dark:text-zinc-400">{{
+            formatMetadata(data.metadata)
+          }}</span>
         </template>
       </Column>
 
       <template #empty>
-        <div class="py-8 text-center text-gray-500">{{ t('audit.no_logs') }}</div>
+        <div class="py-8 text-center text-gray-500 dark:text-zinc-400">
+          {{ t('audit.no_logs') }}
+        </div>
       </template>
     </DataTable>
   </AppLayout>

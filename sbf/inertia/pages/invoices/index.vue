@@ -149,12 +149,16 @@ function onSort(event: any) {
   <AppLayout>
     <Head :title="t('invoices.title')" />
 
-    <h1 class="mb-6 text-2xl font-bold text-gray-900">{{ t('invoices.my_invoices') }}</h1>
+    <h1 class="mb-6 text-2xl font-bold text-gray-900 dark:text-zinc-100">
+      {{ t('invoices.my_invoices') }}
+    </h1>
 
     <!-- Filter bar -->
     <div class="mb-4 flex flex-wrap items-end gap-3">
       <div>
-        <label class="mb-1 block text-sm text-gray-600">{{ t('invoices.filter_status') }}</label>
+        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
+          t('invoices.filter_status')
+        }}</label>
         <Select
           v-model="filterStatus"
           :options="statusOptions"
@@ -250,7 +254,9 @@ function onSort(event: any) {
       </Column>
 
       <template #empty>
-        <div class="py-8 text-center text-gray-500">{{ t('invoices.no_invoices') }}</div>
+        <div class="py-8 text-center text-gray-500 dark:text-zinc-400">
+          {{ t('invoices.no_invoices') }}
+        </div>
       </template>
     </DataTable>
 
@@ -258,11 +264,11 @@ function onSort(event: any) {
     <Dialog v-model:visible="qrDialog" header="QR platba" modal :style="{ width: '400px' }">
       <div class="text-center">
         <div v-if="qrLoading" class="py-8">
-          <span class="pi pi-spin pi-spinner text-3xl text-gray-400" />
+          <span class="pi pi-spin pi-spinner text-3xl text-gray-400 dark:text-zinc-500" />
         </div>
         <template v-else>
           <img v-if="qrImage" :src="qrImage" alt="QR platba" class="mx-auto mb-4" />
-          <p class="break-all text-xs text-gray-500">{{ qrCode }}</p>
+          <p class="break-all text-xs text-gray-500 dark:text-zinc-400">{{ qrCode }}</p>
         </template>
       </div>
     </Dialog>

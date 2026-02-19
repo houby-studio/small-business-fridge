@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import { Link, usePage, router } from '@inertiajs/vue3'
 import Toast from 'primevue/toast'
 import Button from 'primevue/button'
@@ -15,6 +15,41 @@ const user = computed(() => page.props.user)
 const isSupplier = computed(() => user.value?.role === 'supplier' || user.value?.role === 'admin')
 const isAdmin = computed(() => user.value?.role === 'admin')
 
+// ─── Dark mode ───────────────────────────────────────────────────────────────
+// localIsDark mirrors user.colorMode but allows instant client-side toggle
+const localIsDark = ref(user.value?.colorMode === 'dark')
+
+watch(
+  () => user.value?.colorMode,
+  (mode) => {
+    localIsDark.value = mode === 'dark'
+  }
+)
+
+// Keep <html> data-theme in sync (PrimeVue reads from here too)
+watch(
+  localIsDark,
+  (dark) => {
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
+  },
+  { immediate: false }
+)
+
+onMounted(() => {
+  // Set initial data-theme from persisted user preference
+  document.documentElement.setAttribute('data-theme', localIsDark.value ? 'dark' : 'light')
+})
+
+function toggleColorMode() {
+  localIsDark.value = !localIsDark.value
+  router.post(
+    '/profile/color-mode',
+    { colorMode: localIsDark.value ? 'dark' : 'light' },
+    { preserveScroll: true }
+  )
+}
+
+// ─── Navigation ──────────────────────────────────────────────────────────────
 const menuItems = computed(() => {
   const items: any[] = [
     { label: 'Obchod', icon: 'pi pi-shopping-cart', url: '/shop' },
@@ -61,35 +96,73 @@ function logout() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div
+    class="min-h-screen bg-slate-50 transition-colors duration-200 dark:bg-zinc-950"
+    :data-theme="localIsDark ? 'dark' : 'light'"
+  >
     <Toast position="top-right" />
 
-    <!-- Navigation -->
-    <Menubar :model="menuItems" class="rounded-none border-x-0 border-t-0">
-      <template #start>
-        <Link href="/shop" class="mr-4 text-xl font-bold text-primary"> Lednice IT </Link>
-      </template>
-      <template #item="{ item, props }">
-        <Link v-if="item.url && !item.items" v-bind="props.action" :href="item.url">
-          <span :class="item.icon" class="mr-2" />
-          <span>{{ item.label }}</span>
-        </Link>
-        <a v-else v-bind="props.action">
-          <span :class="item.icon" class="mr-2" />
-          <span>{{ item.label }}</span>
-          <span v-if="item.items" class="pi pi-angle-down ml-2" />
-        </a>
-      </template>
-      <template #end>
-        <div class="flex items-center gap-3">
-          <Link href="/profile" class="text-sm text-gray-600 hover:text-gray-900">
-            <span class="pi pi-user mr-1" />
-            {{ user?.displayName }}
+    <!-- Sticky glassmorphism navbar -->
+    <div
+      class="sbf-nav sticky top-0 z-50 border-b border-slate-200/70 bg-white/80 dark:border-zinc-800/60 dark:bg-zinc-900/80"
+    >
+      <Menubar
+        :model="menuItems"
+        class="rounded-none border-0 bg-transparent shadow-none"
+        :pt="{
+          root: { class: 'bg-transparent border-0 shadow-none rounded-none py-0' },
+        }"
+      >
+        <template #start>
+          <Link href="/shop" class="mr-6 flex items-center gap-2">
+            <span
+              class="text-xl font-bold tracking-tight text-primary transition-opacity hover:opacity-80"
+            >
+              Lednice IT
+            </span>
           </Link>
-          <Button icon="pi pi-sign-out" severity="secondary" text size="small" @click="logout" />
-        </div>
-      </template>
-    </Menubar>
+        </template>
+        <template #item="{ item, props }">
+          <Link v-if="item.url && !item.items" v-bind="props.action" :href="item.url">
+            <span :class="item.icon" class="mr-2" />
+            <span>{{ item.label }}</span>
+          </Link>
+          <a v-else v-bind="props.action">
+            <span :class="item.icon" class="mr-2" />
+            <span>{{ item.label }}</span>
+            <span v-if="item.items" class="pi pi-angle-down ml-2" />
+          </a>
+        </template>
+        <template #end>
+          <div class="flex items-center gap-2">
+            <!-- Dark mode toggle -->
+            <Button
+              :icon="localIsDark ? 'pi pi-sun' : 'pi pi-moon'"
+              severity="secondary"
+              text
+              size="small"
+              :aria-label="localIsDark ? 'Přepnout na světlý režim' : 'Přepnout na tmavý režim'"
+              @click="toggleColorMode"
+            />
+            <Link
+              href="/profile"
+              class="flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+            >
+              <span class="pi pi-user text-xs" />
+              {{ user?.displayName }}
+            </Link>
+            <Button
+              icon="pi pi-sign-out"
+              severity="secondary"
+              text
+              size="small"
+              aria-label="Odhlásit se"
+              @click="logout"
+            />
+          </div>
+        </template>
+      </Menubar>
+    </div>
 
     <!-- Main content -->
     <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">

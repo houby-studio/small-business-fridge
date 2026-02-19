@@ -103,16 +103,22 @@ function onPageChange(event: any) {
   <AppLayout>
     <Head :title="t('admin.users_title')" />
 
-    <h1 class="mb-6 text-2xl font-bold text-gray-900">{{ t('admin.users_heading') }}</h1>
+    <h1 class="mb-6 text-2xl font-bold text-gray-900 dark:text-zinc-100">
+      {{ t('admin.users_heading') }}
+    </h1>
 
     <!-- Filter bar -->
     <div class="mb-4 flex flex-wrap items-end gap-3">
       <div>
-        <label class="mb-1 block text-sm text-gray-600">{{ t('admin.users_search') }}</label>
+        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
+          t('admin.users_search')
+        }}</label>
         <InputText v-model="filterSearch" class="w-56" @keydown.enter="applyFilters" />
       </div>
       <div>
-        <label class="mb-1 block text-sm text-gray-600">{{ t('admin.users_filter_role') }}</label>
+        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
+          t('admin.users_filter_role')
+        }}</label>
         <Select
           v-model="filterRole"
           :options="roleOptions"
@@ -186,7 +192,9 @@ function onPageChange(event: any) {
       </Column>
 
       <template #empty>
-        <div class="py-8 text-center text-gray-500">{{ t('common.no_data') }}</div>
+        <div class="py-8 text-center text-gray-500 dark:text-zinc-400">
+          {{ t('common.no_data') }}
+        </div>
       </template>
     </DataTable>
   </AppLayout>

@@ -78,7 +78,9 @@ function submit() {
   <AppLayout>
     <Head :title="t('profile.title')" />
 
-    <h1 class="mb-6 text-2xl font-bold text-gray-900">{{ t('profile.heading') }}</h1>
+    <h1 class="mb-6 text-2xl font-bold text-gray-900 dark:text-zinc-100">
+      {{ t('profile.heading') }}
+    </h1>
 
     <div class="grid max-w-4xl gap-6 lg:grid-cols-2">
       <!-- Editable form -->
@@ -87,57 +89,67 @@ function submit() {
         <template #content>
           <form @submit.prevent="submit" class="flex flex-col gap-5">
             <div>
-              <label class="mb-1 block text-sm font-medium text-gray-700">{{
+              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
                 t('profile.display_name')
               }}</label>
               <InputText v-model="form.displayName" class="w-full" />
             </div>
 
             <div>
-              <label class="mb-1 block text-sm font-medium text-gray-700">{{
+              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
                 t('profile.email')
               }}</label>
               <InputText v-model="form.email" type="email" class="w-full" />
             </div>
 
             <div>
-              <label class="mb-1 block text-sm font-medium text-gray-700">{{
+              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
                 t('profile.phone')
               }}</label>
               <InputText v-model="form.phone" class="w-full" />
             </div>
 
             <div>
-              <label class="mb-1 block text-sm font-medium text-gray-700">{{
+              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
                 t('profile.iban')
               }}</label>
               <InputText v-model="form.iban" class="w-full" maxlength="24" />
             </div>
 
-            <h3 class="mt-2 text-lg font-semibold text-gray-800">{{ t('profile.preferences') }}</h3>
+            <h3 class="mt-2 text-lg font-semibold text-gray-800 dark:text-zinc-200">
+              {{ t('profile.preferences') }}
+            </h3>
 
             <div class="flex items-center justify-between">
-              <label class="text-sm text-gray-700">{{ t('profile.show_all_products') }}</label>
+              <label class="text-sm text-gray-700 dark:text-zinc-300">{{
+                t('profile.show_all_products')
+              }}</label>
               <ToggleSwitch v-model="form.showAllProducts" />
             </div>
 
             <div class="flex items-center justify-between">
-              <label class="text-sm text-gray-700">{{ t('profile.send_mail_on_purchase') }}</label>
+              <label class="text-sm text-gray-700 dark:text-zinc-300">{{
+                t('profile.send_mail_on_purchase')
+              }}</label>
               <ToggleSwitch v-model="form.sendMailOnPurchase" />
             </div>
 
             <div class="flex items-center justify-between">
-              <label class="text-sm text-gray-700">{{ t('profile.send_daily_report') }}</label>
+              <label class="text-sm text-gray-700 dark:text-zinc-300">{{
+                t('profile.send_daily_report')
+              }}</label>
               <ToggleSwitch v-model="form.sendDailyReport" />
             </div>
 
             <div class="flex items-center justify-between">
-              <label class="text-sm text-gray-700">{{ t('profile.keypad_disabled') }}</label>
+              <label class="text-sm text-gray-700 dark:text-zinc-300">{{
+                t('profile.keypad_disabled')
+              }}</label>
               <ToggleSwitch v-model="form.keypadDisabled" />
             </div>
 
             <div>
-              <label class="mb-1 block text-sm font-medium text-gray-700">{{
+              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
                 t('profile.color_mode')
               }}</label>
               <SelectButton
@@ -167,24 +179,34 @@ function submit() {
         <template #content>
           <div class="flex flex-col gap-4">
             <div>
-              <span class="text-sm font-medium text-gray-500">{{ t('profile.username') }}</span>
-              <p class="text-gray-900">{{ user.username ?? '—' }}</p>
+              <span class="text-sm font-medium text-gray-500 dark:text-zinc-400">{{
+                t('profile.username')
+              }}</span>
+              <p class="text-gray-900 dark:text-zinc-100">{{ user.username ?? '—' }}</p>
             </div>
             <div>
-              <span class="text-sm font-medium text-gray-500">{{ t('profile.keypad_id') }}</span>
-              <p class="text-gray-900">{{ user.keypadId }}</p>
+              <span class="text-sm font-medium text-gray-500 dark:text-zinc-400">{{
+                t('profile.keypad_id')
+              }}</span>
+              <p class="text-gray-900 dark:text-zinc-100">{{ user.keypadId }}</p>
             </div>
             <div>
-              <span class="text-sm font-medium text-gray-500">{{ t('profile.card_id') }}</span>
-              <p class="text-gray-900">{{ user.cardId ?? '—' }}</p>
+              <span class="text-sm font-medium text-gray-500 dark:text-zinc-400">{{
+                t('profile.card_id')
+              }}</span>
+              <p class="text-gray-900 dark:text-zinc-100">{{ user.cardId ?? '—' }}</p>
             </div>
             <div>
-              <span class="text-sm font-medium text-gray-500">{{ t('profile.role') }}</span>
-              <p class="text-gray-900">{{ user.role }}</p>
+              <span class="text-sm font-medium text-gray-500 dark:text-zinc-400">{{
+                t('profile.role')
+              }}</span>
+              <p class="text-gray-900 dark:text-zinc-100">{{ user.role }}</p>
             </div>
             <div>
-              <span class="text-sm font-medium text-gray-500">{{ t('profile.created_at') }}</span>
-              <p class="text-gray-900">{{ formatDate(user.createdAt) }}</p>
+              <span class="text-sm font-medium text-gray-500 dark:text-zinc-400">{{
+                t('profile.created_at')
+              }}</span>
+              <p class="text-gray-900 dark:text-zinc-100">{{ formatDate(user.createdAt) }}</p>
             </div>
           </div>
         </template>

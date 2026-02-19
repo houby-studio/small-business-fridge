@@ -80,7 +80,9 @@ function cancelEdit() {
     <Head :title="t('admin.categories_title')" />
 
     <div class="mb-6 flex items-center justify-between">
-      <h1 class="text-2xl font-bold text-gray-900">{{ t('admin.categories_heading') }}</h1>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-zinc-100">
+        {{ t('admin.categories_heading') }}
+      </h1>
       <Button
         :label="t('admin.categories_new')"
         icon="pi pi-plus"
@@ -153,7 +155,9 @@ function cancelEdit() {
     >
       <div class="flex flex-col gap-4">
         <div>
-          <label class="mb-1 block text-sm font-medium text-gray-700">{{ t('common.name') }}</label>
+          <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
+            t('common.name')
+          }}</label>
           <InputText
             v-model="newName"
             class="w-full"
@@ -161,7 +165,7 @@ function cancelEdit() {
           />
         </div>
         <div>
-          <label class="mb-1 block text-sm font-medium text-gray-700">{{
+          <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
             t('admin.categories_color')
           }}</label>
           <ColorPicker v-model="newColor" />

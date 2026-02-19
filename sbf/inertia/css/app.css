@@ -1,9 +1,88 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 @import 'tailwindcss';
+
+/* Map Tailwind's dark variant to the same [data-theme="dark"] PrimeVue uses */
+@custom-variant dark ([data-theme='dark'] &);
 
 @theme {
   --color-primary: #cf112a;
   --color-primary-light: #e8334a;
   --color-primary-dark: #a80e22;
   --color-surface: #ffffff;
-  --color-surface-dark: #1e1e1e;
+  --color-surface-dark: #09090b;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ─── Product card hover lift ─────────────────────────────────────── */
+.sbf-card {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+  will-change: transform;
+}
+
+.sbf-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme='dark'] .sbf-card:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+/* ─── Glassmorphism navbar ────────────────────────────────────────── */
+.sbf-nav {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* PrimeVue Menubar has its own surface background — make it transparent
+   so the parent sbf-nav glass div provides the blurred backdrop instead */
+.sbf-nav .p-menubar {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* ─── Thin custom scrollbar ──────────────────────────────────────── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(207, 17, 42, 0.25) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(207, 17, 42, 0.25);
+  border-radius: 3px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(207, 17, 42, 0.45);
+}
+
+/* ─── Smooth theme transitions ───────────────────────────────────── */
+html {
+  transition:
+    background-color 250ms ease,
+    color 250ms ease;
+}
+
+/* ─── AI-ready badge slot (placeholder for future) ───────────────── */
+.sbf-badge-ai {
+  background: linear-gradient(135deg, #cf112a 0%, #e8334a 100%);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
 }

@@ -123,7 +123,7 @@ function toggleFavorite(productId: number) {
     <ConfirmDialog />
 
     <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <h1 class="text-2xl font-bold text-gray-900">{{ t('shop.title') }}</h1>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-zinc-100">{{ t('shop.title') }}</h1>
       <div class="flex flex-wrap items-center gap-3">
         <InputText v-model="search" :placeholder="t('common.search') + '...'" class="w-48" />
         <Button
@@ -156,7 +156,7 @@ function toggleFavorite(productId: number) {
       <Card
         v-for="product in visibleProducts"
         :key="product.id"
-        class="relative flex h-full flex-col overflow-hidden"
+        class="sbf-card relative flex h-full flex-col overflow-hidden"
         :pt="{
           body: { class: 'flex flex-col flex-1' },
           content: { class: 'flex-1' },
@@ -164,7 +164,7 @@ function toggleFavorite(productId: number) {
       >
         <template #header>
           <div
-            class="flex h-50 items-center justify-center bg-gray-100 p-2"
+            class="flex h-50 items-center justify-center bg-gray-100 p-2 dark:bg-zinc-800"
             :style="{ borderTop: `3px solid ${product.category.color}` }"
           >
             <img
@@ -185,7 +185,9 @@ function toggleFavorite(productId: number) {
               @click.stop="toggleFavorite(product.id)"
               class="shrink-0 text-lg"
               :class="
-                product.isFavorite ? 'text-yellow-500' : 'text-gray-300 hover:text-yellow-400'
+                product.isFavorite
+                  ? 'text-yellow-500'
+                  : 'text-gray-300 hover:text-yellow-400 dark:text-zinc-600 dark:hover:text-yellow-400'
               "
             >
               <span :class="product.isFavorite ? 'pi pi-star-fill' : 'pi pi-star'" />
@@ -205,15 +207,15 @@ function toggleFavorite(productId: number) {
         </template>
 
         <template #content>
-          <p v-if="product.description" class="mb-3 text-sm text-gray-500">
+          <p v-if="product.description" class="mb-3 text-sm text-gray-500 dark:text-zinc-400">
             {{ product.description }}
           </p>
           <div class="flex items-center justify-between">
             <div>
-              <span class="text-xl font-bold text-gray-900">{{
+              <span class="text-xl font-bold text-gray-900 dark:text-zinc-100">{{
                 t('common.price_with_currency', { price: product.price ?? 0 })
               }}</span>
-              <span class="ml-2 text-xs text-gray-400">{{
+              <span class="ml-2 text-xs text-gray-400 dark:text-zinc-500">{{
                 t('common.pieces_in_stock', { count: product.stockSum })
               }}</span>
             </div>
@@ -235,8 +237,8 @@ function toggleFavorite(productId: number) {
     <!-- Sentinel for IntersectionObserver -->
     <div v-if="filteredProducts.length" ref="sentinel" class="h-1" />
 
-    <div v-if="!filteredProducts.length" class="py-12 text-center text-gray-500">
-      <span class="pi pi-inbox mb-4 text-5xl text-gray-300" />
+    <div v-if="!filteredProducts.length" class="py-12 text-center text-gray-500 dark:text-zinc-400">
+      <span class="pi pi-inbox mb-4 text-5xl text-gray-300 dark:text-zinc-600" />
       <p class="mt-4">{{ t('shop.no_products') }}</p>
     </div>
   </AppLayout>

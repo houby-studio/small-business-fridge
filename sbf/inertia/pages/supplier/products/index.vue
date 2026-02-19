@@ -81,7 +81,9 @@ function onPageChange(event: any) {
     <Head :title="t('supplier.products_list_title')" />
 
     <div class="mb-6 flex items-center justify-between">
-      <h1 class="text-2xl font-bold text-gray-900">{{ t('supplier.products_list_heading') }}</h1>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-zinc-100">
+        {{ t('supplier.products_list_heading') }}
+      </h1>
       <Button
         :label="t('supplier.products_new_title')"
         icon="pi pi-plus"
@@ -92,11 +94,13 @@ function onPageChange(event: any) {
     <!-- Filter bar -->
     <div class="mb-4 flex flex-wrap items-end gap-3">
       <div>
-        <label class="mb-1 block text-sm text-gray-600">{{ t('supplier.products_search') }}</label>
+        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
+          t('supplier.products_search')
+        }}</label>
         <InputText v-model="filterSearch" class="w-56" @keydown.enter="applyFilters" />
       </div>
       <div>
-        <label class="mb-1 block text-sm text-gray-600">{{
+        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
           t('supplier.products_filter_category')
         }}</label>
         <Select
@@ -144,7 +148,7 @@ function onPageChange(event: any) {
             :alt="data.displayName"
             class="h-10 w-10 rounded object-cover"
           />
-          <span v-else class="pi pi-image text-2xl text-gray-300" />
+          <span v-else class="pi pi-image text-2xl text-gray-300 dark:text-zinc-600" />
         </template>
       </Column>
       <Column :header="t('supplier.products_name_label')">
@@ -158,7 +162,7 @@ function onPageChange(event: any) {
             :style="{ background: data.category.color }"
             class="text-xs text-white"
           />
-          <span v-else class="text-gray-400">—</span>
+          <span v-else class="text-gray-400 dark:text-zinc-500">—</span>
         </template>
       </Column>
       <Column :header="t('supplier.products_barcode_label')">
@@ -177,7 +181,9 @@ function onPageChange(event: any) {
       </Column>
 
       <template #empty>
-        <div class="py-8 text-center text-gray-500">{{ t('supplier.products_list_empty') }}</div>
+        <div class="py-8 text-center text-gray-500 dark:text-zinc-400">
+          {{ t('supplier.products_list_empty') }}
+        </div>
       </template>
     </DataTable>
   </AppLayout>

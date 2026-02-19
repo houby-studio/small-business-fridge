@@ -39,15 +39,19 @@ function channelSeverity(ch: string): 'info' | 'success' | 'warn' {
   <AppLayout>
     <Head :title="t('admin.dashboard_title')" />
 
-    <h1 class="mb-6 text-2xl font-bold text-gray-900">{{ t('admin.dashboard_title') }}</h1>
+    <h1 class="mb-6 text-2xl font-bold text-gray-900 dark:text-zinc-100">
+      {{ t('admin.dashboard_title') }}
+    </h1>
 
     <!-- Stats grid -->
     <div class="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <Card class="text-center">
         <template #content>
           <div class="text-3xl font-bold">{{ stats.users.total }}</div>
-          <div class="text-sm text-gray-500">{{ t('admin.dashboard_total_users') }}</div>
-          <div class="mt-1 text-xs text-gray-400">
+          <div class="text-sm text-gray-500 dark:text-zinc-400">
+            {{ t('admin.dashboard_total_users') }}
+          </div>
+          <div class="mt-1 text-xs text-gray-400 dark:text-zinc-500">
             {{
               t('admin.dashboard_users_detail', {
                 customers: stats.users.customers,
@@ -61,8 +65,10 @@ function channelSeverity(ch: string): 'info' | 'success' | 'warn' {
       <Card class="text-center">
         <template #content>
           <div class="text-3xl font-bold">{{ stats.orders.total }}</div>
-          <div class="text-sm text-gray-500">{{ t('admin.dashboard_total_orders') }}</div>
-          <div class="mt-1 text-xs text-gray-400">
+          <div class="text-sm text-gray-500 dark:text-zinc-400">
+            {{ t('admin.dashboard_total_orders') }}
+          </div>
+          <div class="mt-1 text-xs text-gray-400 dark:text-zinc-500">
             {{
               t('admin.dashboard_orders_detail', {
                 lastWeek: stats.orders.lastWeek,
@@ -77,7 +83,9 @@ function channelSeverity(ch: string): 'info' | 'success' | 'warn' {
           <div class="text-3xl font-bold">
             {{ t('common.price_with_currency', { price: stats.orders.totalRevenue }) }}
           </div>
-          <div class="text-sm text-gray-500">{{ t('admin.dashboard_total_revenue') }}</div>
+          <div class="text-sm text-gray-500 dark:text-zinc-400">
+            {{ t('admin.dashboard_total_revenue') }}
+          </div>
         </template>
       </Card>
       <Card class="text-center">
@@ -85,8 +93,8 @@ function channelSeverity(ch: string): 'info' | 'success' | 'warn' {
           <div class="text-3xl font-bold text-orange-600">
             {{ t('common.price_with_currency', { price: stats.invoices.unpaidAmount }) }}
           </div>
-          <div class="text-sm text-gray-500">{{ t('common.unpaid') }}</div>
-          <div class="mt-1 text-xs text-gray-400">
+          <div class="text-sm text-gray-500 dark:text-zinc-400">{{ t('common.unpaid') }}</div>
+          <div class="mt-1 text-xs text-gray-400 dark:text-zinc-500">
             {{
               t('admin.dashboard_invoices_detail', {
                 paid: stats.invoices.paid,
@@ -99,7 +107,7 @@ function channelSeverity(ch: string): 'info' | 'success' | 'warn' {
     </div>
 
     <!-- Recent orders -->
-    <h2 class="mb-4 text-lg font-semibold text-gray-800">
+    <h2 class="mb-4 text-lg font-semibold text-gray-800 dark:text-zinc-200">
       {{ t('admin.dashboard_recent_orders') }}
     </h2>
     <DataTable :value="stats.recentOrders" stripedRows class="rounded-lg border">
