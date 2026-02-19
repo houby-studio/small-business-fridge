@@ -47,6 +47,7 @@ test.group('Web Shop - index', (group) => {
     }).create()
 
     const response = await client.get('/shop').loginAs(user)
+    if (response.status() !== 200) console.log(response.text())
     response.assertStatus(200)
     response.assertTextIncludes(product.displayName)
   })

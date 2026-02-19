@@ -64,7 +64,6 @@ export default defineConfig({
       file: () => import('adonisjs-scheduler/scheduler_provider'),
       environment: ['console'],
     },
-    () => import('@7nohe/adonis-mcp/mcp_provider'),
   ],
 
   /*

@@ -83,18 +83,74 @@
   transform: scale(1.07);
 }
 
-/* ─── Favorite card golden accent ────────────────────────────────── */
+/* ─── Favorite card advanced animation ───────────────────────────── */
+@keyframes sbf-spin {
+  from {
+    --angle: 0deg;
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    --angle: 360deg;
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
 .sbf-card-favorite {
-  outline: 1px solid rgba(234, 179, 8, 0.4);
+  --border-width: 2px;
+  --radius: 0.75rem; /* 12px */
+  position: relative;
+  border-radius: var(--radius);
+  z-index: 0;
+  overflow: hidden; /* Clip the rotating gradient */
+  transition: box-shadow 0.3s ease;
+  padding: var(--border-width); /* Border space */
+  background: transparent !important;
 }
 
-[data-theme='dark'] .sbf-card-favorite {
-  outline: 1px solid rgba(234, 179, 8, 0.22);
-  box-shadow: 0 0 20px rgba(234, 179, 8, 0.07);
+.sbf-card-favorite::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200%; /* Larger to ensure coverage during rotation */
+  height: 200%;
+  transform: translate(-50%, -50%);
+  background-image: conic-gradient(
+    from var(--angle),
+    transparent 10%,
+    #fbbf24 25%,
+    transparent 35%,
+    transparent 60%,
+    #fbbf24 75%,
+    transparent 85%
+  );
+  /* Fallback for browsers not supporting @property */
+  animation: sbf-spin 3s linear infinite;
+  z-index: -1;
 }
 
+/* Enhanced glow on hover */
 .sbf-card-favorite:hover {
-  outline-color: rgba(234, 179, 8, 0.65) !important;
+  box-shadow:
+    0 10px 30px -10px rgba(251, 191, 36, 0.4),
+    0 0 20px 0px rgba(251, 191, 36, 0.2);
+}
+
+[data-theme='dark'] .sbf-card-favorite:hover {
+  box-shadow:
+    0 10px 40px -10px rgba(251, 191, 36, 0.3),
+    0 0 25px 2px rgba(251, 191, 36, 0.15);
+}
+
+/* Remove simple outline as we use the animated border */
+.sbf-card-favorite {
+  outline: none !important;
 }
 
 /* ─── Glassmorphism navbar ────────────────────────────────────────── */

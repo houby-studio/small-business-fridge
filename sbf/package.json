@@ -64,7 +64,6 @@
     "vite": "^6.3.5"
   },
   "dependencies": {
-    "@7nohe/adonis-mcp": "^1.1.0-0",
     "@adonisjs/ally": "^5.1.1",
     "@adonisjs/auth": "^9.4.0",
     "@adonisjs/cache": "^1.3.1",

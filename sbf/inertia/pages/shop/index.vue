@@ -160,11 +160,13 @@ function nameClass(name: string): string {
       <div
         v-for="product in visibleProducts"
         :key="product.id"
-        class="sbf-card relative rounded-xl shadow-sm"
+        class="sbf-card relative h-full rounded-xl"
         :class="{ 'sbf-card-favorite': product.isFavorite }"
       >
-        <!-- Inner card: owns background + clips corners; outer div is for the animated border -->
-        <div class="flex h-full flex-col overflow-hidden rounded-xl bg-white dark:bg-zinc-900">
+        <!-- Card content -->
+        <div
+          class="relative flex h-full flex-col overflow-hidden rounded-xl bg-white shadow-sm dark:bg-zinc-900"
+        >
           <!-- Image area + badge straddling the image/body boundary -->
           <div class="relative">
             <div
@@ -182,14 +184,14 @@ function nameClass(name: string): string {
             </div>
             <!-- Badge centered on the image/body border line (bottom-px = border center) -->
             <div class="absolute bottom-0.5 left-4 z-10 translate-y-1/2">
-            <span
-              class="sbf-category-badge inline-block px-4 py-1.5 text-xs font-semibold text-white"
-              :style="{ backgroundColor: product.category.color }"
-            >
-              {{ product.category.name }}
-            </span>
+              <span
+                class="sbf-category-badge inline-block px-4 py-1.5 text-xs font-semibold text-white"
+                :style="{ backgroundColor: product.category.color }"
+              >
+                {{ product.category.name }}
+              </span>
+            </div>
           </div>
-        </div>
 
           <!-- Card body (pt accommodates the half-badge that extends into this area) -->
           <div class="flex flex-1 flex-col px-4 pb-4 pt-5">

@@ -9,7 +9,7 @@ const DB_CONFIG = {
   port: 5433,
   user: 'sbf',
   password: 'sbf',
-  database: 'sbf_test',
+  database: 'sbf',
 }
 
 const SCRYPT_CONFIG = {

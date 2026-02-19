@@ -12,7 +12,7 @@ import { defineConfig, devices } from '@playwright/test'
  */
 export default defineConfig({
   testDir: './tests/e2e',
-  globalSetup: './tests/e2e/global-setup.ts',
+  globalSetup: './tests/e2e/global_setup.ts',
   fullyParallel: false, // Avoid DB conflicts between parallel tests
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -57,8 +57,8 @@ export default defineConfig({
 
   projects: [
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      name: 'msedge',
+      use: { ...devices['Desktop Edge'] },
     },
   ],
 })
