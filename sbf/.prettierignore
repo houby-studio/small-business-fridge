@@ -1,0 +1,8 @@
+node_modules
+build
+tmp
+public/assets
+
+# Generated test output
+test-results
+playwright-report

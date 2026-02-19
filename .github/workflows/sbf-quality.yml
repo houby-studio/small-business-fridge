@@ -16,6 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      checks: write        # required by mikepenz/action-junit-report to post check runs
+      pull-requests: write # required to post PR annotations
 
     services:
       postgres:
@@ -95,3 +97,12 @@ jobs:
           OIDC_ENABLED: 'false'
           API_SECRET: test-api-secret
           APP_URL: http://localhost:3334
+
+      - name: Publish test results
+        uses: mikepenz/action-junit-report@v4
+        if: always()
+        with:
+          report_paths: 'sbf/test-results/junit-*.xml'
+          check_name: 'Test Results'
+          include_passed: true
+          detailed_summary: true
