@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
@@ -34,12 +34,15 @@ interface PaginatedInvoices {
 
 const props = defineProps<{
   invoices: PaginatedInvoices
-  filters: { status: string }
+  filters: { status: string; sortBy: string; sortOrder: string }
 }>()
 
 const { t } = useI18n()
 
 const filterStatus = ref(props.filters.status)
+const filterSortBy = ref(props.filters.sortBy || 'createdAt')
+const filterSortOrder = ref(props.filters.sortOrder || 'desc')
+const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
 
 const statusOptions = [
   { label: t('common.all'), value: '' },
@@ -95,24 +98,49 @@ async function showQr(id: number) {
   }
 }
 
+function buildFilterParams() {
+  return {
+    status: filterStatus.value || undefined,
+    sortBy: filterSortBy.value || undefined,
+    sortOrder: filterSortOrder.value || undefined,
+  }
+}
+
 function applyFilters() {
   router.get(
     '/invoices',
-    { status: filterStatus.value || undefined, page: 1 },
-    { preserveState: true }
+    { ...buildFilterParams(), page: 1 },
+    { preserveState: true, only: ['invoices', 'filters'] }
   )
 }
 
 function clearFilters() {
   filterStatus.value = ''
-  router.get('/invoices', {}, { preserveState: true })
+  filterSortBy.value = 'createdAt'
+  filterSortOrder.value = 'desc'
+  router.get('/invoices', {}, { preserveState: true, only: ['invoices', 'filters'] })
 }
 
 function onPageChange(event: any) {
   router.get(
     '/invoices',
-    { status: filterStatus.value || undefined, page: event.page + 1 },
-    { preserveState: true }
+    { ...buildFilterParams(), page: event.page + 1 },
+    { preserveState: true, only: ['invoices', 'filters'] }
+  )
+}
+
+function onSort(event: any) {
+  filterSortBy.value = event.sortField
+  filterSortOrder.value = event.sortOrder === 1 ? 'asc' : 'desc'
+  router.get(
+    '/invoices',
+    {
+      ...buildFilterParams(),
+      sortBy: event.sortField,
+      sortOrder: event.sortOrder === 1 ? 'asc' : 'desc',
+      page: 1,
+    },
+    { preserveState: true, only: ['invoices', 'filters'] }
   )
 }
 </script>
@@ -157,14 +185,17 @@ function onPageChange(event: any) {
       :totalRecords="invoices.meta.total"
       :lazy="true"
       :first="(invoices.meta.currentPage - 1) * invoices.meta.perPage"
+      :sortField="filterSortBy"
+      :sortOrder="sortOrderNum"
       @page="onPageChange"
+      @sort="onSort"
       stripedRows
       class="rounded-lg border"
     >
       <Column header="#" style="width: 60px">
         <template #body="{ data }">{{ data.id }}</template>
       </Column>
-      <Column :header="t('common.date')">
+      <Column :header="t('common.date')" field="createdAt" sortable>
         <template #body="{ data }">{{ formatDate(data.createdAt) }}</template>
       </Column>
       <Column :header="t('common.supplier')">
@@ -173,7 +204,7 @@ function onPageChange(event: any) {
       <Column :header="t('common.items')">
         <template #body="{ data }">{{ data.orders?.length ?? 0 }}</template>
       </Column>
-      <Column :header="t('common.total')">
+      <Column :header="t('common.total')" field="totalCost" sortable>
         <template #body="{ data }">
           <span class="font-semibold">{{
             t('common.price_with_currency', { price: data.totalCost })

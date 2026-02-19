@@ -7,13 +7,17 @@ export default class InvoicesController {
     const invoiceService = new InvoiceService()
     const page = request.input('page', 1)
     const status = request.input('status')
+    const sortBy = request.input('sortBy')
+    const sortOrder = request.input('sortOrder')
     const invoices = await invoiceService.getInvoicesForBuyer(auth.user!.id, page, 20, {
       status: status || undefined,
+      sortBy: sortBy || undefined,
+      sortOrder: sortOrder || undefined,
     })
 
     return inertia.render('invoices/index', {
       invoices: invoices.serialize(),
-      filters: { status: status || '' },
+      filters: { status: status || '', sortBy: sortBy || '', sortOrder: sortOrder || '' },
     })
   }
 

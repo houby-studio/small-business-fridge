@@ -97,7 +97,7 @@ function applyFilters() {
       entityType: filterEntity.value || undefined,
       userId: filterUserId.value ?? undefined,
     },
-    { preserveState: true }
+    { preserveState: true, only: ['logs', 'filters'] }
   )
 }
 
@@ -105,7 +105,7 @@ function clearFilters() {
   filterAction.value = ''
   filterEntity.value = ''
   filterUserId.value = null
-  router.get('/admin/audit', {}, { preserveState: true })
+  router.get('/admin/audit', {}, { preserveState: true, only: ['logs', 'filters'] })
 }
 
 function onPageChange(event: any) {
@@ -117,7 +117,7 @@ function onPageChange(event: any) {
       entityType: filterEntity.value || undefined,
       userId: filterUserId.value ?? undefined,
     },
-    { preserveState: true }
+    { preserveState: true, only: ['logs', 'filters'] }
   )
 }
 </script>

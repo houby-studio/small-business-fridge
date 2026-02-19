@@ -53,14 +53,14 @@ function applyFilters() {
       categoryId: filterCategoryId.value || undefined,
       page: 1,
     },
-    { preserveState: true }
+    { preserveState: true, only: ['products', 'filters'] }
   )
 }
 
 function clearFilters() {
   filterSearch.value = ''
   filterCategoryId.value = ''
-  router.get('/supplier/products', {}, { preserveState: true })
+  router.get('/supplier/products', {}, { preserveState: true, only: ['products', 'filters'] })
 }
 
 function onPageChange(event: any) {
@@ -71,7 +71,7 @@ function onPageChange(event: any) {
       categoryId: filterCategoryId.value || undefined,
       page: event.page + 1,
     },
-    { preserveState: true }
+    { preserveState: true, only: ['products', 'filters'] }
   )
 }
 </script>

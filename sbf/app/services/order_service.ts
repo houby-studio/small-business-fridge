@@ -55,15 +55,19 @@ export default class OrderService {
     userId: number,
     page: number = 1,
     perPage: number = 20,
-    filters?: { channel?: string; invoiced?: string }
+    filters?: { channel?: string; invoiced?: string; sortBy?: string; sortOrder?: string }
   ) {
+    const sortByWhitelist = ['createdAt']
+    const sortBy = sortByWhitelist.includes(filters?.sortBy ?? '') ? filters!.sortBy! : 'createdAt'
+    const sortOrder = filters?.sortOrder === 'asc' ? 'asc' : 'desc'
+
     const ordersQuery = Order.query()
       .where('buyerId', userId)
       .preload('delivery', (q) => {
         q.preload('product')
         q.preload('supplier')
       })
-      .orderBy('createdAt', 'desc')
+      .orderBy(sortBy, sortOrder)
 
     if (filters?.channel) {
       ordersQuery.where('channel', filters.channel)

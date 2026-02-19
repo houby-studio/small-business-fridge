@@ -52,7 +52,7 @@ const sentinel = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null
 
 watch(selectedCategory, (categoryId) => {
-  router.get('/shop', categoryId ? { category: categoryId } : {})
+  router.get('/shop', categoryId ? { category: categoryId } : {}, { only: ['products', 'filters'] })
 })
 
 const categoryOptions = computed(() => [

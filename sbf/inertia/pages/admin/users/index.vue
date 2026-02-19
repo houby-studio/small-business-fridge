@@ -76,14 +76,14 @@ function applyFilters() {
       role: filterRole.value || undefined,
       page: 1,
     },
-    { preserveState: true }
+    { preserveState: true, only: ['users', 'filters'] }
   )
 }
 
 function clearFilters() {
   filterSearch.value = ''
   filterRole.value = ''
-  router.get('/admin/users', {}, { preserveState: true })
+  router.get('/admin/users', {}, { preserveState: true, only: ['users', 'filters'] })
 }
 
 function onPageChange(event: any) {
@@ -94,7 +94,7 @@ function onPageChange(event: any) {
       search: filterSearch.value || undefined,
       role: filterRole.value || undefined,
     },
-    { preserveState: true }
+    { preserveState: true, only: ['users', 'filters'] }
   )
 }
 </script>

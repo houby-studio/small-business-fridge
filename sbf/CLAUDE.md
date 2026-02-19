@@ -181,6 +181,81 @@ await user.load((loader) => loader.load('orders'))
 // useFlash() for flash messages from controllers
 ```
 
+### Inertia Partial Reloads (MANDATORY for pagination / filter / sort)
+
+Every `router.get()` call that only changes paginated data **must** include `only: [...]` to
+prevent translations and other shared data from being re-sent on every navigation.
+
+**Rule:** list only the props that actually change — the page data prop and `filters`.
+Props not listed keep their previous values on the client (Inertia merges).
+
+```typescript
+// ✅ Correct — partial reload, translations NOT re-sent
+router.get('/orders', { ...params, page: 2 }, { preserveState: true, only: ['orders', 'filters'] })
+
+// ❌ Wrong — full shared data (translations, locale, user) re-sent every time
+router.get('/orders', { ...params, page: 2 }, { preserveState: true })
+```
+
+**Shared data behaviour** (defined in `config/inertia.ts`):
+
+| Prop           | Wrapper            | Sent on partial reload? |
+| -------------- | ------------------ | ----------------------- |
+| `user`         | `inertia.always()` | Yes — always            |
+| `flash`        | `inertia.always()` | Yes — always            |
+| `locale`       | plain function     | No — excluded by `only` |
+| `translations` | plain function     | No — excluded by `only` |
+
+**Per-page `only` values** (reference for existing pages):
+
+| Page                      | `only` props                      |
+| ------------------------- | --------------------------------- |
+| `/orders`                 | `['orders', 'filters']`           |
+| `/invoices`               | `['invoices', 'filters']`         |
+| `/admin/orders`           | `['orders', 'filters']`           |
+| `/admin/invoices`         | `['invoices', 'filters']`         |
+| `/admin/users`            | `['users', 'filters']`            |
+| `/admin/audit`            | `['logs', 'filters']`             |
+| `/audit`                  | `['logs']`                        |
+| `/supplier/payments`      | `['invoices', 'filters']`         |
+| `/supplier/deliveries`    | `['recentDeliveries', 'filters']` |
+| `/supplier/products`      | `['products', 'filters']`         |
+| `/shop` (category filter) | `['products', 'filters']`         |
+
+**Server-side sorting pattern** (for new paginated service methods):
+
+```typescript
+// Service — whitelist sort fields, default to 'createdAt' desc
+const sortByWhitelist = ['createdAt', 'totalCost']
+const sortBy = sortByWhitelist.includes(filters?.sortBy ?? '') ? filters!.sortBy! : 'createdAt'
+const sortOrder = filters?.sortOrder === 'asc' ? 'asc' : 'desc'
+query.orderBy(sortBy, sortOrder)
+```
+
+```typescript
+// Vue — wire up PrimeVue DataTable lazy sort
+const filterSortBy = ref(props.filters.sortBy || 'createdAt')
+const filterSortOrder = ref(props.filters.sortOrder || 'desc')
+const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
+
+function onSort(event: any) {
+  filterSortBy.value = event.sortField
+  filterSortOrder.value = event.sortOrder === 1 ? 'asc' : 'desc'
+  router.get(
+    '/path',
+    {
+      ...buildFilterParams(),
+      sortBy: event.sortField,
+      sortOrder: event.sortOrder === 1 ? 'asc' : 'desc',
+      page: 1,
+    },
+    { preserveState: true, only: ['data', 'filters'] }
+  )
+}
+// DataTable: :sortField="filterSortBy" :sortOrder="sortOrderNum" @sort="onSort"
+// Column:    field="createdAt" sortable
+```
+
 ### TypeScript
 
 - Avoid `any` — use proper types or `unknown`

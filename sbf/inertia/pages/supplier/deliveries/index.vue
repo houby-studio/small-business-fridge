@@ -85,21 +85,29 @@ function buildFilterParams() {
 }
 
 function applyFilters() {
-  router.get('/supplier/deliveries', { ...buildFilterParams(), page: 1 }, { preserveState: true })
+  router.get(
+    '/supplier/deliveries',
+    { ...buildFilterParams(), page: 1 },
+    { preserveState: true, only: ['recentDeliveries', 'filters'] }
+  )
 }
 
 function clearFilters() {
   filterProductId.value = ''
   filterSortBy.value = 'createdAt'
   filterSortOrder.value = 'desc'
-  router.get('/supplier/deliveries', {}, { preserveState: true })
+  router.get(
+    '/supplier/deliveries',
+    {},
+    { preserveState: true, only: ['recentDeliveries', 'filters'] }
+  )
 }
 
 function onPageChange(event: any) {
   router.get(
     '/supplier/deliveries',
     { ...buildFilterParams(), page: event.page + 1 },
-    { preserveState: true }
+    { preserveState: true, only: ['recentDeliveries', 'filters'] }
   )
 }
 
@@ -114,7 +122,7 @@ function onSort(event: any) {
       sortOrder: event.sortOrder === 1 ? 'asc' : 'desc',
       page: 1,
     },
-    { preserveState: true }
+    { preserveState: true, only: ['recentDeliveries', 'filters'] }
   )
 }
 </script>

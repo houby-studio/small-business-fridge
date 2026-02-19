@@ -53,7 +53,7 @@ function formatMetadata(meta: Record<string, any> | null) {
 }
 
 function onPageChange(event: any) {
-  router.get('/audit', { page: event.page + 1 }, { preserveState: true })
+  router.get('/audit', { page: event.page + 1 }, { preserveState: true, only: ['logs'] })
 }
 </script>
 

@@ -64,21 +64,25 @@ function buildFilterParams() {
 }
 
 function applyFilters() {
-  router.get('/admin/invoices', { ...buildFilterParams(), page: 1 }, { preserveState: true })
+  router.get(
+    '/admin/invoices',
+    { ...buildFilterParams(), page: 1 },
+    { preserveState: true, only: ['invoices', 'filters'] }
+  )
 }
 
 function clearFilters() {
   filterStatus.value = ''
   filterSortBy.value = 'createdAt'
   filterSortOrder.value = 'desc'
-  router.get('/admin/invoices', {}, { preserveState: true })
+  router.get('/admin/invoices', {}, { preserveState: true, only: ['invoices', 'filters'] })
 }
 
 function onPageChange(event: any) {
   router.get(
     '/admin/invoices',
     { ...buildFilterParams(), page: event.page + 1 },
-    { preserveState: true }
+    { preserveState: true, only: ['invoices', 'filters'] }
   )
 }
 
@@ -93,7 +97,7 @@ function onSort(event: any) {
       sortOrder: event.sortOrder === 1 ? 'asc' : 'desc',
       page: 1,
     },
-    { preserveState: true }
+    { preserveState: true, only: ['invoices', 'filters'] }
   )
 }
 </script>

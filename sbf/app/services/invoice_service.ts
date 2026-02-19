@@ -108,15 +108,19 @@ export default class InvoiceService {
     buyerId: number,
     page: number = 1,
     perPage: number = 20,
-    filters?: { status?: string }
+    filters?: { status?: string; sortBy?: string; sortOrder?: string }
   ) {
+    const sortByWhitelist = ['createdAt', 'totalCost']
+    const sortBy = sortByWhitelist.includes(filters?.sortBy ?? '') ? filters!.sortBy! : 'createdAt'
+    const sortOrder = filters?.sortOrder === 'asc' ? 'asc' : 'desc'
+
     const query = Invoice.query()
       .where('buyerId', buyerId)
       .preload('supplier')
       .preload('orders', (q) => {
         q.preload('delivery', (dq) => dq.preload('product'))
       })
-      .orderBy('createdAt', 'desc')
+      .orderBy(sortBy, sortOrder)
 
     if (filters?.status === 'paid') {
       query.where('isPaid', true)

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
@@ -40,13 +40,16 @@ const props = defineProps<{
     totalSpend: number
     totalUnpaid: number
   }
-  filters: { channel: string; invoiced: string }
+  filters: { channel: string; invoiced: string; sortBy: string; sortOrder: string }
 }>()
 
 const { t } = useI18n()
 
 const filterChannel = ref(props.filters.channel)
 const filterInvoiced = ref(props.filters.invoiced)
+const filterSortBy = ref(props.filters.sortBy || 'createdAt')
+const filterSortOrder = ref(props.filters.sortOrder || 'desc')
+const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
 
 const channelOptions = [
   { label: t('common.all'), value: '' },
@@ -65,21 +68,48 @@ function buildFilterParams() {
   return {
     channel: filterChannel.value || undefined,
     invoiced: filterInvoiced.value || undefined,
+    sortBy: filterSortBy.value || undefined,
+    sortOrder: filterSortOrder.value || undefined,
   }
 }
 
 function applyFilters() {
-  router.get('/orders', { ...buildFilterParams(), page: 1 }, { preserveState: true })
+  router.get(
+    '/orders',
+    { ...buildFilterParams(), page: 1 },
+    { preserveState: true, only: ['orders', 'filters'] }
+  )
 }
 
 function clearFilters() {
   filterChannel.value = ''
   filterInvoiced.value = ''
-  router.get('/orders', {}, { preserveState: true })
+  filterSortBy.value = 'createdAt'
+  filterSortOrder.value = 'desc'
+  router.get('/orders', {}, { preserveState: true, only: ['orders', 'filters'] })
 }
 
 function onPageChange(event: any) {
-  router.get('/orders', { ...buildFilterParams(), page: event.page + 1 }, { preserveState: true })
+  router.get(
+    '/orders',
+    { ...buildFilterParams(), page: event.page + 1 },
+    { preserveState: true, only: ['orders', 'filters'] }
+  )
+}
+
+function onSort(event: any) {
+  filterSortBy.value = event.sortField
+  filterSortOrder.value = event.sortOrder === 1 ? 'asc' : 'desc'
+  router.get(
+    '/orders',
+    {
+      ...buildFilterParams(),
+      sortBy: event.sortField,
+      sortOrder: event.sortOrder === 1 ? 'asc' : 'desc',
+      page: 1,
+    },
+    { preserveState: true, only: ['orders', 'filters'] }
+  )
 }
 
 function channelLabel(channel: string) {
@@ -165,11 +195,14 @@ function channelLabel(channel: string) {
       :totalRecords="orders.meta.total"
       :lazy="true"
       :first="(orders.meta.currentPage - 1) * orders.meta.perPage"
+      :sortField="filterSortBy"
+      :sortOrder="sortOrderNum"
       @page="onPageChange"
+      @sort="onSort"
       stripedRows
       class="rounded-lg border"
     >
-      <Column :header="t('common.date')">
+      <Column :header="t('common.date')" field="createdAt" sortable>
         <template #body="{ data }">
           {{ formatDate(data.createdAt) }}
         </template>

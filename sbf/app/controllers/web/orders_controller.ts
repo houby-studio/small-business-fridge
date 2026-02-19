@@ -7,10 +7,14 @@ export default class OrdersController {
     const page = request.input('page', 1)
     const channel = request.input('channel')
     const invoiced = request.input('invoiced')
+    const sortBy = request.input('sortBy')
+    const sortOrder = request.input('sortOrder')
 
     const { orders, stats } = await orderService.getOrdersForUser(auth.user!.id, page, 20, {
       channel: channel || undefined,
       invoiced: invoiced || undefined,
+      sortBy: sortBy || undefined,
+      sortOrder: sortOrder || undefined,
     })
 
     return inertia.render('orders/index', {
@@ -19,6 +23,8 @@ export default class OrdersController {
       filters: {
         channel: channel || '',
         invoiced: invoiced || '',
+        sortBy: sortBy || '',
+        sortOrder: sortOrder || '',
       },
     })
   }

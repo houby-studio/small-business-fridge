@@ -63,20 +63,20 @@ function applyFilters() {
   router.get(
     '/supplier/payments',
     { status: filterStatus.value || undefined, page: 1 },
-    { preserveState: true }
+    { preserveState: true, only: ['invoices', 'filters'] }
   )
 }
 
 function clearFilters() {
   filterStatus.value = ''
-  router.get('/supplier/payments', {}, { preserveState: true })
+  router.get('/supplier/payments', {}, { preserveState: true, only: ['invoices', 'filters'] })
 }
 
 function onPageChange(event: any) {
   router.get(
     '/supplier/payments',
     { status: filterStatus.value || undefined, page: event.page + 1 },
-    { preserveState: true }
+    { preserveState: true, only: ['invoices', 'filters'] }
   )
 }
 </script>
