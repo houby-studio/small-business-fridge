@@ -131,7 +131,7 @@
     transparent 85%
   );
   /* Fallback for browsers not supporting @property */
-  animation: sbf-spin 3s linear infinite;
+  animation: sbf-spin 10s linear infinite;
   z-index: -1;
 }
 
