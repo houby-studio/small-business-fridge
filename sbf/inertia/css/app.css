@@ -184,6 +184,18 @@
   background: linear-gradient(90deg, #cf112a, #e8334a);
 }
 
+/* ─── Category badge (hexagon / pointed-ends label) ─────────────── */
+.sbf-category-badge {
+  clip-path: polygon(
+    8px 0%,
+    calc(100% - 8px) 0%,
+    100% 50%,
+    calc(100% - 8px) 100%,
+    8px 100%,
+    0% 50%
+  );
+}
+
 /* ─── Low stock pulse ────────────────────────────────────────────── */
 @keyframes sbf-pulse-ring {
   0% {
