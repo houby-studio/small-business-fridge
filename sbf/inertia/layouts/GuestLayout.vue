@@ -1,8 +1,14 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import Toast from 'primevue/toast'
 import { useFlash } from '~/composables/use_flash'
 
 useFlash()
+
+// Guest pages are always dark — enforce it regardless of any previous state
+onMounted(() => {
+  document.documentElement.setAttribute('data-theme', 'dark')
+})
 </script>
 
 <template>
@@ -30,13 +36,13 @@ useFlash()
             <span class="pi pi-shopping-cart text-xl" />
           </span>
         </div>
-        <h1 class="text-3xl font-bold tracking-tight text-slate-900">Lednice IT</h1>
-        <p class="mt-1.5 text-sm text-slate-500">Sdílení nápojů a svačin</p>
+        <h1 class="text-3xl font-bold tracking-tight text-zinc-100">Lednice IT</h1>
+        <p class="mt-1.5 text-sm text-zinc-400">Sdílení nápojů a svačin</p>
       </div>
 
       <!-- Card wrapper with glass effect -->
       <div
-        class="rounded-2xl border border-slate-200/80 bg-white/90 p-8 shadow-xl shadow-slate-200/50 backdrop-blur-sm"
+        class="rounded-2xl border border-zinc-800/60 bg-zinc-900/90 p-8 shadow-2xl shadow-zinc-950/80 backdrop-blur-sm"
       >
         <slot />
       </div>

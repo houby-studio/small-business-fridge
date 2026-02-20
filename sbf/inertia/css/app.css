@@ -59,7 +59,10 @@
 
 .sbf-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.1),
+    0 4px 16px rgba(0, 0, 0, 0.06),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
 }
 
 [data-theme='dark'] .sbf-card:hover {
@@ -163,8 +166,9 @@
 /* Scroll shadow */
 .sbf-nav-scrolled {
   box-shadow:
-    0 4px 24px rgba(0, 0, 0, 0.07),
-    0 1px 0 rgba(0, 0, 0, 0.04);
+    0 4px 24px rgba(0, 0, 0, 0.08),
+    0 1px 0 rgba(0, 0, 0, 0.05),
+    0 0 0 1px rgba(207, 17, 42, 0.03);
 }
 
 [data-theme='dark'] .sbf-nav-scrolled {
@@ -198,7 +202,10 @@
 
 .sbf-stat:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.09);
+  box-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.09),
+    0 2px 8px rgba(0, 0, 0, 0.05),
+    0 0 0 1px rgba(0, 0, 0, 0.03);
 }
 
 [data-theme='dark'] .sbf-stat:hover {
@@ -309,7 +316,12 @@
   color: inherit;
 }
 
-/* ─── DataTable row transitions ─────────────────────────────────── */
+/* ─── DataTable rounded corners + row transitions ────────────────── */
+/* overflow: hidden clips inner table content to the border-radius on the wrapper */
+.p-datatable {
+  overflow: hidden;
+}
+
 .p-datatable .p-datatable-tbody > tr {
   transition: background-color 0.12s ease;
 }
@@ -345,14 +357,19 @@ html {
     color 250ms ease;
 }
 
-/* ─── Guest layout background ────────────────────────────────────── */
-.sbf-guest-bg {
+/* ─── App layout background (authenticated) ──────────────────────── */
+.sbf-app-bg {
   background:
-    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(207, 17, 42, 0.08) 0%, transparent 70%),
-    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    radial-gradient(ellipse 110% 35% at 50% 0%, rgba(207, 17, 42, 0.045) 0%, transparent 65%),
+    linear-gradient(180deg, #ffffff 0%, #f8fafc 40%, #f1f5f9 100%);
 }
 
-[data-theme='dark'] .sbf-guest-bg {
+[data-theme='dark'] .sbf-app-bg {
+  background: #09090b;
+}
+
+/* ─── Guest layout background (always dark) ──────────────────────── */
+.sbf-guest-bg {
   background:
     radial-gradient(ellipse 80% 60% at 50% -10%, rgba(207, 17, 42, 0.1) 0%, transparent 70%),
     linear-gradient(180deg, #09090b 0%, #18181b 100%);

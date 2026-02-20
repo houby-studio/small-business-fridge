@@ -114,14 +114,14 @@ function logout() {
 
 <template>
   <div
-    class="min-h-screen bg-slate-50 transition-colors duration-200 dark:bg-zinc-950"
+    class="sbf-app-bg min-h-screen transition-colors duration-200"
     :data-theme="localIsDark ? 'dark' : 'light'"
   >
     <Toast position="top-right" />
 
     <!-- Sticky glassmorphism navbar -->
     <div
-      class="sbf-nav sticky top-0 z-50 border-b border-slate-200/70 bg-white/82 dark:border-zinc-800/60 dark:bg-zinc-900/82"
+      class="sbf-nav sticky top-0 z-50 border-b border-slate-200/60 bg-white/85 dark:border-zinc-800/60 dark:bg-zinc-900/82"
       :class="{ 'sbf-nav-scrolled': isScrolled }"
     >
       <Menubar
