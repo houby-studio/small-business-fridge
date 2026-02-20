@@ -33,5 +33,7 @@
   "session_expiring": "Session expires in: {seconds} s",
   "logout": "Log out",
   "product_not_found": "Product not found",
-  "add_to_basket": "Added to basket"
+  "add_to_basket": "Added to basket",
+  "all_categories": "All",
+  "max_stock_reached": "Maximum quantity in basket"
 }

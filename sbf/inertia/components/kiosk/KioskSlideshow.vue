@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useI18n } from '~/composables/use_i18n'
 
 interface ProductItem {
@@ -17,19 +17,11 @@ const props = defineProps<{
 
 const { t } = useI18n()
 const currentIndex = ref(0)
-const visible = ref(true)
 let intervalId: ReturnType<typeof setInterval> | null = null
-
-const current = computed(() => props.products[currentIndex.value] ?? null)
 
 function advance() {
   if (props.products.length <= 1) return
-  // Fade out, swap, fade in
-  visible.value = false
-  setTimeout(() => {
-    currentIndex.value = (currentIndex.value + 1) % props.products.length
-    visible.value = true
-  }, 400)
+  currentIndex.value = (currentIndex.value + 1) % props.products.length
 }
 
 onMounted(() => {
@@ -52,59 +44,62 @@ onUnmounted(() => {
     </div>
 
     <!-- Product slide -->
-    <template v-else-if="current">
-      <div
-        class="flex w-full max-w-md flex-col items-center transition-opacity duration-300"
-        :class="visible ? 'opacity-100' : 'opacity-0'"
-      >
-        <!-- Category color accent -->
-        <div
-          class="mb-6 h-1 w-24 rounded-full"
-          :style="{ backgroundColor: current.category.color }"
-        />
-
-        <!-- Product image -->
-        <div class="relative mb-8 flex h-64 w-full items-center justify-center">
-          <img
-            v-if="current.imagePath"
-            :src="current.imagePath"
-            :alt="current.displayName"
-            class="h-full w-full object-contain drop-shadow-2xl"
-          />
-          <div v-else class="flex h-full w-full items-center justify-center">
-            <i class="pi pi-box text-8xl text-gray-600" />
+    <template v-else>
+      <Transition name="slide-up" mode="out-in">
+        <div :key="currentIndex" class="flex w-full max-w-md flex-col items-center">
+          <!-- Product image -->
+          <div class="relative mb-8 flex h-80 w-full items-center justify-center">
+            <img
+              v-if="products[currentIndex].imagePath"
+              :src="products[currentIndex].imagePath"
+              :alt="products[currentIndex].displayName"
+              class="h-full w-full object-contain drop-shadow-2xl"
+            />
+            <div v-else class="flex h-full w-full items-center justify-center">
+              <i class="pi pi-box text-8xl text-gray-600" />
+            </div>
           </div>
 
-          <!-- Low-stock badge -->
-          <div
-            v-if="current.stockSum <= 5"
-            class="absolute right-0 top-0 rounded-full bg-red-600 px-3 py-1 text-sm font-bold text-white shadow-lg"
-          >
-            {{ t('kiosk.low_stock', { count: current.stockSum }) }}
+          <!-- Product info -->
+          <h2 class="mb-3 text-center text-3xl font-bold text-white">
+            {{ products[currentIndex].displayName }}
+          </h2>
+          <div class="text-4xl font-bold text-green-400">
+            {{ t('common.price_with_currency', { price: products[currentIndex].price ?? 0 }) }}
+          </div>
+          <div class="mt-2 text-sm text-gray-500">
+            {{ t('common.pieces_in_stock', { count: products[currentIndex].stockSum }) }}
           </div>
         </div>
+      </Transition>
 
-        <!-- Product info -->
-        <h2 class="mb-3 text-center text-3xl font-bold text-white">
-          {{ current.displayName }}
-        </h2>
-        <div class="text-4xl font-bold text-green-400">
-          {{ t('common.price_with_currency', { price: current.price ?? 0 }) }}
-        </div>
-        <div class="mt-2 text-sm text-gray-500">
-          {{ t('common.pieces_in_stock', { count: current.stockSum }) }}
-        </div>
-      </div>
-
-      <!-- Dot navigation -->
-      <div v-if="products.length > 1" class="mt-8 flex gap-2">
+      <!-- Dot navigation — active dot uses category color -->
+      <div v-if="products.length > 1" class="mt-10 flex gap-2">
         <div
-          v-for="(_, i) in products"
+          v-for="(p, i) in products"
           :key="i"
-          class="h-2 rounded-full transition-all duration-300"
-          :class="i === currentIndex ? 'w-6 bg-white' : 'w-2 bg-gray-600'"
+          class="h-2 rounded-full transition-all duration-500"
+          :class="i === currentIndex ? 'w-8' : 'w-2 bg-gray-600'"
+          :style="i === currentIndex ? { backgroundColor: p.category.color } : {}"
         />
       </div>
     </template>
   </div>
 </template>
+
+<style scoped>
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s ease;
+}
+.slide-up-enter-from {
+  opacity: 0;
+  transform: translateY(24px);
+}
+.slide-up-leave-to {
+  opacity: 0;
+  transform: translateY(-24px);
+}
+</style>

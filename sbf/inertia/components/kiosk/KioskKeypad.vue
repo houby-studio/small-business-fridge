@@ -2,15 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useI18n } from '~/composables/use_i18n'
 
-interface CustomerInfo {
-  id: number
-  displayName: string
-  keypadId: number
-}
-
 defineProps<{
-  customer: CustomerInfo | null
-  error: string | null
   loading: boolean
 }>()
 
@@ -34,6 +26,7 @@ function pressKey(key: string) {
   } else if (key === 'enter') {
     if (keypadInput.value) {
       emit('submit', keypadInput.value)
+      keypadInput.value = ''
     }
   } else {
     if (keypadInput.value.length < 6) {
@@ -73,8 +66,7 @@ const keys = [
     <!-- Display field -->
     <div class="relative mb-6 w-full max-w-xs">
       <div
-        class="flex h-20 w-full items-center justify-center rounded-2xl border-2 bg-gray-900 text-5xl font-bold tracking-widest transition-colors"
-        :class="error ? 'border-red-500' : 'border-gray-600'"
+        class="flex h-20 w-full items-center justify-center rounded-2xl border-2 border-gray-600 bg-gray-900 text-5xl font-bold tracking-widest"
       >
         {{ keypadInput || '—' }}
       </div>
@@ -113,9 +105,9 @@ const keys = [
       </template>
     </div>
 
-    <!-- Continue button — primary action, full width, large -->
+    <!-- Continue button — same height as digit buttons -->
     <button
-      class="mt-6 flex h-16 w-full max-w-xs items-center justify-center gap-3 rounded-2xl text-xl font-bold transition-all active:scale-95"
+      class="mt-6 flex h-24 w-full max-w-xs items-center justify-center gap-3 rounded-2xl text-2xl font-bold transition-all active:scale-95"
       :class="
         !keypadInput || loading
           ? 'cursor-not-allowed bg-gray-700 text-gray-500'
@@ -128,10 +120,5 @@ const keys = [
       <i v-else class="pi pi-arrow-right" />
       {{ t('common.continue') }}
     </button>
-
-    <!-- Error — below the button, not between keys -->
-    <div v-if="error" class="mt-4 w-full max-w-xs rounded-xl bg-red-900/60 px-4 py-3 text-center">
-      <p class="text-sm font-medium text-red-300">{{ error }}</p>
-    </div>
   </div>
 </template>

@@ -14,6 +14,7 @@ export interface BasketItem {
   imagePath: string | null
   price: number
   quantity: number
+  maxStock: number
 }
 
 const props = defineProps<{
@@ -44,42 +45,33 @@ const countdownClass = computed(() => {
 </script>
 
 <template>
-  <div class="flex h-full flex-col p-4">
-    <!-- Customer header -->
-    <div class="mb-4 flex items-center justify-between">
-      <div>
-        <h2 class="text-xl font-bold text-white">{{ customer.displayName }}</h2>
-        <p class="text-xs text-gray-500">ID: {{ customer.keypadId }}</p>
-      </div>
-      <button
-        class="flex items-center gap-1.5 rounded-xl bg-gray-700 px-3 py-2 text-sm text-gray-300 transition-colors hover:bg-gray-600"
-        @click="emit('cancel')"
-      >
-        <i class="pi pi-sign-out text-xs" />
-        {{ t('kiosk.logout') }}
-      </button>
+  <div class="flex h-full flex-col p-5">
+    <!-- Customer header (no logout button — Cancel below does the same) -->
+    <div class="mb-4 px-1">
+      <h2 class="text-2xl font-bold text-white">{{ customer.displayName }}</h2>
+      <p class="text-sm text-gray-500">ID: {{ customer.keypadId }}</p>
     </div>
 
     <!-- Basket heading -->
     <div class="mb-3 flex items-center gap-2 border-b border-gray-700 pb-3">
       <i class="pi pi-shopping-cart text-gray-400" />
-      <span class="font-semibold text-gray-300">{{ t('kiosk.basket') }}</span>
+      <span class="text-lg font-semibold text-gray-300">{{ t('kiosk.basket') }}</span>
     </div>
 
     <!-- Items list -->
     <div class="flex-1 overflow-y-auto">
       <!-- Empty state -->
-      <div v-if="items.length === 0" class="py-8 text-center text-gray-600">
-        <i class="pi pi-shopping-cart mb-2 text-3xl" />
-        <p class="text-sm">{{ t('kiosk.basket_empty') }}</p>
+      <div v-if="items.length === 0" class="py-12 text-center text-gray-600">
+        <i class="pi pi-shopping-cart mb-3 text-5xl" />
+        <p class="text-base">{{ t('kiosk.basket_empty') }}</p>
       </div>
 
       <!-- Items -->
-      <div v-else class="space-y-2">
+      <div v-else class="space-y-3">
         <div
           v-for="item in items"
           :key="item.deliveryId"
-          class="flex items-center gap-3 rounded-xl p-2 transition-colors"
+          class="flex items-center gap-4 rounded-2xl p-4 transition-colors"
           :class="
             item.deliveryId === outOfStockDeliveryId
               ? 'bg-red-900/40 ring-1 ring-red-500'
@@ -91,44 +83,53 @@ const countdownClass = computed(() => {
             v-if="item.imagePath"
             :src="item.imagePath"
             :alt="item.displayName"
-            class="h-10 w-10 flex-shrink-0 rounded-lg object-contain"
+            class="h-20 w-20 flex-shrink-0 rounded-xl object-contain"
           />
           <div
             v-else
-            class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-gray-700"
+            class="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-xl bg-gray-700"
           >
-            <i class="pi pi-box text-gray-500" />
+            <i class="pi pi-box text-2xl text-gray-500" />
           </div>
 
           <!-- Name + price -->
           <div class="min-w-0 flex-1">
-            <p class="truncate text-sm font-medium text-white">{{ item.displayName }}</p>
-            <p class="text-xs text-green-400">
+            <p class="truncate text-lg font-semibold text-white">{{ item.displayName }}</p>
+            <p class="text-base text-green-400">
               {{ t('common.price_with_currency', { price: item.price * item.quantity }) }}
             </p>
-            <p v-if="item.deliveryId === outOfStockDeliveryId" class="text-xs text-red-400">
+            <p v-if="item.deliveryId === outOfStockDeliveryId" class="text-sm text-red-400">
               {{ t('kiosk.item_out_of_stock_other_buyer') }}
             </p>
           </div>
 
           <!-- Qty controls -->
-          <div class="flex items-center gap-1">
+          <div class="flex items-center gap-2">
             <button
-              class="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-700 text-white transition-colors hover:bg-gray-600 active:scale-95"
+              class="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-700 text-white transition-colors hover:bg-gray-600 active:scale-95"
               @click="
                 item.quantity > 1
                   ? emit('updateQty', item.deliveryId, item.quantity - 1)
                   : emit('remove', item.deliveryId)
               "
             >
-              <i :class="item.quantity > 1 ? 'pi pi-minus' : 'pi pi-trash'" class="text-xs" />
+              <i :class="item.quantity > 1 ? 'pi pi-minus' : 'pi pi-trash'" />
             </button>
-            <span class="w-6 text-center text-sm font-bold text-white">{{ item.quantity }}</span>
+            <span class="w-8 text-center text-xl font-bold text-white">{{ item.quantity }}</span>
             <button
-              class="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-700 text-white transition-colors hover:bg-gray-600 active:scale-95"
-              @click="emit('updateQty', item.deliveryId, item.quantity + 1)"
+              class="flex h-12 w-12 items-center justify-center rounded-xl transition-colors active:scale-95"
+              :class="
+                item.quantity >= item.maxStock
+                  ? 'cursor-not-allowed bg-gray-800 text-gray-600'
+                  : 'bg-gray-700 text-white hover:bg-gray-600'
+              "
+              :disabled="item.quantity >= item.maxStock"
+              @click="
+                item.quantity < item.maxStock &&
+                emit('updateQty', item.deliveryId, item.quantity + 1)
+              "
             >
-              <i class="pi pi-plus text-xs" />
+              <i class="pi pi-plus" />
             </button>
           </div>
         </div>
@@ -136,29 +137,29 @@ const countdownClass = computed(() => {
     </div>
 
     <!-- Total -->
-    <div class="mt-3 border-t border-gray-700 pt-3">
-      <div class="flex items-center justify-between text-lg font-bold">
+    <div class="mt-4 border-t border-gray-700 pt-4">
+      <div class="flex items-center justify-between text-2xl font-bold">
         <span class="text-gray-300">{{ t('kiosk.total') }}</span>
         <span class="text-green-400">{{ t('common.price_with_currency', { price: total }) }}</span>
       </div>
     </div>
 
     <!-- Countdown -->
-    <div class="mt-2 text-center text-xs" :class="countdownClass">
+    <div class="mt-2 text-center text-sm" :class="countdownClass">
       {{ t('kiosk.session_expiring', { seconds: countdown }) }}
     </div>
 
     <!-- Action buttons -->
-    <div class="mt-3 flex gap-2">
+    <div class="mt-4 flex gap-3">
       <button
-        class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gray-700 py-3 text-sm font-semibold text-gray-300 transition-colors hover:bg-gray-600 active:scale-95"
+        class="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gray-700 py-5 text-lg font-semibold text-gray-300 transition-colors hover:bg-gray-600 active:scale-95"
         @click="emit('cancel')"
       >
         <i class="pi pi-times" />
         {{ t('kiosk.cancel_basket') }}
       </button>
       <button
-        class="flex flex-[2] items-center justify-center gap-2 rounded-xl py-3 text-base font-bold transition-all active:scale-95"
+        class="flex flex-[2] items-center justify-center gap-2 rounded-2xl py-5 text-xl font-bold transition-all active:scale-95"
         :class="
           items.length === 0 || checkoutLoading
             ? 'cursor-not-allowed bg-gray-700 text-gray-500'
@@ -170,7 +171,7 @@ const countdownClass = computed(() => {
         <i v-if="checkoutLoading" class="pi pi-spin pi-spinner" />
         <i v-else class="pi pi-shopping-cart" />
         {{ t('kiosk.checkout') }}
-        <span v-if="totalCount > 0" class="rounded-full bg-white/20 px-2 py-0.5 text-sm">
+        <span v-if="totalCount > 0" class="rounded-full bg-white/20 px-3 py-0.5 text-base">
           {{ totalCount }}
         </span>
       </button>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from '~/composables/use_i18n'
 
 export interface ProductItem {
@@ -27,6 +27,21 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
+const filterCategory = ref<string | null>(null)
+
+/** Unique categories derived from product list */
+const categories = computed(() => {
+  const seen = new Set<string>()
+  const cats: Array<{ name: string; color: string }> = []
+  for (const p of props.products) {
+    if (!seen.has(p.category.name)) {
+      seen.add(p.category.name)
+      cats.push(p.category)
+    }
+  }
+  return cats
+})
+
 /** Sort: recommended+favorite → recommended → favorite → rest; then alphabetical */
 const sortedProducts = computed(() => {
   return [...props.products].sort((a, b) => {
@@ -37,64 +52,116 @@ const sortedProducts = computed(() => {
     return a.displayName.localeCompare(b.displayName, 'cs')
   })
 })
+
+const filteredProducts = computed(() => {
+  if (!filterCategory.value) return sortedProducts.value
+  return sortedProducts.value.filter((p) => p.category.name === filterCategory.value)
+})
+
+function glowStyle(product: ProductItem): Record<string, string> {
+  if (product.isRecommended && product.isFavorite) {
+    return { boxShadow: '0 0 28px rgba(168,85,247,0.4)' }
+  }
+  if (product.isRecommended) {
+    return { boxShadow: '0 0 28px rgba(234,179,8,0.4)' }
+  }
+  if (product.isFavorite) {
+    return { boxShadow: '0 0 28px rgba(236,72,153,0.4)' }
+  }
+  return {}
+}
 </script>
 
 <template>
-  <div class="h-full overflow-y-auto p-4">
-    <div class="grid grid-cols-3 gap-3">
-      <div
-        v-for="product in sortedProducts"
-        :key="product.id"
-        class="relative cursor-pointer rounded-2xl border transition-all active:scale-95"
-        :class="{
-          'sbf-card-recommended border-yellow-500/40 bg-yellow-900/10':
-            product.isRecommended && !product.isFavorite,
-          'sbf-card-favorite border-pink-500/40 bg-pink-900/10':
-            product.isFavorite && !product.isRecommended,
-          'sbf-card-both border-purple-500/40 bg-purple-900/10':
-            product.isRecommended && product.isFavorite,
-          'border-gray-700/50 bg-gray-800/60 hover:border-gray-600':
-            !product.isRecommended && !product.isFavorite,
-          'hover:scale-102': true,
-        }"
-        :style="{ borderBottom: `3px solid ${product.category.color}` }"
-        @click="emit('addProduct', product)"
+  <div class="flex h-full flex-col">
+    <!-- Category filter row -->
+    <div
+      class="flex flex-shrink-0 gap-2 overflow-x-auto border-b border-gray-700/50 px-4 py-3"
+      style="scrollbar-width: none"
+    >
+      <button
+        class="flex-shrink-0 rounded-full px-5 py-2 text-base font-semibold transition-all"
+        :class="
+          !filterCategory ? 'bg-white text-gray-900' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+        "
+        @click="filterCategory = null"
       >
-        <!-- In-basket quantity badge -->
-        <div
-          v-if="basketQtyMap.get(product.deliveryId ?? -1)"
-          class="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-green-600 text-xs font-bold text-white shadow"
-        >
-          {{ basketQtyMap.get(product.deliveryId ?? -1) }}
-        </div>
+        {{ t('kiosk.all_categories') }}
+      </button>
+      <button
+        v-for="cat in categories"
+        :key="cat.name"
+        class="flex-shrink-0 rounded-full px-5 py-2 text-base font-semibold transition-all"
+        :class="
+          filterCategory === cat.name ? 'text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+        "
+        :style="filterCategory === cat.name ? { backgroundColor: cat.color } : {}"
+        @click="filterCategory = filterCategory === cat.name ? null : cat.name"
+      >
+        {{ cat.name }}
+      </button>
+    </div>
 
-        <!-- Low-stock badge -->
+    <!-- Product grid -->
+    <div class="flex-1 overflow-y-auto p-4">
+      <div class="grid grid-cols-3 gap-3">
         <div
-          v-if="product.stockSum <= 5"
-          class="absolute left-1.5 top-1.5 z-10 rounded-full bg-red-600 px-1.5 py-0.5 text-xs font-bold text-white"
+          v-for="product in filteredProducts"
+          :key="product.id"
+          class="relative flex cursor-pointer flex-col rounded-2xl border transition-all active:scale-95"
+          :class="{
+            'sbf-card-recommended border-yellow-500/50 bg-yellow-900/10':
+              product.isRecommended && !product.isFavorite,
+            'sbf-card-favorite border-pink-500/50 bg-pink-900/10':
+              product.isFavorite && !product.isRecommended,
+            'sbf-card-both border-purple-500/50 bg-purple-900/10':
+              product.isRecommended && product.isFavorite,
+            'border-gray-700/50 bg-gray-800/60 hover:border-gray-600':
+              !product.isRecommended && !product.isFavorite,
+          }"
+          :style="{
+            borderBottom: `3px solid ${product.category.color}`,
+            ...glowStyle(product),
+          }"
+          @click="emit('addProduct', product)"
         >
-          {{ t('kiosk.low_stock', { count: product.stockSum }) }}
-        </div>
-
-        <div class="p-3 text-center">
-          <img
-            v-if="product.imagePath"
-            :src="product.imagePath"
-            :alt="product.displayName"
-            class="mx-auto mb-2 h-20 w-full object-contain"
-          />
+          <!-- In-basket quantity badge -->
           <div
-            v-else
-            class="mx-auto mb-2 flex h-20 w-full items-center justify-center rounded-lg bg-gray-700"
+            v-if="basketQtyMap.get(product.deliveryId ?? -1)"
+            class="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-green-600 text-sm font-bold text-white shadow-lg"
           >
-            <i class="pi pi-box text-2xl text-gray-500" />
+            {{ basketQtyMap.get(product.deliveryId ?? -1) }}
           </div>
-          <p class="line-clamp-2 text-xs font-semibold leading-tight text-white">
+
+          <!-- Product name at top -->
+          <p
+            class="line-clamp-2 px-3 pt-4 text-center text-sm font-semibold leading-tight text-white"
+          >
             {{ product.displayName }}
           </p>
-          <p class="mt-1 text-sm font-bold text-green-400">
-            {{ t('common.price_with_currency', { price: product.price ?? 0 }) }}
-          </p>
+
+          <!-- Product image in middle -->
+          <div class="flex flex-1 items-center justify-center px-3 py-4">
+            <img
+              v-if="product.imagePath"
+              :src="product.imagePath"
+              :alt="product.displayName"
+              class="h-32 w-full object-contain"
+            />
+            <div v-else class="flex h-32 w-full items-center justify-center rounded-xl bg-gray-700">
+              <i class="pi pi-box text-4xl text-gray-500" />
+            </div>
+          </div>
+
+          <!-- Price + stock at bottom -->
+          <div class="pb-4 text-center">
+            <p class="text-lg font-bold text-green-400">
+              {{ t('common.price_with_currency', { price: product.price ?? 0 }) }}
+            </p>
+            <p class="text-xs text-gray-500">
+              {{ t('common.pieces_in_stock', { count: product.stockSum }) }}
+            </p>
+          </div>
         </div>
       </div>
     </div>

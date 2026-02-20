@@ -45,7 +45,6 @@ interface CustomerInfo {
 
 const appState = ref<AppState>('idle')
 const customer = ref<CustomerInfo | null>(null)
-const keypadError = ref<string | null>(null)
 const keypadLoading = ref(false)
 
 // Personalization overlay (merged client-side onto allProducts)
@@ -82,6 +81,10 @@ function addToBasket(product: ProductItem) {
 
   const existing = basket.value.find((i) => i.deliveryId === product.deliveryId)
   if (existing) {
+    if (existing.quantity >= product.stockSum) {
+      toast.add({ severity: 'warn', summary: t('kiosk.max_stock_reached'), life: 2000 })
+      return
+    }
     existing.quantity++
   } else {
     basket.value.push({
@@ -90,6 +93,7 @@ function addToBasket(product: ProductItem) {
       imagePath: product.imagePath,
       price: product.price ?? 0,
       quantity: 1,
+      maxStock: product.stockSum,
     })
   }
 
@@ -208,7 +212,6 @@ function getCsrfToken(): string {
 }
 
 async function onKeypadSubmit(keypadId: string) {
-  keypadError.value = null
   keypadLoading.value = true
 
   try {
@@ -218,7 +221,11 @@ async function onKeypadSubmit(keypadId: string) {
     const data = await res.json()
 
     if (!res.ok) {
-      keypadError.value = data.error ?? t('messages.kiosk_customer_not_found')
+      toast.add({
+        severity: 'error',
+        summary: data.error ?? t('messages.kiosk_customer_not_found'),
+        life: 3000,
+      })
       return
     }
 
@@ -228,7 +235,7 @@ async function onKeypadSubmit(keypadId: string) {
     appState.value = 'identified'
     startIdleTimer()
   } catch {
-    keypadError.value = t('kiosk.purchase_retry')
+    toast.add({ severity: 'error', summary: t('kiosk.purchase_retry'), life: 3000 })
   } finally {
     keypadLoading.value = false
   }
@@ -304,7 +311,6 @@ function resetToIdle() {
   appState.value = 'idle'
   customer.value = null
   basket.value = []
-  keypadError.value = null
   favoriteIds.value = []
   recommendedIds.value = []
   outOfStockDeliveryId.value = null
@@ -356,8 +362,6 @@ onUnmounted(() => {
           <KioskKeypad
             v-if="appState === 'idle'"
             key="keypad"
-            :customer="null"
-            :error="keypadError"
             :loading="keypadLoading"
             @submit="onKeypadSubmit"
           />
