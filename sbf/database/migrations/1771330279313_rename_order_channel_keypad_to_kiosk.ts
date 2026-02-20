@@ -2,10 +2,7 @@ import { BaseSchema } from '@adonisjs/lucid/schema'
 
 export default class extends BaseSchema {
   async up() {
-    // Migrate existing data
-    await this.db.rawQuery(`UPDATE orders SET channel = 'kiosk' WHERE channel = 'keypad'`)
-
-    // Drop the old check constraint (auto-named by Knex during table creation)
+    // Drop the old check constraint first (it rejects 'kiosk')
     await this.db.rawQuery(`
       DO $$
       DECLARE c text;
@@ -19,6 +16,9 @@ export default class extends BaseSchema {
         END IF;
       END $$
     `)
+
+    // Migrate existing data now that the constraint is gone
+    await this.db.rawQuery(`UPDATE orders SET channel = 'kiosk' WHERE channel = 'keypad'`)
 
     // Add updated check constraint
     await this.db.rawQuery(`
