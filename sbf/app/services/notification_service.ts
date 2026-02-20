@@ -12,6 +12,10 @@ export default class NotificationService {
     return i18nManager.locale(i18nManager.defaultLocale)
   }
 
+  private get appUrl() {
+    return env.get('APP_URL') || `http://${env.get('HOST')}:${env.get('PORT')}`
+  }
+
   /**
    * Send purchase confirmation email to the buyer.
    */
@@ -32,8 +36,7 @@ export default class NotificationService {
       .where('product_id', productId)
       .first()
 
-    const appUrl = env.get('APP_URL') || `http://${env.get('HOST')}:${env.get('PORT')}`
-    const addFavoriteUrl = isFavorite ? null : `${appUrl}/shop?add_favorite=${productId}`
+    const addFavoriteUrl = isFavorite ? null : `${this.appUrl}/shop?add_favorite=${productId}`
 
     await mail.send((message) => {
       message
@@ -50,7 +53,7 @@ export default class NotificationService {
           supplierName: order.delivery.supplier.displayName,
           date: order.createdAt.toFormat('dd.MM.yyyy HH:mm'),
           addFavoriteUrl,
-          shopUrl: appUrl + '/shop',
+          appUrl: this.appUrl,
         })
     })
   }
@@ -66,7 +69,6 @@ export default class NotificationService {
     })
 
     const buyer = invoice.buyer
-    const appUrl = env.get('APP_URL') || `http://${env.get('HOST')}:${env.get('PORT')}`
 
     let qrImageData: string | null = null
     if (invoice.supplier.iban) {
@@ -99,7 +101,8 @@ export default class NotificationService {
           })),
           supplierIban: invoice.supplier.iban,
           qrImageData,
-          confirmPaymentUrl: `${appUrl}/invoices?confirmId=${invoice.id}`,
+          confirmPaymentUrl: `${this.appUrl}/invoices?confirmId=${invoice.id}`,
+          appUrl: this.appUrl,
         })
     })
   }
@@ -114,8 +117,6 @@ export default class NotificationService {
     const supplier = invoice.supplier
     if (supplier.isDisabled) return
 
-    const appUrl = env.get('APP_URL') || `http://${env.get('HOST')}:${env.get('PORT')}`
-
     await mail.send((message) => {
       message
         .to(supplier.email)
@@ -126,7 +127,8 @@ export default class NotificationService {
           buyerName: invoice.buyer.displayName,
           invoiceId: invoice.id,
           totalCost: invoice.totalCost,
-          reviewUrl: `${appUrl}/supplier/payments?reviewId=${invoice.id}`,
+          reviewUrl: `${this.appUrl}/supplier/payments?reviewId=${invoice.id}`,
+          appUrl: this.appUrl,
         })
     })
   }
@@ -153,6 +155,7 @@ export default class NotificationService {
           invoiceId: invoice.id,
           totalCost: invoice.totalCost,
           action,
+          appUrl: this.appUrl,
         })
     })
   }
@@ -193,6 +196,7 @@ export default class NotificationService {
             })),
             totalSpent,
             orderCount: todayOrders.length,
+            appUrl: this.appUrl,
           })
       })
     }
@@ -228,6 +232,7 @@ export default class NotificationService {
             invoiceId: invoice.id,
             totalCost: invoice.totalCost,
             supplierIban: invoice.supplier.iban,
+            appUrl: this.appUrl,
           })
       })
 
@@ -278,6 +283,7 @@ export default class NotificationService {
               totalCost: inv.totalCost,
             })),
             totalPending,
+            appUrl: this.appUrl,
           })
       })
     }
