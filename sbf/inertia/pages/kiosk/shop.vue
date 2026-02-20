@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Head, router, Link } from '@inertiajs/vue3'
 import KioskLayout from '~/layouts/KioskLayout.vue'
 import Button from 'primevue/button'
@@ -21,6 +22,9 @@ interface ProductItem {
   price: number | null
   deliveryId: number | null
   stockSum: number
+  isFavorite: boolean
+  isRecommended: boolean
+  recommendationRank: number
   category: { name: string; color: string }
 }
 
@@ -33,6 +37,26 @@ const props = defineProps<{
 
 const confirm = useConfirm()
 const { t } = useI18n()
+
+/** Sort order: recommended+favorite > recommended > favorite > rest, then alphabetical. */
+function productRank(p: ProductItem): number {
+  if (p.isRecommended && p.isFavorite) return 0
+  if (p.isRecommended) return 1
+  if (p.isFavorite) return 2
+  return 3
+}
+
+const sortedProducts = computed(() => {
+  return [...props.products].sort((a, b) => {
+    const rankDiff = productRank(a) - productRank(b)
+    if (rankDiff !== 0) return rankDiff
+    // Within recommended groups, sort by recommendation strength (rank 1 = best)
+    if (a.isRecommended && b.isRecommended) {
+      return a.recommendationRank - b.recommendationRank
+    }
+    return a.displayName.localeCompare(b.displayName, 'cs')
+  })
+})
 
 function purchase(product: ProductItem) {
   if (!props.customer || !product.deliveryId) return
@@ -97,42 +121,53 @@ function purchase(product: ProductItem) {
 
       <!-- Products grid -->
       <div
-        v-if="customer && products.length > 0"
+        v-if="customer && sortedProducts.length > 0"
         class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
       >
-        <Card
-          v-for="product in products"
+        <div
+          v-for="product in sortedProducts"
           :key="product.id"
-          class="cursor-pointer transition-all hover:scale-105"
-          @click="purchase(product)"
+          :class="{
+            'sbf-card-both': product.isRecommended && product.isFavorite,
+            'sbf-card-recommended': product.isRecommended && !product.isFavorite,
+            'sbf-card-favorite': product.isFavorite && !product.isRecommended,
+          }"
         >
-          <template #content>
-            <div class="text-center">
-              <img
-                v-if="product.imagePath"
-                :src="product.imagePath"
-                :alt="product.displayName"
-                class="mx-auto mb-2 h-24 w-24 rounded-lg object-cover"
-              />
-              <div
-                v-else
-                class="mx-auto mb-2 flex h-24 w-24 items-center justify-center rounded-lg bg-gray-700"
-              >
-                <i class="pi pi-box text-3xl text-gray-500" />
+          <Card
+            class="h-full cursor-pointer transition-all hover:scale-105"
+            @click="purchase(product)"
+          >
+            <template #content>
+              <div class="text-center">
+                <img
+                  v-if="product.imagePath"
+                  :src="product.imagePath"
+                  :alt="product.displayName"
+                  class="mx-auto mb-2 h-24 w-24 rounded-lg object-cover"
+                />
+                <div
+                  v-else
+                  class="mx-auto mb-2 flex h-24 w-24 items-center justify-center rounded-lg bg-gray-700"
+                >
+                  <i class="pi pi-box text-3xl text-gray-500" />
+                </div>
+                <h3 class="text-sm font-semibold">{{ product.displayName }}</h3>
+                <div class="mt-1 text-lg font-bold text-green-400">
+                  {{ t('common.price_with_currency', { price: product.price ?? 0 }) }}
+                </div>
+                <div class="mt-0.5 text-xs text-gray-400">
+                  {{ t('common.pieces_in_stock', { count: product.stockSum }) }}
+                </div>
               </div>
-              <h3 class="text-sm font-semibold">{{ product.displayName }}</h3>
-              <div class="mt-1 text-lg font-bold text-green-400">
-                {{ t('common.price_with_currency', { price: product.price ?? 0 }) }}
-              </div>
-              <div class="mt-0.5 text-xs text-gray-400">
-                {{ t('common.pieces_in_stock', { count: product.stockSum }) }}
-              </div>
-            </div>
-          </template>
-        </Card>
+            </template>
+          </Card>
+        </div>
       </div>
 
-      <div v-else-if="customer && products.length === 0" class="py-20 text-center text-gray-400">
+      <div
+        v-else-if="customer && sortedProducts.length === 0"
+        class="py-20 text-center text-gray-400"
+      >
         <i class="pi pi-inbox mb-4 text-5xl" />
         <p class="text-xl">{{ t('kiosk.no_products') }}</p>
       </div>

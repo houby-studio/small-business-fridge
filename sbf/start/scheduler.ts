@@ -1,5 +1,6 @@
 import scheduler from 'adonisjs-scheduler/services/main'
 import NotificationService from '#services/notification_service'
+import RecommendationService from '#services/recommendation_service'
 import logger from '@adonisjs/core/services/logger'
 
 /**
@@ -49,3 +50,19 @@ scheduler
     }
   })
   .cron('0 9 * * *')
+
+/**
+ * Statistical recommendations refresh — Daily at 02:00
+ * Recomputes purchase predictions for all active users.
+ */
+scheduler
+  .call(async () => {
+    const service = new RecommendationService()
+    try {
+      await service.refreshAll()
+      logger.info('Statistical recommendations refreshed')
+    } catch (error) {
+      logger.error({ err: error }, 'Failed to refresh recommendations')
+    }
+  })
+  .cron('0 2 * * *')

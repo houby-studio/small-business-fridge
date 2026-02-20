@@ -86,7 +86,7 @@
   transform: scale(1.07);
 }
 
-/* ─── Favorite card advanced animation ───────────────────────────── */
+/* ─── Special card spinning border animation ──────────────────────── */
 @keyframes sbf-spin {
   from {
     --angle: 0deg;
@@ -104,7 +104,10 @@
   inherits: false;
 }
 
-.sbf-card-favorite {
+/* Shared base for all animated-border card variants */
+.sbf-card-favorite,
+.sbf-card-recommended,
+.sbf-card-both {
   --border-width: 2px;
   --radius: 0.75rem; /* 12px */
   position: relative;
@@ -114,16 +117,24 @@
   transition: box-shadow 0.3s ease;
   padding: var(--border-width); /* Border space */
   background: transparent !important;
+  outline: none !important;
 }
 
-.sbf-card-favorite::before {
+.sbf-card-favorite::before,
+.sbf-card-recommended::before,
+.sbf-card-both::before {
   content: '';
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 200%; /* Larger to ensure coverage during rotation */
+  width: 200%;
   height: 200%;
   transform: translate(-50%, -50%);
+  z-index: -1;
+}
+
+/* ── Favorite: two gold streaks ─────────────────────────────────── */
+.sbf-card-favorite::before {
   background-image: conic-gradient(
     from var(--angle),
     transparent 10%,
@@ -133,12 +144,9 @@
     #fbbf24 75%,
     transparent 85%
   );
-  /* Fallback for browsers not supporting @property */
   animation: sbf-spin 10s linear infinite;
-  z-index: -1;
 }
 
-/* Enhanced glow on hover */
 .sbf-card-favorite:hover {
   box-shadow:
     0 10px 30px -10px rgba(251, 191, 36, 0.4),
@@ -151,9 +159,59 @@
     0 0 25px 2px rgba(251, 191, 36, 0.15);
 }
 
-/* Remove simple outline as we use the animated border */
-.sbf-card-favorite {
-  outline: none !important;
+/* ── Recommended: two AI gradient streaks (purple → blue) ────────── */
+.sbf-card-recommended::before {
+  background-image: conic-gradient(
+    from var(--angle),
+    transparent 10%,
+    #b224ef 20%,
+    #7579ff 30%,
+    transparent 40%,
+    transparent 60%,
+    #b224ef 70%,
+    #7579ff 80%,
+    transparent 90%
+  );
+  animation: sbf-spin 8s linear infinite;
+}
+
+.sbf-card-recommended:hover {
+  box-shadow:
+    0 10px 30px -10px rgba(117, 121, 255, 0.4),
+    0 0 20px 0px rgba(178, 36, 239, 0.2);
+}
+
+[data-theme='dark'] .sbf-card-recommended:hover {
+  box-shadow:
+    0 10px 40px -10px rgba(117, 121, 255, 0.35),
+    0 0 25px 2px rgba(178, 36, 239, 0.18);
+}
+
+/* ── Both: AI gradient streak + gold streak (tricolor) ───────────── */
+.sbf-card-both::before {
+  background-image: conic-gradient(
+    from var(--angle),
+    transparent 5%,
+    #b224ef 15%,
+    #7579ff 25%,
+    transparent 35%,
+    transparent 55%,
+    #fbbf24 65%,
+    transparent 75%
+  );
+  animation: sbf-spin 6s linear infinite;
+}
+
+.sbf-card-both:hover {
+  box-shadow:
+    0 10px 30px -10px rgba(117, 121, 255, 0.35),
+    0 0 20px 0px rgba(251, 191, 36, 0.25);
+}
+
+[data-theme='dark'] .sbf-card-both:hover {
+  box-shadow:
+    0 10px 40px -10px rgba(117, 121, 255, 0.3),
+    0 0 25px 2px rgba(251, 191, 36, 0.2);
 }
 
 /* ─── Glassmorphism navbar ────────────────────────────────────────── */

@@ -3,7 +3,9 @@ import User from '#models/user'
 import ShopService from '#services/shop_service'
 import OrderService from '#services/order_service'
 import NotificationService from '#services/notification_service'
+import RecommendationService from '#services/recommendation_service'
 import logger from '@adonisjs/core/services/logger'
+import KioskSession from '#models/kiosk_session'
 
 export default class KioskController {
   /**
@@ -42,11 +44,25 @@ export default class KioskController {
       })
     }
 
+    // Fire-and-forget kiosk session tracking
+    KioskSession.create({ userId: customer.id }).catch((err) => {
+      logger.error({ err }, 'Failed to record kiosk session')
+    })
+
     const shopService = new ShopService()
-    const [products, categories] = await Promise.all([
+    const recommendationService = new RecommendationService()
+    const [rawProducts, categories, recommendedIds] = await Promise.all([
       shopService.getProducts({ showAll: false, userId: customer.id }),
       shopService.getCategories(),
+      recommendationService.getRecommendedIds(customer.id),
     ])
+
+    const recommendedRankMap = new Map(recommendedIds.map((id, i) => [id, i + 1]))
+    const products = rawProducts.map((p) => ({
+      ...p,
+      isRecommended: recommendedRankMap.has(p.id),
+      recommendationRank: recommendedRankMap.get(p.id) ?? 0,
+    }))
 
     return inertia.render('kiosk/shop', {
       customer: {

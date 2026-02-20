@@ -20,6 +20,8 @@ interface ShopProduct {
   price: number | null
   deliveryId: number | null
   isFavorite: boolean
+  isRecommended: boolean
+  recommendationRank: number
 }
 
 interface ShopCategory {
@@ -70,9 +72,29 @@ const filteredProducts = computed(() => {
   })
 })
 
-const visibleProducts = computed(() => filteredProducts.value.slice(0, visibleCount.value))
+/** Sort order: recommended+favorite > recommended > favorite > rest, then alphabetical. */
+function productRank(p: ShopProduct): number {
+  if (p.isRecommended && p.isFavorite) return 0
+  if (p.isRecommended) return 1
+  if (p.isFavorite) return 2
+  return 3
+}
 
-const hasMore = computed(() => visibleCount.value < filteredProducts.value.length)
+const sortedProducts = computed(() => {
+  return [...filteredProducts.value].sort((a, b) => {
+    const rankDiff = productRank(a) - productRank(b)
+    if (rankDiff !== 0) return rankDiff
+    // Within recommended groups, sort by recommendation strength (rank 1 = best)
+    if (a.isRecommended && b.isRecommended) {
+      return a.recommendationRank - b.recommendationRank
+    }
+    return a.displayName.localeCompare(b.displayName, 'cs')
+  })
+})
+
+const visibleProducts = computed(() => sortedProducts.value.slice(0, visibleCount.value))
+
+const hasMore = computed(() => visibleCount.value < sortedProducts.value.length)
 
 function setupObserver() {
   observer?.disconnect()
@@ -80,7 +102,7 @@ function setupObserver() {
   observer = new IntersectionObserver(
     ([entry]) => {
       if (entry.isIntersecting && hasMore.value) {
-        visibleCount.value = Math.min(visibleCount.value + PAGE_SIZE, filteredProducts.value.length)
+        visibleCount.value = Math.min(visibleCount.value + PAGE_SIZE, sortedProducts.value.length)
       }
     },
     { rootMargin: '300px' }
@@ -88,8 +110,8 @@ function setupObserver() {
   observer.observe(sentinel.value)
 }
 
-// Reset visible count and re-observe when filters change
-watch(filteredProducts, () => {
+// Reset visible count and re-observe when filters/sort change
+watch(sortedProducts, () => {
   visibleCount.value = INITIAL_COUNT
   nextTick(setupObserver)
 })
@@ -161,7 +183,11 @@ function nameClass(name: string): string {
         v-for="product in visibleProducts"
         :key="product.id"
         class="sbf-card relative h-full rounded-xl"
-        :class="{ 'sbf-card-favorite': product.isFavorite }"
+        :class="{
+          'sbf-card-both': product.isRecommended && product.isFavorite,
+          'sbf-card-recommended': product.isRecommended && !product.isFavorite,
+          'sbf-card-favorite': product.isFavorite && !product.isRecommended,
+        }"
       >
         <!-- Card content -->
         <div
