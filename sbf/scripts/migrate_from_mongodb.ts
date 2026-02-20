@@ -80,9 +80,9 @@ function deriveRole(doc: any): 'admin' | 'supplier' | 'customer' {
   return 'customer'
 }
 
-function deriveChannel(doc: any): 'web' | 'keypad' | 'scanner' {
+function deriveChannel(doc: any): 'web' | 'kiosk' | 'scanner' {
   if (doc.scannerOrder === true) return 'scanner'
-  if (doc.keypadOrder === true) return 'keypad'
+  if (doc.keypadOrder === true) return 'kiosk'
   return 'web'
 }
 

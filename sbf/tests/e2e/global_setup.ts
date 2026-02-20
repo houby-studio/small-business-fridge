@@ -343,7 +343,7 @@ export default async function globalSetup() {
     // Orders 1-10: various products, older dates, will become invoiced
     { buyerId: customerId, keypadId: 1, daysAgo: 28, channel: 'web' },
     { buyerId: customerId, keypadId: 2, daysAgo: 27, channel: 'web' },
-    { buyerId: customerId, keypadId: 3, daysAgo: 26, channel: 'keypad' },
+    { buyerId: customerId, keypadId: 3, daysAgo: 26, channel: 'kiosk' },
     { buyerId: customerId, keypadId: 4, daysAgo: 25, channel: 'web' },
     { buyerId: customerId, keypadId: 5, daysAgo: 24, channel: 'web' },
     { buyerId: customerId, keypadId: 1, daysAgo: 23, channel: 'web' },
@@ -356,7 +356,7 @@ export default async function globalSetup() {
     { buyerId: customerId, keypadId: 10, daysAgo: 17, channel: 'web' },
     { buyerId: customerId, keypadId: 11, daysAgo: 16, channel: 'web' },
     { buyerId: customerId, keypadId: 12, daysAgo: 15, channel: 'web' },
-    { buyerId: customerId, keypadId: 3, daysAgo: 14, channel: 'keypad' },
+    { buyerId: customerId, keypadId: 3, daysAgo: 14, channel: 'kiosk' },
     { buyerId: customerId, keypadId: 13, daysAgo: 13, channel: 'web' },
     { buyerId: customerId, keypadId: 14, daysAgo: 12, channel: 'web' },
     { buyerId: customerId, keypadId: 1, daysAgo: 11, channel: 'web' },
@@ -366,7 +366,7 @@ export default async function globalSetup() {
     { buyerId: customerId, keypadId: 1, daysAgo: 4, channel: 'web' },
     { buyerId: customerId, keypadId: 2, daysAgo: 3, channel: 'web' },
     { buyerId: customerId, keypadId: 8, daysAgo: 2, channel: 'web' },
-    { buyerId: customerId, keypadId: 3, daysAgo: 1, channel: 'keypad' },
+    { buyerId: customerId, keypadId: 3, daysAgo: 1, channel: 'kiosk' },
     { buyerId: customerId, keypadId: 4, daysAgo: 0, channel: 'web' },
     // Orders 26-35: customer2 orders (for supplier view diversity)
     { buyerId: customer2Id, keypadId: 1, daysAgo: 20, channel: 'web' },

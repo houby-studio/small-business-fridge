@@ -3,7 +3,7 @@ import Order from '#models/order'
 import db from '@adonisjs/lucid/services/db'
 import AuditService from '#services/audit_service'
 
-type OrderChannel = 'web' | 'keypad' | 'scanner'
+type OrderChannel = 'web' | 'kiosk' | 'scanner'
 
 export default class OrderService {
   /**

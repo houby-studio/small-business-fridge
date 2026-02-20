@@ -90,7 +90,7 @@ export default class KioskController {
     const orderService = new OrderService()
 
     try {
-      const order = await orderService.purchase(customerId, deliveryId, 'keypad')
+      const order = await orderService.purchase(customerId, deliveryId, 'kiosk')
 
       // Send email notification (fire-and-forget)
       const notificationService = new NotificationService()

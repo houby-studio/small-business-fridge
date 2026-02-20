@@ -115,7 +115,7 @@ before each test.
 Tests `OrderService` against the test DB. Covers:
 
 - `purchase()` creates an Order record and decrements `delivery.amountLeft`
-- Purchase channel is stored (`web`, `keypad`, `scanner`)
+- Purchase channel is stored (`web`, `kiosk`, `scanner`)
 - Throws `OUT_OF_STOCK` when `amountLeft === 0`
 - Throws `OUT_OF_STOCK` for non-existent delivery ID
 - Sequential purchases decrement correctly; 4th purchase on stock-3 throws
@@ -450,7 +450,7 @@ DeliveryFactory.with('supplier', 1, (s) => s.apply('supplier'))
 
 ```typescript
 OrderFactory.create() // channel: 'web'
-OrderFactory.apply('keypad').create()
+OrderFactory.apply('kiosk').create()
 OrderFactory.apply('scanner').create()
 OrderFactory.merge({ buyerId: user.id, deliveryId: delivery.id }).create()
 ```

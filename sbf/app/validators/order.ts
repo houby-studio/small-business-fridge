@@ -9,6 +9,6 @@ export const purchaseValidator = vine.compile(
 export const apiOrderValidator = vine.compile(
   vine.object({
     deliveryId: vine.number().positive(),
-    channel: vine.enum(['keypad', 'scanner'] as const),
+    channel: vine.enum(['kiosk', 'scanner'] as const),
   })
 )
