@@ -4,5 +4,6 @@
   "confirm_message": "Koupit {name} za {price} Kč?",
   "confirm_accept": "Koupit",
   "no_products": "Žádné produkty k zobrazení.",
-  "favorite": "Oblíbené"
+  "favorite": "Oblíbené",
+  "forYou": "Doporučeno pro vás"
 }

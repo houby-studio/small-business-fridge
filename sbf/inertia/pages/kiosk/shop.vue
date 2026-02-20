@@ -28,6 +28,7 @@ const props = defineProps<{
   customer: CustomerInfo | null
   products: ProductItem[]
   categories: any[]
+  recommendations: ProductItem[]
   error: string | null
 }>()
 
@@ -94,6 +95,43 @@ function purchase(product: ProductItem) {
       >
         {{ t('kiosk.purchase_out_of_stock') }}
       </Message>
+
+      <!-- For you strip -->
+      <div v-if="customer && recommendations.length > 0" class="mb-6">
+        <h2 class="mb-3 flex items-center gap-2 text-lg font-semibold text-white">
+          <span class="pi pi-sparkles text-yellow-400" />
+          {{ t('kiosk.forYou') }}
+        </h2>
+        <div class="flex gap-3 overflow-x-auto pb-2" style="scrollbar-width: none">
+          <Card
+            v-for="product in recommendations"
+            :key="product.id"
+            class="w-36 shrink-0 cursor-pointer transition-all hover:scale-105"
+            @click="purchase(product)"
+          >
+            <template #content>
+              <div class="text-center">
+                <img
+                  v-if="product.imagePath"
+                  :src="product.imagePath"
+                  :alt="product.displayName"
+                  class="mx-auto mb-2 h-20 w-20 rounded-lg object-cover"
+                />
+                <div
+                  v-else
+                  class="mx-auto mb-2 flex h-20 w-20 items-center justify-center rounded-lg bg-gray-700"
+                >
+                  <i class="pi pi-box text-2xl text-gray-500" />
+                </div>
+                <h3 class="line-clamp-2 text-xs font-semibold">{{ product.displayName }}</h3>
+                <div class="mt-1 text-base font-bold text-green-400">
+                  {{ t('common.price_with_currency', { price: product.price ?? 0 }) }}
+                </div>
+              </div>
+            </template>
+          </Card>
+        </div>
+      </div>
 
       <!-- Products grid -->
       <div

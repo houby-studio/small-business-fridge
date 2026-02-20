@@ -32,6 +32,7 @@ const props = defineProps<{
   products: ShopProduct[]
   categories: ShopCategory[]
   filters: { category: number | null }
+  recommendations: ShopProduct[]
 }>()
 
 const confirm = useConfirm()
@@ -150,6 +151,56 @@ function nameClass(name: string): string {
         optionValue="value"
         :allowEmpty="false"
       />
+    </div>
+
+    <!-- For you section -->
+    <div v-if="recommendations.length > 0 && !search" class="mb-8">
+      <h2
+        class="mb-3 flex items-center gap-2 text-lg font-semibold text-gray-700 dark:text-zinc-300"
+      >
+        <span class="pi pi-sparkles text-yellow-500" />
+        {{ t('shop.forYou') }}
+      </h2>
+      <div class="flex gap-3 overflow-x-auto pb-2" style="scrollbar-width: none">
+        <div
+          v-for="product in recommendations"
+          :key="product.id"
+          class="sbf-card relative w-44 shrink-0 rounded-xl"
+        >
+          <div
+            class="relative flex h-full flex-col overflow-hidden rounded-xl bg-white shadow-sm dark:bg-zinc-900 cursor-pointer"
+            @click="purchase(product)"
+          >
+            <div class="relative">
+              <div
+                class="flex h-32 items-center justify-center bg-gray-100 p-2 dark:bg-zinc-800"
+                :style="{ borderBottom: `3px solid ${product.category.color}` }"
+              >
+                <img
+                  v-if="product.imagePath"
+                  :src="product.imagePath"
+                  :alt="product.displayName"
+                  class="h-full w-full object-contain"
+                  loading="lazy"
+                />
+                <span v-else class="pi pi-image text-3xl text-gray-300" />
+              </div>
+            </div>
+            <div class="flex flex-1 flex-col px-3 pb-3 pt-2">
+              <span
+                class="mb-1 line-clamp-2 text-sm font-semibold text-gray-900 dark:text-zinc-100"
+              >
+                {{ product.displayName }}
+              </span>
+              <div class="mt-auto">
+                <span class="text-base font-bold text-gray-900 dark:text-zinc-100">
+                  {{ t('common.price_with_currency', { price: product.price ?? 0 }) }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Product grid -->

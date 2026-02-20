@@ -2,9 +2,11 @@ import type { HttpContext } from '@adonisjs/core/http'
 import ShopService from '#services/shop_service'
 import OrderService from '#services/order_service'
 import NotificationService from '#services/notification_service'
+import RecommendationService from '#services/recommendation_service'
 import { purchaseValidator } from '#validators/order'
 import logger from '@adonisjs/core/services/logger'
 import Product from '#models/product'
+import PageView from '#models/page_view'
 
 export default class ShopController {
   async index({ inertia, auth, request, response, session, i18n }: HttpContext) {
@@ -37,21 +39,29 @@ export default class ShopController {
       return response.redirect('/shop')
     }
 
+    // Fire-and-forget page view tracking
+    PageView.create({ userId: user.id, channel: 'web' }).catch((err) => {
+      logger.error({ err }, 'Failed to record page view')
+    })
+
     const rawCategory = request.input('category')
     const categoryId = rawCategory ? Number(rawCategory) : undefined
 
-    const [products, categories] = await Promise.all([
+    const recommendationService = new RecommendationService()
+    const [products, categories, recommendations] = await Promise.all([
       shopService.getProducts({
         showAll: user.showAllProducts,
         userId: user.id,
       }),
       shopService.getCategories(),
+      recommendationService.getForUser(user.id),
     ])
 
     return inertia.render('shop/index', {
       products,
       categories,
       filters: { category: categoryId ?? null },
+      recommendations,
     })
   }
 
