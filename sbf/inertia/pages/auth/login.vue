@@ -83,7 +83,10 @@ function submit() {
 
           <template v-if="oidcEnabled">
             <Divider class="text-gray-400 dark:text-zinc-500" align="center">
-              <span class="text-sm text-gray-400 dark:text-zinc-500 bg-zinc-900/90 px-1 shadow-zinc-950/80 backdrop-blur-sm">{{ t('auth.or') }}</span>
+              <span
+                class="text-sm text-gray-400 dark:text-zinc-500 bg-zinc-900/90 px-1 shadow-zinc-950/80 backdrop-blur-sm"
+                >{{ t('auth.or') }}</span
+              >
             </Divider>
 
             <Button
