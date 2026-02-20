@@ -107,16 +107,13 @@ function glowStyle(product: ProductItem): Record<string, string> {
           v-for="product in filteredProducts"
           :key="product.id"
           class="relative flex cursor-pointer flex-col rounded-2xl border transition-all active:scale-95"
-          :class="{
-            'sbf-card-recommended border-yellow-500/50 bg-yellow-900/10':
-              product.isRecommended && !product.isFavorite,
-            'sbf-card-favorite border-pink-500/50 bg-pink-900/10':
-              product.isFavorite && !product.isRecommended,
-            'sbf-card-both border-purple-500/50 bg-purple-900/10':
-              product.isRecommended && product.isFavorite,
-            'border-gray-700/50 bg-gray-800/60 hover:border-gray-600':
-              !product.isRecommended && !product.isFavorite,
-          }"
+          :class="
+            product.isRecommended && product.isFavorite
+              ? 'sbf-card-both border-purple-500/50 bg-purple-900/10'
+              : product.isFavorite
+                ? 'sbf-card-favorite border-pink-500/50 bg-pink-900/10'
+                : 'border-gray-700/50 bg-gray-800/60 hover:border-gray-600'
+          "
           :style="{
             borderBottom: `3px solid ${product.category.color}`,
             ...glowStyle(product),

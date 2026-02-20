@@ -46,40 +46,4 @@ import Toast from 'primevue/toast'
 :deep(.p-toast-message-info .p-toast-message-content) {
   border-left: 4px solid #2563eb !important;
 }
-
-/* Kiosk confirm dialogs — larger, touch-friendly */
-:deep(.p-dialog) {
-  min-width: 580px;
-  border-radius: 1.5rem !important;
-  overflow: hidden;
-}
-:deep(.p-dialog-header) {
-  padding: 1.75rem 2rem !important;
-}
-:deep(.p-dialog-title) {
-  font-size: 1.5rem !important;
-  font-weight: 700 !important;
-}
-:deep(.p-dialog-content) {
-  padding: 1rem 2rem 1.5rem !important;
-  font-size: 1.25rem !important;
-}
-:deep(.p-dialog-footer) {
-  padding: 1rem 2rem 2rem !important;
-  gap: 1rem !important;
-  display: flex !important;
-}
-:deep(.p-dialog-footer .p-button) {
-  min-height: 4rem !important;
-  padding: 0.75rem 2rem !important;
-  font-size: 1.25rem !important;
-  font-weight: 600 !important;
-  border-radius: 1rem !important;
-  flex: 1 !important;
-  justify-content: center !important;
-}
-:deep(.p-confirm-dialog-message) {
-  font-size: 1.25rem !important;
-  line-height: 1.6 !important;
-}
 </style>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { Head } from '@inertiajs/vue3'
+import { Head, router } from '@inertiajs/vue3'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import ConfirmDialog from 'primevue/confirmdialog'
@@ -213,6 +213,16 @@ function handleBarcode(code: string) {
   addToBasket(product)
 }
 
+// ── Product refresh ───────────────────────────────────────────────────────────
+
+/**
+ * Reload allProducts + featuredProducts from the server in the background.
+ * preserveState: true keeps all client-side refs (basket, customer, etc.) intact.
+ */
+function refreshProducts() {
+  router.reload({ only: ['allProducts', 'featuredProducts'], preserveState: true })
+}
+
 // ── Customer identification ───────────────────────────────────────────────────
 
 function getCsrfToken(): string {
@@ -243,6 +253,7 @@ async function onKeypadSubmit(keypadId: string) {
     recommendedIds.value = data.recommendedIds
     appState.value = 'identified'
     startIdleTimer()
+    refreshProducts() // fetch fresh stock data for this customer's session
   } catch {
     toast.add({ severity: 'error', summary: t('kiosk.purchase_retry'), life: 3000 })
   } finally {
@@ -260,6 +271,7 @@ function requestCheckout() {
   const count = basket.value.reduce((sum, i) => sum + i.quantity, 0)
 
   confirm.require({
+    group: 'kiosk',
     message: t('kiosk.confirm_checkout', { count, total }),
     header: t('kiosk.confirm_checkout_title'),
     icon: 'pi pi-shopping-cart',
@@ -294,6 +306,7 @@ async function submitBasket() {
       lastPurchaseItems.value = [...basket.value]
       lastOrderCount.value = data.orderCount
       showThankYou.value = true
+      refreshProducts() // refresh stock while the thank-you modal is visible
     } else if (data.error === 'out_of_stock') {
       outOfStockDeliveryId.value = data.deliveryId ?? null
       toast.add({
@@ -332,6 +345,7 @@ function requestCancel() {
     return
   }
   confirm.require({
+    group: 'kiosk',
     message: t('kiosk.cancel_basket') + '?',
     header: t('kiosk.cancel_basket'),
     icon: 'pi pi-exclamation-triangle',
@@ -362,7 +376,59 @@ onUnmounted(() => {
 <template>
   <KioskLayout>
     <Head :title="t('kiosk.title')" />
-    <ConfirmDialog />
+
+    <!-- Headless ConfirmDialog — full control over size and touch targets -->
+    <ConfirmDialog group="kiosk">
+      <template #container="{ message, acceptCallback, rejectCallback }">
+        <div
+          class="mx-auto w-full max-w-lg overflow-hidden rounded-3xl border border-gray-700 bg-gray-800 shadow-2xl"
+          @click.stop
+        >
+          <!-- Header -->
+          <div class="flex items-center gap-5 border-b border-gray-700 px-8 py-7">
+            <div
+              class="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl"
+              :class="message.icon?.includes('exclamation') ? 'bg-red-900/50' : 'bg-green-900/50'"
+            >
+              <i
+                :class="[
+                  message.icon,
+                  'text-4xl',
+                  message.icon?.includes('exclamation') ? 'text-red-400' : 'text-green-400',
+                ]"
+              />
+            </div>
+            <h2 class="text-3xl font-bold text-white">{{ message.header }}</h2>
+          </div>
+
+          <!-- Message -->
+          <div class="px-8 py-7">
+            <p class="text-xl leading-relaxed text-gray-300">{{ message.message }}</p>
+          </div>
+
+          <!-- Buttons -->
+          <div class="flex gap-4 px-8 pb-8">
+            <button
+              class="flex flex-1 items-center justify-center rounded-2xl bg-gray-700 py-6 text-xl font-semibold text-gray-300 transition-all hover:bg-gray-600 active:scale-95"
+              @click="rejectCallback"
+            >
+              {{ message.rejectLabel }}
+            </button>
+            <button
+              class="flex flex-[2] items-center justify-center rounded-2xl py-6 text-2xl font-bold text-white transition-all active:scale-95"
+              :class="
+                message.icon?.includes('exclamation')
+                  ? 'bg-red-600 hover:bg-red-500'
+                  : 'bg-green-600 hover:bg-green-500'
+              "
+              @click="acceptCallback"
+            >
+              {{ message.acceptLabel }}
+            </button>
+          </div>
+        </div>
+      </template>
+    </ConfirmDialog>
 
     <div class="flex h-screen overflow-hidden">
       <!-- ── LEFT PANEL ─────────────────────────────────────────── -->
