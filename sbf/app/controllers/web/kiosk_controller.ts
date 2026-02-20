@@ -26,7 +26,6 @@ export default class KioskController {
         customer: null,
         products: [],
         categories: [],
-        recommendations: [],
         error: i18n.t('messages.kiosk_enter_id'),
       })
     }
@@ -41,7 +40,6 @@ export default class KioskController {
         customer: null,
         products: [],
         categories: [],
-        recommendations: [],
         error: i18n.t('messages.kiosk_customer_not_found'),
       })
     }
@@ -53,11 +51,14 @@ export default class KioskController {
 
     const shopService = new ShopService()
     const recommendationService = new RecommendationService()
-    const [products, categories, recommendations] = await Promise.all([
+    const [rawProducts, categories, recommendedIds] = await Promise.all([
       shopService.getProducts({ showAll: false, userId: customer.id }),
       shopService.getCategories(),
-      recommendationService.getForUser(customer.id),
+      recommendationService.getRecommendedIds(customer.id),
     ])
+
+    const recommended = new Set(recommendedIds)
+    const products = rawProducts.map((p) => ({ ...p, isRecommended: recommended.has(p.id) }))
 
     return inertia.render('kiosk/shop', {
       customer: {
@@ -67,7 +68,6 @@ export default class KioskController {
       },
       products,
       categories,
-      recommendations,
       error: null,
     })
   }

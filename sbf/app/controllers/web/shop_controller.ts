@@ -48,20 +48,22 @@ export default class ShopController {
     const categoryId = rawCategory ? Number(rawCategory) : undefined
 
     const recommendationService = new RecommendationService()
-    const [products, categories, recommendations] = await Promise.all([
+    const [rawProducts, categories, recommendedIds] = await Promise.all([
       shopService.getProducts({
         showAll: user.showAllProducts,
         userId: user.id,
       }),
       shopService.getCategories(),
-      recommendationService.getForUser(user.id),
+      recommendationService.getRecommendedIds(user.id),
     ])
+
+    const recommended = new Set(recommendedIds)
+    const products = rawProducts.map((p) => ({ ...p, isRecommended: recommended.has(p.id) }))
 
     return inertia.render('shop/index', {
       products,
       categories,
       filters: { category: categoryId ?? null },
-      recommendations,
     })
   }
 

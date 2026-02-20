@@ -136,7 +136,7 @@ test.group('RecommendationService.computeForUser', (group) => {
   })
 })
 
-test.group('RecommendationService.getForUser', (group) => {
+test.group('RecommendationService.getRecommendedIds', (group) => {
   group.each.setup(cleanAll)
   group.each.teardown(cleanAll)
 
@@ -144,11 +144,11 @@ test.group('RecommendationService.getForUser', (group) => {
     assert,
   }) => {
     const user = await UserFactory.create()
-    const result = await service.getForUser(user.id)
+    const result = await service.getRecommendedIds(user.id)
     assert.deepEqual(result, [])
   })
 
-  test('returns products in ShopProduct shape', async ({ assert }) => {
+  test('returns product IDs as number array', async ({ assert }) => {
     const buyer = await UserFactory.create()
     const supplier = await UserFactory.apply('supplier').create()
     const category = await CategoryFactory.create()
@@ -162,16 +162,11 @@ test.group('RecommendationService.getForUser', (group) => {
 
     await db.table('orders').insert(orderRow(buyer.id, delivery.id))
 
-    const result = await service.getForUser(buyer.id)
+    const result = await service.getRecommendedIds(buyer.id)
 
-    assert.lengthOf(result, 1)
-    const rec = result[0]
-    assert.equal(rec.id, product.id)
-    assert.equal(rec.displayName, product.displayName)
-    assert.equal(rec.stockSum, 5)
-    assert.equal(rec.price, 20)
-    assert.isFalse(rec.isFavorite)
-    assert.isObject(rec.category)
-    assert.equal(rec.category.id, category.id)
+    assert.isArray(result)
+    assert.isAbove(result.length, 0)
+    assert.include(result, product.id)
+    result.forEach((id) => assert.isNumber(id))
   })
 })

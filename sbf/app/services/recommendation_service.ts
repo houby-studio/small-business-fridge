@@ -2,23 +2,7 @@ import db from '@adonisjs/lucid/services/db'
 import { DateTime } from 'luxon'
 import logger from '@adonisjs/core/services/logger'
 import User from '#models/user'
-import Product from '#models/product'
 import Recommendation from '#models/recommendation'
-import { normalizeImagePath } from '#helpers/image_url'
-
-type ShopProductShape = {
-  id: number
-  keypadId: number
-  displayName: string
-  description: string | null
-  imagePath: string | null
-  barcode: string | null
-  category: { id: number; name: string; color: string }
-  stockSum: number
-  price: number | null
-  deliveryId: number | null
-  isFavorite: boolean
-}
 
 export default class RecommendationService {
   /**
@@ -103,72 +87,25 @@ export default class RecommendationService {
   }
 
   /**
-   * Get precomputed recommendations for a user in the same shape as ShopService.getProducts().
-   * Falls back to live computation if no precomputed rows exist.
+   * Return the top-N recommended product IDs for a user (ordered by rank).
+   * Uses precomputed rows if available, falls back to live computation.
+   * Stock filtering is NOT done here — callers merge against the product list
+   * from ShopService, which already excludes out-of-stock items.
    */
-  async getForUser(userId: number, limit: number = 5): Promise<ShopProductShape[]> {
-    let productIds: number[]
-
+  async getRecommendedIds(userId: number, limit: number = 5): Promise<number[]> {
     const precomputed = await Recommendation.query()
       .where('userId', userId)
       .where('model', 'statistical')
       .orderBy('rank', 'asc')
       .limit(limit)
+      .select('productId')
 
     if (precomputed.length > 0) {
-      productIds = precomputed.map((r) => r.productId)
-    } else {
-      // First run before scheduler — compute live
-      const scored = await this.computeForUser(userId)
-      productIds = scored.slice(0, limit).map((s) => s.productId)
+      return precomputed.map((r) => r.productId)
     }
 
-    if (productIds.length === 0) {
-      return []
-    }
-
-    const products = await Product.query()
-      .whereIn('id', productIds)
-      .preload('category')
-      .preload('deliveries', (q) => {
-        q.where('amountLeft', '>', 0)
-      })
-      .whereHas('category', (q) => {
-        q.where('isDisabled', false)
-      })
-
-    // Map and filter out depleted stock
-    const result: ShopProductShape[] = []
-    for (const pid of productIds) {
-      const product = products.find((p) => p.id === pid)
-      if (!product) continue
-
-      const stockSum = product.deliveries.reduce((sum, d) => sum + d.amountLeft, 0)
-      if (stockSum === 0) continue
-
-      const cheapestDelivery = product.deliveries
-        .filter((d) => d.amountLeft > 0)
-        .sort((a, b) => a.price - b.price)[0]
-
-      result.push({
-        id: product.id,
-        keypadId: product.keypadId,
-        displayName: product.displayName,
-        description: product.description,
-        imagePath: normalizeImagePath(product.imagePath),
-        barcode: product.barcode,
-        category: {
-          id: product.category.id,
-          name: product.category.name,
-          color: product.category.color,
-        },
-        stockSum,
-        price: cheapestDelivery?.price ?? null,
-        deliveryId: cheapestDelivery?.id ?? null,
-        isFavorite: false,
-      })
-    }
-
-    return result
+    // First run before scheduler — compute live
+    const scored = await this.computeForUser(userId)
+    return scored.slice(0, limit).map((s) => s.productId)
   }
 }

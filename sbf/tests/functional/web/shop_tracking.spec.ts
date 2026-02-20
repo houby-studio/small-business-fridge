@@ -35,13 +35,25 @@ test.group('Shop tracking - page views', (group) => {
     assert.isAbove(Number(count[0].$extras.total), 0)
   })
 
-  test('GET /shop response includes recommendations prop', async ({ client, assert }) => {
+  test('GET /shop response includes isRecommended field on products', async ({
+    client,
+    assert,
+  }) => {
     const user = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountLeft: 3,
+      price: 10,
+    }).create()
 
     const response = await client.get('/shop').loginAs(user)
 
     response.assertStatus(200)
-    assert.include(response.text(), 'recommendations')
+    assert.include(response.text(), 'isRecommended')
   })
 })
 
@@ -90,8 +102,20 @@ test.group('Kiosk tracking - sessions', (group) => {
     assert.equal(Number(count[0].$extras.total), 0)
   })
 
-  test('GET /kiosk/shop response includes recommendations prop', async ({ client, assert }) => {
+  test('GET /kiosk/shop response includes isRecommended field on products', async ({
+    client,
+    assert,
+  }) => {
     const kioskDevice = await UserFactory.apply('kiosk').create()
+    const category = await CategoryFactory.create()
+    const supplier = await UserFactory.apply('supplier').create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountLeft: 3,
+      price: 10,
+    }).create()
     const customer = await UserFactory.create()
 
     const response = await client
@@ -99,6 +123,6 @@ test.group('Kiosk tracking - sessions', (group) => {
       .loginAs(kioskDevice)
 
     response.assertStatus(200)
-    assert.include(response.text(), 'recommendations')
+    assert.include(response.text(), 'isRecommended')
   })
 })
