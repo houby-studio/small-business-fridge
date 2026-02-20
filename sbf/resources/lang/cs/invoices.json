@@ -9,5 +9,7 @@
   "filter_paid": "Zaplaceno",
   "filter_unpaid": "Nezaplaceno",
   "filter_awaiting": "Čeká na schválení",
-  "qr_header": "QR platba"
+  "qr_header": "QR platba",
+  "confirm_payment_header": "Potvrdit platbu",
+  "confirm_payment_message": "Označit fakturu #{id} ({amount} Kč) jako zaplacenou?"
 }

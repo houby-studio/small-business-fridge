@@ -21,6 +21,9 @@ const mailConfig = defineConfig({
     smtp: transports.smtp({
       host: env.get('SMTP_HOST'),
       port: env.get('SMTP_PORT'),
+      ...(env.get('SMTP_IGNORE_TLS')
+        ? { ignoreTLS: true, tls: { rejectUnauthorized: false } }
+        : {}),
       auth: {
         type: 'login',
         user: env.get('SMTP_USERNAME', ''),

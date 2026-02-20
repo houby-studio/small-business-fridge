@@ -5,18 +5,10 @@
   </head>
   <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
     <h2 style="color: #FF9800;">
-      {{ i18n.t('emails.unpaid_reminder_heading') }}
+      {{ i18n.t('emails.payment_withdrawn_heading') }}
     </h2>
     <p>
-      {{ i18n.t('emails.unpaid_reminder_intro', { buyerName, id: invoiceId, supplierName, amount: totalCost }) }}
-    </p>
-    @if(supplierIban)
-      <p>
-        {{ i18n.t('emails.unpaid_reminder_iban') }} <strong>{{ supplierIban }}</strong>
-      </p>
-    @end
-    <p>
-      {{ i18n.t('emails.unpaid_reminder_note') }}
+      {{ i18n.t('emails.payment_withdrawn_intro', { supplierName, buyerName, id: invoiceId, amount: totalCost }) }}
     </p>
     <p style="color: #666; font-size: 12px;">
       — <a href="{{ appUrl }}" style="color: #cf112a; text-decoration: none;">{{ i18n.t('common.app_name') }}</a>

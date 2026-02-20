@@ -117,7 +117,7 @@ function logout() {
     class="sbf-app-bg min-h-screen transition-colors duration-200"
     :data-theme="localIsDark ? 'dark' : 'light'"
   >
-    <Toast position="top-right" />
+    <Toast position="top-right" :pt="{ root: { style: { top: '4.5rem' } } }" />
 
     <!-- Sticky glassmorphism navbar -->
     <div

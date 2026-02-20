@@ -62,5 +62,8 @@
   "products_filter_category": "Kategorie",
 
   "stock_filter_name": "Hledat název",
-  "stock_filter_in_stock": "Pouze skladem"
+  "stock_filter_in_stock": "Pouze skladem",
+
+  "review_payment_header": "Potvrdit platbu",
+  "review_payment_message": "Zákazník {buyer} označil fakturu #{id} ({amount} Kč) jako zaplacenou. Schválit platbu?"
 }

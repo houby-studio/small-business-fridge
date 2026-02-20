@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+  </head>
+  <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h2 style="color: #2196F3;">
+      {{ i18n.t('emails.payment_requested_heading') }}
+    </h2>
+    <p>
+      {{ i18n.t('emails.payment_requested_intro', { supplierName, buyerName, id: invoiceId, amount: totalCost }) }}
+    </p>
+    @if(reviewUrl)
+      <p style="margin: 24px 0; text-align: center;">
+        <a
+          href="{{ reviewUrl }}"
+          style="background-color: #2196F3; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;"
+        >
+          {{ i18n.t('emails.payment_requested_review') }}
+        </a>
+      </p>
+    @end
+    <p style="color: #666; font-size: 12px;">
+      — <a href="{{ appUrl }}" style="color: #cf112a; text-decoration: none;">{{ i18n.t('common.app_name') }}</a>
+    </p>
+  </body>
+</html>

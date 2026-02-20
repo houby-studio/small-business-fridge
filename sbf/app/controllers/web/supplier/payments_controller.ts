@@ -4,6 +4,7 @@ import NotificationService from '#services/notification_service'
 import { paymentActionValidator } from '#validators/invoice'
 import logger from '@adonisjs/core/services/logger'
 import User from '#models/user'
+import Invoice from '#models/invoice'
 
 export default class PaymentsController {
   async index({ inertia, auth, request }: HttpContext) {
@@ -13,6 +14,7 @@ export default class PaymentsController {
     const sortBy = request.input('sortBy')
     const sortOrder = request.input('sortOrder')
     const buyerId = request.input('buyerId')
+    const reviewIdRaw = request.input('reviewId')
 
     const [invoices, buyers] = await Promise.all([
       invoiceService.getInvoicesForSupplier(auth.user!.id, page, 20, {
@@ -27,6 +29,23 @@ export default class PaymentsController {
         .orderBy('displayName', 'asc'),
     ])
 
+    let reviewInvoice: { id: number; totalCost: number; buyerName: string } | null = null
+    if (reviewIdRaw) {
+      const reviewId = Number(reviewIdRaw)
+      if (!Number.isNaN(reviewId) && reviewId > 0) {
+        const inv = await Invoice.query()
+          .where('id', reviewId)
+          .where('supplierId', auth.user!.id)
+          .where('isPaid', false)
+          .where('isPaymentRequested', true)
+          .preload('buyer')
+          .first()
+        if (inv) {
+          reviewInvoice = { id: inv.id, totalCost: inv.totalCost, buyerName: inv.buyer.displayName }
+        }
+      }
+    }
+
     return inertia.render('supplier/payments/index', {
       invoices: invoices.serialize(),
       filters: {
@@ -36,6 +55,7 @@ export default class PaymentsController {
         buyerId: buyerId || '',
       },
       buyers: buyers.map((u) => ({ id: u.id, displayName: u.displayName })),
+      reviewInvoice,
     })
   }
 

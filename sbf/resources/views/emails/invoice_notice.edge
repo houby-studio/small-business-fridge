@@ -10,6 +10,24 @@
     <p>
       {{ i18n.t('emails.invoice_intro', { buyerName, supplierName }) }}
     </p>
+
+    @if(qrImageData)
+      <div
+        style="text-align: center; margin: 24px 0; padding: 16px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 6px;"
+      >
+        <p style="margin: 0 0 12px; font-weight: bold;">
+          {{ i18n.t('emails.invoice_qr_heading') }}
+        </p>
+        <img
+          src="{{ qrImageData }}"
+          alt="QR platba"
+          width="220"
+          height="220"
+          style="display: block; margin: 0 auto;"
+        />
+      </div>
+    @end
+    
     <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
       <tr style="background: #cf112a; color: white;">
         <th style="padding: 10px; text-align: left;">
@@ -52,8 +70,18 @@
     <p>
       {{ i18n.t('emails.invoice_note') }}
     </p>
+    @if(confirmPaymentUrl)
+      <p style="margin: 20px 0; text-align: center;">
+        <a
+          href="{{ confirmPaymentUrl }}"
+          style="background-color: #4CAF50; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;"
+        >
+          ✓ {{ i18n.t('emails.invoice_confirm_payment') }}
+        </a>
+      </p>
+    @end
     <p style="color: #666; font-size: 12px;">
-      — {{ i18n.t('common.app_name') }}
+      — <a href="{{ appUrl }}" style="color: #cf112a; text-decoration: none;">{{ i18n.t('common.app_name') }}</a>
     </p>
   </body>
 </html>
