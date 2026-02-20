@@ -24,6 +24,7 @@ interface ProductItem {
   stockSum: number
   isFavorite: boolean
   isRecommended: boolean
+  recommendationRank: number
   category: { name: string; color: string }
 }
 
@@ -49,6 +50,10 @@ const sortedProducts = computed(() => {
   return [...props.products].sort((a, b) => {
     const rankDiff = productRank(a) - productRank(b)
     if (rankDiff !== 0) return rankDiff
+    // Within recommended groups, sort by recommendation strength (rank 1 = best)
+    if (a.isRecommended && b.isRecommended) {
+      return a.recommendationRank - b.recommendationRank
+    }
     return a.displayName.localeCompare(b.displayName, 'cs')
   })
 })

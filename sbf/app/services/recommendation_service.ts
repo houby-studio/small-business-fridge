@@ -92,7 +92,7 @@ export default class RecommendationService {
    * Stock filtering is NOT done here — callers merge against the product list
    * from ShopService, which already excludes out-of-stock items.
    */
-  async getRecommendedIds(userId: number, limit: number = 5): Promise<number[]> {
+  async getRecommendedIds(userId: number, limit: number = 4): Promise<number[]> {
     const precomputed = await Recommendation.query()
       .where('userId', userId)
       .where('model', 'statistical')

@@ -21,6 +21,7 @@ interface ShopProduct {
   deliveryId: number | null
   isFavorite: boolean
   isRecommended: boolean
+  recommendationRank: number
 }
 
 interface ShopCategory {
@@ -83,6 +84,10 @@ const sortedProducts = computed(() => {
   return [...filteredProducts.value].sort((a, b) => {
     const rankDiff = productRank(a) - productRank(b)
     if (rankDiff !== 0) return rankDiff
+    // Within recommended groups, sort by recommendation strength (rank 1 = best)
+    if (a.isRecommended && b.isRecommended) {
+      return a.recommendationRank - b.recommendationRank
+    }
     return a.displayName.localeCompare(b.displayName, 'cs')
   })
 })

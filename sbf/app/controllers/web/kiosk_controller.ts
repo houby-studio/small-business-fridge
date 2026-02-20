@@ -57,8 +57,12 @@ export default class KioskController {
       recommendationService.getRecommendedIds(customer.id),
     ])
 
-    const recommended = new Set(recommendedIds)
-    const products = rawProducts.map((p) => ({ ...p, isRecommended: recommended.has(p.id) }))
+    const recommendedRankMap = new Map(recommendedIds.map((id, i) => [id, i + 1]))
+    const products = rawProducts.map((p) => ({
+      ...p,
+      isRecommended: recommendedRankMap.has(p.id),
+      recommendationRank: recommendedRankMap.get(p.id) ?? 0,
+    }))
 
     return inertia.render('kiosk/shop', {
       customer: {
