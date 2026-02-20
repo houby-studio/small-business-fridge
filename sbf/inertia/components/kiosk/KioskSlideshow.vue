@@ -36,19 +36,19 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="flex h-full flex-col items-center justify-center p-10">
+  <div class="relative flex h-full flex-col items-center justify-center p-10">
     <!-- Empty state -->
     <div v-if="products.length === 0" class="text-center">
       <i class="pi pi-box mb-6 text-8xl text-gray-600" />
       <h2 class="text-3xl font-bold text-white">{{ t('kiosk.idle_welcome') }}</h2>
     </div>
 
-    <!-- Product slide -->
+    <!-- Product slide — fixed structure so dots never shift -->
     <template v-else>
-      <Transition name="slide-up" mode="out-in">
+      <Transition name="slide-lr" mode="out-in">
         <div :key="currentIndex" class="flex w-full max-w-md flex-col items-center">
-          <!-- Product image -->
-          <div class="relative mb-8 flex h-80 w-full items-center justify-center">
+          <!-- Image area: fixed height, image always centered here -->
+          <div class="flex h-80 w-full items-center justify-center">
             <img
               v-if="products[currentIndex].imagePath"
               :src="products[currentIndex].imagePath"
@@ -60,21 +60,23 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- Product info -->
-          <h2 class="mb-3 text-center text-3xl font-bold text-white">
-            {{ products[currentIndex].displayName }}
-          </h2>
-          <div class="text-4xl font-bold text-green-400">
-            {{ t('common.price_with_currency', { price: products[currentIndex].price ?? 0 }) }}
-          </div>
-          <div class="mt-2 text-sm text-gray-500">
-            {{ t('common.pieces_in_stock', { count: products[currentIndex].stockSum }) }}
+          <!-- Text area: fixed height so dots don't drift -->
+          <div class="mt-8 flex h-36 w-full flex-col items-center justify-start text-center">
+            <h2 class="line-clamp-2 text-3xl font-bold leading-tight text-white">
+              {{ products[currentIndex].displayName }}
+            </h2>
+            <div class="mt-3 text-4xl font-bold text-green-400">
+              {{ t('common.price_with_currency', { price: products[currentIndex].price ?? 0 }) }}
+            </div>
+            <div class="mt-1 text-sm text-gray-500">
+              {{ t('common.pieces_in_stock', { count: products[currentIndex].stockSum }) }}
+            </div>
           </div>
         </div>
       </Transition>
 
-      <!-- Dot navigation — active dot uses category color -->
-      <div v-if="products.length > 1" class="mt-10 flex gap-2">
+      <!-- Dot navigation: absolute at bottom so it never moves -->
+      <div v-if="products.length > 1" class="absolute bottom-10 flex gap-2">
         <div
           v-for="(p, i) in products"
           :key="i"
@@ -88,18 +90,18 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.slide-up-enter-active,
-.slide-up-leave-active {
+.slide-lr-enter-active,
+.slide-lr-leave-active {
   transition:
     opacity 0.35s ease,
     transform 0.35s ease;
 }
-.slide-up-enter-from {
+.slide-lr-enter-from {
   opacity: 0;
-  transform: translateY(24px);
+  transform: translateX(40px);
 }
-.slide-up-leave-to {
+.slide-lr-leave-to {
   opacity: 0;
-  transform: translateY(-24px);
+  transform: translateX(-40px);
 }
 </style>

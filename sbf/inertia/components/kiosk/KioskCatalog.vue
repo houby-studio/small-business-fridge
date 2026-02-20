@@ -60,14 +60,12 @@ const filteredProducts = computed(() => {
 
 function glowStyle(product: ProductItem): Record<string, string> {
   if (product.isRecommended && product.isFavorite) {
-    return { boxShadow: '0 0 28px rgba(168,85,247,0.4)' }
-  }
-  if (product.isRecommended) {
-    return { boxShadow: '0 0 28px rgba(234,179,8,0.4)' }
+    return { boxShadow: '0 0 28px rgba(168,85,247,0.4)' } // purple — best of both
   }
   if (product.isFavorite) {
-    return { boxShadow: '0 0 28px rgba(236,72,153,0.4)' }
+    return { boxShadow: '0 0 28px rgba(234,179,8,0.4)' } // yellow — favorites only
   }
+  // recommended-only: no extra glow (border already highlights it)
   return {}
 }
 </script>

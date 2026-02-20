@@ -9,6 +9,7 @@ import KioskKeypad from '~/components/kiosk/KioskKeypad.vue'
 import KioskSlideshow from '~/components/kiosk/KioskSlideshow.vue'
 import KioskBasket, { type BasketItem } from '~/components/kiosk/KioskBasket.vue'
 import KioskCatalog, { type ProductItem } from '~/components/kiosk/KioskCatalog.vue'
+import KioskThankYou from '~/components/kiosk/KioskThankYou.vue'
 import { useI18n } from '~/composables/use_i18n'
 
 // ── Server-provided props ─────────────────────────────────────────────────────
@@ -53,12 +54,15 @@ const recommendedIds = ref<number[]>([])
 
 const personalizedProducts = computed<ProductItem[]>(() => {
   const recommendedRankMap = new Map(recommendedIds.value.map((id, i) => [id, i + 1]))
-  return props.allProducts.map((p) => ({
-    ...p,
-    isFavorite: favoriteIds.value.includes(p.id),
-    isRecommended: recommendedRankMap.has(p.id),
-    recommendationRank: recommendedRankMap.get(p.id) ?? 0,
-  }))
+  return props.allProducts.map((p) => {
+    const rank = recommendedRankMap.get(p.id) ?? 0
+    return {
+      ...p,
+      isFavorite: favoriteIds.value.includes(p.id),
+      isRecommended: rank > 0 && rank <= 3, // only top-3 get the recommended highlight
+      recommendationRank: rank,
+    }
+  })
 })
 
 // ── Basket ────────────────────────────────────────────────────────────────────
@@ -66,6 +70,11 @@ const personalizedProducts = computed<ProductItem[]>(() => {
 const basket = ref<BasketItem[]>([])
 const checkoutLoading = ref(false)
 const outOfStockDeliveryId = ref<number | null>(null)
+
+// ── Thank-you modal ────────────────────────────────────────────────────────────
+const showThankYou = ref(false)
+const lastPurchaseItems = ref<BasketItem[]>([])
+const lastOrderCount = ref(0)
 
 const basketQtyMap = computed<Map<number, number>>(() => {
   const m = new Map<number, number>()
@@ -281,12 +290,10 @@ async function submitBasket() {
     const data = await res.json()
 
     if (data.ok) {
-      toast.add({
-        severity: 'success',
-        summary: t('kiosk.checkout_success', { count: data.orderCount }),
-        life: 2500,
-      })
-      setTimeout(() => resetToIdle(), 2500)
+      // Capture summary before resetting state, then show thank-you modal
+      lastPurchaseItems.value = [...basket.value]
+      lastOrderCount.value = data.orderCount
+      showThankYou.value = true
     } else if (data.error === 'out_of_stock') {
       outOfStockDeliveryId.value = data.deliveryId ?? null
       toast.add({
@@ -314,6 +321,9 @@ function resetToIdle() {
   favoriteIds.value = []
   recommendedIds.value = []
   outOfStockDeliveryId.value = null
+  showThankYou.value = false
+  lastPurchaseItems.value = []
+  lastOrderCount.value = 0
 }
 
 function requestCancel() {
@@ -400,6 +410,17 @@ onUnmounted(() => {
         </Transition>
       </div>
     </div>
+
+    <!-- ── Thank-you modal — shown after successful checkout ── -->
+    <Transition name="fade-scale">
+      <KioskThankYou
+        v-if="showThankYou && customer"
+        :customer="customer"
+        :items="lastPurchaseItems"
+        :order-count="lastOrderCount"
+        @close="resetToIdle"
+      />
+    </Transition>
   </KioskLayout>
 </template>
 
@@ -417,5 +438,17 @@ onUnmounted(() => {
 .panel-swap-leave-to {
   opacity: 0;
   transform: translateY(-12px);
+}
+
+.fade-scale-enter-active,
+.fade-scale-leave-active {
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+}
+.fade-scale-enter-from,
+.fade-scale-leave-to {
+  opacity: 0;
+  transform: scale(0.97);
 }
 </style>

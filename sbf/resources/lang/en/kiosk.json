@@ -35,5 +35,7 @@
   "product_not_found": "Product not found",
   "add_to_basket": "Added to basket",
   "all_categories": "All",
-  "max_stock_reached": "Maximum quantity in basket"
+  "max_stock_reached": "Maximum quantity in basket",
+  "thank_you": "Thank you, {name}!",
+  "purchase_done": "Great choice! See you next time."
 }

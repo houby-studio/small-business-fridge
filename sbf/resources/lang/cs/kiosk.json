@@ -35,5 +35,7 @@
   "product_not_found": "Produkt nenalezen",
   "add_to_basket": "Přidáno do košíku",
   "all_categories": "Vše",
-  "max_stock_reached": "Maximální množství v košíku"
+  "max_stock_reached": "Maximální množství v košíku",
+  "thank_you": "Díky, {name}!",
+  "purchase_done": "Dobrý výběr! Nashledanou."
 }
