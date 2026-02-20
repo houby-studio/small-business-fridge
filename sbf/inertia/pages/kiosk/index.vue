@@ -60,6 +60,9 @@ const keys = [
               'bg-red-700 text-white hover:bg-red-600': key === 'clear',
               'bg-yellow-700 text-white hover:bg-yellow-600': key === 'back',
             }"
+            :aria-label="
+              key === 'clear' ? t('kiosk.clear') : key === 'back' ? t('kiosk.backspace') : key
+            "
             @click="pressKey(key)"
           >
             <template v-if="key === 'clear'">C</template>

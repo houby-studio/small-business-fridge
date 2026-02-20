@@ -1,9 +1,376 @@
 @import 'tailwindcss';
 
+/* Map Tailwind's dark variant to the same [data-theme="dark"] PrimeVue uses */
+@custom-variant dark ([data-theme='dark'] &);
+
 @theme {
   --color-primary: #cf112a;
   --color-primary-light: #e8334a;
   --color-primary-dark: #a80e22;
   --color-surface: #ffffff;
-  --color-surface-dark: #1e1e1e;
+  --color-surface-dark: #09090b;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ─── Brand gradient animation ─────────────────────────────────────── */
+@keyframes sbf-gradient-shift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.sbf-brand {
+  background: linear-gradient(135deg, #cf112a 0%, #ff4d5e 40%, #cf112a 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: sbf-gradient-shift 3s ease infinite;
+}
+
+/* ─── Page entrance animation ──────────────────────────────────────── */
+@keyframes sbf-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sbf-main {
+  animation: sbf-page-in 0.3s ease forwards;
+}
+
+/* ─── Product card hover lift + image zoom ────────────────────────── */
+.sbf-card {
+  transition:
+    transform 0.22s ease,
+    box-shadow 0.22s ease,
+    outline-color 0.22s ease;
+  will-change: transform;
+}
+
+.sbf-card:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.1),
+    0 4px 16px rgba(0, 0, 0, 0.06),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme='dark'] .sbf-card:hover {
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(207, 17, 42, 0.13),
+    0 0 24px rgba(207, 17, 42, 0.06);
+}
+
+/* Image zoom on card hover */
+.sbf-img-zoom {
+  overflow: hidden;
+}
+
+.sbf-img-zoom img {
+  transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  will-change: transform;
+}
+
+.sbf-card:hover .sbf-img-zoom img {
+  transform: scale(1.07);
+}
+
+/* ─── Favorite card advanced animation ───────────────────────────── */
+@keyframes sbf-spin {
+  from {
+    --angle: 0deg;
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    --angle: 360deg;
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.sbf-card-favorite {
+  --border-width: 2px;
+  --radius: 0.75rem; /* 12px */
+  position: relative;
+  border-radius: var(--radius);
+  z-index: 0;
+  overflow: hidden; /* Clip the rotating gradient */
+  transition: box-shadow 0.3s ease;
+  padding: var(--border-width); /* Border space */
+  background: transparent !important;
+}
+
+.sbf-card-favorite::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200%; /* Larger to ensure coverage during rotation */
+  height: 200%;
+  transform: translate(-50%, -50%);
+  background-image: conic-gradient(
+    from var(--angle),
+    transparent 10%,
+    #fbbf24 25%,
+    transparent 35%,
+    transparent 60%,
+    #fbbf24 75%,
+    transparent 85%
+  );
+  /* Fallback for browsers not supporting @property */
+  animation: sbf-spin 10s linear infinite;
+  z-index: -1;
+}
+
+/* Enhanced glow on hover */
+.sbf-card-favorite:hover {
+  box-shadow:
+    0 10px 30px -10px rgba(251, 191, 36, 0.4),
+    0 0 20px 0px rgba(251, 191, 36, 0.2);
+}
+
+[data-theme='dark'] .sbf-card-favorite:hover {
+  box-shadow:
+    0 10px 40px -10px rgba(251, 191, 36, 0.3),
+    0 0 25px 2px rgba(251, 191, 36, 0.15);
+}
+
+/* Remove simple outline as we use the animated border */
+.sbf-card-favorite {
+  outline: none !important;
+}
+
+/* ─── Glassmorphism navbar ────────────────────────────────────────── */
+.sbf-nav {
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: box-shadow 0.25s ease;
+}
+
+/* Scroll shadow */
+.sbf-nav-scrolled {
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.08),
+    0 1px 0 rgba(0, 0, 0, 0.05),
+    0 0 0 1px rgba(207, 17, 42, 0.03);
+}
+
+[data-theme='dark'] .sbf-nav-scrolled {
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.32),
+    0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+/* PrimeVue Menubar — transparent so parent glass div shows through */
+.sbf-nav .p-menubar {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* ─── Active nav link ─────────────────────────────────────────────── */
+.sbf-nav-active {
+  color: #cf112a !important;
+  font-weight: 600;
+  position: relative;
+}
+
+/* ─── Stat card accent variants ─────────────────────────────────────── */
+.sbf-stat {
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.sbf-stat:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.09),
+    0 2px 8px rgba(0, 0, 0, 0.05),
+    0 0 0 1px rgba(0, 0, 0, 0.03);
+}
+
+[data-theme='dark'] .sbf-stat:hover {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.38);
+}
+
+/* Top accent line via ::before */
+.sbf-stat::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+}
+
+.sbf-stat-blue::before {
+  background: linear-gradient(90deg, #2563eb, #60a5fa);
+}
+
+.sbf-stat-green::before {
+  background: linear-gradient(90deg, #16a34a, #4ade80);
+}
+
+.sbf-stat-purple::before {
+  background: linear-gradient(90deg, #9333ea, #c084fc);
+}
+
+.sbf-stat-amber::before {
+  background: linear-gradient(90deg, #d97706, #fbbf24);
+}
+
+.sbf-stat-red::before {
+  background: linear-gradient(90deg, #dc2626, #f87171);
+}
+
+.sbf-stat-primary::before {
+  background: linear-gradient(90deg, #cf112a, #e8334a);
+}
+
+/* ─── Category badge (hexagon / pointed-ends label) ─────────────── */
+.sbf-category-badge {
+  clip-path: polygon(
+    8px 0%,
+    calc(100% - 8px) 0%,
+    100% 50%,
+    calc(100% - 8px) 100%,
+    8px 100%,
+    0% 50%
+  );
+}
+
+/* ─── Low stock pulse ────────────────────────────────────────────── */
+@keyframes sbf-pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 5px rgba(239, 68, 68, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+.sbf-stock-low {
+  animation: sbf-pulse-ring 1.8s ease-out infinite;
+}
+
+/* ─── Primary button gradient + micro-interactions ───────────────── */
+/* Targets default-severity buttons (no severity class = primary) */
+.p-button:not(.p-button-text):not(.p-button-outlined):not(.p-button-link):not(
+    .p-button-secondary
+  ):not(.p-button-success):not(.p-button-info):not(.p-button-warn):not(.p-button-danger):not(
+    .p-button-help
+  ):not(.p-button-contrast) {
+  background: linear-gradient(135deg, #cf112a 0%, #e8334a 100%) !important;
+  border-color: transparent !important;
+  box-shadow: 0 2px 8px rgba(207, 17, 42, 0.22);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease !important;
+}
+
+.p-button:not(.p-button-text):not(.p-button-outlined):not(.p-button-link):not(
+    .p-button-secondary
+  ):not(.p-button-success):not(.p-button-info):not(.p-button-warn):not(.p-button-danger):not(
+    .p-button-help
+  ):not(.p-button-contrast):not(:disabled):hover {
+  background: linear-gradient(135deg, #b50f25 0%, #d42035 100%) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 5px 18px rgba(207, 17, 42, 0.38) !important;
+}
+
+.p-button:not(.p-button-text):not(.p-button-outlined):not(.p-button-link):not(
+    .p-button-secondary
+  ):not(.p-button-success):not(.p-button-info):not(.p-button-warn):not(.p-button-danger):not(
+    .p-button-help
+  ):not(.p-button-contrast):not(:disabled):active {
+  transform: translateY(0) scale(0.98) !important;
+  box-shadow: 0 2px 6px rgba(207, 17, 42, 0.2) !important;
+}
+
+/* ─── Branded text selection ─────────────────────────────────────── */
+::selection {
+  background: rgba(207, 17, 42, 0.14);
+  color: inherit;
+}
+
+/* ─── DataTable rounded corners + row transitions ────────────────── */
+/* overflow: hidden clips inner table content to the border-radius on the wrapper */
+.p-datatable {
+  overflow: hidden;
+}
+
+.p-datatable .p-datatable-tbody > tr {
+  transition: background-color 0.12s ease;
+}
+
+/* ─── Thin custom scrollbar ──────────────────────────────────────── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(207, 17, 42, 0.25) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(207, 17, 42, 0.25);
+  border-radius: 3px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(207, 17, 42, 0.45);
+}
+
+/* ─── Smooth theme transitions ───────────────────────────────────── */
+html {
+  transition:
+    background-color 250ms ease,
+    color 250ms ease;
+}
+
+/* ─── App layout background (authenticated) ──────────────────────── */
+.sbf-app-bg {
+  background:
+    radial-gradient(ellipse 110% 35% at 50% 0%, rgba(207, 17, 42, 0.045) 0%, transparent 65%),
+    linear-gradient(180deg, #ffffff 0%, #f8fafc 40%, #f1f5f9 100%);
+}
+
+[data-theme='dark'] .sbf-app-bg {
+  background: #09090b;
+}
+
+/* ─── Guest layout background (always dark) ──────────────────────── */
+.sbf-guest-bg {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(207, 17, 42, 0.1) 0%, transparent 70%),
+    linear-gradient(180deg, #09090b 0%, #18181b 100%);
 }

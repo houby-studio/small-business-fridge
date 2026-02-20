@@ -66,31 +66,33 @@ function submit() {
   <AppLayout>
     <Head :title="`${t('supplier.products_edit_title')}: ${product.displayName}`" />
 
-    <h1 class="mb-6 text-2xl font-bold text-gray-900">{{ t('supplier.products_edit_heading') }}</h1>
+    <h1 class="mb-6 text-2xl font-bold text-gray-900 dark:text-zinc-100">
+      {{ t('supplier.products_edit_heading') }}
+    </h1>
 
     <Card class="max-w-2xl">
       <template #content>
         <form @submit.prevent="submit" class="flex flex-col gap-5">
-          <div class="text-sm text-gray-500">
+          <div class="text-sm text-gray-500 dark:text-zinc-400">
             Keypad ID: <strong>{{ product.keypadId }}</strong>
           </div>
 
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{
+            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
               t('supplier.products_name_label')
             }}</label>
             <InputText v-model="form.displayName" class="w-full" />
           </div>
 
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{
+            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
               t('supplier.products_description_label')
             }}</label>
             <Textarea v-model="form.description" rows="3" class="w-full" />
           </div>
 
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{
+            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
               t('supplier.products_category_label')
             }}</label>
             <Select
@@ -104,14 +106,14 @@ function submit() {
           </div>
 
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{
+            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
               t('supplier.products_barcode_label')
             }}</label>
             <InputText v-model="form.barcode" class="w-full" />
           </div>
 
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{
+            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
               t('supplier.products_image_label')
             }}</label>
             <div v-if="product.imagePath" class="mb-2">

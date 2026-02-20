@@ -9,5 +9,7 @@
   "purchase_accept": "Koupit",
   "purchase_success": "Nákup proběhl úspěšně!",
   "purchase_out_of_stock": "Produkt není skladem.",
-  "no_products": "Žádné produkty skladem."
+  "no_products": "Žádné produkty skladem.",
+  "clear": "Vymazat",
+  "backspace": "Smazat poslední"
 }

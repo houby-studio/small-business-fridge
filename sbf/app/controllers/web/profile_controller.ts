@@ -1,5 +1,5 @@
 import type { HttpContext } from '@adonisjs/core/http'
-import { updateProfileValidator } from '#validators/user'
+import { updateProfileValidator, toggleColorModeValidator } from '#validators/user'
 import AuditService from '#services/audit_service'
 
 export default class ProfileController {
@@ -29,6 +29,14 @@ export default class ProfileController {
 
     session.flash('alert', { type: 'success', message: i18n.t('messages.profile_updated') })
     return response.redirect('/profile')
+  }
+
+  async toggleColorMode({ request, auth, response }: HttpContext) {
+    const user = auth.user!
+    const data = await request.validateUsing(toggleColorModeValidator)
+    user.colorMode = data.colorMode
+    await user.save()
+    return response.redirect().back()
   }
 
   async toggleFavorite({ params, auth, response }: HttpContext) {

@@ -132,14 +132,16 @@ function onSort(event: any) {
   <AppLayout>
     <Head :title="t('supplier.deliveries_title')" />
 
-    <h1 class="mb-6 text-2xl font-bold text-gray-900">{{ t('supplier.deliveries_heading') }}</h1>
+    <h1 class="mb-6 text-2xl font-bold text-gray-900 dark:text-zinc-100">
+      {{ t('supplier.deliveries_heading') }}
+    </h1>
 
     <!-- Add stock form -->
     <Card class="mb-8">
       <template #content>
         <form @submit.prevent="submit" class="flex flex-wrap items-end gap-4">
           <div class="min-w-[250px] flex-1">
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{
+            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
               t('supplier.deliveries_product')
             }}</label>
             <Select
@@ -153,7 +155,7 @@ function onSort(event: any) {
             />
           </div>
           <div class="w-32">
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{
+            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
               t('supplier.deliveries_amount')
             }}</label>
             <InputNumber
@@ -164,7 +166,7 @@ function onSort(event: any) {
             />
           </div>
           <div class="w-32">
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{
+            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
               t('supplier.deliveries_price')
             }}</label>
             <InputNumber
@@ -187,12 +189,14 @@ function onSort(event: any) {
     </Card>
 
     <!-- Recent deliveries -->
-    <h2 class="mb-4 text-lg font-semibold text-gray-800">{{ t('supplier.deliveries_recent') }}</h2>
+    <h2 class="mb-4 text-lg font-semibold text-gray-800 dark:text-zinc-200">
+      {{ t('supplier.deliveries_recent') }}
+    </h2>
 
     <!-- Filter bar -->
     <div class="mb-4 flex flex-wrap items-end gap-3">
       <div>
-        <label class="mb-1 block text-sm text-gray-600">{{
+        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
           t('supplier.deliveries_filter_product')
         }}</label>
         <Select
@@ -251,7 +255,9 @@ function onSort(event: any) {
       </Column>
 
       <template #empty>
-        <div class="py-8 text-center text-gray-500">{{ t('supplier.deliveries_none') }}</div>
+        <div class="py-8 text-center text-gray-500 dark:text-zinc-400">
+          {{ t('supplier.deliveries_none') }}
+        </div>
       </template>
     </DataTable>
   </AppLayout>

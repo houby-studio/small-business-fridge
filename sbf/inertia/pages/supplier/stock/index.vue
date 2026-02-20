@@ -119,7 +119,9 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
     <Head :title="t('supplier.stock_title')" />
 
     <div class="mb-6 flex items-center justify-between">
-      <h1 class="text-2xl font-bold text-gray-900">{{ t('supplier.stock_heading') }}</h1>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-zinc-100">
+        {{ t('supplier.stock_heading') }}
+      </h1>
       <div class="flex gap-2">
         <Link href="/supplier/products/new">
           <Button :label="t('supplier.stock_new_product')" icon="pi pi-plus" size="small" />
@@ -137,26 +139,62 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
 
     <!-- Summary cards (totals across all filtered results) -->
     <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <Card class="text-center">
+      <Card class="sbf-stat sbf-stat-primary">
         <template #content>
-          <div class="text-3xl font-bold">{{ stock.totals.totalProducts }}</div>
-          <div class="text-sm text-gray-500">{{ t('supplier.stock_products') }}</div>
+          <div class="flex items-center gap-4">
+            <div
+              class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-red-100 dark:bg-red-950/40"
+            >
+              <span class="pi pi-tags text-xl text-primary" />
+            </div>
+            <div>
+              <div class="text-3xl font-bold text-gray-900 dark:text-zinc-100">
+                {{ stock.totals.totalProducts }}
+              </div>
+              <div class="text-sm text-gray-500 dark:text-zinc-400">
+                {{ t('supplier.stock_products') }}
+              </div>
+            </div>
+          </div>
         </template>
       </Card>
-      <Card class="text-center">
+      <Card class="sbf-stat sbf-stat-green">
         <template #content>
-          <div class="text-3xl font-bold">
-            {{ stock.totals.totalRemaining }} {{ t('common.pieces') }}
+          <div class="flex items-center gap-4">
+            <div
+              class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-green-100 dark:bg-green-950/40"
+            >
+              <span class="pi pi-warehouse text-xl text-green-600 dark:text-green-400" />
+            </div>
+            <div>
+              <div class="text-3xl font-bold text-gray-900 dark:text-zinc-100">
+                {{ stock.totals.totalRemaining }}
+                <span class="text-lg font-medium">{{ t('common.pieces') }}</span>
+              </div>
+              <div class="text-sm text-gray-500 dark:text-zinc-400">
+                {{ t('supplier.stock_total_in_stock') }}
+              </div>
+            </div>
           </div>
-          <div class="text-sm text-gray-500">{{ t('supplier.stock_total_in_stock') }}</div>
         </template>
       </Card>
-      <Card class="text-center">
+      <Card class="sbf-stat sbf-stat-purple">
         <template #content>
-          <div class="text-3xl font-bold">
-            {{ t('common.price_with_currency', { price: stock.totals.totalRevenue }) }}
+          <div class="flex items-center gap-4">
+            <div
+              class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-purple-100 dark:bg-purple-950/40"
+            >
+              <span class="pi pi-chart-bar text-xl text-purple-600 dark:text-purple-400" />
+            </div>
+            <div>
+              <div class="text-2xl font-bold text-gray-900 dark:text-zinc-100">
+                {{ t('common.price_with_currency', { price: stock.totals.totalRevenue }) }}
+              </div>
+              <div class="text-sm text-gray-500 dark:text-zinc-400">
+                {{ t('supplier.stock_total_revenue') }}
+              </div>
+            </div>
           </div>
-          <div class="text-sm text-gray-500">{{ t('supplier.stock_total_revenue') }}</div>
         </template>
       </Card>
     </div>
@@ -164,7 +202,7 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
     <!-- Filter bar -->
     <div class="mb-4 flex flex-wrap items-end gap-3">
       <div>
-        <label class="mb-1 block text-sm text-gray-600">{{
+        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
           t('supplier.stock_filter_name')
         }}</label>
         <InputText
@@ -175,7 +213,9 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
         />
       </div>
       <div>
-        <label class="mb-1 block text-sm text-gray-600">{{ t('common.category') }}</label>
+        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
+          t('common.category')
+        }}</label>
         <Select
           v-model="filterCategoryId"
           :options="categoryOptions"
@@ -186,7 +226,7 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
       </div>
       <div class="flex items-center gap-2 pb-0.5">
         <Checkbox v-model="filterInStock" inputId="inStockCheck" binary />
-        <label for="inStockCheck" class="cursor-pointer text-sm text-gray-600">{{
+        <label for="inStockCheck" class="cursor-pointer text-sm text-gray-600 dark:text-zinc-400">{{
           t('supplier.stock_filter_in_stock')
         }}</label>
       </div>
@@ -294,7 +334,9 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
       </Column>
 
       <template #empty>
-        <div class="py-8 text-center text-gray-500">{{ t('supplier.stock_none') }}</div>
+        <div class="py-8 text-center text-gray-500 dark:text-zinc-400">
+          {{ t('supplier.stock_none') }}
+        </div>
       </template>
     </DataTable>
   </AppLayout>

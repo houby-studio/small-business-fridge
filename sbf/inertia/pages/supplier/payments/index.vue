@@ -119,12 +119,14 @@ function onSort(event: any) {
   <AppLayout>
     <Head :title="t('supplier.payments_title')" />
 
-    <h1 class="mb-6 text-2xl font-bold text-gray-900">{{ t('supplier.payments_heading') }}</h1>
+    <h1 class="mb-6 text-2xl font-bold text-gray-900 dark:text-zinc-100">
+      {{ t('supplier.payments_heading') }}
+    </h1>
 
     <!-- Filter bar -->
     <div class="mb-4 flex flex-wrap items-end gap-3">
       <div>
-        <label class="mb-1 block text-sm text-gray-600">{{
+        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
           t('supplier.payments_filter_status')
         }}</label>
         <Select
@@ -136,7 +138,7 @@ function onSort(event: any) {
         />
       </div>
       <div>
-        <label class="mb-1 block text-sm text-gray-600">{{
+        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
           t('supplier.payments_filter_customer')
         }}</label>
         <Select
@@ -229,7 +231,9 @@ function onSort(event: any) {
       </Column>
 
       <template #empty>
-        <div class="py-8 text-center text-gray-500">{{ t('supplier.payments_no_invoices') }}</div>
+        <div class="py-8 text-center text-gray-500 dark:text-zinc-400">
+          {{ t('supplier.payments_no_invoices') }}
+        </div>
       </template>
     </DataTable>
   </AppLayout>

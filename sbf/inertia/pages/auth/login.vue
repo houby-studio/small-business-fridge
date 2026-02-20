@@ -43,7 +43,7 @@ function submit() {
           </Message>
 
           <div class="flex flex-col gap-2">
-            <label for="username" class="text-sm font-medium text-gray-700">
+            <label for="username" class="text-sm font-medium text-gray-700 dark:text-zinc-300">
               {{ t('auth.username') }}
             </label>
             <InputText
@@ -57,7 +57,7 @@ function submit() {
           </div>
 
           <div class="flex flex-col gap-2">
-            <label for="password" class="text-sm font-medium text-gray-700">
+            <label for="password" class="text-sm font-medium text-gray-700 dark:text-zinc-300">
               {{ t('auth.password') }}
             </label>
             <Password
@@ -82,8 +82,11 @@ function submit() {
           />
 
           <template v-if="oidcEnabled">
-            <Divider align="center">
-              <span class="text-sm text-gray-400">nebo</span>
+            <Divider class="text-gray-400 dark:text-zinc-500" align="center">
+              <span
+                class="text-sm text-gray-400 dark:text-zinc-500 bg-zinc-900/90 px-1 shadow-zinc-950/80 backdrop-blur-sm"
+                >{{ t('auth.or') }}</span
+              >
             </Divider>
 
             <Button

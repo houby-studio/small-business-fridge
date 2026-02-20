@@ -122,30 +122,69 @@ function channelLabel(channel: string) {
   <AppLayout>
     <Head :title="t('orders.title')" />
 
-    <h1 class="mb-6 text-2xl font-bold text-gray-900">{{ t('orders.my_orders') }}</h1>
+    <h1 class="mb-6 text-2xl font-bold text-gray-900 dark:text-zinc-100">
+      {{ t('orders.my_orders') }}
+    </h1>
 
     <!-- Stats cards -->
     <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <Card class="text-center">
+      <Card class="sbf-stat sbf-stat-primary">
         <template #content>
-          <div class="text-3xl font-bold text-gray-900">{{ stats.totalOrders }}</div>
-          <div class="text-sm text-gray-500">{{ t('orders.total_orders') }}</div>
+          <div class="flex items-center gap-4">
+            <div
+              class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-red-100 dark:bg-red-950/40"
+            >
+              <span class="pi pi-list text-xl text-primary" />
+            </div>
+            <div>
+              <div class="text-3xl font-bold text-gray-900 dark:text-zinc-100">
+                {{ stats.totalOrders }}
+              </div>
+              <div class="text-sm text-gray-500 dark:text-zinc-400">
+                {{ t('orders.total_orders') }}
+              </div>
+            </div>
+          </div>
         </template>
       </Card>
-      <Card class="text-center">
+
+      <Card class="sbf-stat sbf-stat-green">
         <template #content>
-          <div class="text-3xl font-bold text-gray-900">
-            {{ t('common.price_with_currency', { price: stats.totalSpend }) }}
+          <div class="flex items-center gap-4">
+            <div
+              class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-green-100 dark:bg-green-950/40"
+            >
+              <span class="pi pi-wallet text-xl text-green-600 dark:text-green-400" />
+            </div>
+            <div>
+              <div class="text-2xl font-bold text-gray-900 dark:text-zinc-100">
+                {{ t('common.price_with_currency', { price: stats.totalSpend }) }}
+              </div>
+              <div class="text-sm text-gray-500 dark:text-zinc-400">
+                {{ t('orders.total_spent') }}
+              </div>
+            </div>
           </div>
-          <div class="text-sm text-gray-500">{{ t('orders.total_spent') }}</div>
         </template>
       </Card>
-      <Card class="text-center">
+
+      <Card class="sbf-stat sbf-stat-red">
         <template #content>
-          <div class="text-3xl font-bold text-red-600">
-            {{ t('common.price_with_currency', { price: stats.totalUnpaid }) }}
+          <div class="flex items-center gap-4">
+            <div
+              class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-red-100 dark:bg-red-950/40"
+            >
+              <span class="pi pi-credit-card text-xl text-red-600 dark:text-red-400" />
+            </div>
+            <div>
+              <div class="text-2xl font-bold text-red-600">
+                {{ t('common.price_with_currency', { price: stats.totalUnpaid }) }}
+              </div>
+              <div class="text-sm text-gray-500 dark:text-zinc-400">
+                {{ t('orders.total_unpaid') }}
+              </div>
+            </div>
           </div>
-          <div class="text-sm text-gray-500">{{ t('orders.total_unpaid') }}</div>
         </template>
       </Card>
     </div>
@@ -153,7 +192,9 @@ function channelLabel(channel: string) {
     <!-- Filter bar -->
     <div class="mb-4 flex flex-wrap items-end gap-3">
       <div>
-        <label class="mb-1 block text-sm text-gray-600">{{ t('orders.filter_channel') }}</label>
+        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
+          t('orders.filter_channel')
+        }}</label>
         <Select
           v-model="filterChannel"
           :options="channelOptions"
@@ -163,7 +204,9 @@ function channelLabel(channel: string) {
         />
       </div>
       <div>
-        <label class="mb-1 block text-sm text-gray-600">{{ t('orders.filter_invoiced') }}</label>
+        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
+          t('orders.filter_invoiced')
+        }}</label>
         <Select
           v-model="filterInvoiced"
           :options="invoicedOptions"
@@ -242,7 +285,7 @@ function channelLabel(channel: string) {
       </Column>
 
       <template #empty>
-        <div class="py-8 text-center text-gray-500">
+        <div class="py-8 text-center text-gray-500 dark:text-zinc-400">
           {{ t('orders.no_orders') }}
         </div>
       </template>

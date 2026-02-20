@@ -1,7 +1,14 @@
-<template>
-  <div class="container">
-    <div class="title">Page not found</div>
+<script setup lang="ts">
+import Button from 'primevue/button'
+</script>
 
-    <span>This page does not exist.</span>
+<template>
+  <div
+    class="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 text-center dark:bg-zinc-950"
+  >
+    <span class="pi pi-exclamation-circle mb-6 block text-8xl text-slate-300 dark:text-zinc-700" />
+    <h1 class="mb-2 text-5xl font-bold text-slate-800 dark:text-zinc-100">404</h1>
+    <p class="mb-8 text-lg text-slate-500 dark:text-zinc-400">Stránka nebyla nalezena.</p>
+    <Button as="a" href="/" label="Zpět na úvod" icon="pi pi-home" />
   </div>
 </template>

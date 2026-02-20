@@ -57,13 +57,15 @@ function submit() {
   <AppLayout>
     <Head :title="t('supplier.products_new_title')" />
 
-    <h1 class="mb-6 text-2xl font-bold text-gray-900">{{ t('supplier.products_new_heading') }}</h1>
+    <h1 class="mb-6 text-2xl font-bold text-gray-900 dark:text-zinc-100">
+      {{ t('supplier.products_new_heading') }}
+    </h1>
 
     <Card class="max-w-2xl">
       <template #content>
         <form @submit.prevent="submit" class="flex flex-col gap-5">
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{
+            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
               t('supplier.products_name_label')
             }}</label>
             <InputText
@@ -74,7 +76,7 @@ function submit() {
           </div>
 
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{
+            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
               t('supplier.products_description_label')
             }}</label>
             <Textarea
@@ -86,7 +88,7 @@ function submit() {
           </div>
 
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{
+            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
               t('supplier.products_category_label')
             }}</label>
             <Select
@@ -100,7 +102,7 @@ function submit() {
           </div>
 
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{
+            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
               t('supplier.products_barcode_label')
             }}</label>
             <InputText
@@ -111,7 +113,7 @@ function submit() {
           </div>
 
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{
+            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
               t('supplier.products_image_label')
             }}</label>
             <FileUpload

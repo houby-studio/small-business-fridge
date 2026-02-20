@@ -40,5 +40,9 @@
 
   "orders_filter_search": "Hledat zákazníka",
   "orders_filter_channel": "Kanál",
-  "orders_filter_invoiced": "Fakturováno"
+  "orders_filter_invoiced": "Fakturováno",
+
+  "users_col_id": "ID",
+  "users_col_email": "E-mail",
+  "users_col_role": "Role"
 }

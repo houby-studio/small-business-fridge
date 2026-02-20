@@ -101,6 +101,7 @@ router
     // Profile
     router.get('/profile', [ProfileController, 'show'])
     router.put('/profile', [ProfileController, 'update'])
+    router.post('/profile/color-mode', [ProfileController, 'toggleColorMode'])
     router.post('/profile/favorites/:id', [ProfileController, 'toggleFavorite'])
 
     // Audit log (customer view)

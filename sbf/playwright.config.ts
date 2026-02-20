@@ -12,12 +12,12 @@ import { defineConfig, devices } from '@playwright/test'
  */
 export default defineConfig({
   testDir: './tests/e2e',
-  globalSetup: './tests/e2e/global-setup.ts',
+  globalSetup: './tests/e2e/global_setup.ts',
   fullyParallel: false, // Avoid DB conflicts between parallel tests
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: 1,
-  reporter: 'list',
+  reporter: [['list'], ['junit', { outputFile: 'test-results/junit-e2e.xml' }]],
 
   use: {
     baseURL: 'http://localhost:3334',
@@ -57,8 +57,8 @@ export default defineConfig({
 
   projects: [
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      name: 'msedge',
+      use: { ...devices['Desktop Edge'] },
     },
   ],
 })

@@ -7,10 +7,21 @@ import { sessionApiClient } from '@adonisjs/session/plugins/api_client'
 import { authApiClient } from '@adonisjs/auth/plugins/api_client'
 import { shieldApiClient } from '@adonisjs/shield/plugins/api_client'
 import testUtils from '@adonisjs/core/services/test_utils'
+import { spec } from '@japa/runner/reporters'
+import { junitReporter } from './reporters/junit.js'
 
 /**
  * This file is imported by the "bin/test.ts" entrypoint file
  */
+
+/**
+ * Reporters: spec for human-readable terminal output + JUnit XML for CI dashboards.
+ * Output: test-results/junit-japa.xml
+ */
+export const reporters: Config['reporters'] = {
+  activated: ['spec', 'junit'],
+  list: [spec(), junitReporter()],
+}
 
 /**
  * Configure Japa plugins in the plugins array.

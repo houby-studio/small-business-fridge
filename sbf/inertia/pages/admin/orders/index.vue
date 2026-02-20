@@ -128,18 +128,20 @@ function storno(orderId: number) {
     <Head :title="t('admin.orders_title')" />
     <ConfirmDialog />
 
-    <h1 class="mb-6 text-2xl font-bold text-gray-900">{{ t('admin.orders_heading') }}</h1>
+    <h1 class="mb-6 text-2xl font-bold text-gray-900 dark:text-zinc-100">
+      {{ t('admin.orders_heading') }}
+    </h1>
 
     <!-- Filter bar -->
     <div class="mb-4 flex flex-wrap items-end gap-3">
       <div>
-        <label class="mb-1 block text-sm text-gray-600">{{
+        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
           t('admin.orders_filter_search')
         }}</label>
         <InputText v-model="filterSearch" class="w-48" @keydown.enter="applyFilters" />
       </div>
       <div>
-        <label class="mb-1 block text-sm text-gray-600">{{
+        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
           t('admin.orders_filter_channel')
         }}</label>
         <Select
@@ -151,7 +153,7 @@ function storno(orderId: number) {
         />
       </div>
       <div>
-        <label class="mb-1 block text-sm text-gray-600">{{
+        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
           t('admin.orders_filter_invoiced')
         }}</label>
         <Select
@@ -224,7 +226,7 @@ function storno(orderId: number) {
             severity="success"
             class="text-xs"
           />
-          <span v-else class="text-xs text-gray-400">—</span>
+          <span v-else class="text-xs text-gray-400 dark:text-zinc-500">—</span>
         </template>
       </Column>
       <Column :header="t('common.actions')" style="width: 100px">
@@ -242,7 +244,9 @@ function storno(orderId: number) {
       </Column>
 
       <template #empty>
-        <div class="py-8 text-center text-gray-500">{{ t('admin.orders_no_orders') }}</div>
+        <div class="py-8 text-center text-gray-500 dark:text-zinc-400">
+          {{ t('admin.orders_no_orders') }}
+        </div>
       </template>
     </DataTable>
   </AppLayout>

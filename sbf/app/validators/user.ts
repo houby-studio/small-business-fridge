@@ -8,6 +8,12 @@ export const updateUserValidator = vine.compile(
   })
 )
 
+export const toggleColorModeValidator = vine.compile(
+  vine.object({
+    colorMode: vine.enum(['light', 'dark'] as const),
+  })
+)
+
 export const updateProfileValidator = vine.compile(
   vine.object({
     displayName: vine.string().trim().minLength(1).maxLength(255),
