@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
@@ -7,6 +7,8 @@ import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import Select from 'primevue/select'
+import ConfirmDialog from 'primevue/confirmdialog'
+import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDate } from '~/composables/use_format_date'
 
@@ -28,8 +30,10 @@ const props = defineProps<{
   invoices: PaginatedInvoices
   filters: { status: string; sortBy: string; sortOrder: string; buyerId: string }
   buyers: { id: number; displayName: string }[]
+  reviewInvoice: { id: number; totalCost: number; buyerName: string } | null
 }>()
 const { t } = useI18n()
+const confirm = useConfirm()
 
 const filterStatus = ref(props.filters.status)
 const filterSortBy = ref(props.filters.sortBy || 'createdAt')
@@ -57,6 +61,24 @@ function statusLabel(invoice: InvoiceRow) {
   if (invoice.isPaymentRequested) return t('common.awaiting_approval')
   return t('common.unpaid')
 }
+
+onMounted(() => {
+  if (props.reviewInvoice) {
+    const inv = props.reviewInvoice
+    confirm.require({
+      message: t('supplier.review_payment_message', {
+        buyer: inv.buyerName,
+        id: inv.id,
+        amount: inv.totalCost,
+      }),
+      header: t('supplier.review_payment_header'),
+      icon: 'pi pi-credit-card',
+      acceptLabel: t('supplier.payments_approve'),
+      rejectLabel: t('common.cancel'),
+      accept: () => approve(inv.id),
+    })
+  }
+})
 
 function approve(id: number) {
   router.post(`/supplier/payments/${id}`, { action: 'approve' })
@@ -118,6 +140,7 @@ function onSort(event: any) {
 <template>
   <AppLayout>
     <Head :title="t('supplier.payments_title')" />
+    <ConfirmDialog />
 
     <h1 class="mb-6 text-2xl font-bold text-gray-900 dark:text-zinc-100">
       {{ t('supplier.payments_heading') }}

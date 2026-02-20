@@ -4,6 +4,7 @@ import env from '#start/env'
 import User from '#models/user'
 import Order from '#models/order'
 import Invoice from '#models/invoice'
+import QrPaymentService from '#services/qr_payment_service'
 import db from '@adonisjs/lucid/services/db'
 
 export default class NotificationService {
@@ -42,12 +43,14 @@ export default class NotificationService {
         )
         .htmlView('emails/purchase_confirmation', {
           i18n: this.i18n,
+          orderId: order.id,
           buyerName: buyer.displayName,
           productName: order.delivery.product.displayName,
           price: order.delivery.price,
           supplierName: order.delivery.supplier.displayName,
           date: order.createdAt.toFormat('dd.MM.yyyy HH:mm'),
           addFavoriteUrl,
+          shopUrl: appUrl + '/shop',
         })
     })
   }
@@ -63,6 +66,19 @@ export default class NotificationService {
     })
 
     const buyer = invoice.buyer
+    const appUrl = env.get('APP_URL') || `http://${env.get('HOST')}:${env.get('PORT')}`
+
+    let qrImageData: string | null = null
+    if (invoice.supplier.iban) {
+      const qrService = new QrPaymentService()
+      const qr = await qrService.generate({
+        iban: invoice.supplier.iban,
+        amount: invoice.totalCost,
+        receiverName: invoice.supplier.displayName,
+        payerName: buyer.displayName,
+      })
+      qrImageData = qr.imageData
+    }
 
     await mail.send((message) => {
       message
@@ -82,6 +98,35 @@ export default class NotificationService {
             date: o.createdAt.toFormat('dd.MM.yyyy'),
           })),
           supplierIban: invoice.supplier.iban,
+          qrImageData,
+          confirmPaymentUrl: `${appUrl}/invoices?confirmId=${invoice.id}`,
+        })
+    })
+  }
+
+  /**
+   * Notify supplier that a customer has marked an invoice as paid.
+   */
+  async sendPaymentRequestedNotification(invoice: Invoice) {
+    await invoice.load('buyer')
+    await invoice.load('supplier')
+
+    const supplier = invoice.supplier
+    if (supplier.isDisabled) return
+
+    const appUrl = env.get('APP_URL') || `http://${env.get('HOST')}:${env.get('PORT')}`
+
+    await mail.send((message) => {
+      message
+        .to(supplier.email)
+        .subject(this.i18n.t('emails.payment_requested_subject', { id: invoice.id }))
+        .htmlView('emails/payment_requested', {
+          i18n: this.i18n,
+          supplierName: supplier.displayName,
+          buyerName: invoice.buyer.displayName,
+          invoiceId: invoice.id,
+          totalCost: invoice.totalCost,
+          reviewUrl: `${appUrl}/supplier/payments?reviewId=${invoice.id}`,
         })
     })
   }

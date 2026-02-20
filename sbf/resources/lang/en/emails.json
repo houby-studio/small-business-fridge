@@ -6,12 +6,16 @@
   "purchase_price": "Price",
   "purchase_supplier": "Supplier",
   "purchase_date": "Date",
+  "purchase_order_id": "Order Number",
+  "purchase_visit_shop": "Go to Shop",
 
   "invoice_subject": "Invoice #{id} — {amount} CZK",
   "invoice_heading": "New Invoice #{id}",
   "invoice_intro": "Hi {buyerName}, supplier {supplierName} has issued an invoice for your purchases:",
   "invoice_total": "Total",
   "invoice_iban": "Supplier's bank account:",
+  "invoice_qr_heading": "QR Payment Code",
+  "invoice_confirm_payment": "Mark as Paid",
   "invoice_note": "After payment, please mark the invoice as paid in the application.",
 
   "payment_approved_subject": "Payment approved — Invoice #{id}",
@@ -32,6 +36,11 @@
   "unpaid_reminder_intro": "Hi {buyerName}, invoice #{id} from supplier {supplierName} for {amount} CZK has not been paid yet.",
   "unpaid_reminder_iban": "Account number:",
   "unpaid_reminder_note": "After payment, please mark the invoice as paid in the application.",
+
+  "payment_requested_subject": "Customer sent payment — Invoice #{id}",
+  "payment_requested_heading": "Customer Sent Payment",
+  "payment_requested_intro": "Hi {supplierName}, customer {buyerName} has marked invoice #{id} ({amount} CZK) as paid.",
+  "payment_requested_review": "Review Payment",
 
   "pending_approval_subject": "{count} payments awaiting approval — {total} CZK",
   "pending_approval_heading": "Payments Awaiting Approval",

@@ -6,12 +6,16 @@
   "purchase_price": "Cena",
   "purchase_supplier": "Dodavatel",
   "purchase_date": "Datum",
+  "purchase_order_id": "Číslo objednávky",
+  "purchase_visit_shop": "Přejít do obchodu",
 
   "invoice_subject": "Faktura #{id} — {amount} Kč",
   "invoice_heading": "Nová faktura #{id}",
   "invoice_intro": "Ahoj {buyerName}, dodavatel {supplierName} vystavil fakturu za tvé nákupy:",
   "invoice_total": "Celkem",
   "invoice_iban": "Číslo účtu dodavatele:",
+  "invoice_qr_heading": "QR kód pro platbu",
+  "invoice_confirm_payment": "Označit jako zaplaceno",
   "invoice_note": "Po zaplacení prosím označ fakturu jako zaplacenou v aplikaci.",
 
   "payment_approved_subject": "Platba schválena — Faktura #{id}",
@@ -32,6 +36,11 @@
   "unpaid_reminder_intro": "Ahoj {buyerName}, faktura #{id} od dodavatele {supplierName} na {amount} Kč zatím nebyla zaplacena.",
   "unpaid_reminder_iban": "Číslo účtu:",
   "unpaid_reminder_note": "Po zaplacení prosím označ fakturu jako zaplacenou v aplikaci.",
+
+  "payment_requested_subject": "Zákazník odeslal platbu — Faktura #{id}",
+  "payment_requested_heading": "Zákazník odeslal platbu",
+  "payment_requested_intro": "Ahoj {supplierName}, zákazník {buyerName} označil fakturu #{id} ({amount} Kč) jako zaplacenou.",
+  "payment_requested_review": "Zkontrolovat platbu",
 
   "pending_approval_subject": "{count} plateb čeká na schválení — {total} Kč",
   "pending_approval_heading": "Platby čekající na schválení",

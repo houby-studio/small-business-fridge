@@ -9,5 +9,7 @@
   "filter_paid": "Paid",
   "filter_unpaid": "Unpaid",
   "filter_awaiting": "Awaiting approval",
-  "qr_header": "QR payment"
+  "qr_header": "QR payment",
+  "confirm_payment_header": "Confirm Payment",
+  "confirm_payment_message": "Mark invoice #{id} ({amount} CZK) as paid?"
 }

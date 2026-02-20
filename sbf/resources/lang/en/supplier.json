@@ -62,5 +62,8 @@
   "products_filter_category": "Category",
 
   "stock_filter_name": "Search by name",
-  "stock_filter_in_stock": "In stock only"
+  "stock_filter_in_stock": "In stock only",
+
+  "review_payment_header": "Review Payment",
+  "review_payment_message": "Customer {buyer} has marked invoice #{id} ({amount} CZK) as paid. Approve the payment?"
 }

@@ -1,6 +1,9 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import InvoiceService from '#services/invoice_service'
 import QrPaymentService from '#services/qr_payment_service'
+import NotificationService from '#services/notification_service'
+import Invoice from '#models/invoice'
+import logger from '@adonisjs/core/services/logger'
 
 export default class InvoicesController {
   async index({ inertia, auth, request }: HttpContext) {
@@ -9,15 +12,34 @@ export default class InvoicesController {
     const status = request.input('status')
     const sortBy = request.input('sortBy')
     const sortOrder = request.input('sortOrder')
+    const confirmIdRaw = request.input('confirmId')
+
     const invoices = await invoiceService.getInvoicesForBuyer(auth.user!.id, page, 20, {
       status: status || undefined,
       sortBy: sortBy || undefined,
       sortOrder: sortOrder || undefined,
     })
 
+    let confirmInvoice: { id: number; totalCost: number } | null = null
+    if (confirmIdRaw) {
+      const confirmId = Number(confirmIdRaw)
+      if (!Number.isNaN(confirmId) && confirmId > 0) {
+        const inv = await Invoice.query()
+          .where('id', confirmId)
+          .where('buyerId', auth.user!.id)
+          .where('isPaid', false)
+          .where('isPaymentRequested', false)
+          .first()
+        if (inv) {
+          confirmInvoice = { id: inv.id, totalCost: inv.totalCost }
+        }
+      }
+    }
+
     return inertia.render('invoices/index', {
       invoices: invoices.serialize(),
       filters: { status: status || '', sortBy: sortBy || '', sortOrder: sortOrder || '' },
+      confirmInvoice,
     })
   }
 
@@ -25,8 +47,14 @@ export default class InvoicesController {
     const invoiceService = new InvoiceService()
 
     try {
-      await invoiceService.requestPayment(Number(params.id), auth.user!.id)
+      const invoice = await invoiceService.requestPayment(Number(params.id), auth.user!.id)
       session.flash('alert', { type: 'success', message: i18n.t('messages.payment_requested') })
+
+      // Notify supplier that customer has sent payment (fire-and-forget)
+      const notificationService = new NotificationService()
+      notificationService.sendPaymentRequestedNotification(invoice).catch((err) => {
+        logger.error({ err }, `Failed to send payment requested email for invoice #${params.id}`)
+      })
     } catch (error) {
       if (error instanceof Error && error.message === 'FORBIDDEN') {
         session.flash('alert', { type: 'danger', message: i18n.t('messages.invoice_forbidden') })
