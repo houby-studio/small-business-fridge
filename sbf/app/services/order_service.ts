@@ -5,6 +5,13 @@ import AuditService from '#services/audit_service'
 
 type OrderChannel = 'web' | 'kiosk' | 'scanner'
 
+export class OutOfStockError extends Error {
+  constructor(public readonly deliveryId: number) {
+    super('OUT_OF_STOCK')
+    this.name = 'OutOfStockError'
+  }
+}
+
 export default class OrderService {
   /**
    * Unified purchase logic for ALL channels.
@@ -45,6 +52,55 @@ export default class OrderService {
       })
 
       return order
+    })
+  }
+
+  /**
+   * Atomic basket purchase — validates and buys all items in a single DB transaction.
+   * Throws OutOfStockError (with deliveryId) if any item lacks sufficient stock.
+   * Creates one Order row per unit to preserve the existing order model.
+   */
+  async purchaseBasket(
+    buyerId: number,
+    items: Array<{ deliveryId: number; quantity: number }>,
+    channel: OrderChannel
+  ): Promise<Order[]> {
+    return db.transaction(async (trx) => {
+      const orders: Order[] = []
+
+      for (const item of items) {
+        // Lock row and validate sufficient stock for full quantity
+        const delivery = await Delivery.query({ client: trx })
+          .where('id', item.deliveryId)
+          .where('amountLeft', '>=', item.quantity)
+          .forUpdate()
+          .first()
+
+        if (!delivery) {
+          throw new OutOfStockError(item.deliveryId)
+        }
+
+        // Decrement stock by full quantity at once
+        delivery.amountLeft -= item.quantity
+        await delivery.save()
+
+        // Create one Order row per unit (preserving existing model)
+        for (let q = 0; q < item.quantity; q++) {
+          const order = await Order.create(
+            { buyerId, deliveryId: item.deliveryId, channel },
+            { client: trx }
+          )
+          orders.push(order)
+
+          AuditService.log(buyerId, 'order.created', 'order', order.id, delivery.supplierId, {
+            productId: delivery.productId,
+            price: delivery.price,
+            channel,
+          })
+        }
+      }
+
+      return orders
     })
   }
 

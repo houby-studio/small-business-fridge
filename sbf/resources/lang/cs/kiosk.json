@@ -18,5 +18,20 @@
   "enter_id_to_buy": "Pro nákup zadejte své ID",
   "see_all_products": "Zobrazit celý sortiment",
   "low_stock": "Jen {count} ks",
-  "quick_pick": "Rychlý výběr"
+  "quick_pick": "Rychlý výběr",
+  "basket": "Košík",
+  "basket_empty": "Košík je prázdný",
+  "checkout": "Koupit vše",
+  "cancel_basket": "Zrušit",
+  "total": "Celkem",
+  "confirm_checkout": "Koupit {count} položek za {total} Kč?",
+  "confirm_checkout_title": "Potvrdit nákup",
+  "checkout_success": "Nákup {count} položek proběhl úspěšně!",
+  "item_out_of_stock_other_buyer": "Někdo jiný to koupil dřív!",
+  "purchase_retry": "Chyba nákupu, zkuste znovu",
+  "idle_welcome": "Vítejte v Lednici IT!",
+  "session_expiring": "Relace vyprší za: {seconds} s",
+  "logout": "Odhlásit",
+  "product_not_found": "Produkt nenalezen",
+  "add_to_basket": "Přidáno do košíku"
 }

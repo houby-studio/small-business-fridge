@@ -70,5 +70,15 @@
 
   "payment_withdrawn_subject": "Customer withdrew payment confirmation — Invoice #{id}",
   "payment_withdrawn_heading": "Customer Withdrew Payment",
-  "payment_withdrawn_intro": "Hi {supplierName}, customer {buyerName} has withdrawn the payment notification for invoice #{id} ({amount} CZK). The invoice is back to awaiting payment status."
+  "payment_withdrawn_intro": "Hi {supplierName}, customer {buyerName} has withdrawn the payment notification for invoice #{id} ({amount} CZK). The invoice is back to awaiting payment status.",
+
+  "purchase_batch_subject": "Kiosk purchase: {count} items, {total} CZK",
+  "purchase_batch_heading": "Kiosk Purchase Confirmation",
+  "purchase_batch_intro": "Hi {name}, your kiosk purchase has been recorded:",
+  "purchase_batch_product": "Product",
+  "purchase_batch_qty": "Qty",
+  "purchase_batch_unit_price": "Unit Price",
+  "purchase_batch_subtotal": "Subtotal",
+  "purchase_batch_total": "Total",
+  "purchase_batch_date": "Date"
 }

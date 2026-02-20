@@ -18,5 +18,20 @@
   "enter_id_to_buy": "Enter your ID to purchase",
   "see_all_products": "See all products",
   "low_stock": "Only {count} left",
-  "quick_pick": "Quick Pick"
+  "quick_pick": "Quick Pick",
+  "basket": "Basket",
+  "basket_empty": "Basket is empty",
+  "checkout": "Buy All",
+  "cancel_basket": "Cancel",
+  "total": "Total",
+  "confirm_checkout": "Buy {count} items for {total} CZK?",
+  "confirm_checkout_title": "Confirm Purchase",
+  "checkout_success": "Purchase of {count} items completed!",
+  "item_out_of_stock_other_buyer": "Someone else bought it first!",
+  "purchase_retry": "Purchase failed, please try again",
+  "idle_welcome": "Welcome to Lednice IT!",
+  "session_expiring": "Session expires in: {seconds} s",
+  "logout": "Log out",
+  "product_not_found": "Product not found",
+  "add_to_basket": "Added to basket"
 }

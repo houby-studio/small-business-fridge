@@ -60,6 +60,74 @@ export default class NotificationService {
   }
 
   /**
+   * Send a single batch purchase confirmation email for a kiosk basket checkout.
+   * Aggregates multiple orders into one email with an item table.
+   */
+  async sendBatchPurchaseConfirmation(orders: Order[], buyerId: number) {
+    const buyer = await User.find(buyerId)
+    if (!buyer || !buyer.sendMailOnPurchase) return
+
+    const loadedOrders = await Order.query()
+      .whereIn(
+        'id',
+        orders.map((o) => o.id)
+      )
+      .preload('delivery', (q) => {
+        q.preload('product')
+        q.preload('supplier')
+      })
+
+    // Aggregate by delivery (product + price) to show grouped quantities
+    const itemMap = new Map<
+      number,
+      { productName: string; supplierName: string; quantity: number; unitPrice: number }
+    >()
+    let totalCost = 0
+
+    for (const order of loadedOrders) {
+      const key = order.deliveryId
+      const existing = itemMap.get(key)
+      if (existing) {
+        existing.quantity++
+      } else {
+        itemMap.set(key, {
+          productName: order.delivery.product.displayName,
+          supplierName: order.delivery.supplier.displayName,
+          quantity: 1,
+          unitPrice: order.delivery.price,
+        })
+      }
+      totalCost += order.delivery.price
+    }
+
+    const items = Array.from(itemMap.values()).map((i) => ({
+      ...i,
+      subtotal: i.quantity * i.unitPrice,
+    }))
+    const date = loadedOrders[0]?.createdAt.toFormat('dd.MM.yyyy HH:mm') ?? ''
+
+    await mail.send((message) => {
+      message
+        .to(buyer.email)
+        .subject(
+          this.i18n.t('emails.purchase_batch_subject', {
+            count: orders.length,
+            total: totalCost,
+          })
+        )
+        .htmlView('emails/purchase_batch', {
+          i18n: this.i18n,
+          buyerName: buyer.displayName,
+          items,
+          totalCost,
+          date,
+          orderCount: orders.length,
+          appUrl: this.appUrl,
+        })
+    })
+  }
+
+  /**
    * Send invoice notification to the buyer.
    */
   async sendInvoiceNotice(invoice: Invoice) {

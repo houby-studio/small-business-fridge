@@ -70,5 +70,15 @@
 
   "payment_withdrawn_subject": "Zákazník zrušil oznámení o platbě — Faktura #{id}",
   "payment_withdrawn_heading": "Zákazník zrušil platbu",
-  "payment_withdrawn_intro": "Ahoj {supplierName}, zákazník {buyerName} zrušil oznámení o platbě faktury #{id} ({amount} Kč). Faktura je opět ve stavu čekající na platbu."
+  "payment_withdrawn_intro": "Ahoj {supplierName}, zákazník {buyerName} zrušil oznámení o platbě faktury #{id} ({amount} Kč). Faktura je opět ve stavu čekající na platbu.",
+
+  "purchase_batch_subject": "Kiosk nákup: {count} položek, {total} Kč",
+  "purchase_batch_heading": "Potvrzení nákupu z kiosku",
+  "purchase_batch_intro": "Ahoj {name}, tvůj nákup z kiosku byl úspěšně zaznamenán:",
+  "purchase_batch_product": "Produkt",
+  "purchase_batch_qty": "Počet",
+  "purchase_batch_unit_price": "Cena/ks",
+  "purchase_batch_subtotal": "Mezisoučet",
+  "purchase_batch_total": "Celkem",
+  "purchase_batch_date": "Datum"
 }

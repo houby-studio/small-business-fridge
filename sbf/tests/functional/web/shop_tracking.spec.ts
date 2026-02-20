@@ -57,36 +57,38 @@ test.group('Shop tracking - page views', (group) => {
   })
 })
 
-test.group('Kiosk index - GET /kiosk with keypadId', (group) => {
+test.group('Kiosk index - GET /kiosk', (group) => {
   group.each.setup(cleanAll)
   group.each.teardown(cleanAll)
 
-  test('GET /kiosk?keypadId=valid returns 200 with customer and personalizedProducts', async ({
+  test('GET /kiosk returns 200 with featuredProducts and allProducts', async ({
+    client,
+    assert,
+  }) => {
+    const kioskDevice = await UserFactory.apply('kiosk').create()
+
+    const response = await client.get('/kiosk').loginAs(kioskDevice)
+
+    response.assertStatus(200)
+    assert.include(response.text(), 'featuredProducts')
+    assert.include(response.text(), 'allProducts')
+  })
+
+  test('GET /kiosk/customer?keypadId=valid returns 200 with customer info', async ({
     client,
     assert,
   }) => {
     const kioskDevice = await UserFactory.apply('kiosk').create()
     const customer = await UserFactory.create()
 
-    const response = await client.get(`/kiosk?keypadId=${customer.keypadId}`).loginAs(kioskDevice)
+    const response = await client
+      .get(`/kiosk/customer?keypadId=${customer.keypadId}`)
+      .loginAs(kioskDevice)
 
     response.assertStatus(200)
     assert.include(response.text(), customer.displayName)
-    assert.include(response.text(), 'personalizedProducts')
-  })
-
-  test('GET /kiosk?keypadId=invalid returns 200 with error and no customer', async ({
-    client,
-    assert,
-  }) => {
-    const kioskDevice = await UserFactory.apply('kiosk').create()
-
-    const response = await client.get('/kiosk?keypadId=999999').loginAs(kioskDevice)
-
-    response.assertStatus(200)
-    assert.include(response.text(), 'error')
-    // panelState should be idle (no customer identified)
-    assert.include(response.text(), 'idle')
+    assert.include(response.text(), 'favoriteIds')
+    assert.include(response.text(), 'recommendedIds')
   })
 })
 

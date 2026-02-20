@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import Button from 'primevue/button'
 import { useI18n } from '~/composables/use_i18n'
 
 interface CustomerInfo {
@@ -9,9 +8,10 @@ interface CustomerInfo {
   keypadId: number
 }
 
-const props = defineProps<{
+defineProps<{
   customer: CustomerInfo | null
   error: string | null
+  loading: boolean
 }>()
 
 const emit = defineEmits<{
@@ -20,10 +20,10 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const keypadInput = ref('')
-const displayRef = ref<HTMLInputElement | null>(null)
+const hiddenRef = ref<HTMLInputElement | null>(null)
 
 onMounted(() => {
-  displayRef.value?.focus()
+  hiddenRef.value?.focus()
 })
 
 function pressKey(key: string) {
@@ -63,37 +63,28 @@ const keys = [
 </script>
 
 <template>
-  <div class="flex flex-col items-center justify-center p-8">
-    <!-- Greeting when customer identified -->
-    <div v-if="customer" class="mb-4 text-center">
-      <p class="text-xl font-semibold text-green-400">
-        {{ t('kiosk.greeting', { name: customer.displayName }) }}
-      </p>
-    </div>
-    <div v-else class="mb-4 text-center">
-      <h1 class="mb-1 text-3xl font-bold text-white">{{ t('kiosk.heading') }}</h1>
-      <p class="text-base text-gray-400">{{ t('kiosk.enter_number') }}</p>
+  <div class="flex h-full flex-col items-center justify-center p-8">
+    <!-- Heading -->
+    <div class="mb-6 text-center">
+      <h1 class="text-3xl font-bold text-white">{{ t('kiosk.heading') }}</h1>
+      <p class="mt-1 text-base text-gray-400">{{ t('kiosk.enter_number') }}</p>
     </div>
 
-    <!-- Display field (also captures keyboard/scanner input) -->
+    <!-- Display field -->
     <div class="relative mb-6 w-full max-w-xs">
       <div
-        class="flex h-20 w-full items-center justify-center rounded-2xl border-2 border-gray-600 bg-gray-900 text-5xl font-bold tracking-widest text-white"
+        class="flex h-20 w-full items-center justify-center rounded-2xl border-2 bg-gray-900 text-5xl font-bold tracking-widest transition-colors"
+        :class="error ? 'border-red-500' : 'border-gray-600'"
       >
         {{ keypadInput || '—' }}
       </div>
-      <!-- Hidden input for scanner/keyboard focus -->
+      <!-- Hidden input captures keyboard/scanner input -->
       <input
-        ref="displayRef"
+        ref="hiddenRef"
         class="absolute inset-0 opacity-0"
         aria-label="keypad input"
         @keydown="onKeydown"
       />
-    </div>
-
-    <!-- Error -->
-    <div v-if="error" class="mb-4 w-full max-w-xs rounded-xl bg-red-900/50 px-4 py-2 text-center">
-      <p class="text-sm text-red-300">{{ error }}</p>
     </div>
 
     <!-- Keypad grid -->
@@ -102,15 +93,11 @@ const keys = [
         <button
           v-for="key in row"
           :key="key"
-          class="flex h-24 w-24 items-center justify-center rounded-xl text-2xl font-bold transition-all"
+          class="flex h-24 w-24 items-center justify-center rounded-xl text-2xl font-bold transition-all active:scale-95"
           :class="{
-            'bg-gray-700 text-white hover:bg-gray-600 active:bg-gray-500': ![
-              'clear',
-              'back',
-              'enter',
-            ].includes(key),
-            'bg-red-700 text-white hover:bg-red-600 active:bg-red-500': key === 'clear',
-            'bg-yellow-700 text-white hover:bg-yellow-600 active:bg-yellow-500': key === 'back',
+            'bg-gray-700 text-white hover:bg-gray-600': !['clear', 'back'].includes(key),
+            'bg-red-700 text-white hover:bg-red-600': key === 'clear',
+            'bg-yellow-700 text-white hover:bg-yellow-600': key === 'back',
           }"
           :aria-label="
             key === 'clear' ? t('kiosk.clear') : key === 'back' ? t('kiosk.backspace') : key
@@ -126,14 +113,25 @@ const keys = [
       </template>
     </div>
 
-    <!-- Continue button -->
-    <Button
-      :label="t('common.continue')"
-      icon="pi pi-arrow-right"
-      size="large"
-      class="mt-6 w-full max-w-xs"
-      :disabled="!keypadInput"
+    <!-- Continue button — primary action, full width, large -->
+    <button
+      class="mt-6 flex h-16 w-full max-w-xs items-center justify-center gap-3 rounded-2xl text-xl font-bold transition-all active:scale-95"
+      :class="
+        !keypadInput || loading
+          ? 'cursor-not-allowed bg-gray-700 text-gray-500'
+          : 'bg-green-600 text-white hover:bg-green-500'
+      "
+      :disabled="!keypadInput || loading"
       @click="pressKey('enter')"
-    />
+    >
+      <i v-if="loading" class="pi pi-spin pi-spinner" />
+      <i v-else class="pi pi-arrow-right" />
+      {{ t('common.continue') }}
+    </button>
+
+    <!-- Error — below the button, not between keys -->
+    <div v-if="error" class="mt-4 w-full max-w-xs rounded-xl bg-red-900/60 px-4 py-3 text-center">
+      <p class="text-sm font-medium text-red-300">{{ error }}</p>
+    </div>
   </div>
 </template>
