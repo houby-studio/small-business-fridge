@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+  </head>
+  <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h2 style="color: #F44336;">
+      {{ i18n.t('emails.order_cancelled_heading') }}
+    </h2>
+    <p>
+      {{ i18n.t('emails.order_cancelled_intro', { buyerName, id: orderId, productName, supplierName, price }) }}
+    </p>
+    <p>
+      {{ i18n.t('emails.order_cancelled_note') }}
+    </p>
+    <p style="color: #666; font-size: 12px;">
+      — <a href="{{ appUrl }}" style="color: #cf112a; text-decoration: none;">{{ i18n.t('common.app_name') }}</a>
+    </p>
+  </body>
+</html>

@@ -2,6 +2,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import logger from '@adonisjs/core/services/logger'
 import User from '#models/user'
 import AuditService from '#services/audit_service'
+import NotificationService from '#services/notification_service'
 import env from '#start/env'
 
 export default class OidcController {
@@ -76,6 +77,13 @@ export default class OidcController {
       }
 
       logger.info({ userId: user.id, email, role: user.role }, 'OIDC auto-registered new user')
+
+      // Send welcome email (fire-and-forget)
+      const notificationService = new NotificationService()
+      notificationService.sendWelcomeEmail(user).catch((err) => {
+        logger.error({ err }, `Failed to send welcome email to ${email}`)
+      })
+
       AuditService.log(user.id, 'user.registered', 'user', user.id, null, {
         via: 'oidc',
         ip: request.ip(),

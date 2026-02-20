@@ -48,5 +48,27 @@
   "pending_approval_invoice": "Faktura",
   "pending_approval_amount": "Částka",
   "pending_approval_note": "Zkontroluj platby na svém bankovním účtu a schval je v aplikaci.",
-  "purchase_add_favorite": "Přidat do oblíbených"
+  "purchase_add_favorite": "Přidat do oblíbených",
+
+  "order_cancelled_subject": "Storno objednávky #{id}",
+  "order_cancelled_heading": "Objednávka zrušena",
+  "order_cancelled_intro": "Ahoj {buyerName}, tvá objednávka #{id} produktu {productName} od dodavatele {supplierName} za {price} Kč byla zrušena správcem.",
+  "order_cancelled_note": "Pokud máš produkt u sebe, prosím ho vrať na původní místo.",
+
+  "welcome_subject": "Vítej v Lednici IT!",
+  "welcome_heading": "Vítej v Lednici IT!",
+  "welcome_intro": "Ahoj {name}, tvůj účet byl automaticky vytvořen. Nyní si můžeš objednávat produkty z lednice.",
+  "welcome_keypad_label": "Tvůj kód do klávesnice: {keypadId}",
+  "welcome_note": "Pokud máš otázky nebo problémy, kontaktuj správce systému.",
+
+  "restock_subject": "Produkt {productName} je opět skladem!",
+  "restock_heading": "Oblíbený produkt je opět skladem",
+  "restock_intro": "Ahoj {name}, produkt {productName} od dodavatele {supplierName} je opět dostupný.",
+  "restock_amount": "Dostupné množství: {amount} ks",
+  "restock_price": "Cena: {price} Kč",
+  "restock_note": "Spěchej, zásoby mohou být omezené!",
+
+  "payment_withdrawn_subject": "Zákazník zrušil oznámení o platbě — Faktura #{id}",
+  "payment_withdrawn_heading": "Zákazník zrušil platbu",
+  "payment_withdrawn_intro": "Ahoj {supplierName}, zákazník {buyerName} zrušil oznámení o platbě faktury #{id} ({amount} Kč). Faktura je opět ve stavu čekající na platbu."
 }

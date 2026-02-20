@@ -72,10 +72,16 @@ export default class InvoicesController {
     const invoiceService = new InvoiceService()
 
     try {
-      await invoiceService.cancelPaymentRequest(Number(params.id), auth.user!.id)
+      const invoice = await invoiceService.cancelPaymentRequest(Number(params.id), auth.user!.id)
       session.flash('alert', {
         type: 'success',
         message: i18n.t('messages.payment_request_cancelled'),
+      })
+
+      // Notify supplier that buyer withdrew payment confirmation (fire-and-forget)
+      const notificationService = new NotificationService()
+      notificationService.sendPaymentWithdrawnNotification(invoice).catch((err) => {
+        logger.error({ err }, `Failed to send payment withdrawn email for invoice #${params.id}`)
       })
     } catch (error) {
       if (error instanceof Error && error.message === 'FORBIDDEN') {

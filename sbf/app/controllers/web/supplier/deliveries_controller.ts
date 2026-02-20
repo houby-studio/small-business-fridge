@@ -1,7 +1,9 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import DeliveryService from '#services/delivery_service'
+import NotificationService from '#services/notification_service'
 import { createDeliveryValidator } from '#validators/delivery'
 import { normalizeImagePath } from '#helpers/image_url'
+import logger from '@adonisjs/core/services/logger'
 
 export default class DeliveriesController {
   async index({ inertia, auth, request }: HttpContext) {
@@ -42,7 +44,13 @@ export default class DeliveriesController {
     const data = await request.validateUsing(createDeliveryValidator)
 
     const service = new DeliveryService()
-    await service.addStock(auth.user!.id, data.productId, data.amount, data.price)
+    const delivery = await service.addStock(auth.user!.id, data.productId, data.amount, data.price)
+
+    // Notify users who favourited this product (fire-and-forget)
+    const notificationService = new NotificationService()
+    notificationService.sendRestockNotification(delivery).catch((err) => {
+      logger.error({ err }, `Failed to send restock notifications for product #${data.productId}`)
+    })
 
     session.flash('alert', {
       type: 'success',

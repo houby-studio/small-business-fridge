@@ -4,6 +4,7 @@ import env from '#start/env'
 import User from '#models/user'
 import Order from '#models/order'
 import Invoice from '#models/invoice'
+import Delivery from '#models/delivery'
 import QrPaymentService from '#services/qr_payment_service'
 import db from '@adonisjs/lucid/services/db'
 
@@ -287,6 +288,112 @@ export default class NotificationService {
           })
       })
     }
+  }
+
+  /**
+   * Notify buyer that their order was cancelled by an admin (storno).
+   * Call with a pre-loaded order (buyer, delivery.product, delivery.supplier).
+   */
+  async sendStornoNotification(order: Order) {
+    const buyer = order.buyer
+    if (buyer.isDisabled) return
+
+    await mail.send((message) => {
+      message
+        .to(buyer.email)
+        .subject(this.i18n.t('emails.order_cancelled_subject', { id: order.id }))
+        .htmlView('emails/order_cancelled', {
+          i18n: this.i18n,
+          buyerName: buyer.displayName,
+          orderId: order.id,
+          productName: order.delivery.product.displayName,
+          supplierName: order.delivery.supplier.displayName,
+          price: order.delivery.price,
+          appUrl: this.appUrl,
+        })
+    })
+  }
+
+  /**
+   * Send welcome email to a newly auto-registered user.
+   */
+  async sendWelcomeEmail(user: User) {
+    if (!user.email) return
+
+    await mail.send((message) => {
+      message
+        .to(user.email)
+        .subject(this.i18n.t('emails.welcome_subject'))
+        .htmlView('emails/welcome', {
+          i18n: this.i18n,
+          name: user.displayName,
+          keypadId: user.keypadId,
+          appUrl: this.appUrl,
+        })
+    })
+  }
+
+  /**
+   * Notify users who favourited a product that it's back in stock.
+   */
+  async sendRestockNotification(delivery: Delivery) {
+    await delivery.load('product')
+    await delivery.load('supplier')
+
+    const favouriteUsers = await db
+      .from('user_favorites')
+      .join('users', 'user_favorites.user_id', 'users.id')
+      .where('user_favorites.product_id', delivery.productId)
+      .where('users.is_disabled', false)
+      .whereNotNull('users.email')
+      .select('users.id', 'users.display_name', 'users.email')
+
+    for (const row of favouriteUsers) {
+      await mail.send((message) => {
+        message
+          .to(row.email as string)
+          .subject(
+            this.i18n.t('emails.restock_subject', {
+              productName: delivery.product.displayName,
+            })
+          )
+          .htmlView('emails/restock', {
+            i18n: this.i18n,
+            name: row.display_name as string,
+            productName: delivery.product.displayName,
+            supplierName: delivery.supplier.displayName,
+            amount: delivery.amountSupplied,
+            price: delivery.price,
+            shopUrl: this.appUrl,
+            appUrl: this.appUrl,
+          })
+      })
+    }
+  }
+
+  /**
+   * Notify supplier that a buyer has withdrawn their payment confirmation.
+   */
+  async sendPaymentWithdrawnNotification(invoice: Invoice) {
+    await invoice.load('buyer')
+    await invoice.load('supplier')
+
+    const supplier = invoice.supplier
+    if (supplier.isDisabled) return
+
+    await mail.send((message) => {
+      message
+        .to(supplier.email)
+        .subject(this.i18n.t('emails.payment_withdrawn_subject', { id: invoice.id }))
+        .htmlView('emails/payment_withdrawn', {
+          i18n: this.i18n,
+          supplierName: supplier.displayName,
+          buyerName: invoice.buyer.displayName,
+          invoiceId: invoice.id,
+          totalCost: invoice.totalCost,
+          appUrl: this.appUrl,
+        })
+    })
   }
 
   /**

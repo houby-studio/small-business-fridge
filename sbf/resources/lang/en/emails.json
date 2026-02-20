@@ -48,5 +48,27 @@
   "pending_approval_invoice": "Invoice",
   "pending_approval_amount": "Amount",
   "pending_approval_note": "Check payments in your bank account and approve them in the application.",
-  "purchase_add_favorite": "Add to Favorites"
+  "purchase_add_favorite": "Add to Favorites",
+
+  "order_cancelled_subject": "Order Cancelled #{id}",
+  "order_cancelled_heading": "Order Cancelled",
+  "order_cancelled_intro": "Hi {buyerName}, your order #{id} for {productName} from supplier {supplierName} for {price} CZK has been cancelled by an administrator.",
+  "order_cancelled_note": "If you have the product with you, please return it to its original place.",
+
+  "welcome_subject": "Welcome to Lednice IT!",
+  "welcome_heading": "Welcome to Lednice IT!",
+  "welcome_intro": "Hi {name}, your account has been automatically created. You can now order products from the fridge.",
+  "welcome_keypad_label": "Your keypad code: {keypadId}",
+  "welcome_note": "If you have any questions or issues, please contact the system administrator.",
+
+  "restock_subject": "Product {productName} is back in stock!",
+  "restock_heading": "Favourite Product Back in Stock",
+  "restock_intro": "Hi {name}, product {productName} from supplier {supplierName} is available again.",
+  "restock_amount": "Available quantity: {amount} pcs",
+  "restock_price": "Price: {price} CZK",
+  "restock_note": "Hurry, stock may be limited!",
+
+  "payment_withdrawn_subject": "Customer withdrew payment confirmation — Invoice #{id}",
+  "payment_withdrawn_heading": "Customer Withdrew Payment",
+  "payment_withdrawn_intro": "Hi {supplierName}, customer {buyerName} has withdrawn the payment notification for invoice #{id} ({amount} CZK). The invoice is back to awaiting payment status."
 }

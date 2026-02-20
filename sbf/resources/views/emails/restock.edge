@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+  </head>
+  <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h2 style="color: #4CAF50;">
+      {{ i18n.t('emails.restock_heading') }}
+    </h2>
+    <p>
+      {{ i18n.t('emails.restock_intro', { name, productName, supplierName }) }}
+    </p>
+    <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+      <tr style="background: #4CAF50; color: white;">
+        <td style="padding: 10px; font-weight: bold;">
+          {{ i18n.t('emails.purchase_product') }}
+        </td>
+        <td style="padding: 10px; text-align: right;">
+          {{ productName }}
+        </td>
+      </tr>
+      <tr style="background: #f5f5f5;">
+        <td style="padding: 8px; border: 1px solid #ddd;">
+          {{ i18n.t('emails.restock_amount', { amount }) }}
+        </td>
+        <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">
+        </td>
+      </tr>
+      <tr>
+        <td style="padding: 8px; border: 1px solid #ddd;">
+          {{ i18n.t('emails.restock_price', { price }) }}
+        </td>
+        <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">
+        </td>
+      </tr>
+    </table>
+    <p>
+      <strong>{{ i18n.t('emails.restock_note') }}</strong>
+    </p>
+    <p style="margin: 24px 0; text-align: center;">
+      <a
+        href="{{ shopUrl }}"
+        style="background-color: #4CAF50; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;"
+      >
+        {{ i18n.t('emails.purchase_visit_shop') }}
+      </a>
+    </p>
+    <p style="color: #666; font-size: 12px;">
+      — <a href="{{ appUrl }}" style="color: #cf112a; text-decoration: none;">{{ i18n.t('common.app_name') }}</a>
+    </p>
+  </body>
+</html>
