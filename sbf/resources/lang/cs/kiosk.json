@@ -12,5 +12,11 @@
   "no_products": "Žádné produkty skladem.",
   "clear": "Vymazat",
   "backspace": "Smazat poslední",
-  "forYou": "Doporučeno pro vás"
+  "forYou": "Doporučeno pro vás",
+  "featured_products": "Doporučené produkty",
+  "your_picks": "Vaše oblíbené",
+  "enter_id_to_buy": "Pro nákup zadejte své ID",
+  "see_all_products": "Zobrazit celý sortiment",
+  "low_stock": "Jen {count} ks",
+  "quick_pick": "Rychlý výběr"
 }

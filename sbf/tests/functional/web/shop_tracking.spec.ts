@@ -57,6 +57,39 @@ test.group('Shop tracking - page views', (group) => {
   })
 })
 
+test.group('Kiosk index - GET /kiosk with keypadId', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('GET /kiosk?keypadId=valid returns 200 with customer and personalizedProducts', async ({
+    client,
+    assert,
+  }) => {
+    const kioskDevice = await UserFactory.apply('kiosk').create()
+    const customer = await UserFactory.create()
+
+    const response = await client.get(`/kiosk?keypadId=${customer.keypadId}`).loginAs(kioskDevice)
+
+    response.assertStatus(200)
+    assert.include(response.text(), customer.displayName)
+    assert.include(response.text(), 'personalizedProducts')
+  })
+
+  test('GET /kiosk?keypadId=invalid returns 200 with error and no customer', async ({
+    client,
+    assert,
+  }) => {
+    const kioskDevice = await UserFactory.apply('kiosk').create()
+
+    const response = await client.get('/kiosk?keypadId=999999').loginAs(kioskDevice)
+
+    response.assertStatus(200)
+    assert.include(response.text(), 'error')
+    // panelState should be idle (no customer identified)
+    assert.include(response.text(), 'idle')
+  })
+})
+
 test.group('Kiosk tracking - sessions', (group) => {
   group.each.setup(cleanAll)
   group.each.teardown(cleanAll)

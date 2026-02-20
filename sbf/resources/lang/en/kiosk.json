@@ -12,5 +12,11 @@
   "no_products": "No products in stock.",
   "clear": "Clear",
   "backspace": "Delete last",
-  "forYou": "Recommended for you"
+  "forYou": "Recommended for you",
+  "featured_products": "Featured Products",
+  "your_picks": "Your Picks",
+  "enter_id_to_buy": "Enter your ID to purchase",
+  "see_all_products": "See all products",
+  "low_stock": "Only {count} left",
+  "quick_pick": "Quick Pick"
 }

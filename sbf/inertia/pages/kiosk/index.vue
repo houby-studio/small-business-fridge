@@ -1,88 +1,83 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
+import { useToast } from 'primevue/usetoast'
 import KioskLayout from '~/layouts/KioskLayout.vue'
-import Button from 'primevue/button'
+import KioskKeypad from '~/components/kiosk/KioskKeypad.vue'
+import KioskRightPanel, { type PanelState } from '~/components/kiosk/KioskRightPanel.vue'
 import { useI18n } from '~/composables/use_i18n'
 
-const { t } = useI18n()
-
-const keypadInput = ref('')
-
-function pressKey(key: string) {
-  if (key === 'clear') {
-    keypadInput.value = ''
-  } else if (key === 'back') {
-    keypadInput.value = keypadInput.value.slice(0, -1)
-  } else if (key === 'enter') {
-    if (keypadInput.value) {
-      router.get('/kiosk/shop', { keypadId: keypadInput.value })
-    }
-  } else {
-    if (keypadInput.value.length < 6) {
-      keypadInput.value += key
-    }
-  }
+interface CustomerInfo {
+  id: number
+  displayName: string
+  keypadId: number
 }
 
-const keys = [
-  ['1', '2', '3'],
-  ['4', '5', '6'],
-  ['7', '8', '9'],
-  ['clear', '0', 'back'],
-]
+interface ProductItem {
+  id: number
+  displayName: string
+  imagePath: string | null
+  price: number | null
+  deliveryId: number | null
+  stockSum: number
+  isFavorite: boolean
+  category: { name: string; color: string }
+}
+
+const props = defineProps<{
+  panelState: PanelState
+  featuredProducts: ProductItem[]
+  personalizedProducts: ProductItem[]
+  customer: CustomerInfo | null
+  error: string | null
+}>()
+
+const { t } = useI18n()
+const toast = useToast()
+
+onMounted(() => {
+  // Handle success/error query params from post-purchase redirect
+  const url = window.location.href
+  if (url.includes('success=1')) {
+    toast.add({
+      severity: 'success',
+      summary: t('kiosk.purchase_success'),
+      life: 4000,
+    })
+  } else if (url.includes('error=out_of_stock')) {
+    toast.add({
+      severity: 'error',
+      summary: t('kiosk.purchase_out_of_stock'),
+      life: 4000,
+    })
+  }
+})
+
+function onKeypadSubmit(keypadId: string) {
+  router.get('/kiosk', { keypadId }, { preserveState: false })
+}
 </script>
 
 <template>
   <KioskLayout>
     <Head :title="t('kiosk.title')" />
 
-    <div class="flex min-h-screen flex-col items-center justify-center p-8">
-      <h1 class="mb-2 text-4xl font-bold text-white">{{ t('kiosk.heading') }}</h1>
-      <p class="mb-8 text-lg text-gray-400">{{ t('kiosk.enter_number') }}</p>
-
-      <!-- Display -->
-      <div
-        class="mb-8 flex h-20 w-80 items-center justify-center rounded-xl border-2 border-gray-600 bg-gray-800 text-5xl font-bold tracking-widest text-white"
-      >
-        {{ keypadInput || '—' }}
+    <div class="flex h-screen overflow-hidden">
+      <!-- Left panel: keypad -->
+      <div class="flex w-5/12 flex-col justify-center border-r border-gray-700/50 bg-gray-900">
+        <KioskKeypad :customer="customer" :error="error" @submit="onKeypadSubmit" />
       </div>
 
-      <!-- Keypad -->
-      <div class="grid grid-cols-3 gap-3">
-        <template v-for="row in keys" :key="row.join('')">
-          <button
-            v-for="key in row"
-            :key="key"
-            class="flex h-20 w-20 items-center justify-center rounded-xl text-2xl font-bold transition-all"
-            :class="{
-              'bg-gray-700 text-white hover:bg-gray-600': !['clear', 'back', 'enter'].includes(key),
-              'bg-red-700 text-white hover:bg-red-600': key === 'clear',
-              'bg-yellow-700 text-white hover:bg-yellow-600': key === 'back',
-            }"
-            :aria-label="
-              key === 'clear' ? t('kiosk.clear') : key === 'back' ? t('kiosk.backspace') : key
-            "
-            @click="pressKey(key)"
-          >
-            <template v-if="key === 'clear'">C</template>
-            <template v-else-if="key === 'back'">
-              <i class="pi pi-arrow-left" />
-            </template>
-            <template v-else>{{ key }}</template>
-          </button>
-        </template>
+      <!-- Right panel: featured / personalized products -->
+      <div class="w-7/12 overflow-y-auto bg-gray-900">
+        <KioskRightPanel
+          :state="panelState"
+          :featured-products="featuredProducts"
+          :personalized-products="personalizedProducts"
+          :customer="customer"
+          :keypad-id="customer?.keypadId?.toString() ?? ''"
+        />
       </div>
-
-      <!-- Enter button -->
-      <Button
-        :label="t('common.continue')"
-        icon="pi pi-arrow-right"
-        size="large"
-        class="mt-6 w-80"
-        :disabled="!keypadInput"
-        @click="pressKey('enter')"
-      />
     </div>
   </KioskLayout>
 </template>
