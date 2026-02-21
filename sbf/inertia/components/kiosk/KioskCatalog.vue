@@ -63,9 +63,11 @@ function glowStyle(product: ProductItem): Record<string, string> {
     return { boxShadow: '0 0 28px rgba(168,85,247,0.4)' } // purple — best of both
   }
   if (product.isFavorite) {
-    return { boxShadow: '0 0 28px rgba(234,179,8,0.4)' } // yellow — favorites only
+    return { boxShadow: '0 0 28px rgba(234,179,8,0.4)' } // gold — favorites only
   }
-  // recommended-only: no extra glow (border already highlights it)
+  if (product.isRecommended) {
+    return { boxShadow: '0 0 28px rgba(59,130,246,0.4)' } // blue — recommended only
+  }
   return {}
 }
 </script>
@@ -112,7 +114,9 @@ function glowStyle(product: ProductItem): Record<string, string> {
               ? 'sbf-card-both border-purple-500/50 bg-purple-900/10'
               : product.isFavorite
                 ? 'sbf-card-favorite border-pink-500/50 bg-pink-900/10'
-                : 'border-gray-700/50 bg-gray-800/60 hover:border-gray-600'
+                : product.isRecommended
+                  ? 'sbf-card-recommended border-blue-500/50 bg-blue-900/10'
+                  : 'border-gray-700/50 bg-gray-800/60 hover:border-gray-600'
           "
           :style="{
             borderBottom: `3px solid ${product.category.color}`,
