@@ -56,6 +56,9 @@ const actionOptions = [
   { label: t('audit.action_user_login'), value: 'user.login' },
   { label: t('audit.action_user_registered'), value: 'user.registered' },
   { label: t('audit.action_user_logout'), value: 'user.logout' },
+  { label: t('audit.action_profile_token_created'), value: 'profile.token.created' },
+  { label: t('audit.action_admin_impersonate_start'), value: 'admin.impersonate.start' },
+  { label: t('audit.action_admin_impersonate_stop'), value: 'admin.impersonate.stop' },
 ]
 
 const entityOptions = [
@@ -82,6 +85,9 @@ const actionLabels: Record<string, string> = {
   'user.login': 'audit.action_user_login',
   'user.registered': 'audit.action_user_registered',
   'user.logout': 'audit.action_user_logout',
+  'profile.token.created': 'audit.action_profile_token_created',
+  'admin.impersonate.start': 'audit.action_admin_impersonate_start',
+  'admin.impersonate.stop': 'audit.action_admin_impersonate_stop',
 }
 
 function actionLabel(action: string | undefined) {

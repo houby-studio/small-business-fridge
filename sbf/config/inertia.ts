@@ -51,6 +51,13 @@ const inertiaConfig = defineConfig({
       ctx.inertia.always(() => {
         return ctx.session?.flashMessages.all() ?? {}
       }),
+    impersonation: (ctx) =>
+      ctx.inertia.always(() => {
+        const imp = ctx.session?.get('__impersonation') as
+          | { byId: number; asId: number; asName: string }
+          | undefined
+        return imp ? { asName: imp.asName } : null
+      }),
     locale: (ctx) => ctx.i18n?.locale ?? 'cs',
     translations: (ctx) => {
       const locale = ctx.i18n?.locale ?? 'cs'

@@ -29,5 +29,8 @@
   "action_order_storno": "Storno objednávky",
   "action_user_login": "Přihlášení",
   "action_user_registered": "Registrace",
-  "action_user_logout": "Odhlášení"
+  "action_user_logout": "Odhlášení",
+  "action_profile_token_created": "Token vytvořen",
+  "action_admin_impersonate_start": "Impersonace zahájena",
+  "action_admin_impersonate_stop": "Impersonace ukončena"
 }

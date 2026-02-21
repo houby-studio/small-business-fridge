@@ -6,14 +6,21 @@ import AuditService from '#services/audit_service'
 import env from '#start/env'
 
 export default class LoginController {
-  async show({ inertia }: HttpContext) {
+  async show({ inertia, response }: HttpContext) {
+    if (env.get('LOCAL_LOGIN_DISABLED', false)) {
+      return response.redirect('/auth/oidc/redirect')
+    }
     return inertia.render('auth/login', {
       oidcEnabled: env.get('OIDC_ENABLED', false),
     })
   }
 
   async store({ request, auth, response, session, i18n }: HttpContext) {
-    const { username, password } = await request.validateUsing(loginValidator)
+    if (env.get('LOCAL_LOGIN_DISABLED', false)) {
+      return response.redirect('/auth/oidc/redirect')
+    }
+
+    const { username, password, rememberMe } = await request.validateUsing(loginValidator)
 
     try {
       const user = await User.verifyCredentials(username, password)
@@ -24,7 +31,7 @@ export default class LoginController {
         return response.redirect('/login')
       }
 
-      await auth.use('web').login(user)
+      await auth.use('web').login(user, !!rememberMe)
       logger.info({ userId: user.id, username }, 'Password login success')
       AuditService.log(user.id, 'user.login', 'user', user.id, null, {
         via: 'password',

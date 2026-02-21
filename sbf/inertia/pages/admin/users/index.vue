@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { Head, router } from '@inertiajs/vue3'
+import { ref, computed } from 'vue'
+import { Head, router, usePage } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
@@ -10,6 +10,7 @@ import ToggleSwitch from 'primevue/toggleswitch'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import { useI18n } from '~/composables/use_i18n'
+import type { SharedProps } from '~/types'
 
 interface UserRow {
   id: number
@@ -33,6 +34,8 @@ const props = defineProps<{
   filters: { search: string; role: string }
 }>()
 const { t } = useI18n()
+const page = usePage<SharedProps>()
+const currentUserId = computed(() => page.props.user?.id)
 
 const filterSearch = ref(props.filters.search)
 const filterRole = ref(props.filters.role)
@@ -96,6 +99,10 @@ function onPageChange(event: any) {
     },
     { preserveState: true, only: ['users', 'filters'] }
   )
+}
+
+function impersonateUser(userId: number) {
+  router.post(`/admin/users/${userId}/impersonate`)
 }
 </script>
 
@@ -187,6 +194,25 @@ function onPageChange(event: any) {
           <ToggleSwitch
             :modelValue="data.isDisabled"
             @update:modelValue="(val: boolean) => toggleDisabled(data.id, val)"
+          />
+        </template>
+      </Column>
+
+      <Column :header="t('admin.users_actions')" style="width: 80px">
+        <template #body="{ data }">
+          <Button
+            v-if="
+              !data.isKiosk &&
+              data.role !== 'admin' &&
+              data.id !== currentUserId &&
+              !data.isDisabled
+            "
+            icon="pi pi-user-edit"
+            severity="warn"
+            size="small"
+            text
+            :aria-label="t('admin.impersonate')"
+            @click="impersonateUser(data.id)"
           />
         </template>
       </Column>

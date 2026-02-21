@@ -81,6 +81,7 @@
     "@tpointurier/ally-microsoft": "^0.3.0",
     "@vinejs/vine": "^3.0.1",
     "@vue/server-renderer": "^3.5.28",
+    "adonis-autoswagger": "^3.73.0",
     "adonisjs-scheduler": "^2.7.0",
     "dotenv": "^17.3.1",
     "edge.js": "^6.2.1",

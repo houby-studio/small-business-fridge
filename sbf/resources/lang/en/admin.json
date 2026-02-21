@@ -44,5 +44,9 @@
 
   "users_col_id": "ID",
   "users_col_email": "Email",
-  "users_col_role": "Role"
+  "users_col_role": "Role",
+  "users_actions": "Actions",
+  "impersonate": "Sign in as user",
+  "impersonate_stop": "Stop impersonating",
+  "impersonating_as": "Impersonating"
 }

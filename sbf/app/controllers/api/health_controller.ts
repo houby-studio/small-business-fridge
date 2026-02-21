@@ -2,6 +2,14 @@ import type { HttpContext } from '@adonisjs/core/http'
 import db from '@adonisjs/lucid/services/db'
 
 export default class HealthController {
+  /**
+   * @summary Health check
+   * @description Returns service health status including database connectivity and uptime.
+   * @tag Health
+   * @responseBody 200 - {"status": "ok", "timestamp": "2024-01-01T12:00:00.000Z", "uptime": 3600, "checks": {"database": {"status": "ok", "latency": 2}}}
+   * @responseBody 503 - {"status": "degraded", "timestamp": "2024-01-01T12:00:00.000Z", "uptime": 3600, "checks": {"database": {"status": "error", "latency": 100, "error": "connection refused"}}}
+   * @noAuth true
+   */
   async index({ response }: HttpContext) {
     const checks: Record<string, { status: string; latency?: number; error?: string }> = {}
 

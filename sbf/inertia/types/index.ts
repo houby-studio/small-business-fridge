@@ -17,9 +17,14 @@ export interface FlashMessages {
   [key: string]: unknown
 }
 
+export interface Impersonation {
+  asName: string
+}
+
 export interface SharedProps {
   user: User | null
   flash: FlashMessages
+  impersonation: Impersonation | null
   [key: string]: unknown
 }
 

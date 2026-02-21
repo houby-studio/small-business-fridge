@@ -1,14 +1,19 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { Head, router } from '@inertiajs/vue3'
+import { ref, computed } from 'vue'
+import { Head, router, usePage } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import InputText from 'primevue/inputtext'
+import InputNumber from 'primevue/inputnumber'
 import ToggleSwitch from 'primevue/toggleswitch'
 import SelectButton from 'primevue/selectbutton'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
+import DataTable from 'primevue/datatable'
+import Column from 'primevue/column'
+import Dialog from 'primevue/dialog'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDate } from '~/composables/use_format_date'
+import type { SharedProps } from '~/types'
 
 interface UserData {
   id: number
@@ -28,8 +33,19 @@ interface UserData {
   createdAt: string
 }
 
-const props = defineProps<{ user: UserData }>()
+interface ApiToken {
+  id: number
+  name: string
+  created_at: string
+  last_used_at: string | null
+  expires_at: string | null
+}
+
+const props = defineProps<{ user: UserData; tokens: ApiToken[] }>()
 const { t } = useI18n()
+const page = usePage<SharedProps>()
+
+// ─── Profile form ─────────────────────────────────────────────────────────────
 
 const form = ref({
   displayName: props.user.displayName,
@@ -71,6 +87,59 @@ function submit() {
       onFinish: () => (submitting.value = false),
     }
   )
+}
+
+// ─── API tokens ───────────────────────────────────────────────────────────────
+
+const newTokenName = ref('')
+const newTokenExpiresDays = ref<number | null>(null)
+const creatingToken = ref(false)
+
+function createToken() {
+  if (!newTokenName.value.trim()) return
+  creatingToken.value = true
+  router.post(
+    '/profile/tokens',
+    { name: newTokenName.value.trim(), expiresInDays: newTokenExpiresDays.value ?? undefined },
+    {
+      onFinish: () => {
+        creatingToken.value = false
+        newTokenName.value = ''
+        newTokenExpiresDays.value = null
+      },
+    }
+  )
+}
+
+function revokeToken(tokenId: number) {
+  router.delete(`/profile/tokens/${tokenId}`, {}, { preserveScroll: true })
+}
+
+// Show-once new token dialog — driven by flash
+const newTokenFlash = computed(
+  () => (page.props.flash as any)?.newApiToken as { name: string; token: string } | undefined
+)
+const showNewTokenDialog = ref(false)
+const copiedToken = ref(false)
+
+// Watch for new token in flash and open dialog
+import { watch } from 'vue'
+watch(
+  newTokenFlash,
+  (val) => {
+    if (val) {
+      showNewTokenDialog.value = true
+      copiedToken.value = false
+    }
+  },
+  { immediate: true }
+)
+
+function copyToken() {
+  if (!newTokenFlash.value?.token) return
+  navigator.clipboard.writeText(newTokenFlash.value.token).then(() => {
+    copiedToken.value = true
+  })
 }
 </script>
 
@@ -211,6 +280,112 @@ function submit() {
           </div>
         </template>
       </Card>
+
+      <!-- API tokens — full width -->
+      <Card class="lg:col-span-2">
+        <template #title>{{ t('profile.tokens_heading') }}</template>
+        <template #content>
+          <div class="flex flex-col gap-6">
+            <!-- Existing tokens -->
+            <DataTable :value="tokens" stripedRows class="rounded-lg border">
+              <Column :header="t('profile.tokens_name')">
+                <template #body="{ data }">{{ data.name }}</template>
+              </Column>
+              <Column :header="t('profile.tokens_created')" style="width: 160px">
+                <template #body="{ data }">{{ formatDate(data.created_at) }}</template>
+              </Column>
+              <Column :header="t('profile.tokens_last_used')" style="width: 160px">
+                <template #body="{ data }">
+                  {{
+                    data.last_used_at
+                      ? formatDate(data.last_used_at)
+                      : t('profile.tokens_never_used')
+                  }}
+                </template>
+              </Column>
+              <Column :header="t('profile.tokens_expires')" style="width: 160px">
+                <template #body="{ data }">
+                  {{
+                    data.expires_at
+                      ? formatDate(data.expires_at)
+                      : t('profile.tokens_never_expires')
+                  }}
+                </template>
+              </Column>
+              <Column style="width: 80px">
+                <template #body="{ data }">
+                  <Button
+                    :label="t('profile.tokens_revoke')"
+                    severity="danger"
+                    size="small"
+                    text
+                    @click="revokeToken(data.id)"
+                  />
+                </template>
+              </Column>
+              <template #empty>
+                <div class="py-4 text-center text-gray-500 dark:text-zinc-400">
+                  {{ t('profile.tokens_empty') }}
+                </div>
+              </template>
+            </DataTable>
+
+            <!-- Create new token -->
+            <div class="flex flex-wrap items-end gap-3">
+              <div class="flex-1">
+                <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                  {{ t('profile.tokens_new_name') }}
+                </label>
+                <InputText v-model="newTokenName" class="w-full" maxlength="100" />
+              </div>
+              <div class="w-56">
+                <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                  {{ t('profile.tokens_new_expires') }}
+                </label>
+                <InputNumber
+                  v-model="newTokenExpiresDays"
+                  :min="1"
+                  :max="3650"
+                  :placeholder="t('profile.tokens_never_expires')"
+                  class="w-full"
+                />
+              </div>
+              <Button
+                :label="t('profile.tokens_create')"
+                icon="pi pi-plus"
+                :loading="creatingToken"
+                :disabled="!newTokenName.trim()"
+                @click="createToken"
+              />
+            </div>
+          </div>
+        </template>
+      </Card>
     </div>
+
+    <!-- Show-once new token dialog -->
+    <Dialog
+      v-model:visible="showNewTokenDialog"
+      :header="t('profile.tokens_new_value_heading')"
+      :closable="true"
+      :modal="true"
+      style="width: 560px"
+    >
+      <p class="mb-4 text-sm text-gray-600 dark:text-zinc-400">
+        {{ t('profile.tokens_new_value_info') }}
+      </p>
+      <div
+        class="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 font-mono text-sm dark:border-zinc-700 dark:bg-zinc-800"
+      >
+        <span class="flex-1 break-all">{{ newTokenFlash?.token }}</span>
+        <Button
+          :icon="copiedToken ? 'pi pi-check' : 'pi pi-copy'"
+          :label="copiedToken ? t('profile.tokens_copied') : t('profile.tokens_copy')"
+          size="small"
+          severity="secondary"
+          @click="copyToken"
+        />
+      </div>
+    </Dialog>
   </AppLayout>
 </template>

@@ -21,5 +21,21 @@
   "role": "Role",
   "created_at": "Registrován",
   "save": "Uložit změny",
-  "update_success": "Profil byl úspěšně aktualizován."
+  "update_success": "Profil byl úspěšně aktualizován.",
+  "tokens_heading": "API tokeny",
+  "tokens_empty": "Žádné aktivní tokeny.",
+  "tokens_name": "Název",
+  "tokens_created": "Vytvořen",
+  "tokens_last_used": "Naposledy použit",
+  "tokens_expires": "Platnost do",
+  "tokens_never_used": "Nikdy",
+  "tokens_never_expires": "Neomezená",
+  "tokens_revoke": "Odvolat",
+  "tokens_new_name": "Název tokenu",
+  "tokens_new_expires": "Platnost (dní, prázdné = neomezená)",
+  "tokens_create": "Vytvořit token",
+  "tokens_new_value_heading": "Nový API token",
+  "tokens_new_value_info": "Zkopírujte tuto hodnotu nyní. Po zavření ji nebude možné znovu zobrazit.",
+  "tokens_copy": "Kopírovat",
+  "tokens_copied": "Zkopírováno!"
 }

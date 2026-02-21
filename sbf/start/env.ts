@@ -55,6 +55,7 @@ export default await Env.create(new URL('../', import.meta.url), {
   |----------------------------------------------------------
   */
   OIDC_ENABLED: Env.schema.boolean.optional(),
+  LOCAL_LOGIN_DISABLED: Env.schema.boolean.optional(),
   OIDC_AUTO_REGISTER: Env.schema.boolean.optional(),
   OIDC_CLIENT_ID: Env.schema.string.optional(),
   OIDC_CLIENT_SECRET: Env.schema.string.optional(),
@@ -75,6 +76,7 @@ export default await Env.create(new URL('../', import.meta.url), {
   */
   APP_URL: Env.schema.string.optional(),
   FEEDBACK_URL: Env.schema.string.optional(),
+  SWAGGER_ENABLED: Env.schema.boolean.optional(),
 
   /*
   |----------------------------------------------------------
