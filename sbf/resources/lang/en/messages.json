@@ -37,5 +37,12 @@
   "login_not_registered": "Your Microsoft account is not registered in this app. Contact your administrator.",
   "login_auto_registered": "Your account has been automatically created. Welcome!",
   "favorite_added": "Product added to favorites.",
-  "favorite_already_added": "Product is already in your favorites."
+  "favorite_already_added": "Product is already in your favorites.",
+  "impersonate_started": "Signed in as user {name}.",
+  "impersonate_stopped": "Impersonation stopped.",
+  "impersonate_self": "You cannot impersonate yourself.",
+  "impersonate_admin": "Cannot impersonate an administrator.",
+  "impersonate_kiosk": "Cannot impersonate a kiosk account.",
+  "token_created": "API token created. Copy the value now — it will not be shown again.",
+  "token_revoked": "API token revoked."
 }

@@ -21,5 +21,21 @@
   "role": "Role",
   "created_at": "Registered",
   "save": "Save Changes",
-  "update_success": "Profile updated successfully."
+  "update_success": "Profile updated successfully.",
+  "tokens_heading": "API Tokens",
+  "tokens_empty": "No active tokens.",
+  "tokens_name": "Name",
+  "tokens_created": "Created",
+  "tokens_last_used": "Last used",
+  "tokens_expires": "Expires",
+  "tokens_never_used": "Never",
+  "tokens_never_expires": "Never",
+  "tokens_revoke": "Revoke",
+  "tokens_new_name": "Token name",
+  "tokens_new_expires": "Validity (days, empty = never expires)",
+  "tokens_create": "Create token",
+  "tokens_new_value_heading": "New API Token",
+  "tokens_new_value_info": "Copy this value now. It cannot be shown again after closing.",
+  "tokens_copy": "Copy",
+  "tokens_copied": "Copied!"
 }

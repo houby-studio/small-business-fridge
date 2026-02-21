@@ -118,7 +118,8 @@ export default class OidcController {
     }
     if (dirty) await user.save()
 
-    await auth.use('web').login(user)
+    // Always remember for OIDC — user already authenticated with Microsoft, no reason to expire session
+    await auth.use('web').login(user, true)
     logger.info({ userId: user.id, email }, 'OIDC login success')
     AuditService.log(user.id, 'user.login', 'user', user.id, null, {
       via: 'oidc',

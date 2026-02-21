@@ -13,7 +13,7 @@ export default class LoginController {
   }
 
   async store({ request, auth, response, session, i18n }: HttpContext) {
-    const { username, password } = await request.validateUsing(loginValidator)
+    const { username, password, rememberMe } = await request.validateUsing(loginValidator)
 
     try {
       const user = await User.verifyCredentials(username, password)
@@ -24,7 +24,7 @@ export default class LoginController {
         return response.redirect('/login')
       }
 
-      await auth.use('web').login(user)
+      await auth.use('web').login(user, !!rememberMe)
       logger.info({ userId: user.id, username }, 'Password login success')
       AuditService.log(user.id, 'user.login', 'user', user.id, null, {
         via: 'password',

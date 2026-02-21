@@ -5,6 +5,7 @@ import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Button from 'primevue/button'
+import Checkbox from 'primevue/checkbox'
 import Divider from 'primevue/divider'
 import Message from 'primevue/message'
 import { useI18n } from '~/composables/use_i18n'
@@ -18,6 +19,7 @@ const { t } = useI18n()
 const form = useForm({
   username: '',
   password: '',
+  rememberMe: false,
 })
 
 function submit() {
@@ -71,6 +73,13 @@ function submit() {
               inputClass="w-full"
               class="w-full"
             />
+          </div>
+
+          <div class="flex items-center gap-2">
+            <Checkbox inputId="rememberMe" v-model="form.rememberMe" :binary="true" />
+            <label for="rememberMe" class="cursor-pointer text-sm text-gray-700 dark:text-zinc-300">
+              {{ t('auth.remember_me') }}
+            </label>
           </div>
 
           <Button

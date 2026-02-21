@@ -36,6 +36,7 @@ const AdminCategoriesController = () => import('#controllers/web/admin/categorie
 const AdminOrdersController = () => import('#controllers/web/admin/orders_controller')
 const AdminInvoicesController = () => import('#controllers/web/admin/invoices_controller')
 const AdminStornoController = () => import('#controllers/web/admin/storno_controller')
+const AdminImpersonationController = () => import('#controllers/web/admin/impersonation_controller')
 const AuditController = () => import('#controllers/web/audit_controller')
 const AdminAuditController = () => import('#controllers/web/admin/audit_controller')
 const KioskController = () => import('#controllers/web/kiosk_controller')
@@ -69,13 +70,18 @@ router.get('/uploads/*', async ({ request, response }) => {
 
 router.group(() => {
   router.get('/login', [LoginController, 'show']).use(middleware.guest())
-  router.post('/login', [LoginController, 'store']).use(middleware.guest())
+  router
+    .post('/login', [LoginController, 'store'])
+    .use([middleware.guest(), middleware.throttle({ maxRequests: 10, windowMs: 60_000 })])
 })
 
 router.get('/auth/oidc/redirect', [OidcController, 'redirect'])
 router.get('/auth/oidc/callback', [OidcController, 'callback'])
 
 router.post('/logout', [LoginController, 'destroy']).use(middleware.auth())
+
+// Stop impersonation — requires auth only (impersonation middleware has already run)
+router.post('/impersonate/stop', [AdminImpersonationController, 'destroy']).use(middleware.auth())
 
 /*
 |--------------------------------------------------------------------------
@@ -103,6 +109,10 @@ router
     router.put('/profile', [ProfileController, 'update'])
     router.post('/profile/color-mode', [ProfileController, 'toggleColorMode'])
     router.post('/profile/favorites/:id', [ProfileController, 'toggleFavorite'])
+
+    // Personal API tokens
+    router.post('/profile/tokens', [ProfileController, 'createToken'])
+    router.delete('/profile/tokens/:id', [ProfileController, 'revokeToken'])
 
     // Audit log (customer view)
     router.get('/audit', [AuditController, 'index'])
@@ -170,6 +180,9 @@ router
 
     // Audit log
     router.get('/audit', [AdminAuditController, 'index'])
+
+    // Impersonation
+    router.post('/users/:id/impersonate', [AdminImpersonationController, 'store'])
   })
   .prefix('/admin')
   .use([middleware.auth(), middleware.role({ roles: ['admin'] })])

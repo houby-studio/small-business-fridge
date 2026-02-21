@@ -37,5 +37,12 @@
   "login_not_registered": "Váš účet Microsoft není registrován v aplikaci. Kontaktujte správce.",
   "login_auto_registered": "Váš účet byl automaticky vytvořen. Vítejte!",
   "favorite_added": "Produkt byl přidán do oblíbených.",
-  "favorite_already_added": "Produkt je již ve vašich oblíbených."
+  "favorite_already_added": "Produkt je již ve vašich oblíbených.",
+  "impersonate_started": "Přihlášeni jako uživatel {name}.",
+  "impersonate_stopped": "Zastupování bylo ukončeno.",
+  "impersonate_self": "Nemůžete se přihlásit sami za sebe.",
+  "impersonate_admin": "Nelze zastupovat administrátora.",
+  "impersonate_kiosk": "Nelze zastupovat kioskový účet.",
+  "token_created": "API token byl vytvořen. Zkopírujte hodnotu nyní — nebude znovu zobrazena.",
+  "token_revoked": "API token byl odvolán."
 }

@@ -5,12 +5,15 @@ import Toast from 'primevue/toast'
 import Button from 'primevue/button'
 import Menubar from 'primevue/menubar'
 import { useFlash } from '~/composables/use_flash'
+import { useI18n } from '~/composables/use_i18n'
 import type { SharedProps } from '~/types'
 
 useFlash()
 
 const page = usePage<SharedProps>()
+const { t } = useI18n()
 const user = computed(() => page.props.user)
+const impersonation = computed(() => page.props.impersonation)
 
 const isSupplier = computed(() => user.value?.role === 'supplier' || user.value?.role === 'admin')
 const isAdmin = computed(() => user.value?.role === 'admin')
@@ -110,6 +113,10 @@ const menuItems = computed(() => {
 function logout() {
   router.post('/logout')
 }
+
+function stopImpersonation() {
+  router.post('/impersonate/stop')
+}
 </script>
 
 <template>
@@ -118,6 +125,24 @@ function logout() {
     :data-theme="localIsDark ? 'dark' : 'light'"
   >
     <Toast position="top-right" :pt="{ root: { style: { top: '4.5rem' } } }" />
+
+    <!-- Impersonation banner -->
+    <div
+      v-if="impersonation"
+      class="flex items-center justify-between bg-amber-500 px-4 py-2 text-sm font-medium text-amber-950"
+    >
+      <span class="flex items-center gap-2">
+        <span class="pi pi-user-edit" />
+        {{ t('admin.impersonating_as') }}: <strong>{{ impersonation.asName }}</strong>
+      </span>
+      <Button
+        :label="t('admin.impersonate_stop')"
+        icon="pi pi-times"
+        severity="contrast"
+        size="small"
+        @click="stopImpersonation"
+      />
+    </div>
 
     <!-- Sticky glassmorphism navbar -->
     <div

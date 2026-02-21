@@ -5,6 +5,7 @@ import { BaseModel, column, hasMany, manyToMany } from '@adonisjs/lucid/orm'
 import type { HasMany, ManyToMany } from '@adonisjs/lucid/types/relations'
 import { withAuthFinder } from '@adonisjs/auth/mixins/lucid'
 import { DbAccessTokensProvider } from '@adonisjs/auth/access_tokens'
+import { DbRememberMeTokensProvider } from '@adonisjs/auth/session'
 import Delivery from '#models/delivery'
 import Order from '#models/order'
 import Invoice from '#models/invoice'
@@ -109,4 +110,8 @@ export default class User extends compose(BaseModel, AuthFinder) {
   // Access tokens for API auth
 
   static accessTokens = DbAccessTokensProvider.forModel(User)
+
+  // Remember-me tokens for web session persistence
+
+  static rememberMeTokens = DbRememberMeTokensProvider.forModel(User)
 }

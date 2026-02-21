@@ -44,5 +44,9 @@
 
   "users_col_id": "ID",
   "users_col_email": "E-mail",
-  "users_col_role": "Role"
+  "users_col_role": "Role",
+  "users_actions": "Akce",
+  "impersonate": "Přihlásit jako uživatel",
+  "impersonate_stop": "Ukončit zastupování",
+  "impersonating_as": "Zastupujete uživatele"
 }

@@ -1,6 +1,7 @@
 import { test } from '@japa/runner'
 import { UserFactory } from '#database/factories/user_factory'
 import db from '@adonisjs/lucid/services/db'
+import User from '#models/user'
 
 test.group('Web Auth', (group) => {
   group.each.setup(async () => {
@@ -43,6 +44,65 @@ test.group('Web Auth', (group) => {
     const user = await UserFactory.create()
     const response = await client.get('/profile').loginAs(user)
     response.assertStatus(200)
+  })
+})
+
+test.group('Web Auth - Remember Me', (group) => {
+  const cleanAll = async () => {
+    await db.from('remember_me_tokens').delete()
+    await db.from('users').delete()
+  }
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('POST /login with rememberMe=true creates a remember_me_token in DB', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.create({
+      username: 'remtest',
+      password: 'secret123',
+      displayName: 'Remember Test',
+      email: 'remtest@test.local',
+      keypadId: 9901,
+      role: 'customer',
+    })
+
+    const response = await client
+      .post('/login')
+      .form({ username: 'remtest', password: 'secret123', rememberMe: true })
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    const tokens = await db.from('remember_me_tokens').where('tokenable_id', user.id)
+    assert.lengthOf(tokens, 1)
+  })
+
+  test('POST /login without rememberMe does not create a remember_me_token', async ({
+    client,
+    assert,
+  }) => {
+    await User.create({
+      username: 'noremtest',
+      password: 'secret123',
+      displayName: 'No Remember Test',
+      email: 'noremtest@test.local',
+      keypadId: 9902,
+      role: 'customer',
+    })
+
+    const response = await client
+      .post('/login')
+      .form({ username: 'noremtest', password: 'secret123' })
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    const tokens = await db.from('remember_me_tokens')
+    assert.lengthOf(tokens, 0)
   })
 })
 
