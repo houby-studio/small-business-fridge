@@ -66,6 +66,46 @@ export default class ShopService {
   }
 
   /**
+   * Get featured products — popular recent purchases blended with low-stock urgency.
+   * Score = popularRank * 0.6 + (1 / stockSum) * 0.4
+   * Returns same shape as getProducts() items (no isRecommended / isFavorite fields).
+   */
+  async getFeaturedProducts(limit: number = 8) {
+    // Get order counts per product for the last 30 days
+    const popularRows = await db
+      .from('orders')
+      .join('deliveries', 'deliveries.id', 'orders.delivery_id')
+      .where('orders.created_at', '>', db.raw(`NOW() - INTERVAL '30 days'`))
+      .groupBy('deliveries.product_id')
+      .select('deliveries.product_id')
+      .count('orders.id as cnt')
+
+    const popularCountMap = new Map(popularRows.map((r) => [Number(r.product_id), Number(r.cnt)]))
+
+    // Get all in-stock products
+    const allProducts = await this.getProducts({ showAll: false })
+
+    if (allProducts.length === 0) {
+      return []
+    }
+
+    // Compute score for each product
+    const maxPopular = Math.max(...allProducts.map((p) => popularCountMap.get(p.id) ?? 0), 1)
+
+    const scored = allProducts.map((p) => {
+      const popularCount = popularCountMap.get(p.id) ?? 0
+      const popularRank = popularCount / maxPopular
+      const stockScore = p.stockSum > 0 ? 1 / p.stockSum : 0
+      const score = popularRank * 0.6 + stockScore * 0.4
+      return { product: p, score }
+    })
+
+    scored.sort((a, b) => b.score - a.score)
+
+    return scored.slice(0, limit).map((s) => s.product)
+  }
+
+  /**
    * Get all active categories.
    */
   async getCategories() {

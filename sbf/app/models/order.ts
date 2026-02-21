@@ -19,7 +19,7 @@ export default class Order extends BaseModel {
   declare invoiceId: number | null
 
   @column()
-  declare channel: 'web' | 'keypad' | 'scanner'
+  declare channel: 'web' | 'kiosk' | 'scanner'
 
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime

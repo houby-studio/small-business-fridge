@@ -40,14 +40,14 @@ test.group('OrderService', (group) => {
     assert.equal(delivery.amountLeft, initialStock - 1)
   })
 
-  test('purchase with keypad channel sets correct channel', async ({ assert }) => {
+  test('purchase with kiosk channel sets correct channel', async ({ assert }) => {
     const buyer = await UserFactory.create()
     const delivery = await DeliveryFactory.with('supplier', 1, (s) => s.apply('supplier'))
       .with('product', 1, (p) => p.with('category'))
       .create()
 
-    const order = await orderService.purchase(buyer.id, delivery.id, 'keypad')
-    assert.equal(order.channel, 'keypad')
+    const order = await orderService.purchase(buyer.id, delivery.id, 'kiosk')
+    assert.equal(order.channel, 'kiosk')
   })
 
   test('purchase with scanner channel sets correct channel', async ({ assert }) => {
@@ -103,7 +103,7 @@ test.group('OrderService', (group) => {
 
     // Create 3 orders
     await orderService.purchase(buyer.id, delivery.id, 'web')
-    await orderService.purchase(buyer.id, delivery.id, 'keypad')
+    await orderService.purchase(buyer.id, delivery.id, 'kiosk')
     await orderService.purchase(buyer.id, delivery.id, 'scanner')
 
     const result = await orderService.getOrdersForUser(buyer.id)

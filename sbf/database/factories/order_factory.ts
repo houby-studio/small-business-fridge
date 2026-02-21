@@ -9,8 +9,8 @@ export const OrderFactory = factory
       channel: 'web' as const,
     }
   })
-  .state('keypad', (order) => {
-    order.channel = 'keypad'
+  .state('kiosk', (order) => {
+    order.channel = 'kiosk'
   })
   .state('scanner', (order) => {
     order.channel = 'scanner'

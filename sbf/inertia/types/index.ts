@@ -57,7 +57,7 @@ export interface Order {
   buyerId: number
   deliveryId: number
   invoiceId: number | null
-  channel: 'web' | 'keypad' | 'scanner'
+  channel: 'web' | 'kiosk' | 'scanner'
   createdAt: string
   delivery?: Delivery
 }

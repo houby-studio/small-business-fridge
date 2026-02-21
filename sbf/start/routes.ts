@@ -183,6 +183,8 @@ router
 router
   .group(() => {
     router.get('/kiosk', [KioskController, 'index'])
+    router.get('/kiosk/customer', [KioskController, 'identify'])
+    router.post('/kiosk/purchase-basket', [KioskController, 'purchaseBasket'])
     router.get('/kiosk/shop', [KioskController, 'shop'])
     router.post('/kiosk/purchase', [KioskController, 'purchase'])
   })

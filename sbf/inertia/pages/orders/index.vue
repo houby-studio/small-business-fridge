@@ -54,7 +54,7 @@ const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
 const channelOptions = [
   { label: t('common.all'), value: '' },
   { label: t('common.channel_web'), value: 'web' },
-  { label: t('common.channel_keypad'), value: 'keypad' },
+  { label: t('common.channel_kiosk'), value: 'kiosk' },
   { label: t('common.channel_scanner'), value: 'scanner' },
 ]
 

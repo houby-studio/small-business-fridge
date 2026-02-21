@@ -47,7 +47,7 @@
   "awaiting_payment": "Čeká na platbu",
   "not_invoiced": "Nefakturováno",
   "channel_web": "Web",
-  "channel_keypad": "Klávesnice",
+  "channel_kiosk": "Kiosek",
   "channel_scanner": "Skener",
   "role_customer": "Zákazník",
   "role_supplier": "Dodavatel",

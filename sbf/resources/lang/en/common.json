@@ -47,7 +47,7 @@
   "awaiting_payment": "Awaiting payment",
   "not_invoiced": "Not invoiced",
   "channel_web": "Web",
-  "channel_keypad": "Keypad",
+  "channel_kiosk": "Kiosk",
   "channel_scanner": "Scanner",
   "role_customer": "Customer",
   "role_supplier": "Supplier",
