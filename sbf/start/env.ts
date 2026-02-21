@@ -75,6 +75,7 @@ export default await Env.create(new URL('../', import.meta.url), {
   */
   APP_URL: Env.schema.string.optional(),
   FEEDBACK_URL: Env.schema.string.optional(),
+  SWAGGER_ENABLED: Env.schema.boolean.optional(),
 
   /*
   |----------------------------------------------------------

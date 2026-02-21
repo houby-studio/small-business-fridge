@@ -10,6 +10,7 @@
 import router from '@adonisjs/core/services/router'
 import { middleware } from '#start/kernel'
 import app from '@adonisjs/core/services/app'
+import env from '#start/env'
 
 /*
 |--------------------------------------------------------------------------
@@ -241,3 +242,26 @@ router
   })
   .prefix('/api/v1')
   .use(middleware.throttle({ maxRequests: 60, windowMs: 60_000 }))
+
+/*
+|--------------------------------------------------------------------------
+| Swagger UI (only when SWAGGER_ENABLED=true)
+|--------------------------------------------------------------------------
+*/
+
+if (env.get('SWAGGER_ENABLED')) {
+  const autoswagger = await import('adonis-autoswagger')
+  const swagger = autoswagger.default.default
+  const swaggerModule = await import('../config/swagger.js')
+  const swaggerConfig = swaggerModule.default
+
+  router.get('/swagger', async ({ response }) => {
+    const routes = router.toJSON()
+    const apiRoutes = { root: routes.root.filter((r) => r.pattern.startsWith('/api/v1')) }
+    return response.json(await swagger.json(apiRoutes, swaggerConfig))
+  })
+
+  router.get('/docs', async ({ response }) => {
+    return response.header('Content-Type', 'text/html').send(swagger.ui('/swagger', swaggerConfig))
+  })
+}
