@@ -275,8 +275,8 @@ function requestCheckout() {
     message: t('kiosk.confirm_checkout', { count, total }),
     header: t('kiosk.confirm_checkout_title'),
     icon: 'pi pi-shopping-cart',
-    acceptLabel: t('kiosk.checkout'),
-    rejectLabel: t('kiosk.cancel_basket'),
+    acceptLabel: t('kiosk.complete_purchase'),
+    rejectLabel: t('kiosk.continue_shopping'),
     accept: () => submitBasket(),
   })
 }
@@ -327,6 +327,7 @@ async function submitBasket() {
 // ── Reset ─────────────────────────────────────────────────────────────────────
 
 function resetToIdle() {
+  confirm.close()
   stopIdleTimer()
   appState.value = 'idle'
   customer.value = null
@@ -346,11 +347,11 @@ function requestCancel() {
   }
   confirm.require({
     group: 'kiosk',
-    message: t('kiosk.cancel_basket') + '?',
-    header: t('kiosk.cancel_basket'),
+    message: t('kiosk.cancel_purchase_message'),
+    header: t('kiosk.cancel_purchase'),
     icon: 'pi pi-exclamation-triangle',
-    acceptLabel: t('kiosk.cancel_basket'),
-    rejectLabel: t('common.back'),
+    acceptLabel: t('kiosk.cancel_purchase'),
+    rejectLabel: t('kiosk.continue_shopping'),
     accept: () => resetToIdle(),
   })
 }
@@ -382,6 +383,7 @@ onUnmounted(() => {
       <template #container="{ message, acceptCallback, rejectCallback }">
         <div
           class="mx-auto w-full max-w-lg overflow-hidden rounded-3xl border border-gray-700 bg-gray-800 shadow-2xl"
+          style="min-width: 40vw"
           @click.stop
         >
           <!-- Header -->
