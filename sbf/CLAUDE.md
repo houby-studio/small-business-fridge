@@ -25,7 +25,7 @@ npm run typecheck        # tsc --noEmit
 node ace test --no-color # 91 tests: unit + functional (Japa)
 ```
 
-> If Docker isn't running: `docker compose -f docker-compose.dev.yml up -d postgres`
+> If Docker isn't running: `docker compose -f compose.dev.yml up -d postgres`
 > Tests need PostgreSQL on localhost:5433, database `sbf_test`
 
 **Never leave a task incomplete if any of these fail.** Fix the failure before moving on.

@@ -44,7 +44,7 @@ PostgreSQL must be running. Start it with:
 
 ```bash
 cd sbf/
-docker compose -f docker-compose.dev.yml up -d postgres
+docker compose -f compose.dev.yml up -d postgres
 ```
 
 The test database `sbf_test` is created automatically by the Docker compose setup alongside the
