@@ -10,7 +10,6 @@ import ToggleSwitch from 'primevue/toggleswitch'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import ConfirmDialog from 'primevue/confirmdialog'
-import Dialog from 'primevue/dialog'
 import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from '~/composables/use_i18n'
 import type { SharedProps } from '~/types'
@@ -46,19 +45,6 @@ const confirm = useConfirm()
 const filterSearch = ref(props.filters.search)
 const filterRole = ref(props.filters.role)
 
-// Block dialog (single "Zavřít" button — server blocks the action in both cases)
-const blockDialogVisible = ref(false)
-const blockDialogMessage = ref('')
-
-function showBlockDialog(message: string) {
-  blockDialogMessage.value = message
-  blockDialogVisible.value = true
-}
-
-function closeBlockDialog() {
-  blockDialogVisible.value = false
-}
-
 const roleOptions = [
   { label: t('common.all'), value: '' },
   { label: t('common.role_customer'), value: 'customer' },
@@ -82,13 +68,7 @@ function updateRole(userId: number, role: string) {
   router.put(`/admin/users/${userId}`, { role }, { preserveState: true })
 }
 
-function toggleDisabled(userId: number, isDisabled: boolean, data: UserRow) {
-  if (isDisabled && (data.hasUninvoicedOrders || data.hasUnpaidInvoices)) {
-    // Server blocks both cases — just inform the admin
-    showBlockDialog(t('messages.user_has_uninvoiced_orders'))
-    return
-  }
-
+function toggleDisabled(userId: number, isDisabled: boolean) {
   router.put(`/admin/users/${userId}`, { isDisabled }, { preserveState: true })
 }
 
@@ -148,22 +128,6 @@ function impersonateUser(userId: number) {
   <AppLayout>
     <Head :title="t('admin.users_title')" />
     <ConfirmDialog />
-
-    <!-- Single-button block dialog (no confirm needed — server blocks in all cases) -->
-    <Dialog
-      v-model:visible="blockDialogVisible"
-      modal
-      :header="t('common.confirm')"
-      :style="{ width: '30rem' }"
-    >
-      <div class="flex items-start gap-3">
-        <span class="pi pi-exclamation-triangle mt-0.5 text-xl text-yellow-500" />
-        <p>{{ blockDialogMessage }}</p>
-      </div>
-      <template #footer>
-        <Button :label="t('common.close')" @click="closeBlockDialog" />
-      </template>
-    </Dialog>
 
     <h1 class="mb-6 text-2xl font-bold text-gray-900 dark:text-zinc-100">
       {{ t('admin.users_heading') }}
@@ -244,24 +208,25 @@ function impersonateUser(userId: number) {
           />
         </template>
       </Column>
-      <Column :header="t('admin.users_disabled')" style="width: 100px">
+      <Column :header="t('admin.users_disabled')" style="width: 110px">
         <template #body="{ data }">
-          <div class="relative inline-flex">
-            <ToggleSwitch
-              :modelValue="data.isDisabled"
-              @update:modelValue="(val: boolean) => toggleDisabled(data.id, val, data)"
-            />
-            <!-- Overlay blocks the click before it reaches the switch when action is forbidden -->
-            <div
-              v-if="!data.isDisabled && (data.hasUninvoicedOrders || data.hasUnpaidInvoices)"
-              class="absolute inset-0 cursor-not-allowed"
-              @click="showBlockDialog(t('messages.user_has_uninvoiced_orders'))"
-            />
-          </div>
+          <!-- If user has pending issues and is currently active, show warning instead of toggle -->
+          <Tag
+            v-if="!data.isDisabled && (data.hasUninvoicedOrders || data.hasUnpaidInvoices)"
+            severity="warn"
+            icon="pi pi-exclamation-circle"
+            :title="t('messages.user_has_uninvoiced_orders')"
+            :aria-label="t('messages.user_has_uninvoiced_orders')"
+          />
+          <ToggleSwitch
+            v-else
+            :modelValue="data.isDisabled"
+            @update:modelValue="(val: boolean) => toggleDisabled(data.id, val)"
+          />
         </template>
       </Column>
 
-      <Column :header="t('admin.users_actions')" style="width: 150px">
+      <Column :header="t('admin.users_actions')" style="width: 100px">
         <template #body="{ data }">
           <div class="flex items-center gap-1">
             <Button
@@ -272,13 +237,6 @@ function impersonateUser(userId: number) {
               text
               :aria-label="t('admin.users_generate_invoice')"
               @click="generateInvoiceForUser(data.id, data.displayName)"
-            />
-            <Tag
-              v-else-if="data.hasUnpaidInvoices"
-              severity="warn"
-              icon="pi pi-exclamation-circle"
-              :aria-label="t('admin.users_has_unpaid')"
-              :title="t('admin.users_has_unpaid')"
             />
             <Button
               v-if="

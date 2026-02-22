@@ -81,10 +81,6 @@ export default class UsersController {
       user = await service.updateUser(params.id, data)
     } catch (err) {
       if (err instanceof Error && err.message === 'USER_HAS_UNINVOICED_ORDERS') {
-        session.flash('alert', {
-          type: 'error',
-          message: i18n.t('messages.user_has_uninvoiced_orders'),
-        })
         return response.redirect(usersUrl(request))
       }
       throw err
