@@ -21,7 +21,6 @@ RUN node ace build
 
 # Production stage
 FROM base
-RUN apk add --no-cache tzdata
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=production-deps /app/node_modules /app/node_modules
