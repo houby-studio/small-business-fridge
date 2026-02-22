@@ -1,7 +1,6 @@
 Critical / High Priority
 
-Gap: Restock notifications not triggered  
- Details: Email template exists (restock.edge), but DeliveryService never calls it when a favorite product is restocked
+~~Gap: Restock notifications not triggered~~ ✓ FIXED — DeliveriesController.store() calls NotificationService.sendRestockNotification() on each new delivery
 ────────────────────────────────────────  
  Gap: ESL Integration (AIMS/JAMES)  
  Details: Env var ESL_AIMS_ENABLED referenced but no scheduled sync tasks or actual integration logic; /admin/esl-mapping route is a
