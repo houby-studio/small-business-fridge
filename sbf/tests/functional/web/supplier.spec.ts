@@ -164,6 +164,130 @@ test.group('Web Supplier - invoice index and generate', (group) => {
   })
 })
 
+test.group('Web Supplier - generate invoice for single buyer', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('supplier can generate invoice for a specific buyer', async ({ client, assert }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    const delivery = await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountLeft: 5,
+      price: 30,
+    }).create()
+
+    await OrderFactory.merge({ buyerId: buyer.id, deliveryId: delivery.id }).create()
+
+    const response = await client
+      .post(`/supplier/invoice/generate/${buyer.id}`)
+      .loginAs(supplier)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    assert.equal(response.header('location'), '/supplier/invoice')
+
+    const invoice = await Invoice.query()
+      .where('supplierId', supplier.id)
+      .where('buyerId', buyer.id)
+      .first()
+
+    assert.isNotNull(invoice)
+    assert.equal(invoice!.totalCost, 30)
+  })
+
+  test('generate for buyer with no orders redirects with info flash', async ({
+    client,
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+
+    const response = await client
+      .post(`/supplier/invoice/generate/${buyer.id}`)
+      .loginAs(supplier)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    assert.equal(response.header('location'), '/supplier/invoice')
+
+    const count = await Invoice.query().where('supplierId', supplier.id).count('* as total')
+    assert.equal(Number(count[0].$extras.total), 0)
+  })
+
+  test('customer cannot call generate for buyer endpoint', async ({ client }) => {
+    const customer = await UserFactory.create()
+    const buyer = await UserFactory.create()
+
+    const response = await client
+      .post(`/supplier/invoice/generate/${buyer.id}`)
+      .loginAs(customer)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    // Role middleware redirects customers away from supplier routes
+  })
+
+  test('generate for buyer only invoices calling supplier orders, not other suppliers', async ({
+    client,
+    assert,
+  }) => {
+    const supplier1 = await UserFactory.apply('supplier').create()
+    const supplier2 = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+    const category = await CategoryFactory.create()
+
+    const product1 = await ProductFactory.merge({ categoryId: category.id }).create()
+    const delivery1 = await DeliveryFactory.merge({
+      supplierId: supplier1.id,
+      productId: product1.id,
+      amountLeft: 5,
+      price: 10,
+    }).create()
+
+    const product2 = await ProductFactory.merge({ categoryId: category.id }).create()
+    const delivery2 = await DeliveryFactory.merge({
+      supplierId: supplier2.id,
+      productId: product2.id,
+      amountLeft: 5,
+      price: 20,
+    }).create()
+
+    await OrderFactory.merge({ buyerId: buyer.id, deliveryId: delivery1.id }).create()
+    await OrderFactory.merge({ buyerId: buyer.id, deliveryId: delivery2.id }).create()
+
+    // supplier1 generates invoice for buyer
+    const response = await client
+      .post(`/supplier/invoice/generate/${buyer.id}`)
+      .loginAs(supplier1)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    // Only supplier1's invoice should exist
+    const invoice1 = await Invoice.query()
+      .where('supplierId', supplier1.id)
+      .where('buyerId', buyer.id)
+      .first()
+    assert.isNotNull(invoice1)
+    assert.equal(invoice1!.totalCost, 10) // only supplier1's order
+
+    // supplier2's order must still be uninvoiced
+    const invoice2 = await Invoice.query()
+      .where('supplierId', supplier2.id)
+      .where('buyerId', buyer.id)
+      .first()
+    assert.isNull(invoice2)
+  })
+})
+
 test.group('Web Supplier - payments status filter', (group) => {
   group.each.setup(cleanAll)
   group.each.teardown(cleanAll)

@@ -135,6 +135,7 @@ router
     // Invoice generation
     router.get('/invoice', [SupplierInvoiceController, 'index'])
     router.post('/invoice/generate', [SupplierInvoiceController, 'generate'])
+    router.post('/invoice/generate/:buyerId', [SupplierInvoiceController, 'generateForBuyer'])
 
     // Payments
     router.get('/payments', [SupplierPaymentsController, 'index'])
@@ -184,6 +185,9 @@ router
 
     // Impersonation
     router.post('/users/:id/impersonate', [AdminImpersonationController, 'store'])
+
+    // Generate invoice for a user (across all suppliers)
+    router.post('/users/:id/generate-invoice', [AdminUsersController, 'generateInvoice'])
   })
   .prefix('/admin')
   .use([middleware.auth(), middleware.role({ roles: ['admin'] })])

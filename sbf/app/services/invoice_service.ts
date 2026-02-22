@@ -244,4 +244,148 @@ export default class InvoiceService {
 
     return invoice
   }
+
+  /**
+   * Generate an invoice for a single buyer from a specific supplier.
+   * Returns the Invoice or null if no uninvoiced orders exist for that pair.
+   */
+  async generateInvoiceForBuyer(supplierId: number, buyerId: number): Promise<Invoice | null> {
+    return db.transaction(async (trx) => {
+      const orders = await Order.query({ client: trx })
+        .whereNull('invoiceId')
+        .where('buyerId', buyerId)
+        .whereHas('delivery', (q) => {
+          q.where('supplierId', supplierId)
+        })
+        .preload('delivery')
+
+      if (orders.length === 0) {
+        return null
+      }
+
+      const totalCost = orders.reduce((sum, o) => sum + o.delivery.price, 0)
+      const isSelfInvoice = buyerId === supplierId
+
+      const invoice = await Invoice.create(
+        {
+          buyerId,
+          supplierId,
+          totalCost,
+          isPaid: isSelfInvoice,
+          isPaymentRequested: isSelfInvoice,
+          autoReminderCount: 0,
+          manualReminderCount: 0,
+        },
+        { client: trx }
+      )
+
+      await Order.query({ client: trx })
+        .whereIn(
+          'id',
+          orders.map((o) => o.id)
+        )
+        .update({ invoiceId: invoice.id })
+
+      AuditService.log(supplierId, 'invoice.generated', 'invoice', invoice.id, buyerId, {
+        total: totalCost,
+        orderCount: orders.length,
+      })
+
+      return invoice
+    })
+  }
+
+  /**
+   * Admin-level: generate invoices for a single buyer across ALL suppliers.
+   * Groups uninvoiced orders by supplierId and creates one invoice per group.
+   */
+  async generateInvoicesForUser(actorId: number, buyerId: number): Promise<Invoice[]> {
+    return db.transaction(async (trx) => {
+      const allOrders = await Order.query({ client: trx })
+        .whereNull('invoiceId')
+        .where('buyerId', buyerId)
+        .preload('delivery')
+
+      if (allOrders.length === 0) {
+        return []
+      }
+
+      const bySupplier = new Map<number, typeof allOrders>()
+      for (const order of allOrders) {
+        const supplierId = order.delivery.supplierId
+        const existing = bySupplier.get(supplierId) || []
+        existing.push(order)
+        bySupplier.set(supplierId, existing)
+      }
+
+      const invoices: Invoice[] = []
+
+      for (const [supplierId, orders] of bySupplier) {
+        const totalCost = orders.reduce((sum, o) => sum + o.delivery.price, 0)
+        const isSelfInvoice = buyerId === supplierId
+
+        const invoice = await Invoice.create(
+          {
+            buyerId,
+            supplierId,
+            totalCost,
+            isPaid: isSelfInvoice,
+            isPaymentRequested: isSelfInvoice,
+            autoReminderCount: 0,
+            manualReminderCount: 0,
+          },
+          { client: trx }
+        )
+
+        await Order.query({ client: trx })
+          .whereIn(
+            'id',
+            orders.map((o) => o.id)
+          )
+          .update({ invoiceId: invoice.id })
+
+        invoices.push(invoice)
+
+        AuditService.log(actorId, 'invoice.generated', 'invoice', invoice.id, buyerId, {
+          total: totalCost,
+          orderCount: orders.length,
+          supplierId,
+        })
+      }
+
+      return invoices
+    })
+  }
+
+  /**
+   * Returns the subset of buyerIds that have at least one uninvoiced order.
+   */
+  async getUninvoicedBuyerIds(buyerIds: number[]): Promise<Set<number>> {
+    if (buyerIds.length === 0) return new Set()
+
+    const rows = await db
+      .from('orders')
+      .whereIn('buyer_id', buyerIds)
+      .whereNull('invoice_id')
+      .distinct('buyer_id')
+      .select('buyer_id')
+
+    return new Set(rows.map((r) => r.buyer_id))
+  }
+
+  /**
+   * Returns the subset of buyerIds that have at least one unpaid invoice.
+   */
+  async getUnpaidBuyerIds(buyerIds: number[]): Promise<Set<number>> {
+    if (buyerIds.length === 0) return new Set()
+
+    const rows = await db
+      .from('invoices')
+      .whereIn('buyer_id', buyerIds)
+      .where('is_paid', false)
+      .distinct('buyer_id')
+      .select('buyer_id')
+
+    return new Set(rows.map((r) => r.buyer_id))
+  }
 }

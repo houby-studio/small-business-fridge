@@ -44,5 +44,8 @@
   "impersonate_admin": "Nelze zastupovat administrátora.",
   "impersonate_kiosk": "Nelze zastupovat kioskový účet.",
   "token_created": "API token byl vytvořen. Zkopírujte hodnotu nyní — nebude znovu zobrazena.",
-  "token_revoked": "API token byl odvolán."
+  "token_revoked": "API token byl odvolán.",
+  "user_has_uninvoiced_orders": "Nelze deaktivovat uživatele — má nefakturované objednávky nebo nezaplacené faktury. Nejprve vygenerujte faktury.",
+  "invoice_generated_for_user": "{count, plural, one {Vygenerována {count} faktura} few {Vygenerovány {count} faktury} other {Vygenerováno {count} faktur}} pro uživatele {name}.",
+  "invoice_no_orders_for_buyer": "Zákazník nemá žádné nefakturované objednávky."
 }

@@ -9,6 +9,8 @@ import Select from 'primevue/select'
 import ToggleSwitch from 'primevue/toggleswitch'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
+import ConfirmDialog from 'primevue/confirmdialog'
+import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from '~/composables/use_i18n'
 import type { SharedProps } from '~/types'
 
@@ -22,6 +24,8 @@ interface UserRow {
   isDisabled: boolean
   keypadId: number
   createdAt: string
+  hasUninvoicedOrders: boolean
+  hasUnpaidInvoices: boolean
 }
 
 interface PaginatedUsers {
@@ -36,6 +40,7 @@ const props = defineProps<{
 const { t } = useI18n()
 const page = usePage<SharedProps>()
 const currentUserId = computed(() => page.props.user?.id)
+const confirm = useConfirm()
 
 const filterSearch = ref(props.filters.search)
 const filterRole = ref(props.filters.role)
@@ -53,18 +58,25 @@ const roleEditOptions = [
   { label: t('common.role_admin'), value: 'admin' },
 ]
 
-function roleSeverity(role: string): 'info' | 'warn' | 'danger' {
-  if (role === 'admin') return 'danger'
-  if (role === 'supplier') return 'warn'
-  return 'info'
-}
-
 function updateRole(userId: number, role: string) {
   router.put(`/admin/users/${userId}`, { role }, { preserveState: true })
 }
 
 function toggleDisabled(userId: number, isDisabled: boolean) {
   router.put(`/admin/users/${userId}`, { isDisabled }, { preserveState: true })
+}
+
+function generateInvoiceForUser(userId: number, displayName: string) {
+  confirm.require({
+    message: t('admin.users_generate_invoice_confirm', { name: displayName }),
+    header: t('common.confirm'),
+    icon: 'pi pi-receipt',
+    acceptLabel: t('admin.users_generate_invoice'),
+    rejectLabel: t('common.cancel'),
+    accept: () => {
+      router.post(`/admin/users/${userId}/generate-invoice`)
+    },
+  })
 }
 
 function toggleKiosk(userId: number, isKiosk: boolean) {
@@ -109,6 +121,7 @@ function impersonateUser(userId: number) {
 <template>
   <AppLayout>
     <Head :title="t('admin.users_title')" />
+    <ConfirmDialog />
 
     <h1 class="mb-6 text-2xl font-bold text-gray-900 dark:text-zinc-100">
       {{ t('admin.users_heading') }}
@@ -189,31 +202,51 @@ function impersonateUser(userId: number) {
           />
         </template>
       </Column>
-      <Column :header="t('admin.users_disabled')" style="width: 100px">
+      <Column :header="t('admin.users_disabled')" style="width: 110px">
         <template #body="{ data }">
+          <!-- If user has pending issues and is currently active, show warning instead of toggle -->
+          <Tag
+            v-if="!data.isDisabled && (data.hasUninvoicedOrders || data.hasUnpaidInvoices)"
+            severity="warn"
+            icon="pi pi-exclamation-circle"
+            :title="t('messages.user_has_uninvoiced_orders')"
+            :aria-label="t('messages.user_has_uninvoiced_orders')"
+          />
           <ToggleSwitch
+            v-else
             :modelValue="data.isDisabled"
             @update:modelValue="(val: boolean) => toggleDisabled(data.id, val)"
           />
         </template>
       </Column>
 
-      <Column :header="t('admin.users_actions')" style="width: 80px">
+      <Column :header="t('admin.users_actions')" style="width: 100px">
         <template #body="{ data }">
-          <Button
-            v-if="
-              !data.isKiosk &&
-              data.role !== 'admin' &&
-              data.id !== currentUserId &&
-              !data.isDisabled
-            "
-            icon="pi pi-user-edit"
-            severity="warn"
-            size="small"
-            text
-            :aria-label="t('admin.impersonate')"
-            @click="impersonateUser(data.id)"
-          />
+          <div class="flex items-center gap-1">
+            <Button
+              v-if="data.hasUninvoicedOrders"
+              icon="pi pi-receipt"
+              severity="warn"
+              size="small"
+              text
+              :aria-label="t('admin.users_generate_invoice')"
+              @click="generateInvoiceForUser(data.id, data.displayName)"
+            />
+            <Button
+              v-if="
+                !data.isKiosk &&
+                data.role !== 'admin' &&
+                data.id !== currentUserId &&
+                !data.isDisabled
+              "
+              icon="pi pi-user-edit"
+              severity="warn"
+              size="small"
+              text
+              :aria-label="t('admin.impersonate')"
+              @click="impersonateUser(data.id)"
+            />
+          </div>
         </template>
       </Column>
 

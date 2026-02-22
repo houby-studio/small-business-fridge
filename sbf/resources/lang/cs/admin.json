@@ -48,5 +48,9 @@
   "users_actions": "Akce",
   "impersonate": "Přihlásit jako uživatel",
   "impersonate_stop": "Ukončit zastupování",
-  "impersonating_as": "Zastupujete uživatele"
+  "impersonating_as": "Zastupujete uživatele",
+  "users_generate_invoice": "Vygenerovat fakturu",
+  "users_generate_invoice_confirm": "Vygenerovat faktury pro uživatele {name} u všech dodavatelů? Tato akce je nevratná.",
+  "users_has_unpaid": "Má nezaplacené faktury",
+  "users_disable_unpaid_confirm": "Uživatel {name} má nezaplacené faktury. Opravdu ho chcete deaktivovat?"
 }
