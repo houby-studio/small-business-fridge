@@ -58,12 +58,6 @@ const roleEditOptions = [
   { label: t('common.role_admin'), value: 'admin' },
 ]
 
-function roleSeverity(role: string): 'info' | 'warn' | 'danger' {
-  if (role === 'admin') return 'danger'
-  if (role === 'supplier') return 'warn'
-  return 'info'
-}
-
 function updateRole(userId: number, role: string) {
   router.put(`/admin/users/${userId}`, { role }, { preserveState: true })
 }

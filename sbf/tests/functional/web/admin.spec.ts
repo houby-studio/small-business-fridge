@@ -254,4 +254,116 @@ test.group('Admin - generate invoice for user', (group) => {
     await buyer.refresh()
     assert.isTrue(buyer.isDisabled)
   })
+
+  test('customer cannot call generate invoice for user endpoint', async ({ client }) => {
+    const customer = await UserFactory.create()
+    const buyer = await UserFactory.create()
+
+    const response = await client
+      .post(`/admin/users/${buyer.id}/generate-invoice`)
+      .loginAs(customer)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    // Role middleware redirects non-admins away
+  })
+
+  test('supplier cannot call generate invoice for user endpoint', async ({ client }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+
+    const response = await client
+      .post(`/admin/users/${buyer.id}/generate-invoice`)
+      .loginAs(supplier)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+  })
+})
+
+test.group('Admin - users index flags', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('user with uninvoiced orders has hasUninvoicedOrders=true in response', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const supplier = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    const delivery = await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountLeft: 5,
+      price: 10,
+    }).create()
+
+    await OrderFactory.merge({ buyerId: buyer.id, deliveryId: delivery.id }).create()
+
+    const response = await client
+      .get('/admin/users')
+      .loginAs(admin)
+      .header('X-Inertia', 'true')
+      .header('X-Inertia-Version', '1')
+
+    response.assertStatus(200)
+    const body = response.body()
+    const users: any[] = body.props.users.data
+    const buyerRow = users.find((u: any) => u.id === buyer.id)
+
+    assert.isDefined(buyerRow, 'buyer should appear in user list')
+    assert.isTrue(buyerRow.hasUninvoicedOrders)
+    assert.isFalse(buyerRow.hasUnpaidInvoices)
+  })
+
+  test('user with unpaid invoice has hasUnpaidInvoices=true in response', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const supplier = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+
+    await InvoiceFactory.merge({ buyerId: buyer.id, supplierId: supplier.id }).create()
+
+    const response = await client
+      .get('/admin/users')
+      .loginAs(admin)
+      .header('X-Inertia', 'true')
+      .header('X-Inertia-Version', '1')
+
+    response.assertStatus(200)
+    const body = response.body()
+    const users: any[] = body.props.users.data
+    const buyerRow = users.find((u: any) => u.id === buyer.id)
+
+    assert.isDefined(buyerRow, 'buyer should appear in user list')
+    assert.isFalse(buyerRow.hasUninvoicedOrders)
+    assert.isTrue(buyerRow.hasUnpaidInvoices)
+  })
+
+  test('user with no pending items has both flags false', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const buyer = await UserFactory.create()
+
+    const response = await client
+      .get('/admin/users')
+      .loginAs(admin)
+      .header('X-Inertia', 'true')
+      .header('X-Inertia-Version', '1')
+
+    response.assertStatus(200)
+    const body = response.body()
+    const users: any[] = body.props.users.data
+    const buyerRow = users.find((u: any) => u.id === buyer.id)
+
+    assert.isDefined(buyerRow, 'buyer should appear in user list')
+    assert.isFalse(buyerRow.hasUninvoicedOrders)
+    assert.isFalse(buyerRow.hasUnpaidInvoices)
+  })
 })
