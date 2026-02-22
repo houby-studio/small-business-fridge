@@ -47,6 +47,9 @@
   "invoice_no_orders": "No uninvoiced orders.",
   "invoice_customers": "Customers",
   "invoice_orders": "Orders",
+  "invoice_generate_for_buyer": "Generate invoice",
+  "invoice_confirm_buyer": "Generate invoice for {name}? ({count} orders, {amount} CZK) This action cannot be undone.",
+  "invoice_generated_for_buyer": "Invoice for customer {name} has been generated.",
 
   "payments_title": "Payments",
   "payments_heading": "Payment Management",

@@ -9,6 +9,8 @@ import Select from 'primevue/select'
 import ToggleSwitch from 'primevue/toggleswitch'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
+import ConfirmDialog from 'primevue/confirmdialog'
+import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from '~/composables/use_i18n'
 import type { SharedProps } from '~/types'
 
@@ -22,6 +24,8 @@ interface UserRow {
   isDisabled: boolean
   keypadId: number
   createdAt: string
+  hasUninvoicedOrders: boolean
+  hasUnpaidInvoices: boolean
 }
 
 interface PaginatedUsers {
@@ -36,6 +40,7 @@ const props = defineProps<{
 const { t } = useI18n()
 const page = usePage<SharedProps>()
 const currentUserId = computed(() => page.props.user?.id)
+const confirm = useConfirm()
 
 const filterSearch = ref(props.filters.search)
 const filterRole = ref(props.filters.role)
@@ -63,8 +68,47 @@ function updateRole(userId: number, role: string) {
   router.put(`/admin/users/${userId}`, { role }, { preserveState: true })
 }
 
-function toggleDisabled(userId: number, isDisabled: boolean) {
+function toggleDisabled(userId: number, isDisabled: boolean, data: UserRow) {
+  if (isDisabled && data.hasUninvoicedOrders) {
+    // Server will block this — show client-side info instead of a pointless confirm
+    confirm.require({
+      message: t('messages.user_has_uninvoiced_orders'),
+      header: t('common.confirm'),
+      icon: 'pi pi-exclamation-triangle',
+      rejectLabel: t('common.close'),
+      acceptClass: 'hidden',
+    })
+    return
+  }
+
+  if (isDisabled && data.hasUnpaidInvoices) {
+    confirm.require({
+      message: t('admin.users_disable_unpaid_confirm', { name: data.displayName }),
+      header: t('common.confirm'),
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: t('common.confirm'),
+      rejectLabel: t('common.cancel'),
+      accept: () => {
+        router.put(`/admin/users/${userId}`, { isDisabled }, { preserveState: true })
+      },
+    })
+    return
+  }
+
   router.put(`/admin/users/${userId}`, { isDisabled }, { preserveState: true })
+}
+
+function generateInvoiceForUser(userId: number, displayName: string) {
+  confirm.require({
+    message: t('admin.users_generate_invoice_confirm', { name: displayName }),
+    header: t('common.confirm'),
+    icon: 'pi pi-file-invoice',
+    acceptLabel: t('admin.users_generate_invoice'),
+    rejectLabel: t('common.cancel'),
+    accept: () => {
+      router.post(`/admin/users/${userId}/generate-invoice`)
+    },
+  })
 }
 
 function toggleKiosk(userId: number, isKiosk: boolean) {
@@ -109,6 +153,7 @@ function impersonateUser(userId: number) {
 <template>
   <AppLayout>
     <Head :title="t('admin.users_title')" />
+    <ConfirmDialog />
 
     <h1 class="mb-6 text-2xl font-bold text-gray-900 dark:text-zinc-100">
       {{ t('admin.users_heading') }}
@@ -193,27 +238,44 @@ function impersonateUser(userId: number) {
         <template #body="{ data }">
           <ToggleSwitch
             :modelValue="data.isDisabled"
-            @update:modelValue="(val: boolean) => toggleDisabled(data.id, val)"
+            @update:modelValue="(val: boolean) => toggleDisabled(data.id, val, data)"
           />
         </template>
       </Column>
 
-      <Column :header="t('admin.users_actions')" style="width: 80px">
+      <Column :header="t('admin.users_actions')" style="width: 150px">
         <template #body="{ data }">
-          <Button
-            v-if="
-              !data.isKiosk &&
-              data.role !== 'admin' &&
-              data.id !== currentUserId &&
-              !data.isDisabled
-            "
-            icon="pi pi-user-edit"
-            severity="warn"
-            size="small"
-            text
-            :aria-label="t('admin.impersonate')"
-            @click="impersonateUser(data.id)"
-          />
+          <div class="flex items-center gap-1">
+            <Button
+              v-if="data.hasUninvoicedOrders"
+              icon="pi pi-file-invoice"
+              severity="warn"
+              size="small"
+              text
+              :aria-label="t('admin.users_generate_invoice')"
+              @click="generateInvoiceForUser(data.id, data.displayName)"
+            />
+            <Tag
+              v-else-if="data.hasUnpaidInvoices"
+              severity="warn"
+              icon="pi pi-exclamation-circle"
+              :aria-label="t('admin.users_has_unpaid')"
+            />
+            <Button
+              v-if="
+                !data.isKiosk &&
+                data.role !== 'admin' &&
+                data.id !== currentUserId &&
+                !data.isDisabled
+              "
+              icon="pi pi-user-edit"
+              severity="warn"
+              size="small"
+              text
+              :aria-label="t('admin.impersonate')"
+              @click="impersonateUser(data.id)"
+            />
+          </div>
         </template>
       </Column>
 

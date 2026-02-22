@@ -329,6 +329,114 @@ test.group('InvoiceService - getInvoicesForBuyer status filter', (group) => {
   })
 })
 
+test.group('InvoiceService - generateInvoiceForBuyer', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('generates invoice for specific buyer only', async ({ assert }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const buyer1 = await UserFactory.create()
+    const buyer2 = await UserFactory.create()
+    const delivery = await DeliveryFactory.with('product', 1, (p) => p.with('category'))
+      .merge({ supplierId: supplier.id, amountSupplied: 10, amountLeft: 8, price: 20 })
+      .create()
+
+    await OrderFactory.merge({ buyerId: buyer1.id, deliveryId: delivery.id }).create()
+    await OrderFactory.merge({ buyerId: buyer2.id, deliveryId: delivery.id }).create()
+
+    const invoice = await invoiceService.generateInvoiceForBuyer(supplier.id, buyer1.id)
+
+    assert.isNotNull(invoice)
+    assert.equal(invoice!.buyerId, buyer1.id)
+    assert.equal(invoice!.supplierId, supplier.id)
+    assert.equal(invoice!.totalCost, 20)
+
+    // buyer2's order must remain uninvoiced
+    const remaining = await invoiceService.generateInvoiceForBuyer(supplier.id, buyer2.id)
+    assert.isNotNull(remaining)
+  })
+
+  test('returns null when no uninvoiced orders for that buyer+supplier pair', async ({
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+
+    const result = await invoiceService.generateInvoiceForBuyer(supplier.id, buyer.id)
+    assert.isNull(result)
+  })
+})
+
+test.group('InvoiceService - generateInvoicesForUser', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('creates invoices grouped by supplier for one buyer', async ({ assert }) => {
+    const supplier1 = await UserFactory.apply('supplier').create()
+    const supplier2 = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+
+    const delivery1 = await DeliveryFactory.with('product', 1, (p) => p.with('category'))
+      .merge({ supplierId: supplier1.id, amountSupplied: 5, amountLeft: 4, price: 10 })
+      .create()
+    const delivery2 = await DeliveryFactory.with('product', 1, (p) => p.with('category'))
+      .merge({ supplierId: supplier2.id, amountSupplied: 5, amountLeft: 4, price: 25 })
+      .create()
+
+    await OrderFactory.merge({ buyerId: buyer.id, deliveryId: delivery1.id }).create()
+    await OrderFactory.merge({ buyerId: buyer.id, deliveryId: delivery2.id }).create()
+
+    const invoices = await invoiceService.generateInvoicesForUser(buyer.id, buyer.id)
+
+    assert.lengthOf(invoices, 2)
+    const supplierIds = invoices.map((i) => i.supplierId).sort()
+    assert.deepEqual(supplierIds, [supplier1.id, supplier2.id].sort())
+  })
+
+  test('returns empty array when no uninvoiced orders', async ({ assert }) => {
+    const buyer = await UserFactory.create()
+    const invoices = await invoiceService.generateInvoicesForUser(buyer.id, buyer.id)
+    assert.lengthOf(invoices, 0)
+  })
+})
+
+test.group('InvoiceService - getUninvoicedBuyerIds / getUnpaidBuyerIds', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('getUninvoicedBuyerIds returns correct set of IDs', async ({ assert }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const buyer1 = await UserFactory.create()
+    const buyer2 = await UserFactory.create()
+    const delivery = await DeliveryFactory.with('product', 1, (p) => p.with('category'))
+      .merge({ supplierId: supplier.id, amountSupplied: 10, amountLeft: 8, price: 10 })
+      .create()
+
+    await OrderFactory.merge({ buyerId: buyer1.id, deliveryId: delivery.id }).create()
+
+    const result = await invoiceService.getUninvoicedBuyerIds([buyer1.id, buyer2.id])
+
+    assert.isTrue(result.has(buyer1.id))
+    assert.isFalse(result.has(buyer2.id))
+  })
+
+  test('getUnpaidBuyerIds returns correct set of IDs', async ({ assert }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const buyer1 = await UserFactory.create()
+    const buyer2 = await UserFactory.create()
+
+    await InvoiceFactory.merge({ buyerId: buyer1.id, supplierId: supplier.id }).create()
+    await InvoiceFactory.apply('paid')
+      .merge({ buyerId: buyer2.id, supplierId: supplier.id })
+      .create()
+
+    const result = await invoiceService.getUnpaidBuyerIds([buyer1.id, buyer2.id])
+
+    assert.isTrue(result.has(buyer1.id))
+    assert.isFalse(result.has(buyer2.id))
+  })
+})
+
 test.group('InvoiceService - getUninvoicedSummary', (group) => {
   group.each.setup(cleanAll)
   group.each.teardown(cleanAll)

@@ -37,6 +37,28 @@ function generateInvoices() {
     },
   })
 }
+
+function generateInvoiceForBuyer(
+  buyerId: number,
+  buyerName: string,
+  orderCount: number,
+  totalCost: number
+) {
+  confirm.require({
+    message: t('supplier.invoice_confirm_buyer', {
+      name: buyerName,
+      count: orderCount,
+      amount: totalCost,
+    }),
+    header: t('common.confirm'),
+    icon: 'pi pi-file-invoice',
+    acceptLabel: t('supplier.invoice_generate_for_buyer'),
+    rejectLabel: t('common.cancel'),
+    accept: () => {
+      router.post(`/supplier/invoice/generate/${buyerId}`)
+    },
+  })
+}
 </script>
 
 <template>
@@ -129,6 +151,24 @@ function generateInvoices() {
             <span class="font-semibold">{{
               t('common.price_with_currency', { price: data.totalCost })
             }}</span>
+          </template>
+        </Column>
+        <Column :header="t('common.actions')" style="width: 160px">
+          <template #body="{ data }">
+            <Button
+              :label="t('supplier.invoice_generate_for_buyer')"
+              icon="pi pi-file-invoice"
+              size="small"
+              severity="secondary"
+              @click="
+                generateInvoiceForBuyer(
+                  data.buyerId,
+                  data.buyerName,
+                  data.orderCount,
+                  data.totalCost
+                )
+              "
+            />
           </template>
         </Column>
       </DataTable>

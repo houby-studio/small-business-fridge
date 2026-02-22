@@ -3,6 +3,7 @@ import Order from '#models/order'
 import Invoice from '#models/invoice'
 import Category from '#models/category'
 import db from '@adonisjs/lucid/services/db'
+import InvoiceService from '#services/invoice_service'
 
 export default class AdminService {
   /**
@@ -122,6 +123,7 @@ export default class AdminService {
 
   /**
    * Update user properties (role, disabled status, etc.).
+   * Throws 'USER_HAS_UNINVOICED_ORDERS' if trying to disable a user with pending financial items.
    */
   async updateUser(
     userId: number,
@@ -132,6 +134,17 @@ export default class AdminService {
     }
   ) {
     const user = await User.findOrFail(userId)
+
+    if (data.isDisabled === true) {
+      const invoiceService = new InvoiceService()
+      const [uninvoiced, unpaid] = await Promise.all([
+        invoiceService.getUninvoicedBuyerIds([user.id]),
+        invoiceService.getUnpaidBuyerIds([user.id]),
+      ])
+      if (uninvoiced.has(user.id) || unpaid.has(user.id)) {
+        throw new Error('USER_HAS_UNINVOICED_ORDERS')
+      }
+    }
 
     if (data.role !== undefined) user.role = data.role
     if (data.isDisabled !== undefined) user.isDisabled = data.isDisabled

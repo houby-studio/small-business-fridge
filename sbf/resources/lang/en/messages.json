@@ -44,5 +44,8 @@
   "impersonate_admin": "Cannot impersonate an administrator.",
   "impersonate_kiosk": "Cannot impersonate a kiosk account.",
   "token_created": "API token created. Copy the value now — it will not be shown again.",
-  "token_revoked": "API token revoked."
+  "token_revoked": "API token revoked.",
+  "user_has_uninvoiced_orders": "Cannot disable user — they have uninvoiced orders or unpaid invoices. Generate invoices first.",
+  "invoice_generated_for_user": "{count, plural, one {{count} invoice generated} other {{count} invoices generated}} for user {name}.",
+  "invoice_no_orders_for_buyer": "Customer has no uninvoiced orders."
 }

@@ -164,6 +164,63 @@ test.group('Web Supplier - invoice index and generate', (group) => {
   })
 })
 
+test.group('Web Supplier - generate invoice for single buyer', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('supplier can generate invoice for a specific buyer', async ({ client, assert }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    const delivery = await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountLeft: 5,
+      price: 30,
+    }).create()
+
+    await OrderFactory.merge({ buyerId: buyer.id, deliveryId: delivery.id }).create()
+
+    const response = await client
+      .post(`/supplier/invoice/generate/${buyer.id}`)
+      .loginAs(supplier)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    assert.equal(response.header('location'), '/supplier/invoice')
+
+    const invoice = await Invoice.query()
+      .where('supplierId', supplier.id)
+      .where('buyerId', buyer.id)
+      .first()
+
+    assert.isNotNull(invoice)
+    assert.equal(invoice!.totalCost, 30)
+  })
+
+  test('generate for buyer with no orders redirects with info flash', async ({
+    client,
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+
+    const response = await client
+      .post(`/supplier/invoice/generate/${buyer.id}`)
+      .loginAs(supplier)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    assert.equal(response.header('location'), '/supplier/invoice')
+
+    const count = await Invoice.query().where('supplierId', supplier.id).count('* as total')
+    assert.equal(Number(count[0].$extras.total), 0)
+  })
+})
+
 test.group('Web Supplier - payments status filter', (group) => {
   group.each.setup(cleanAll)
   group.each.teardown(cleanAll)

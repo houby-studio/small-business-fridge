@@ -48,5 +48,9 @@
   "users_actions": "Actions",
   "impersonate": "Sign in as user",
   "impersonate_stop": "Stop impersonating",
-  "impersonating_as": "Impersonating"
+  "impersonating_as": "Impersonating",
+  "users_generate_invoice": "Generate invoice",
+  "users_generate_invoice_confirm": "Generate invoices for user {name} from all suppliers? This action cannot be undone.",
+  "users_has_unpaid": "Has unpaid invoices",
+  "users_disable_unpaid_confirm": "User {name} has unpaid invoices. Disable them anyway?"
 }
