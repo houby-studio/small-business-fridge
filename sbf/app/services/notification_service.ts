@@ -273,11 +273,14 @@ export default class NotificationService {
 
   /**
    * Send unpaid invoice reminders to buyers.
+   * Only sends for invoices older than UNPAID_REMINDER_MIN_AGE_DAYS days (default: 3).
    */
   async sendUnpaidInvoiceReminders() {
+    const minAgeDays = env.get('UNPAID_REMINDER_MIN_AGE_DAYS') ?? 3
     const unpaidInvoices = await Invoice.query()
       .where('isPaid', false)
       .where('isPaymentRequested', false)
+      .whereRaw("created_at <= NOW() - (? * INTERVAL '1 day')", [minAgeDays])
       .preload('buyer')
       .preload('supplier')
 
