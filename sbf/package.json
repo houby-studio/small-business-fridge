@@ -8,6 +8,7 @@
     "start": "node bin/server.js",
     "build": "node ace build",
     "dev": "node ace serve --hmr",
+    "scheduler": "node ace scheduler:run",
     "test": "node ace test",
     "test:e2e": "playwright test",
     "lint": "eslint .",

@@ -2,6 +2,7 @@ FROM node:22.16.0-alpine3.22 AS base
 
 # All deps stage
 FROM base AS deps
+RUN apk add --no-cache tzdata
 WORKDIR /app
 ADD package.json package-lock.json ./
 RUN npm ci
