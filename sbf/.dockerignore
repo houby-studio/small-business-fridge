@@ -4,8 +4,9 @@ tmp
 .env
 .env.test
 .env.*.local
-docker-compose.dev.yml
-docker-compose.yml
+secrets/
+compose.dev.yaml
+compose.yaml
 Dockerfile
 .git
 .github

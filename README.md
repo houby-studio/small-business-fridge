@@ -6,6 +6,50 @@
 **Small Business Fridge** is a super simple system for sharing foods and drinks with colleagues, it offers simple, mostly intuitive UI, which offers what products are available, how many and for how much.
 Customers can buy product with one simple click. The only other thing they have to do is to take the product and consume it and pay it later with QR code.
 
+## Getting Started — v3 (AdonisJS rewrite)
+
+The `sbf/` directory contains the current rewrite built on **AdonisJS 6 + PostgreSQL + Vue 3**.
+This is the recommended version for new deployments.
+
+### Developer quickstart
+
+```bash
+cd sbf
+cp .env.example .env          # set APP_KEY (see comment in file) and adjust anything you need
+docker compose -f compose.dev.yaml up -d   # postgres on :5433, mailpit on :8025/:1025
+npm install
+node ace migration:run
+node ace db:seed              # creates admin / supplier / customer / kiosk seed users
+npm run dev                   # app at http://localhost:3333
+```
+
+Seed user credentials: `admin / admin123`, `supplier / supplier123`, `customer / customer123`, `kiosk / kiosk123`.
+Mailpit web UI: <http://localhost:8025>
+
+### Production quickstart (Docker)
+
+```bash
+# 1. Place compose.yaml on your server alongside a secrets/ directory
+mkdir secrets
+node -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex'))" > secrets/app_key
+printf 'strong-db-password' > secrets/db_password
+chmod 600 secrets/*
+
+# 2. Configure required env vars (create a .env next to compose.yaml or export in shell)
+#    APP_URL=https://your-domain.example.com
+#    SMTP_HOST=smtp.your-provider.com   SMTP_PORT=587   SMTP_USERNAME=...
+
+# 3. (Optional) uncomment oidc_client_secret / api_secret / smtp_password in compose.yaml
+#    and create the corresponding secrets/ files before running.
+
+# 4. Start
+docker compose up -d
+# First run: run migrations
+docker compose exec app node ace migration:run
+```
+
+---
+
 ## Disclaimer
 
 This tool was exclusively developed for ourselves, colleagues in IT department, but we have commited to make it FOSS and hopefully configurable enough to allow others to use it if they want!

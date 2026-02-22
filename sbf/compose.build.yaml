@@ -1,0 +1,10 @@
+# Compose override: builds the image from local source instead of pulling from Docker Hub.
+# Usage: docker compose -f compose.yaml -f compose.build.yaml up -d
+#
+# When both `image:` and `build:` are specified, Docker Compose builds from source
+# and tags the result with the image name (houbystudio/sbf:latest).
+services:
+  app:
+    build: .
+  scheduler:
+    build: .

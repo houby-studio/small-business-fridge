@@ -3,7 +3,7 @@
 # Usage: ./check.sh [--skip-tests]
 #
 # Requires: PostgreSQL running on localhost:5433
-#   Start with: docker compose -f docker-compose.dev.yml up -d postgres
+#   Start with: docker compose -f compose.dev.yaml up -d postgres
 
 set -euo pipefail
 

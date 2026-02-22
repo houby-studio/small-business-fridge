@@ -26,6 +26,10 @@ yarn-error.log
 
 *.png
 
+# Docker secrets (local files — never commit actual secret values)
+secrets/
+!secrets/README.md
+
 # Test output (generated, not committed)
 test-results/
 playwright-report/
