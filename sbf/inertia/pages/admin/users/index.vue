@@ -10,6 +10,7 @@ import ToggleSwitch from 'primevue/toggleswitch'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import ConfirmDialog from 'primevue/confirmdialog'
+import Dialog from 'primevue/dialog'
 import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from '~/composables/use_i18n'
 import type { SharedProps } from '~/types'
@@ -45,6 +46,21 @@ const confirm = useConfirm()
 const filterSearch = ref(props.filters.search)
 const filterRole = ref(props.filters.role)
 
+// Block dialog (single "Zavřít" button — server blocks the action in both cases)
+const blockDialogVisible = ref(false)
+const blockDialogMessage = ref('')
+
+function showBlockDialog(message: string) {
+  blockDialogMessage.value = message
+  blockDialogVisible.value = true
+}
+
+function closeBlockDialog() {
+  blockDialogVisible.value = false
+  // Reload to reset the toggle visual state
+  router.reload({ only: ['users', 'filters'] })
+}
+
 const roleOptions = [
   { label: t('common.all'), value: '' },
   { label: t('common.role_customer'), value: 'customer' },
@@ -69,29 +85,9 @@ function updateRole(userId: number, role: string) {
 }
 
 function toggleDisabled(userId: number, isDisabled: boolean, data: UserRow) {
-  if (isDisabled && data.hasUninvoicedOrders) {
-    // Server will block this — show client-side info instead of a pointless confirm
-    confirm.require({
-      message: t('messages.user_has_uninvoiced_orders'),
-      header: t('common.confirm'),
-      icon: 'pi pi-exclamation-triangle',
-      rejectLabel: t('common.close'),
-      acceptClass: 'hidden',
-    })
-    return
-  }
-
-  if (isDisabled && data.hasUnpaidInvoices) {
-    confirm.require({
-      message: t('admin.users_disable_unpaid_confirm', { name: data.displayName }),
-      header: t('common.confirm'),
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: t('common.confirm'),
-      rejectLabel: t('common.cancel'),
-      accept: () => {
-        router.put(`/admin/users/${userId}`, { isDisabled }, { preserveState: true })
-      },
-    })
+  if (isDisabled && (data.hasUninvoicedOrders || data.hasUnpaidInvoices)) {
+    // Server blocks both cases — just inform the admin
+    showBlockDialog(t('messages.user_has_uninvoiced_orders'))
     return
   }
 
@@ -102,7 +98,7 @@ function generateInvoiceForUser(userId: number, displayName: string) {
   confirm.require({
     message: t('admin.users_generate_invoice_confirm', { name: displayName }),
     header: t('common.confirm'),
-    icon: 'pi pi-file-invoice',
+    icon: 'pi pi-receipt',
     acceptLabel: t('admin.users_generate_invoice'),
     rejectLabel: t('common.cancel'),
     accept: () => {
@@ -154,6 +150,23 @@ function impersonateUser(userId: number) {
   <AppLayout>
     <Head :title="t('admin.users_title')" />
     <ConfirmDialog />
+
+    <!-- Single-button block dialog (no confirm needed — server blocks in all cases) -->
+    <Dialog
+      v-model:visible="blockDialogVisible"
+      modal
+      :header="t('common.confirm')"
+      :style="{ width: '30rem' }"
+      @hide="router.reload({ only: ['users', 'filters'] })"
+    >
+      <div class="flex items-start gap-3">
+        <span class="pi pi-exclamation-triangle mt-0.5 text-xl text-yellow-500" />
+        <p>{{ blockDialogMessage }}</p>
+      </div>
+      <template #footer>
+        <Button :label="t('common.close')" @click="closeBlockDialog" />
+      </template>
+    </Dialog>
 
     <h1 class="mb-6 text-2xl font-bold text-gray-900 dark:text-zinc-100">
       {{ t('admin.users_heading') }}
@@ -248,7 +261,7 @@ function impersonateUser(userId: number) {
           <div class="flex items-center gap-1">
             <Button
               v-if="data.hasUninvoicedOrders"
-              icon="pi pi-file-invoice"
+              icon="pi pi-receipt"
               severity="warn"
               size="small"
               text
@@ -260,6 +273,7 @@ function impersonateUser(userId: number) {
               severity="warn"
               icon="pi pi-exclamation-circle"
               :aria-label="t('admin.users_has_unpaid')"
+              :title="t('admin.users_has_unpaid')"
             />
             <Button
               v-if="

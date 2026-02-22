@@ -51,7 +51,7 @@ function generateInvoiceForBuyer(
       amount: totalCost,
     }),
     header: t('common.confirm'),
-    icon: 'pi pi-file-invoice',
+    icon: 'pi pi-receipt',
     acceptLabel: t('supplier.invoice_generate_for_buyer'),
     rejectLabel: t('common.cancel'),
     accept: () => {
