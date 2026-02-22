@@ -1,8 +1,7 @@
-FROM node:22.16.0-alpine3.22 AS base
+FROM node:25.6.1-alpine3.23 AS base
 
 # All deps stage
 FROM base AS deps
-RUN apk add --no-cache tzdata
 WORKDIR /app
 ADD package.json package-lock.json ./
 RUN npm ci
@@ -22,6 +21,7 @@ RUN node ace build
 
 # Production stage
 FROM base
+RUN apk add --no-cache tzdata
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=production-deps /app/node_modules /app/node_modules
