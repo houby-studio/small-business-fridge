@@ -44,7 +44,7 @@ PostgreSQL must be running. Start it with:
 
 ```bash
 cd sbf/
-docker compose -f compose.dev.yml up -d postgres
+docker compose -f compose.dev.yaml up -d postgres
 ```
 
 The test database `sbf_test` is created automatically by the Docker compose setup alongside the
@@ -599,7 +599,7 @@ Both Japa and Playwright write **JUnit XML** files to `test-results/` after ever
 | `test-results/junit-e2e.xml`  | All Playwright E2E results         |
 
 These files are consumed by `mikepenz/action-junit-report@v4` in the GitHub Actions workflow
-(`.github/workflows/sbf-quality.yml`). After each push/PR the action posts:
+(`.github/workflows/sbf-quality.yaml`). After each push/PR the action posts:
 
 - A **Check Run** on the commit with pass/fail counts
 - **Inline annotations** on failing test lines in the diff view

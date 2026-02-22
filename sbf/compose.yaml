@@ -16,7 +16,7 @@ x-app-env: &app-env
   SMTP_HOST: ${SMTP_HOST:-localhost}
   SMTP_PORT: ${SMTP_PORT:-587}
   SMTP_USERNAME: ${SMTP_USERNAME:-}
-  SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS:-noreply@example.com}
+  SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS:-noreply@localhost.localdomain}
   SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Lednice IT}
   SMTP_IGNORE_TLS: ${SMTP_IGNORE_TLS:-false}
   OIDC_ENABLED: ${OIDC_ENABLED:-false}
@@ -48,9 +48,9 @@ services:
     secrets:
       - app_key
       - db_password
-      - smtp_password
       - oidc_client_secret
       - api_secret
+      # - smtp_password
       # - openai_api_key
       # - esl_james_api_key
     volumes:
@@ -62,6 +62,7 @@ services:
 
   scheduler:
     image: houbystudio/sbf:latest
+    container_name: scheduler
     command: node ace scheduler:run
     environment:
       <<: *app-env
@@ -72,9 +73,9 @@ services:
     secrets:
       - app_key
       - db_password
-      - smtp_password
       - oidc_client_secret
       - api_secret
+      # - smtp_password
       # - openai_api_key
       # - esl_james_api_key
     volumes:
@@ -85,7 +86,8 @@ services:
     restart: unless-stopped
 
   postgres:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
+    container_name: postgres
     environment:
       POSTGRES_USER: sbf
       POSTGRES_PASSWORD_FILE: /run/secrets/db_password
@@ -93,7 +95,7 @@ services:
     secrets:
       - db_password
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U sbf']
       interval: 5s
@@ -103,19 +105,19 @@ services:
 
 secrets:
   app_key:
-    file: ./secrets/app_key
+    file: ./.secrets/app_key
   db_password:
-    file: ./secrets/db_password
-  smtp_password:
-    file: ./secrets/smtp_password
+    file: ./.secrets/db_password
   oidc_client_secret:
-    file: ./secrets/oidc_client_secret
+    file: ./.secrets/oidc_client_secret
   api_secret:
-    file: ./secrets/api_secret
+    file: ./.secrets/api_secret
+  # smtp_password:
+  #   file: ./.secrets/smtp_password
   # openai_api_key:
-  #   file: ./secrets/openai_api_key
+  #   file: ./.secrets/openai_api_key
   # esl_james_api_key:
-  #   file: ./secrets/esl_james_api_key
+  #   file: ./.secrets/esl_james_api_key
 
 volumes:
   pgdata:

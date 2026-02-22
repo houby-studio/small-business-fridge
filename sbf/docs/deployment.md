@@ -36,7 +36,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 **3. Create a minimal compose override (`.env` values are read automatically by Docker Compose):**
 
 Add the secrets to your `.env` file and ensure they appear in the compose `environment:` block,
-or use the provided `compose.yml` with `${VAR}` substitution.
+or use the provided `compose.yaml` with `${VAR}` substitution.
 
 **4. Start:**
 
@@ -51,19 +51,19 @@ docker compose up -d
 Recommended for production. Secret values never appear in `docker inspect`, compose logs, or
 environment listings.
 
-**1. Create the `secrets/` directory and populate secret files:**
+**1. Create the `.secrets/` directory and populate secret files:**
 
 ```bash
 # Required
-node -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex'))" > secrets/app_key
-printf 'your-db-password' > secrets/db_password
+node -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex'))" > .secrets/app_key
+printf 'your-db-password' > .secrets/db_password
 
 # Optional — only create files for features you use
-printf 'your-smtp-password' > secrets/smtp_password
-printf 'your-oidc-secret'   > secrets/oidc_client_secret
-printf 'your-api-secret'    > secrets/api_secret
+printf 'your-smtp-password' > .secrets/smtp_password
+printf 'your-oidc-secret'   > .secrets/oidc_client_secret
+printf 'your-api-secret'    > .secrets/api_secret
 
-chmod 600 secrets/*
+chmod 600 .secrets/*
 ```
 
 See [`secrets/README.md`](../secrets/README.md) for the full list of secrets.
@@ -74,7 +74,7 @@ See [`secrets/README.md`](../secrets/README.md) for the full list of secrets.
 docker compose up -d
 ```
 
-The `compose.yml` mounts the `secrets/` files into containers. `.env.production` (baked
+The `compose.yaml` mounts the `secrets/` files into containers. `.env.production` (baked
 into the image) reads them via the `file:` identifier. No secrets appear in environment listings.
 
 ---
@@ -86,7 +86,7 @@ For local development, run services via Docker Compose and the app directly with
 **1. Start infrastructure services (PostgreSQL, MailDev, pgAdmin):**
 
 ```bash
-docker compose -f compose.dev.yml up -d
+docker compose -f compose.dev.yaml up -d
 ```
 
 | Service  | URL / port                       |
@@ -120,10 +120,10 @@ npm run dev               # starts on http://localhost:3333
 If you want to build the Docker image locally instead of pulling from Docker Hub:
 
 ```bash
-docker compose -f compose.yml -f compose.build.yml up -d --build
+docker compose -f compose.yaml -f compose.build.yaml up -d --build
 ```
 
-The `compose.build.yml` override adds `build: .` to both `app` and `scheduler` services.
+The `compose.build.yaml` override adds `build: .` to both `app` and `scheduler` services.
 When both `image:` and `build:` are specified, Docker Compose builds from source and tags the
 result with the `image:` name (`houbystudio/sbf:latest`).
 

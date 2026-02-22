@@ -25,7 +25,7 @@ npm run typecheck        # tsc --noEmit
 node ace test --no-color # 91 tests: unit + functional (Japa)
 ```
 
-> If Docker isn't running: `docker compose -f compose.dev.yml up -d postgres`
+> If Docker isn't running: `docker compose -f compose.dev.yaml up -d postgres`
 > Tests need PostgreSQL on localhost:5433, database `sbf_test`
 
 **Never leave a task incomplete if any of these fail.** Fix the failure before moving on.
@@ -278,8 +278,8 @@ When adding user-facing text:
 
 ## CI/CD
 
-- **Docker image**: `.github/workflows/sbf-docker-image.yml` — triggers on push to `v3/*` or `master` when `sbf/**` changes
-- **Quality CI**: `.github/workflows/sbf-quality.yml` — runs lint + format + typecheck + tests on every PR and push to `v3/*`
+- **Docker image**: `.github/workflows/sbf-docker-image.yaml` — triggers on push to `v3/*` or `master` when `sbf/**` changes
+- **Quality CI**: `.github/workflows/sbf-quality.yaml` — runs lint + format + typecheck + tests on every PR and push to `v3/*`
 - Dockerfile does NOT run quality checks — they happen in the quality CI job
 
 ---
