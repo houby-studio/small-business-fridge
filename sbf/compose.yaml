@@ -48,8 +48,8 @@ services:
     secrets:
       - app_key
       - db_password
-      - oidc_client_secret
-      - api_secret
+      # - oidc_client_secret  # uncomment when OIDC_ENABLED=true
+      # - api_secret          # uncomment when API auth is needed
       # - smtp_password
       # - openai_api_key
       # - esl_james_api_key
@@ -73,8 +73,8 @@ services:
     secrets:
       - app_key
       - db_password
-      - oidc_client_secret
-      - api_secret
+      # - oidc_client_secret  # uncomment when OIDC_ENABLED=true
+      # - api_secret          # uncomment when API auth is needed
       # - smtp_password
       # - openai_api_key
       # - esl_james_api_key
@@ -105,19 +105,19 @@ services:
 
 secrets:
   app_key:
-    file: ./.secrets/app_key
+    file: ./secrets/app_key
   db_password:
-    file: ./.secrets/db_password
-  oidc_client_secret:
-    file: ./.secrets/oidc_client_secret
-  api_secret:
-    file: ./.secrets/api_secret
+    file: ./secrets/db_password
+  # oidc_client_secret:
+  #   file: ./secrets/oidc_client_secret
+  # api_secret:
+  #   file: ./secrets/api_secret
   # smtp_password:
-  #   file: ./.secrets/smtp_password
+  #   file: ./secrets/smtp_password
   # openai_api_key:
-  #   file: ./.secrets/openai_api_key
+  #   file: ./secrets/openai_api_key
   # esl_james_api_key:
-  #   file: ./.secrets/esl_james_api_key
+  #   file: ./secrets/esl_james_api_key
 
 volumes:
   pgdata:
