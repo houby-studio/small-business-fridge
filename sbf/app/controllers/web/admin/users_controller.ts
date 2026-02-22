@@ -1,4 +1,4 @@
-import type { HttpContext } from '@adonisjs/core/http'
+import type { HttpContext, Request } from '@adonisjs/core/http'
 import AdminService from '#services/admin_service'
 import InvoiceService from '#services/invoice_service'
 import User from '#models/user'
@@ -6,6 +6,21 @@ import { updateUserValidator } from '#validators/user'
 import AuditService from '#services/audit_service'
 import NotificationService from '#services/notification_service'
 import logger from '@adonisjs/core/services/logger'
+
+/**
+ * Return the referer URL if it points to /admin/users (preserving search/role filters),
+ * otherwise fall back to /admin/users without filters.
+ */
+function usersUrl(request: Request): string {
+  const referer = request.header('referer') ?? ''
+  try {
+    const { pathname, search } = new URL(referer)
+    if (pathname === '/admin/users') return pathname + search
+  } catch {
+    // invalid URL — use fallback
+  }
+  return '/admin/users'
+}
 
 export default class UsersController {
   async index({ inertia, request }: HttpContext) {
@@ -70,7 +85,7 @@ export default class UsersController {
           type: 'error',
           message: i18n.t('messages.user_has_uninvoiced_orders'),
         })
-        return response.redirect('/admin/users')
+        return response.redirect(usersUrl(request))
       }
       throw err
     }
@@ -96,10 +111,10 @@ export default class UsersController {
       message: i18n.t('messages.user_updated', { name: user.displayName }),
     })
 
-    return response.redirect('/admin/users')
+    return response.redirect(usersUrl(request))
   }
 
-  async generateInvoice({ params, response, session, i18n, auth }: HttpContext) {
+  async generateInvoice({ params, request, response, session, i18n, auth }: HttpContext) {
     const userId = Number(params.id)
     const user = await User.findOrFail(userId)
 
@@ -128,6 +143,6 @@ export default class UsersController {
       }
     }
 
-    return response.redirect('/admin/users')
+    return response.redirect(usersUrl(request))
   }
 }

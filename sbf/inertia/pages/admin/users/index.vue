@@ -57,8 +57,6 @@ function showBlockDialog(message: string) {
 
 function closeBlockDialog() {
   blockDialogVisible.value = false
-  // Reload to reset the toggle visual state
-  router.reload({ only: ['users', 'filters'] })
 }
 
 const roleOptions = [
@@ -157,7 +155,6 @@ function impersonateUser(userId: number) {
       modal
       :header="t('common.confirm')"
       :style="{ width: '30rem' }"
-      @hide="router.reload({ only: ['users', 'filters'] })"
     >
       <div class="flex items-start gap-3">
         <span class="pi pi-exclamation-triangle mt-0.5 text-xl text-yellow-500" />
@@ -249,10 +246,18 @@ function impersonateUser(userId: number) {
       </Column>
       <Column :header="t('admin.users_disabled')" style="width: 100px">
         <template #body="{ data }">
-          <ToggleSwitch
-            :modelValue="data.isDisabled"
-            @update:modelValue="(val: boolean) => toggleDisabled(data.id, val, data)"
-          />
+          <div class="relative inline-flex">
+            <ToggleSwitch
+              :modelValue="data.isDisabled"
+              @update:modelValue="(val: boolean) => toggleDisabled(data.id, val, data)"
+            />
+            <!-- Overlay blocks the click before it reaches the switch when action is forbidden -->
+            <div
+              v-if="!data.isDisabled && (data.hasUninvoicedOrders || data.hasUnpaidInvoices)"
+              class="absolute inset-0 cursor-not-allowed"
+              @click="showBlockDialog(t('messages.user_has_uninvoiced_orders'))"
+            />
+          </div>
         </template>
       </Column>
 
