@@ -9,7 +9,29 @@
 |
 */
 
+import { readFile } from 'node:fs/promises'
 import { Env } from '@adonisjs/core/env'
+
+/*
+|--------------------------------------------------------------------------
+| Docker secrets support
+|--------------------------------------------------------------------------
+|
+| The `file:` identifier allows reading secret values from files mounted
+| by Docker secrets (e.g. APP_KEY=file:/run/secrets/app_key).
+| Returns an empty string if the file does not exist (ENOENT), so optional
+| secrets like OIDC_CLIENT_SECRET do not cause a startup crash.
+|
+*/
+Env.defineIdentifier('file', async (filePath) => {
+  try {
+    const content = await readFile(filePath.trim(), 'utf-8')
+    return content.trim()
+  } catch (error: any) {
+    if (error.code === 'ENOENT') return ''
+    throw error
+  }
+})
 
 export default await Env.create(new URL('../', import.meta.url), {
   NODE_ENV: Env.schema.enum(['development', 'production', 'test'] as const),

@@ -11,12 +11,6 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
-  redis:
-    image: redis:7-alpine
-    restart: always
-    ports:
-      - '6380:6379'
-
   maildev:
     image: maildev/maildev
     restart: always
