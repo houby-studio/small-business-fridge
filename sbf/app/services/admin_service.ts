@@ -182,6 +182,13 @@ export default class AdminService {
   ) {
     const category = await Category.findOrFail(categoryId)
 
+    if (data.isDisabled === true) {
+      const hasProducts = await db.from('products').where('category_id', category.id).first()
+      if (hasProducts) {
+        throw new Error('CATEGORY_HAS_PRODUCTS')
+      }
+    }
+
     if (data.name !== undefined) category.name = data.name
     if (data.color !== undefined) category.color = data.color
     if (data.isDisabled !== undefined) category.isDisabled = data.isDisabled
@@ -210,11 +217,43 @@ export default class AdminService {
   async updateAllergen(allergenId: number, data: { name?: string; isDisabled?: boolean }) {
     const allergen = await Allergen.findOrFail(allergenId)
 
+    if (data.isDisabled === true) {
+      const hasProducts = await db
+        .from('product_allergen')
+        .where('allergen_id', allergen.id)
+        .first()
+      if (hasProducts) {
+        throw new Error('ALLERGEN_HAS_PRODUCTS')
+      }
+    }
+
     if (data.name !== undefined) allergen.name = data.name
     if (data.isDisabled !== undefined) allergen.isDisabled = data.isDisabled
 
     await allergen.save()
     return allergen
+  }
+
+  async getCategoryIdsWithProducts(categoryIds: number[]) {
+    if (categoryIds.length === 0) return new Set<number>()
+
+    const rows = await db
+      .from('products')
+      .whereIn('category_id', categoryIds)
+      .distinct('category_id as categoryId')
+
+    return new Set(rows.map((row) => Number(row.categoryId)))
+  }
+
+  async getAllergenIdsWithProducts(allergenIds: number[]) {
+    if (allergenIds.length === 0) return new Set<number>()
+
+    const rows = await db
+      .from('product_allergen')
+      .whereIn('allergen_id', allergenIds)
+      .distinct('allergen_id as allergenId')
+
+    return new Set(rows.map((row) => Number(row.allergenId)))
   }
 
   /**

@@ -5,11 +5,33 @@ import User from '#models/user'
 import Recommendation from '#models/recommendation'
 
 export default class RecommendationService {
+  private parseExcludedAllergenIds(raw: string | number[] | null | undefined): number[] {
+    if (Array.isArray(raw)) {
+      return raw.map(Number).filter((id) => Number.isInteger(id) && id > 0)
+    }
+
+    if (typeof raw === 'string') {
+      try {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed)) {
+          return parsed.map(Number).filter((id) => Number.isInteger(id) && id > 0)
+        }
+      } catch {
+        return []
+      }
+    }
+
+    return []
+  }
+
   /**
    * Compute statistical scores for a single user.
    * Returns product IDs sorted by score descending, filtered to in-stock only.
    */
-  async computeForUser(userId: number): Promise<Array<{ productId: number; score: number }>> {
+  async computeForUser(
+    userId: number,
+    excludedAllergenIds: number[] = []
+  ): Promise<Array<{ productId: number; score: number }>> {
     const rows = await db.rawQuery<{ rows: Array<{ product_id: number; score: number }> }>(
       `
       WITH
@@ -46,10 +68,16 @@ export default class RecommendationService {
           AS score
       FROM user_history uh
       JOIN in_stock isp ON isp.product_id = uh.product_id
+      WHERE NOT EXISTS (
+        SELECT 1
+        FROM product_allergen pa
+        WHERE pa.product_id = uh.product_id
+          AND pa.allergen_id = ANY(COALESCE(?::int[], ARRAY[]::int[]))
+      )
       ORDER BY score DESC
       LIMIT 10
       `,
-      [userId]
+      [userId, excludedAllergenIds]
     )
 
     return rows.rows.map((r) => ({ productId: r.product_id, score: Number(r.score) }))
@@ -59,11 +87,11 @@ export default class RecommendationService {
    * Refresh statistical recommendations for all active, non-disabled users.
    */
   async refreshAll(): Promise<void> {
-    const users = await User.query().where('isDisabled', false).select('id')
+    const users = await User.query().where('isDisabled', false).select('id', 'excludedAllergenIds')
 
     let refreshed = 0
     for (const user of users) {
-      const scored = await this.computeForUser(user.id)
+      const scored = await this.computeForUser(user.id, user.excludedAllergenIds ?? [])
 
       await Recommendation.query().where('userId', user.id).where('model', 'statistical').delete()
 
@@ -92,6 +120,13 @@ export default class RecommendationService {
    * Keeps only products that are currently in stock before applying the limit.
    */
   async getRecommendedIds(userId: number, limit: number = 4): Promise<number[]> {
+    const userRow = await db
+      .from('users')
+      .where('id', userId)
+      .select('excluded_allergen_ids')
+      .first()
+    const excludedAllergenIds = this.parseExcludedAllergenIds(userRow?.excluded_allergen_ids)
+
     const precomputed = await Recommendation.query()
       .where('userId', userId)
       .where('model', 'statistical')
@@ -100,6 +135,15 @@ export default class RecommendationService {
           .select(db.raw('1'))
           .whereColumn('deliveries.product_id', 'recommendations.product_id')
           .where('deliveries.amount_left', '>', 0)
+      })
+      .if(excludedAllergenIds.length > 0, (q) => {
+        q.whereNotExists((sub) => {
+          sub
+            .from('product_allergen')
+            .select(db.raw('1'))
+            .whereColumn('product_allergen.product_id', 'recommendations.product_id')
+            .whereIn('product_allergen.allergen_id', excludedAllergenIds)
+        })
       })
       .orderBy('rank', 'asc')
       .limit(limit)
@@ -110,7 +154,7 @@ export default class RecommendationService {
     }
 
     // First run before scheduler — compute live
-    const scored = await this.computeForUser(userId)
+    const scored = await this.computeForUser(userId, excludedAllergenIds)
     return scored.slice(0, limit).map((s) => s.productId)
   }
 }

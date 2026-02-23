@@ -6,6 +6,7 @@ import { DeliveryFactory } from '#database/factories/delivery_factory'
 import { CategoryFactory } from '#database/factories/category_factory'
 import PageView from '#models/page_view'
 import KioskSession from '#models/kiosk_session'
+import Allergen from '#models/allergen'
 import db from '@adonisjs/lucid/services/db'
 
 const cleanAll = async () => {
@@ -14,7 +15,9 @@ const cleanAll = async () => {
   await db.from('kiosk_sessions').delete()
   await db.from('orders').delete()
   await db.from('deliveries').delete()
+  await db.from('product_allergen').delete()
   await db.from('products').delete()
+  await db.from('allergens').delete()
   await db.from('categories').delete()
   await db.from('auth_access_tokens').delete()
   await db.from('users').delete()
@@ -160,5 +163,48 @@ test.group('Kiosk tracking - sessions', (group) => {
 
     response.assertStatus(200)
     assert.include(response.text(), 'isRecommended')
+  })
+
+  test('GET /kiosk/shop hides products matching customer excluded allergens', async ({
+    client,
+    assert,
+  }) => {
+    const kioskDevice = await UserFactory.apply('kiosk').create()
+    const category = await CategoryFactory.create()
+    const supplier = await UserFactory.apply('supplier').create()
+    const blockedAllergen = await Allergen.create({ name: 'Celery', isDisabled: false })
+
+    const blockedProduct = await ProductFactory.merge({ categoryId: category.id }).create()
+    const allowedProduct = await ProductFactory.merge({ categoryId: category.id }).create()
+
+    await db.table('product_allergen').insert({
+      product_id: blockedProduct.id,
+      allergen_id: blockedAllergen.id,
+    })
+
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: blockedProduct.id,
+      amountLeft: 3,
+      price: 10,
+    }).create()
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: allowedProduct.id,
+      amountLeft: 3,
+      price: 10,
+    }).create()
+
+    const customer = await UserFactory.merge({
+      excludedAllergenIds: [blockedAllergen.id],
+    }).create()
+
+    const response = await client
+      .get(`/kiosk/shop?keypadId=${customer.keypadId}`)
+      .loginAs(kioskDevice)
+
+    response.assertStatus(200)
+    assert.notInclude(response.text(), blockedProduct.displayName)
+    assert.include(response.text(), allowedProduct.displayName)
   })
 })

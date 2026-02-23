@@ -93,6 +93,10 @@ function onPageChange(event: any) {
     { preserveState: true, only: ['products', 'filters'] }
   )
 }
+
+function formatAllergenList(allergens: ProductRow['allergens']) {
+  return allergens.map((allergen) => allergen.name).join(', ')
+}
 </script>
 
 <template>
@@ -190,7 +194,7 @@ function onPageChange(event: any) {
       <Column :header="t('supplier.products_allergens_label')">
         <template #body="{ data }">
           <span v-if="data.allergens?.length">
-            {{ data.allergens.map((a) => a.name).join(', ') }}
+            {{ formatAllergenList(data.allergens) }}
           </span>
           <span v-else class="text-gray-400 dark:text-zinc-500">—</span>
         </template>

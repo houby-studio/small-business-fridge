@@ -408,6 +408,30 @@ test.group('Admin - allergens CRUD', (group) => {
     assert.isFalse(allergen!.isDisabled)
   })
 
+  test('creating an allergen writes allergen.created audit entry', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+
+    const response = await client
+      .post('/admin/allergens')
+      .loginAs(admin)
+      .withCsrfToken()
+      .form({ name: 'Sesame' })
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    const allergen = await Allergen.findByOrFail('name', 'Sesame')
+    const log = await db
+      .from('audit_logs')
+      .where('action', 'allergen.created')
+      .where('entity_type', 'allergen')
+      .where('entity_id', allergen.id)
+      .first()
+
+    assert.isDefined(log, 'allergen.created audit log should exist')
+    assert.equal(log.user_id, admin.id)
+  })
+
   test('admin can update allergen', async ({ client, assert }) => {
     const admin = await UserFactory.apply('admin').create()
     const allergen = await Allergen.create({ name: 'Lepek', isDisabled: false })
@@ -440,10 +464,113 @@ test.group('Admin - allergens CRUD', (group) => {
     assert.isTrue(allergen.isDisabled)
   })
 
+  test('disable allergen with tied products is blocked', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const allergen = await Allergen.create({ name: 'Milk', isDisabled: false })
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    await product.related('allergens').attach([allergen.id])
+
+    const response = await client
+      .put(`/admin/allergens/${allergen.id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .form({ isDisabled: 'true' })
+      .redirects(0)
+
+    response.assertStatus(302)
+    assert.equal(response.header('location'), '/admin/allergens')
+    await allergen.refresh()
+    assert.isFalse(allergen.isDisabled)
+  })
+
+  test('allergen with tied products has hasProducts=true in response', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const allergen = await Allergen.create({ name: 'Soy', isDisabled: false })
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    await product.related('allergens').attach([allergen.id])
+
+    const response = await client
+      .get('/admin/allergens')
+      .loginAs(admin)
+      .header('X-Inertia', 'true')
+      .header('X-Inertia-Version', '1')
+
+    response.assertStatus(200)
+    const body = response.body()
+    const rows: any[] = body.props.allergens
+    const allergenRow = rows.find((row: any) => row.id === allergen.id)
+
+    assert.isDefined(allergenRow, 'allergen should appear in allergens list')
+    assert.isTrue(allergenRow.hasProducts)
+  })
+
+  test('updating an allergen writes allergen.updated audit entry', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const allergen = await Allergen.create({ name: 'Lepek', isDisabled: false })
+
+    const response = await client
+      .put(`/admin/allergens/${allergen.id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .form({ name: 'Gluten', isDisabled: 'true' })
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    const log = await db
+      .from('audit_logs')
+      .where('action', 'allergen.updated')
+      .where('entity_type', 'allergen')
+      .where('entity_id', allergen.id)
+      .first()
+
+    assert.isDefined(log, 'allergen.updated audit log should exist')
+    assert.equal(log.user_id, admin.id)
+
+    const metadata = log.metadata as Record<string, { from: unknown; to: unknown }> | null
+    assert.isNotNull(metadata)
+    assert.deepEqual(metadata!.name, { from: 'Lepek', to: 'Gluten' })
+    assert.deepEqual(metadata!.isDisabled, { from: false, to: true })
+  })
+
+  test('updating an allergen with no real change does not write allergen.updated audit entry', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const allergen = await Allergen.create({ name: 'Lepek', isDisabled: false })
+
+    const response = await client
+      .put(`/admin/allergens/${allergen.id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .form({ name: 'Lepek' })
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    const log = await db
+      .from('audit_logs')
+      .where('action', 'allergen.updated')
+      .where('entity_type', 'allergen')
+      .where('entity_id', allergen.id)
+      .first()
+
+    assert.isNull(log)
+  })
+
   test('customer cannot access admin allergens page', async ({ client }) => {
     const customer = await UserFactory.create()
     const response = await client.get('/admin/allergens').loginAs(customer).redirects(0)
     response.assertStatus(302)
+  })
+})
+
 test.group('Admin - category audit logging', (group) => {
   group.each.setup(cleanAll)
   group.each.teardown(cleanAll)
@@ -500,5 +627,72 @@ test.group('Admin - category audit logging', (group) => {
     assert.deepEqual(metadata!.name, { from: 'Food', to: 'Snacks' })
     assert.deepEqual(metadata!.color, { from: '#aaaaaa', to: '#bbbbbb' })
     assert.deepEqual(metadata!.isDisabled, { from: false, to: true })
+  })
+
+  test('disable category with tied products is blocked', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const category = await CategoryFactory.create()
+    await ProductFactory.merge({ categoryId: category.id }).create()
+
+    const response = await client
+      .put(`/admin/categories/${category.id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .form({ isDisabled: 'true' })
+      .redirects(0)
+
+    response.assertStatus(302)
+    assert.equal(response.header('location'), '/admin/categories')
+    await category.refresh()
+    assert.isFalse(category.isDisabled)
+  })
+
+  test('category with tied products has hasProducts=true in response', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const category = await CategoryFactory.create()
+    await ProductFactory.merge({ categoryId: category.id }).create()
+
+    const response = await client
+      .get('/admin/categories')
+      .loginAs(admin)
+      .header('X-Inertia', 'true')
+      .header('X-Inertia-Version', '1')
+
+    response.assertStatus(200)
+    const body = response.body()
+    const rows: any[] = body.props.categories
+    const categoryRow = rows.find((row: any) => row.id === category.id)
+
+    assert.isDefined(categoryRow, 'category should appear in categories list')
+    assert.isTrue(categoryRow.hasProducts)
+  })
+
+  test('updating a category with no real change does not write category.updated audit entry', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const category = await CategoryFactory.merge({ name: 'Food', color: '#aaaaaa' }).create()
+
+    const response = await client
+      .put(`/admin/categories/${category.id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .form({ name: 'Food', color: '#aaaaaa' })
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    const log = await db
+      .from('audit_logs')
+      .where('action', 'category.updated')
+      .where('entity_type', 'category')
+      .where('entity_id', category.id)
+      .first()
+
+    assert.isNull(log)
   })
 })

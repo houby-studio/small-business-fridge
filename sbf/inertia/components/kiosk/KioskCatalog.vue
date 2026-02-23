@@ -9,6 +9,7 @@ export interface ProductItem {
   price: number | null
   deliveryId: number | null
   stockSum: number
+  allergens: { id: number; name: string }[]
   isFavorite: boolean
   isRecommended: boolean
   recommendationRank: number

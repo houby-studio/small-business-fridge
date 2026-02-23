@@ -8,6 +8,7 @@ import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import ColorPicker from 'primevue/colorpicker'
 import ToggleSwitch from 'primevue/toggleswitch'
+import Tag from 'primevue/tag'
 import Dialog from 'primevue/dialog'
 import { useI18n } from '~/composables/use_i18n'
 
@@ -16,6 +17,7 @@ interface CategoryRow {
   name: string
   color: string
   isDisabled: boolean
+  hasProducts: boolean
 }
 
 const props = defineProps<{ categories: CategoryRow[] }>()
@@ -112,7 +114,15 @@ function cancelEdit() {
       </Column>
       <Column :header="t('common.active')" style="width: 100px">
         <template #body="{ data }">
+          <span
+            v-if="!data.isDisabled && data.hasProducts"
+            v-tooltip.top="t('messages.category_has_products')"
+            :aria-label="t('messages.category_has_products')"
+          >
+            <Tag severity="warn" icon="pi pi-exclamation-circle" />
+          </span>
           <ToggleSwitch
+            v-else
             :modelValue="!data.isDisabled"
             @update:modelValue="(val: boolean) => toggleDisabled(data.id, !val)"
           />

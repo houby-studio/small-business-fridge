@@ -45,7 +45,6 @@ function submit() {
     form.setError('image', t('supplier.products_image_required'))
     return
   }
-  formData.append('allergenIds', JSON.stringify(form.value.allergenIds))
 
   form.post('/supplier/products', {
     forceFormData: true,

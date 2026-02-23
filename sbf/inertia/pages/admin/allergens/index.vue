@@ -7,6 +7,7 @@ import Column from 'primevue/column'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import ToggleSwitch from 'primevue/toggleswitch'
+import Tag from 'primevue/tag'
 import Dialog from 'primevue/dialog'
 import { useI18n } from '~/composables/use_i18n'
 
@@ -14,6 +15,7 @@ interface AllergenRow {
   id: number
   name: string
   isDisabled: boolean
+  hasProducts: boolean
 }
 
 const props = defineProps<{ allergens: AllergenRow[] }>()
@@ -95,7 +97,15 @@ function cancelEdit() {
       </Column>
       <Column :header="t('common.active')" style="width: 100px">
         <template #body="{ data }">
+          <span
+            v-if="!data.isDisabled && data.hasProducts"
+            v-tooltip.top="t('messages.allergen_has_products')"
+            :aria-label="t('messages.allergen_has_products')"
+          >
+            <Tag severity="warn" icon="pi pi-exclamation-circle" />
+          </span>
           <ToggleSwitch
+            v-else
             :modelValue="!data.isDisabled"
             @update:modelValue="(val: boolean) => toggleDisabled(data.id, !val)"
           />
