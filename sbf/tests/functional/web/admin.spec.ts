@@ -444,6 +444,9 @@ test.group('Admin - allergens CRUD', (group) => {
     const customer = await UserFactory.create()
     const response = await client.get('/admin/allergens').loginAs(customer).redirects(0)
     response.assertStatus(302)
+  })
+})
+
 test.group('Admin - category audit logging', (group) => {
   group.each.setup(cleanAll)
   group.each.teardown(cleanAll)
