@@ -9,6 +9,7 @@ interface CustomerInfo {
 }
 
 export interface BasketItem {
+  productId: number
   deliveryId: number
   displayName: string
   imagePath: string | null

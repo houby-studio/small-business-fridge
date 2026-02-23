@@ -23,9 +23,30 @@ interface FeaturedProduct {
   category: { name: string; color: string }
 }
 
+interface ServerProduct {
+  id: number
+  displayName: string
+  imagePath: string | null
+  price: number | null
+  deliveryId: number | null
+  stockSum: number
+  deliveryLots: Array<{
+    deliveryId: number
+    price: number
+    amountLeft: number
+    createdAt: string
+  }>
+  allergens: { id: number; name: string }[]
+  isFavorite: boolean
+  isRecommended?: boolean
+  recommendationRank?: number
+  barcode: string | null
+  category: { name: string; color: string }
+}
+
 const props = defineProps<{
   featuredProducts: FeaturedProduct[]
-  allProducts: ProductItem[]
+  allProducts: ServerProduct[]
 }>()
 
 // ── Composables ───────────────────────────────────────────────────────────────
@@ -53,25 +74,6 @@ const favoriteIds = ref<number[]>([])
 const recommendedIds = ref<number[]>([])
 const excludedAllergenIds = ref<number[]>([])
 
-const personalizedProducts = computed<ProductItem[]>(() => {
-  const recommendedRankMap = new Map(recommendedIds.value.map((id, i) => [id, i + 1]))
-  return props.allProducts
-    .filter((p) =>
-      excludedAllergenIds.value.length === 0
-        ? true
-        : !p.allergens.some((a) => excludedAllergenIds.value.includes(a.id))
-    )
-    .map((p) => {
-      const rank = recommendedRankMap.get(p.id) ?? 0
-      return {
-        ...p,
-        isFavorite: favoriteIds.value.includes(p.id),
-        isRecommended: rank > 0 && rank <= 3, // only top-3 get the recommended highlight
-        recommendationRank: rank,
-      }
-    })
-})
-
 // ── Basket ────────────────────────────────────────────────────────────────────
 
 const basket = ref<BasketItem[]>([])
@@ -86,35 +88,89 @@ const lastOrderCount = ref(0)
 const basketQtyMap = computed<Map<number, number>>(() => {
   const m = new Map<number, number>()
   for (const item of basket.value) {
-    m.set(item.deliveryId, item.quantity)
+    m.set(item.productId, (m.get(item.productId) ?? 0) + item.quantity)
   }
   return m
 })
 
+function getReservedQty(deliveryId: number): number {
+  return basket.value
+    .filter((item) => item.deliveryId === deliveryId)
+    .reduce((sum, item) => sum + item.quantity, 0)
+}
+
+function getNextAvailableLot(product: ServerProduct) {
+  return (
+    product.deliveryLots.find((lot) => lot.amountLeft - getReservedQty(lot.deliveryId) > 0) ?? null
+  )
+}
+
+function getRemainingStock(product: ServerProduct): number {
+  return product.deliveryLots.reduce(
+    (sum, lot) => sum + Math.max(lot.amountLeft - getReservedQty(lot.deliveryId), 0),
+    0
+  )
+}
+
+const personalizedProducts = computed<ProductItem[]>(() => {
+  const recommendedRankMap = new Map(recommendedIds.value.map((id, i) => [id, i + 1]))
+
+  return props.allProducts
+    .filter((p) =>
+      excludedAllergenIds.value.length === 0
+        ? true
+        : !p.allergens.some((a) => excludedAllergenIds.value.includes(a.id))
+    )
+    .map((p) => {
+      const rank = recommendedRankMap.get(p.id) ?? 0
+      const nextLot = getNextAvailableLot(p)
+      return {
+        ...p,
+        price: nextLot?.price ?? null,
+        deliveryId: nextLot?.deliveryId ?? null,
+        remainingStock: getRemainingStock(p),
+        isFavorite: favoriteIds.value.includes(p.id),
+        isRecommended: rank > 0 && rank <= 3,
+        recommendationRank: rank,
+      }
+    })
+})
+
 function addToBasket(product: ProductItem) {
-  if (!product.deliveryId) return
   resetIdleTimer()
 
-  const existing = basket.value.find((i) => i.deliveryId === product.deliveryId)
+  const source = props.allProducts.find((p) => p.id === product.id)
+  if (!source) {
+    return
+  }
+
+  const nextLot = getNextAvailableLot(source)
+  if (!nextLot) {
+    toast.add({ severity: 'warn', summary: t('kiosk.max_stock_reached'), life: 2000 })
+    return
+  }
+
+  const existing = basket.value.find((i) => i.deliveryId === nextLot.deliveryId)
   if (existing) {
-    if (existing.quantity >= product.stockSum) {
+    if (existing.quantity >= existing.maxStock) {
       toast.add({ severity: 'warn', summary: t('kiosk.max_stock_reached'), life: 2000 })
       return
     }
     existing.quantity++
   } else {
     basket.value.push({
-      deliveryId: product.deliveryId,
+      productId: product.id,
+      deliveryId: nextLot.deliveryId,
       displayName: product.displayName,
       imagePath: product.imagePath,
-      price: product.price ?? 0,
+      price: nextLot.price,
       quantity: 1,
-      maxStock: product.stockSum,
+      maxStock: nextLot.amountLeft,
     })
   }
 
   // Clear any previous out-of-stock highlight
-  if (outOfStockDeliveryId.value === product.deliveryId) {
+  if (outOfStockDeliveryId.value === nextLot.deliveryId) {
     outOfStockDeliveryId.value = null
   }
 
@@ -212,7 +268,7 @@ function onGlobalKeydown(e: KeyboardEvent) {
 
 function handleBarcode(code: string) {
   resetIdleTimer()
-  const product = props.allProducts.find((p) => p.barcode === code)
+  const product = personalizedProducts.value.find((p) => p.barcode === code)
   if (!product) {
     toast.add({ severity: 'warn', summary: t('kiosk.product_not_found'), life: 2500 })
     return

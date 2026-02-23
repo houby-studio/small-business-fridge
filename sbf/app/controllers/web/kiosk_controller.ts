@@ -17,8 +17,8 @@ export default class KioskController {
   async index({ inertia }: HttpContext) {
     const shopService = new ShopService()
     const [featuredProducts, allProducts] = await Promise.all([
-      shopService.getFeaturedProducts(8),
-      shopService.getProducts({ showAll: false }),
+      shopService.getKioskFeaturedProducts(8),
+      shopService.getKioskProducts({ showAll: false }),
     ])
 
     return inertia.render('kiosk/index', { featuredProducts, allProducts })
@@ -131,7 +131,7 @@ export default class KioskController {
     const shopService = new ShopService()
     const recommendationService = new RecommendationService()
     const [rawProducts, categories, recommendedIds] = await Promise.all([
-      shopService.getProducts({ showAll: false, userId: customer.id }),
+      shopService.getKioskProducts({ showAll: false, userId: customer.id }),
       shopService.getCategories(),
       recommendationService.getRecommendedIds(customer.id),
     ])
