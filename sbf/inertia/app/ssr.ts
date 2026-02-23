@@ -6,6 +6,7 @@ import Aura from '@primeuix/themes/aura'
 import { definePreset, Theme } from '@primeuix/themes'
 import ToastService from 'primevue/toastservice'
 import ConfirmationService from 'primevue/confirmationservice'
+import Tooltip from 'primevue/tooltip'
 
 // ─── Custom SBF theme preset (must match app.ts) ─────────────────────────────
 const SBFPreset = definePreset(Aura, {
@@ -94,6 +95,7 @@ export default function render(page: any) {
         })
         .use(ToastService)
         .use(ConfirmationService)
+        .directive('tooltip', Tooltip)
     },
   }).then((result) => {
     // PrimeVue injects theme CSS via document.head (DOM), which is a no-op on the server

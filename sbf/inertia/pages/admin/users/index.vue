@@ -243,7 +243,7 @@ function impersonateUser(userId: number) {
           <!-- If user has pending issues and is currently active, show warning instead of toggle -->
           <span
             v-if="!data.isDisabled && (data.hasUninvoicedOrders || data.hasUnpaidInvoices)"
-            :title="t('messages.user_has_uninvoiced_orders')"
+            v-tooltip.top="t('messages.user_has_uninvoiced_orders')"
             :aria-label="t('messages.user_has_uninvoiced_orders')"
           >
             <Tag severity="warn" icon="pi pi-exclamation-circle" />

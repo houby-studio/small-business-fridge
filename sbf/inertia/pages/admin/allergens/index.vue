@@ -99,7 +99,7 @@ function cancelEdit() {
         <template #body="{ data }">
           <span
             v-if="!data.isDisabled && data.hasProducts"
-            :title="t('messages.allergen_has_products')"
+            v-tooltip.top="t('messages.allergen_has_products')"
             :aria-label="t('messages.allergen_has_products')"
           >
             <Tag severity="warn" icon="pi pi-exclamation-circle" />
