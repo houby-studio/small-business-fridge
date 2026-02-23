@@ -63,6 +63,7 @@ export default class KioskController {
       },
       favoriteIds: favoriteRows.map((r: { product_id: number }) => r.product_id),
       recommendedIds,
+      excludedAllergenIds: customer.excludedAllergenIds ?? [],
     })
   }
 

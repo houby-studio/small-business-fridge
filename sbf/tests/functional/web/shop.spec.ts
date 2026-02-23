@@ -6,6 +6,7 @@ import { DeliveryFactory } from '#database/factories/delivery_factory'
 import { CategoryFactory } from '#database/factories/category_factory'
 import Order from '#models/order'
 import User from '#models/user'
+import Allergen from '#models/allergen'
 import db from '@adonisjs/lucid/services/db'
 
 const cleanAll = async () => {
@@ -114,6 +115,67 @@ test.group('Web Shop - index', (group) => {
     response.assertTextIncludes(inStockLowerRank.displayName)
     assert.notInclude(response.text(), outOfStockTopRank.displayName)
     assert.match(response.text(), /(?:&quot;|")isRecommended(?:&quot;|")\s*:\s*true/)
+    assert.match(response.text(), /(?:&quot;|")recommendationRank(?:&quot;|")\s*:\s*1/)
+  })
+
+  test('shop recommendations skip products matching user excluded allergens', async ({
+    client,
+    assert,
+  }) => {
+    const excludedAllergen = await Allergen.create({ name: 'Mustard', isDisabled: false })
+    const user = await UserFactory.merge({
+      excludedAllergenIds: [excludedAllergen.id],
+    }).create()
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const blockedProduct = await ProductFactory.merge({ categoryId: category.id }).create()
+    const allowedProduct = await ProductFactory.merge({ categoryId: category.id }).create()
+
+    await db.table('product_allergen').insert({
+      product_id: blockedProduct.id,
+      allergen_id: excludedAllergen.id,
+    })
+
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: blockedProduct.id,
+      amountLeft: 5,
+      price: 20,
+    }).create()
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: allowedProduct.id,
+      amountLeft: 5,
+      price: 20,
+    }).create()
+
+    const now = new Date()
+    await db.table('recommendations').insert([
+      {
+        user_id: user.id,
+        product_id: blockedProduct.id,
+        score: 0.9,
+        model: 'statistical',
+        rank: 1,
+        generated_at: now,
+        created_at: now,
+      },
+      {
+        user_id: user.id,
+        product_id: allowedProduct.id,
+        score: 0.8,
+        model: 'statistical',
+        rank: 2,
+        generated_at: now,
+        created_at: now,
+      },
+    ])
+
+    const response = await client.get('/shop').loginAs(user)
+
+    response.assertStatus(200)
+    assert.notInclude(response.text(), blockedProduct.displayName)
+    assert.include(response.text(), allowedProduct.displayName)
     assert.match(response.text(), /(?:&quot;|")recommendationRank(?:&quot;|")\s*:\s*1/)
   })
 })

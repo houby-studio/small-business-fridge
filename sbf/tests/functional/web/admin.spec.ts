@@ -408,6 +408,30 @@ test.group('Admin - allergens CRUD', (group) => {
     assert.isFalse(allergen!.isDisabled)
   })
 
+  test('creating an allergen writes allergen.created audit entry', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+
+    const response = await client
+      .post('/admin/allergens')
+      .loginAs(admin)
+      .withCsrfToken()
+      .form({ name: 'Sesame' })
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    const allergen = await Allergen.findByOrFail('name', 'Sesame')
+    const log = await db
+      .from('audit_logs')
+      .where('action', 'allergen.created')
+      .where('entity_type', 'allergen')
+      .where('entity_id', allergen.id)
+      .first()
+
+    assert.isDefined(log, 'allergen.created audit log should exist')
+    assert.equal(log.user_id, admin.id)
+  })
+
   test('admin can update allergen', async ({ client, assert }) => {
     const admin = await UserFactory.apply('admin').create()
     const allergen = await Allergen.create({ name: 'Lepek', isDisabled: false })
@@ -438,6 +462,35 @@ test.group('Admin - allergens CRUD', (group) => {
     response.assertStatus(302)
     await allergen.refresh()
     assert.isTrue(allergen.isDisabled)
+  })
+
+  test('updating an allergen writes allergen.updated audit entry', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const allergen = await Allergen.create({ name: 'Lepek', isDisabled: false })
+
+    const response = await client
+      .put(`/admin/allergens/${allergen.id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .form({ name: 'Gluten', isDisabled: 'true' })
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    const log = await db
+      .from('audit_logs')
+      .where('action', 'allergen.updated')
+      .where('entity_type', 'allergen')
+      .where('entity_id', allergen.id)
+      .first()
+
+    assert.isDefined(log, 'allergen.updated audit log should exist')
+    assert.equal(log.user_id, admin.id)
+
+    const metadata = log.metadata as Record<string, { from: unknown; to: unknown }> | null
+    assert.isNotNull(metadata)
+    assert.deepEqual(metadata!.name, { from: 'Lepek', to: 'Gluten' })
+    assert.deepEqual(metadata!.isDisabled, { from: false, to: true })
   })
 
   test('customer cannot access admin allergens page', async ({ client }) => {

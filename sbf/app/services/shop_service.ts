@@ -5,11 +5,41 @@ import db from '@adonisjs/lucid/services/db'
 import { normalizeImagePath } from '#helpers/image_url'
 
 export default class ShopService {
+  private parseExcludedAllergenIds(raw: string | number[] | null | undefined): number[] {
+    if (Array.isArray(raw)) {
+      return raw.map(Number).filter((id) => Number.isInteger(id) && id > 0)
+    }
+
+    if (typeof raw === 'string') {
+      try {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed)) {
+          return parsed.map(Number).filter((id) => Number.isInteger(id) && id > 0)
+        }
+      } catch {
+        return []
+      }
+    }
+
+    return []
+  }
+
   /**
    * Get all products with stock info, grouped by category.
    * Optionally filters to only in-stock products.
    */
   async getProducts(options: { showAll?: boolean; userId?: number } = {}) {
+    let excludedAllergenIds: number[] = []
+    if (options.userId) {
+      const userRow = await db
+        .from('users')
+        .where('id', options.userId)
+        .select('excluded_allergen_ids')
+        .first()
+
+      excludedAllergenIds = this.parseExcludedAllergenIds(userRow?.excluded_allergen_ids)
+    }
+
     const query = Product.query()
       .preload('category')
       .preload('allergens')
@@ -20,6 +50,12 @@ export default class ShopService {
         q.where('isDisabled', false)
       })
       .orderBy('displayName', 'asc')
+
+    if (excludedAllergenIds.length > 0) {
+      query.whereDoesntHave('allergens', (q) => {
+        q.whereIn('allergens.id', excludedAllergenIds)
+      })
+    }
 
     const products = await query
 

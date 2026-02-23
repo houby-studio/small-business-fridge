@@ -1,6 +1,8 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import AdminService from '#services/admin_service'
 import { createAllergenValidator, updateAllergenValidator } from '#validators/allergen'
+import AuditService from '#services/audit_service'
+import Allergen from '#models/allergen'
 
 export default class AllergensController {
   async index({ inertia }: HttpContext) {
@@ -16,11 +18,16 @@ export default class AllergensController {
     })
   }
 
-  async store({ request, response, session, i18n }: HttpContext) {
+  async store({ request, response, session, i18n, auth }: HttpContext) {
     const data = await request.validateUsing(createAllergenValidator)
 
     const service = new AdminService()
-    await service.createAllergen(data.name)
+    const allergen = await service.createAllergen(data.name)
+
+    AuditService.log(auth.user!.id, 'allergen.created', 'allergen', allergen.id, null, {
+      name: allergen.name,
+      isDisabled: allergen.isDisabled,
+    })
 
     session.flash('alert', {
       type: 'success',
@@ -30,11 +37,33 @@ export default class AllergensController {
     return response.redirect('/admin/allergens')
   }
 
-  async update({ params, request, response, session, i18n }: HttpContext) {
+  async update({ params, request, response, session, i18n, auth }: HttpContext) {
     const data = await request.validateUsing(updateAllergenValidator)
+
+    const allergenBefore = await Allergen.findOrFail(Number(params.id))
+    const before = {
+      name: allergenBefore.name,
+      isDisabled: allergenBefore.isDisabled,
+    }
 
     const service = new AdminService()
     const allergen = await service.updateAllergen(Number(params.id), data)
+
+    const changes: Record<string, { from: unknown; to: unknown }> = {}
+    for (const key of ['name', 'isDisabled'] as const) {
+      if (data[key] !== undefined && before[key] !== allergen[key]) {
+        changes[key] = { from: before[key], to: allergen[key] }
+      }
+    }
+
+    AuditService.log(
+      auth.user!.id,
+      'allergen.updated',
+      'allergen',
+      allergen.id,
+      null,
+      Object.keys(changes).length ? changes : null
+    )
 
     session.flash('alert', {
       type: 'success',

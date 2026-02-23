@@ -51,18 +51,25 @@ const keypadLoading = ref(false)
 // Personalization overlay (merged client-side onto allProducts)
 const favoriteIds = ref<number[]>([])
 const recommendedIds = ref<number[]>([])
+const excludedAllergenIds = ref<number[]>([])
 
 const personalizedProducts = computed<ProductItem[]>(() => {
   const recommendedRankMap = new Map(recommendedIds.value.map((id, i) => [id, i + 1]))
-  return props.allProducts.map((p) => {
-    const rank = recommendedRankMap.get(p.id) ?? 0
-    return {
-      ...p,
-      isFavorite: favoriteIds.value.includes(p.id),
-      isRecommended: rank > 0 && rank <= 3, // only top-3 get the recommended highlight
-      recommendationRank: rank,
-    }
-  })
+  return props.allProducts
+    .filter((p) =>
+      excludedAllergenIds.value.length === 0
+        ? true
+        : !p.allergens.some((a) => excludedAllergenIds.value.includes(a.id))
+    )
+    .map((p) => {
+      const rank = recommendedRankMap.get(p.id) ?? 0
+      return {
+        ...p,
+        isFavorite: favoriteIds.value.includes(p.id),
+        isRecommended: rank > 0 && rank <= 3, // only top-3 get the recommended highlight
+        recommendationRank: rank,
+      }
+    })
 })
 
 // ── Basket ────────────────────────────────────────────────────────────────────
@@ -251,6 +258,7 @@ async function onKeypadSubmit(keypadId: string) {
     customer.value = data.customer
     favoriteIds.value = data.favoriteIds
     recommendedIds.value = data.recommendedIds
+    excludedAllergenIds.value = data.excludedAllergenIds ?? []
     appState.value = 'identified'
     startIdleTimer()
     refreshProducts() // fetch fresh stock data for this customer's session
