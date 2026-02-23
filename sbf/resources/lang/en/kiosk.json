@@ -32,7 +32,7 @@
   "confirm_checkout_title": "Confirm Purchase",
   "checkout_success": "Purchase of {count} items completed!",
   "item_out_of_stock_other_buyer": "Someone else bought it first!",
-  "item_fifo_only": "This product must be purchased from older stock first.",
+  "item_fifo_only": "Stock changed while you were shopping. Please adjust basket and try again.",
   "purchase_retry": "Purchase failed, please try again",
   "idle_welcome": "Welcome to Lednice IT!",
   "session_expiring": "Session expires in: {seconds} s",
