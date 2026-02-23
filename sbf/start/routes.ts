@@ -261,16 +261,29 @@ if (env.get('SWAGGER_ENABLED')) {
   const swaggerConfig = swaggerModule.default
 
   router.get('/swagger', async ({ response }) => {
-    const routes = router.toJSON()
-    const apiRoutes = { root: routes.root.filter((r) => r.pattern.startsWith('/api/v1')) }
+    const routes = router.toJSON() as any
+    const flattenedRoutes = Array.isArray(routes)
+      ? routes
+      : Object.values(routes).flatMap((domainRoutes: any) =>
+          Array.isArray(domainRoutes) ? domainRoutes : []
+        )
+    const normalizedRoutes = { root: flattenedRoutes }
     try {
-      return response.json(await swagger.json(apiRoutes, swaggerConfig))
+      const spec = await swagger.json(normalizedRoutes, swaggerConfig)
+      spec.paths = Object.fromEntries(
+        Object.entries(spec.paths ?? {}).filter(([path]) => path.startsWith('/api/v1'))
+      )
+      return response.json(spec)
     } catch (error: any) {
       // In production, adonis-autoswagger reads a pre-generated swagger.json.
       // If the file is missing in the image, generate docs at runtime as fallback.
       if (error?.code === 'ENOENT') {
         const runtimeSwagger = swagger as any
-        return response.json(await runtimeSwagger.generate(apiRoutes, swaggerConfig))
+        const spec = await runtimeSwagger.generate(normalizedRoutes, swaggerConfig)
+        spec.paths = Object.fromEntries(
+          Object.entries(spec.paths ?? {}).filter(([path]) => path.startsWith('/api/v1'))
+        )
+        return response.json(spec)
       }
       throw error
     }
