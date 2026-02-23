@@ -112,7 +112,7 @@ function createToken() {
 }
 
 function revokeToken(tokenId: number) {
-  router.delete(`/profile/tokens/${tokenId}`, {}, { preserveScroll: true })
+  router.delete(`/profile/tokens/${tokenId}`, { preserveScroll: true })
 }
 
 // Show-once new token dialog — driven by flash

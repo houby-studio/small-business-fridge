@@ -118,8 +118,8 @@ function applyFilters() {
 function clearFilters() {
   filterAction.value = ALL
   filterSortOrder.value = 'desc'
-  lastAppliedFilterParams.value = {}
-  router.get('/audit', {}, { preserveState: true, only: ['logs', 'filters'] })
+  lastAppliedFilterParams.value = buildParams()
+  router.get('/audit', buildParams(), { preserveState: true, only: ['logs', 'filters'] })
 }
 
 function onPageChange(event: any) {

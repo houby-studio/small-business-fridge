@@ -90,8 +90,11 @@ function clearFilters() {
   filterInStock.value = false
   filterSortBy.value = 'productName'
   filterSortOrder.value = 'asc'
-  lastAppliedFilterParams.value = {}
-  router.get('/supplier/stock', {}, { preserveState: true, only: ['stock', 'filters'] })
+  lastAppliedFilterParams.value = buildFilterParams()
+  router.get('/supplier/stock', buildFilterParams(), {
+    preserveState: true,
+    only: ['stock', 'filters'],
+  })
 }
 
 function onPageChange(event: any) {

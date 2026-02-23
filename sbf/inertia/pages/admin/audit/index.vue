@@ -140,8 +140,8 @@ function clearFilters() {
   filterEntity.value = ALL
   filterUserId.value = ALL
   filterSortOrder.value = 'desc'
-  lastAppliedFilterParams.value = {}
-  router.get('/admin/audit', {}, { preserveState: true, only: ['logs', 'filters'] })
+  lastAppliedFilterParams.value = buildParams()
+  router.get('/admin/audit', buildParams(), { preserveState: true, only: ['logs', 'filters'] })
 }
 
 function onPageChange(event: any) {

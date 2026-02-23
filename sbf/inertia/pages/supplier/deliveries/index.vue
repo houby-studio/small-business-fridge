@@ -106,12 +106,11 @@ function clearFilters() {
   filterProductId.value = ALL
   filterSortBy.value = 'createdAt'
   filterSortOrder.value = 'desc'
-  lastAppliedFilterParams.value = {}
-  router.get(
-    '/supplier/deliveries',
-    {},
-    { preserveState: true, only: ['recentDeliveries', 'filters'] }
-  )
+  lastAppliedFilterParams.value = buildFilterParams()
+  router.get('/supplier/deliveries', buildFilterParams(), {
+    preserveState: true,
+    only: ['recentDeliveries', 'filters'],
+  })
 }
 
 function onPageChange(event: any) {

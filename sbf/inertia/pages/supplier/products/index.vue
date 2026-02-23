@@ -75,8 +75,11 @@ function applyFilters() {
 function clearFilters() {
   filterSearch.value = ''
   filterCategoryId.value = ALL
-  lastAppliedFilterParams.value = {}
-  router.get('/supplier/products', {}, { preserveState: true, only: ['products', 'filters'] })
+  lastAppliedFilterParams.value = buildFilterParams()
+  router.get('/supplier/products', buildFilterParams(), {
+    preserveState: true,
+    only: ['products', 'filters'],
+  })
 }
 
 function onPageChange(event: any) {

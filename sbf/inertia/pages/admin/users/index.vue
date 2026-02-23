@@ -113,8 +113,11 @@ function applyFilters() {
 function clearFilters() {
   filterSearch.value = ''
   filterRole.value = ALL
-  lastAppliedFilterParams.value = {}
-  router.get('/admin/users', {}, { preserveState: true, only: ['users', 'filters'] })
+  lastAppliedFilterParams.value = buildFilterParams()
+  router.get('/admin/users', buildFilterParams(), {
+    preserveState: true,
+    only: ['users', 'filters'],
+  })
 }
 
 function onPageChange(event: any) {

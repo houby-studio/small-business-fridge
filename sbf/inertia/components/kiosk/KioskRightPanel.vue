@@ -26,6 +26,7 @@ interface ProductItem {
   deliveryId: number | null
   stockSum: number
   isFavorite: boolean
+  isRecommended?: boolean
   category: { name: string; color: string }
 }
 

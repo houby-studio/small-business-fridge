@@ -95,8 +95,8 @@ function clearFilters() {
   filterInvoiced.value = ALL
   filterSortBy.value = 'createdAt'
   filterSortOrder.value = 'desc'
-  lastAppliedFilterParams.value = {}
-  router.get('/orders', {}, { preserveState: true, only: ['orders', 'filters'] })
+  lastAppliedFilterParams.value = buildFilterParams()
+  router.get('/orders', buildFilterParams(), { preserveState: true, only: ['orders', 'filters'] })
 }
 
 function onPageChange(event: any) {
