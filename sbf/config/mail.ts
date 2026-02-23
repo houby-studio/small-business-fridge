@@ -1,6 +1,10 @@
 import env from '#start/env'
 import { defineConfig, transports } from '@adonisjs/mail'
 
+const smtpUsername = env.get('SMTP_USERNAME')
+const smtpPassword = env.get('SMTP_PASSWORD')
+const hasSmtpAuth = Boolean(smtpUsername && smtpPassword)
+
 const mailConfig = defineConfig({
   default: 'smtp',
 
@@ -19,16 +23,20 @@ const mailConfig = defineConfig({
    */
   mailers: {
     smtp: transports.smtp({
+      ...(hasSmtpAuth
+        ? {
+            auth: {
+              type: 'login',
+              user: smtpUsername!,
+              pass: smtpPassword!,
+            },
+          }
+        : {}),
       host: env.get('SMTP_HOST'),
       port: env.get('SMTP_PORT'),
       ...(env.get('SMTP_IGNORE_TLS')
         ? { ignoreTLS: true, tls: { rejectUnauthorized: false } }
         : {}),
-      auth: {
-        type: 'login',
-        user: env.get('SMTP_USERNAME', ''),
-        pass: env.get('SMTP_PASSWORD', ''),
-      },
     }),
   },
 })
