@@ -259,6 +259,23 @@ if (env.get('SWAGGER_ENABLED')) {
   const swagger = autoswagger.default.default
   const swaggerModule = await import('../config/swagger.js')
   const swaggerConfig = swaggerModule.default
+  const keepOnlyApiV1 = (spec: any) => {
+    spec.paths = Object.fromEntries(
+      Object.entries(spec.paths ?? {}).filter(([path]) => path.startsWith('/api/v1'))
+    )
+
+    const usedTags = new Set<string>()
+    const operations: any[] = Object.values(spec.paths ?? {}).flatMap((pathItem: any) =>
+      Object.values((pathItem ?? {}) as Record<string, any>)
+    )
+    for (const operation of operations) {
+      for (const tag of operation?.tags ?? []) {
+        if (typeof tag === 'string') usedTags.add(tag)
+      }
+    }
+
+    spec.tags = (spec.tags ?? []).filter((tag: any) => usedTags.has(tag?.name))
+  }
 
   router.get('/swagger', async ({ response }) => {
     const routes = router.toJSON() as any
@@ -270,9 +287,7 @@ if (env.get('SWAGGER_ENABLED')) {
     const normalizedRoutes = { root: flattenedRoutes }
     try {
       const spec = await swagger.json(normalizedRoutes, swaggerConfig)
-      spec.paths = Object.fromEntries(
-        Object.entries(spec.paths ?? {}).filter(([path]) => path.startsWith('/api/v1'))
-      )
+      keepOnlyApiV1(spec)
       return response.json(spec)
     } catch (error: any) {
       // In production, adonis-autoswagger reads a pre-generated swagger.json.
@@ -280,9 +295,7 @@ if (env.get('SWAGGER_ENABLED')) {
       if (error?.code === 'ENOENT') {
         const runtimeSwagger = swagger as any
         const spec = await runtimeSwagger.generate(normalizedRoutes, swaggerConfig)
-        spec.paths = Object.fromEntries(
-          Object.entries(spec.paths ?? {}).filter(([path]) => path.startsWith('/api/v1'))
-        )
+        keepOnlyApiV1(spec)
         return response.json(spec)
       }
       throw error
