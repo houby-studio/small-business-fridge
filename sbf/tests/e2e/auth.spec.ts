@@ -1,3 +1,4 @@
+import '#tests/test_context'
 import { test, expect } from '@playwright/test'
 
 /**

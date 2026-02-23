@@ -30,7 +30,7 @@ export const createProductValidator = vine.compile(
     description: vine.string().trim().maxLength(1000),
     categoryId: vine.number().positive(),
     barcode: vine.string().trim().maxLength(100).optional(),
-    image: vine.file({ size: '5mb', extnames: ['jpg', 'jpeg', 'png', 'webp'] }).optional(),
+    image: vine.file({ size: '5mb', extnames: ['jpg', 'jpeg', 'png', 'webp'] }),
     allergenIds: parseAllergenIds(),
   })
 )

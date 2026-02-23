@@ -1,3 +1,4 @@
+import '#tests/test_context'
 import { test } from '@japa/runner'
 import { UserFactory } from '#database/factories/user_factory'
 import { ProductFactory } from '#database/factories/product_factory'
@@ -139,5 +140,79 @@ test.group('GET /kiosk/customer', (group) => {
 
     response.assertStatus(404)
     assert.include(response.text(), 'error')
+  })
+
+  test('recommendedIds skip out-of-stock higher ranks and backfill with lower in-stock ranks', async ({
+    client,
+    assert,
+  }) => {
+    const kioskDevice = await UserFactory.apply('kiosk').create()
+    const customer = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+
+    const productRank1 = await ProductFactory.merge({ categoryId: category.id }).create()
+    const productRank2 = await ProductFactory.merge({ categoryId: category.id }).create()
+    const productRank3 = await ProductFactory.merge({ categoryId: category.id }).create()
+
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: productRank1.id,
+      amountLeft: 0,
+      amountSupplied: 5,
+      price: 10,
+    }).create()
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: productRank2.id,
+      amountLeft: 5,
+      price: 10,
+    }).create()
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: productRank3.id,
+      amountLeft: 5,
+      price: 10,
+    }).create()
+
+    const now = new Date()
+    await db.table('recommendations').insert([
+      {
+        user_id: customer.id,
+        product_id: productRank1.id,
+        score: 0.9,
+        model: 'statistical',
+        rank: 1,
+        generated_at: now,
+        created_at: now,
+      },
+      {
+        user_id: customer.id,
+        product_id: productRank2.id,
+        score: 0.8,
+        model: 'statistical',
+        rank: 2,
+        generated_at: now,
+        created_at: now,
+      },
+      {
+        user_id: customer.id,
+        product_id: productRank3.id,
+        score: 0.7,
+        model: 'statistical',
+        rank: 3,
+        generated_at: now,
+        created_at: now,
+      },
+    ])
+
+    const response = await client
+      .get(`/kiosk/customer?keypadId=${customer.keypadId}`)
+      .loginAs(kioskDevice)
+
+    response.assertStatus(200)
+    const body = JSON.parse(response.text())
+    assert.deepEqual(body.recommendedIds, [productRank2.id, productRank3.id])
+    assert.notInclude(body.recommendedIds, productRank1.id)
   })
 })

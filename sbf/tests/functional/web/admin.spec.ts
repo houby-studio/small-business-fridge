@@ -1,3 +1,4 @@
+import '#tests/test_context'
 import { test } from '@japa/runner'
 import { UserFactory } from '#database/factories/user_factory'
 import { InvoiceFactory } from '#database/factories/invoice_factory'
@@ -59,6 +60,14 @@ test.group('Admin - users search and filter', (group) => {
     const admin = await UserFactory.apply('admin').create()
 
     const response = await client.get('/admin/users?search=john&role=customer').loginAs(admin)
+    response.assertStatus(200)
+  })
+
+  test('filter by userId returns 200', async ({ client }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const user = await UserFactory.create()
+
+    const response = await client.get(`/admin/users?userId=${user.id}`).loginAs(admin)
     response.assertStatus(200)
   })
 })
@@ -435,5 +444,61 @@ test.group('Admin - allergens CRUD', (group) => {
     const customer = await UserFactory.create()
     const response = await client.get('/admin/allergens').loginAs(customer).redirects(0)
     response.assertStatus(302)
+test.group('Admin - category audit logging', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('creating a category writes category.created audit entry', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+
+    const response = await client
+      .post('/admin/categories')
+      .loginAs(admin)
+      .withCsrfToken()
+      .form({ name: 'Drinks', color: '#123456' })
+      .redirects(0)
+
+    response.assertStatus(302)
+    assert.equal(response.header('location'), '/admin/categories')
+
+    const log = await db
+      .from('audit_logs')
+      .where('action', 'category.created')
+      .where('entity_type', 'category')
+      .first()
+
+    assert.isDefined(log, 'category.created audit log should exist')
+    assert.equal(log.user_id, admin.id)
+  })
+
+  test('updating a category writes category.updated audit entry', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const category = await CategoryFactory.merge({ name: 'Food', color: '#aaaaaa' }).create()
+
+    const response = await client
+      .put(`/admin/categories/${category.id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .form({ name: 'Snacks', color: '#bbbbbb', isDisabled: 'true' })
+      .redirects(0)
+
+    response.assertStatus(302)
+    assert.equal(response.header('location'), '/admin/categories')
+
+    const log = await db
+      .from('audit_logs')
+      .where('action', 'category.updated')
+      .where('entity_type', 'category')
+      .where('entity_id', category.id)
+      .first()
+
+    assert.isDefined(log, 'category.updated audit log should exist')
+    assert.equal(log.user_id, admin.id)
+
+    const metadata = log.metadata as Record<string, { from: unknown; to: unknown }> | null
+    assert.isNotNull(metadata)
+    assert.deepEqual(metadata!.name, { from: 'Food', to: 'Snacks' })
+    assert.deepEqual(metadata!.color, { from: '#aaaaaa', to: '#bbbbbb' })
+    assert.deepEqual(metadata!.isDisabled, { from: false, to: true })
   })
 })

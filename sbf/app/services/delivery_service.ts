@@ -34,14 +34,14 @@ export default class DeliveryService {
   /**
    * Get stock overview for a supplier — all their deliveries with product info.
    * Groups by product, shows supplied/remaining/sold amounts.
-   * Supports filtering by name, category, inStock, sorting, and pagination.
+   * Supports filtering by product, category, inStock, sorting, and pagination.
    */
   async getStockForSupplier(
     supplierId: number,
     page: number = 1,
     perPage: number = 20,
     filters?: {
-      name?: string
+      productId?: number
       categoryId?: number
       inStock?: boolean
       sortBy?: string
@@ -85,8 +85,8 @@ export default class DeliveryService {
         'categories.color'
       )
 
-    if (filters?.name) {
-      query = query.whereRaw('products.display_name ILIKE ?', [`%${filters.name}%`])
+    if (filters?.productId) {
+      query = query.where('products.id', filters.productId)
     }
     if (filters?.categoryId) {
       query = query.where('products.category_id', filters.categoryId)

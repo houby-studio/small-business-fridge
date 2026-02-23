@@ -12,6 +12,7 @@ import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDate } from '~/composables/use_format_date'
+import { areFilterParamsEqual } from '~/composables/use_filter_params'
 
 interface OrderRow {
   id: number
@@ -37,23 +38,24 @@ const props = defineProps<{
 }>()
 const confirm = useConfirm()
 const { t } = useI18n()
+const ALL = '__all__'
 
-const filterSearch = ref(props.filters.search)
-const filterChannel = ref(props.filters.channel)
-const filterInvoiced = ref(props.filters.invoiced)
+const filterSearch = ref(props.filters.search ?? '')
+const filterChannel = ref(props.filters.channel || ALL)
+const filterInvoiced = ref(props.filters.invoiced || ALL)
 const filterSortBy = ref(props.filters.sortBy || 'createdAt')
 const filterSortOrder = ref(props.filters.sortOrder || 'desc')
 const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
 
 const channelOptions = [
-  { label: t('common.all'), value: '' },
+  { label: t('common.all'), value: ALL },
   { label: t('common.channel_web'), value: 'web' },
   { label: t('common.channel_kiosk'), value: 'kiosk' },
   { label: t('common.channel_scanner'), value: 'scanner' },
 ]
 
 const invoicedOptions = [
-  { label: t('common.all'), value: '' },
+  { label: t('common.all'), value: ALL },
   { label: t('orders.filter_invoiced_yes'), value: 'yes' },
   { label: t('orders.filter_invoiced_no'), value: 'no' },
 ]
@@ -61,28 +63,39 @@ const invoicedOptions = [
 function buildFilterParams() {
   return {
     search: filterSearch.value || undefined,
-    channel: filterChannel.value || undefined,
-    invoiced: filterInvoiced.value || undefined,
+    channel: filterChannel.value === ALL ? undefined : filterChannel.value,
+    invoiced: filterInvoiced.value === ALL ? undefined : filterInvoiced.value,
     sortBy: filterSortBy.value || undefined,
     sortOrder: filterSortOrder.value || undefined,
   }
 }
 
+const lastAppliedFilterParams = ref(buildFilterParams())
+
 function applyFilters() {
+  const nextParams = buildFilterParams()
+  const page = areFilterParamsEqual(nextParams, lastAppliedFilterParams.value)
+    ? props.orders.meta.currentPage
+    : 1
   router.get(
     '/admin/orders',
-    { ...buildFilterParams(), page: 1 },
+    { ...nextParams, page },
     { preserveState: true, only: ['orders', 'filters'] }
   )
+  lastAppliedFilterParams.value = nextParams
 }
 
 function clearFilters() {
   filterSearch.value = ''
-  filterChannel.value = ''
-  filterInvoiced.value = ''
+  filterChannel.value = ALL
+  filterInvoiced.value = ALL
   filterSortBy.value = 'createdAt'
   filterSortOrder.value = 'desc'
-  router.get('/admin/orders', {}, { preserveState: true, only: ['orders', 'filters'] })
+  lastAppliedFilterParams.value = buildFilterParams()
+  router.get('/admin/orders', buildFilterParams(), {
+    preserveState: true,
+    only: ['orders', 'filters'],
+  })
 }
 
 function onPageChange(event: any) {

@@ -7,10 +7,10 @@ import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
-import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
 import Checkbox from 'primevue/checkbox'
 import { useI18n } from '~/composables/use_i18n'
+import { areFilterParamsEqual } from '~/composables/use_filter_params'
 
 interface StockRow {
   productId: number
@@ -37,51 +37,80 @@ interface CategoryOption {
   color: string
 }
 
+interface ProductOption {
+  id: number
+  displayName: string
+}
+
 const props = defineProps<{
   stock: StockResult
   categories: CategoryOption[]
-  filters: { name: string; categoryId: string; inStock: string; sortBy: string; sortOrder: string }
+  products: ProductOption[]
+  filters: {
+    productId: string
+    categoryId: string
+    inStock: string
+    sortBy: string
+    sortOrder: string
+  }
 }>()
 
 const { t } = useI18n()
+const ALL = '__all__'
 
-const filterName = ref(props.filters.name)
-const filterCategoryId = ref(props.filters.categoryId)
+const filterProductId = ref(props.filters.productId || ALL)
+const filterCategoryId = ref(props.filters.categoryId || ALL)
 const filterInStock = ref(props.filters.inStock === '1')
 const filterSortBy = ref(props.filters.sortBy || 'productName')
 const filterSortOrder = ref(props.filters.sortOrder || 'asc')
 const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
 
+const productOptions = computed(() => [
+  { label: t('common.all'), value: ALL },
+  ...props.products.map((p) => ({ label: p.displayName, value: String(p.id) })),
+])
+
 const categoryOptions = computed(() => [
-  { label: t('common.all'), value: '' },
+  { label: t('common.all'), value: ALL },
   ...props.categories.map((c) => ({ label: c.name, value: String(c.id) })),
 ])
 
 function buildFilterParams() {
   return {
-    name: filterName.value || undefined,
-    categoryId: filterCategoryId.value || undefined,
+    productId: filterProductId.value === ALL ? undefined : filterProductId.value,
+    categoryId: filterCategoryId.value === ALL ? undefined : filterCategoryId.value,
     inStock: filterInStock.value ? '1' : undefined,
     sortBy: filterSortBy.value || undefined,
     sortOrder: filterSortOrder.value || undefined,
   }
 }
 
+const lastAppliedFilterParams = ref(buildFilterParams())
+
 function applyFilters() {
+  const nextParams = buildFilterParams()
+  const page = areFilterParamsEqual(nextParams, lastAppliedFilterParams.value)
+    ? props.stock.meta.currentPage
+    : 1
   router.get(
     '/supplier/stock',
-    { ...buildFilterParams(), page: 1 },
+    { ...nextParams, page },
     { preserveState: true, only: ['stock', 'filters'] }
   )
+  lastAppliedFilterParams.value = nextParams
 }
 
 function clearFilters() {
-  filterName.value = ''
-  filterCategoryId.value = ''
+  filterProductId.value = ALL
+  filterCategoryId.value = ALL
   filterInStock.value = false
   filterSortBy.value = 'productName'
   filterSortOrder.value = 'asc'
-  router.get('/supplier/stock', {}, { preserveState: true, only: ['stock', 'filters'] })
+  lastAppliedFilterParams.value = buildFilterParams()
+  router.get('/supplier/stock', buildFilterParams(), {
+    preserveState: true,
+    only: ['stock', 'filters'],
+  })
 }
 
 function onPageChange(event: any) {
@@ -203,13 +232,16 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
     <div class="mb-4 flex flex-wrap items-end gap-3">
       <div>
         <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
-          t('supplier.stock_filter_name')
+          t('supplier.stock_filter_product')
         }}</label>
-        <InputText
-          v-model="filterName"
-          :placeholder="t('supplier.stock_filter_name')"
-          class="w-48"
-          @keyup.enter="applyFilters"
+        <Select
+          v-model="filterProductId"
+          :options="productOptions"
+          optionLabel="label"
+          optionValue="value"
+          :placeholder="t('supplier.stock_filter_product')"
+          class="w-56"
+          filter
         />
       </div>
       <div>

@@ -24,6 +24,8 @@
   "action_delivery_created": "Stock delivery",
   "action_product_created": "Product created",
   "action_product_updated": "Product updated",
+  "action_category_created": "Category created",
+  "action_category_updated": "Category updated",
   "action_profile_updated": "Profile updated",
   "action_user_updated": "User updated",
   "action_order_storno": "Order cancelled",

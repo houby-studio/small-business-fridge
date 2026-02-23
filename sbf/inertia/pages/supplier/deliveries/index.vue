@@ -10,6 +10,7 @@ import Column from 'primevue/column'
 import Card from 'primevue/card'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDate } from '~/composables/use_format_date'
+import { areFilterParamsEqual } from '~/composables/use_filter_params'
 
 interface ProductOption {
   id: number
@@ -40,19 +41,20 @@ const props = defineProps<{
 }>()
 
 const { t } = useI18n()
+const ALL = '__all__'
 
 const selectedProduct = ref<number | null>(props.preselect ?? null)
 const amount = ref<number | null>(null)
 const price = ref<number | null>(null)
 const submitting = ref(false)
 
-const filterProductId = ref(props.filters.productId)
+const filterProductId = ref(props.filters.productId || ALL)
 const filterSortBy = ref(props.filters.sortBy || 'createdAt')
 const filterSortOrder = ref(props.filters.sortOrder || 'desc')
 const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
 
 const productFilterOptions = computed(() => [
-  { label: t('common.all'), value: '' },
+  { label: t('common.all'), value: ALL },
   ...props.products.map((p) => ({ label: p.displayName, value: String(p.id) })),
 ])
 
@@ -79,29 +81,36 @@ function submit() {
 
 function buildFilterParams() {
   return {
-    productId: filterProductId.value || undefined,
+    productId: filterProductId.value === ALL ? undefined : filterProductId.value,
     sortBy: filterSortBy.value || undefined,
     sortOrder: filterSortOrder.value || undefined,
   }
 }
 
+const lastAppliedFilterParams = ref(buildFilterParams())
+
 function applyFilters() {
+  const nextParams = buildFilterParams()
+  const page = areFilterParamsEqual(nextParams, lastAppliedFilterParams.value)
+    ? props.recentDeliveries.meta.currentPage
+    : 1
   router.get(
     '/supplier/deliveries',
-    { ...buildFilterParams(), page: 1 },
+    { ...nextParams, page },
     { preserveState: true, only: ['recentDeliveries', 'filters'] }
   )
+  lastAppliedFilterParams.value = nextParams
 }
 
 function clearFilters() {
-  filterProductId.value = ''
+  filterProductId.value = ALL
   filterSortBy.value = 'createdAt'
   filterSortOrder.value = 'desc'
-  router.get(
-    '/supplier/deliveries',
-    {},
-    { preserveState: true, only: ['recentDeliveries', 'filters'] }
-  )
+  lastAppliedFilterParams.value = buildFilterParams()
+  router.get('/supplier/deliveries', buildFilterParams(), {
+    preserveState: true,
+    only: ['recentDeliveries', 'filters'],
+  })
 }
 
 function onPageChange(event: any) {
@@ -139,51 +148,49 @@ function onSort(event: any) {
     <!-- Add stock form -->
     <Card class="mb-8">
       <template #content>
-        <form @submit.prevent="submit" class="flex flex-wrap items-end gap-4">
-          <div class="min-w-[250px] flex-1">
+        <form @submit.prevent="submit" class="grid grid-cols-1 items-end gap-2 lg:grid-cols-12">
+          <div class="min-w-0 lg:col-span-6">
             <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
               t('supplier.deliveries_product')
             }}</label>
             <Select
               v-model="selectedProduct"
+              fluid
               :options="products"
               optionLabel="displayName"
               optionValue="id"
               :placeholder="t('supplier.deliveries_product')"
               filter
-              class="w-full"
             />
           </div>
-          <div class="w-32">
+          <div class="min-w-0 lg:col-span-2">
             <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
               t('supplier.deliveries_amount')
             }}</label>
-            <InputNumber
-              v-model="amount"
-              :min="1"
-              :placeholder="t('common.pieces')"
-              class="w-full"
-            />
+            <InputNumber v-model="amount" fluid :min="1" :placeholder="t('common.pieces')" />
           </div>
-          <div class="w-32">
+          <div class="lg:col-span-2">
             <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
               t('supplier.deliveries_price')
             }}</label>
             <InputNumber
               v-model="price"
+              fluid
               :min="1"
               :suffix="' ' + t('common.currency')"
               :placeholder="t('common.currency')"
-              class="w-full"
             />
           </div>
-          <Button
-            type="submit"
-            :label="t('supplier.deliveries_submit')"
-            icon="pi pi-plus"
-            :loading="submitting"
-            :disabled="!selectedProduct || !amount || !price"
-          />
+          <div class="lg:col-span-2 lg:flex lg:justify-end">
+            <Button
+              type="submit"
+              fluid
+              :label="t('supplier.deliveries_submit')"
+              icon="pi pi-plus"
+              :loading="submitting"
+              :disabled="!selectedProduct || !amount || !price"
+            />
+          </div>
         </form>
       </template>
     </Card>
@@ -204,7 +211,8 @@ function onSort(event: any) {
           :options="productFilterOptions"
           optionLabel="label"
           optionValue="value"
-          class="w-52"
+          :placeholder="t('supplier.deliveries_filter_product')"
+          filter
         />
       </div>
       <Button

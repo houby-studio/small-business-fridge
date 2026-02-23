@@ -1,3 +1,4 @@
+import '#tests/test_context'
 import { test } from '@japa/runner'
 import { store as throttleStore } from '#middleware/throttle_middleware'
 

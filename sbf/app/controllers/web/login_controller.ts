@@ -55,6 +55,6 @@ export default class LoginController {
         ua: request.header('user-agent') ?? null,
       })
     }
-    return response.redirect('/login')
+    return response.redirect('/')
   }
 }

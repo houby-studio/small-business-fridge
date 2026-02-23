@@ -112,7 +112,7 @@ const menuItems = computed(() => {
 })
 
 function logout() {
-  router.post('/logout')
+  window.location.assign('/logout')
 }
 
 function stopImpersonation() {

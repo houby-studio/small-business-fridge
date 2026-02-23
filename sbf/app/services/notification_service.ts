@@ -28,7 +28,8 @@ export default class NotificationService {
     })
 
     const buyer = order.buyer
-    if (!buyer.sendMailOnPurchase) return
+    const isKioskPurchase = order.channel === 'kiosk'
+    if (!isKioskPurchase && !buyer.sendMailOnPurchase) return
 
     const productId = order.delivery.product.id
     const isFavorite = await db
@@ -65,7 +66,7 @@ export default class NotificationService {
    */
   async sendBatchPurchaseConfirmation(orders: Order[], buyerId: number) {
     const buyer = await User.find(buyerId)
-    if (!buyer || !buyer.sendMailOnPurchase) return
+    if (!buyer) return
 
     const loadedOrders = await Order.query()
       .whereIn(
@@ -76,6 +77,10 @@ export default class NotificationService {
         q.preload('product')
         q.preload('supplier')
       })
+
+    const isKioskBatch =
+      loadedOrders.length > 0 && loadedOrders.every((order) => order.channel === 'kiosk')
+    if (!isKioskBatch && !buyer.sendMailOnPurchase) return
 
     // Aggregate by delivery (product + price) to show grouped quantities
     const itemMap = new Map<

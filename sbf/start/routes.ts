@@ -80,6 +80,7 @@ router.group(() => {
 router.get('/auth/oidc/redirect', [OidcController, 'redirect'])
 router.get('/auth/oidc/callback', [OidcController, 'callback'])
 
+router.get('/logout', [LoginController, 'destroy']).use(middleware.auth())
 router.post('/logout', [LoginController, 'destroy']).use(middleware.auth())
 
 // Stop impersonation — requires auth only (impersonation middleware has already run)
@@ -265,11 +266,47 @@ if (env.get('SWAGGER_ENABLED')) {
   const swagger = autoswagger.default.default
   const swaggerModule = await import('../config/swagger.js')
   const swaggerConfig = swaggerModule.default
+  const keepOnlyApiV1 = (spec: any) => {
+    spec.paths = Object.fromEntries(
+      Object.entries(spec.paths ?? {}).filter(([path]) => path.startsWith('/api/v1'))
+    )
+
+    const usedTags = new Set<string>()
+    const operations: any[] = Object.values(spec.paths ?? {}).flatMap((pathItem: any) =>
+      Object.values((pathItem ?? {}) as Record<string, any>)
+    )
+    for (const operation of operations) {
+      for (const tag of operation?.tags ?? []) {
+        if (typeof tag === 'string') usedTags.add(tag)
+      }
+    }
+
+    spec.tags = (spec.tags ?? []).filter((tag: any) => usedTags.has(tag?.name))
+  }
 
   router.get('/swagger', async ({ response }) => {
-    const routes = router.toJSON()
-    const apiRoutes = { root: routes.root.filter((r) => r.pattern.startsWith('/api/v1')) }
-    return response.json(await swagger.json(apiRoutes, swaggerConfig))
+    const routes = router.toJSON() as any
+    const flattenedRoutes = Array.isArray(routes)
+      ? routes
+      : Object.values(routes).flatMap((domainRoutes: any) =>
+          Array.isArray(domainRoutes) ? domainRoutes : []
+        )
+    const normalizedRoutes = { root: flattenedRoutes }
+    try {
+      const spec = await swagger.json(normalizedRoutes, swaggerConfig)
+      keepOnlyApiV1(spec)
+      return response.json(spec)
+    } catch (error: any) {
+      // In production, adonis-autoswagger reads a pre-generated swagger.json.
+      // If the file is missing in the image, generate docs at runtime as fallback.
+      if (error?.code === 'ENOENT') {
+        const runtimeSwagger = swagger as any
+        const spec = await runtimeSwagger.generate(normalizedRoutes, swaggerConfig)
+        keepOnlyApiV1(spec)
+        return response.json(spec)
+      }
+      throw error
+    }
   })
 
   router.get('/docs', async ({ response }) => {

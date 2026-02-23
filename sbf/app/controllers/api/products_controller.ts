@@ -4,6 +4,7 @@ import Product from '#models/product'
 
 export default class ProductsController {
   /**
+   * @index
    * @summary List available products
    * @description Returns all products visible to the authenticated user. Out-of-stock products are excluded unless the user has showAllProducts enabled.
    * @tag Products
@@ -17,10 +18,11 @@ export default class ProductsController {
   }
 
   /**
+   * @show
    * @summary Get product by barcode
    * @description Returns a single product with current stock and cheapest delivery price.
    * @tag Products
-   * @paramPath barcode - Product barcode (EAN) - @type(string)
+   * @paramPath barcode - Product barcode (EAN) - @type(string) @required
    * @responseBody 200 - {"data": {"id": 1, "keypadId": 1, "displayName": "Kofola 0.5l", "barcode": "8590121052023", "category": "Nápoje", "stockSum": 12, "price": 25, "deliveryId": 3}}
    * @responseBody 401 - {"error": "Unauthorized"}
    * @responseBody 404 - {"error": "Product not found."}

@@ -33,6 +33,7 @@
   "products_image_label": "Obrázek",
   "products_image_choose": "Vybrat obrázek",
   "products_image_upload": "Nahrát nový obrázek",
+  "products_image_required": "Obrázek je povinný.",
   "products_create_submit": "Vytvořit produkt",
   "products_edit_title": "Upravit produkt",
   "products_edit_heading": "Upravit produkt",
@@ -65,7 +66,7 @@
   "products_search": "Hledat produkt",
   "products_filter_category": "Kategorie",
 
-  "stock_filter_name": "Hledat název",
+  "stock_filter_product": "Filtrovat produkt",
   "stock_filter_in_stock": "Pouze skladem",
 
   "review_payment_header": "Potvrdit platbu",

@@ -12,6 +12,7 @@ import Button from 'primevue/button'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from '~/composables/use_i18n'
+import { areFilterParamsEqual } from '~/composables/use_filter_params'
 import type { SharedProps } from '~/types'
 
 interface UserRow {
@@ -35,28 +36,42 @@ interface PaginatedUsers {
 
 const props = defineProps<{
   users: PaginatedUsers
-  filters: { search: string; role: string }
+  filters: { search: string; role: string; userId: string }
+  userOptions: { id: number; displayName: string }[]
 }>()
 const { t } = useI18n()
 const page = usePage<SharedProps>()
 const currentUserId = computed(() => page.props.user?.id)
 const confirm = useConfirm()
+const ALL = '__all__'
 
-const filterSearch = ref(props.filters.search)
-const filterRole = ref(props.filters.role)
+const filterSearch = ref(props.filters.search ?? '')
+const filterRole = ref(props.filters.role || ALL)
+const filterUserId = ref<number | string>(props.filters.userId ? Number(props.filters.userId) : ALL)
 
 const roleOptions = [
-  { label: t('common.all'), value: '' },
+  { label: t('common.all'), value: ALL },
   { label: t('common.role_customer'), value: 'customer' },
   { label: t('common.role_supplier'), value: 'supplier' },
   { label: t('common.role_admin'), value: 'admin' },
 ]
+const userFilterOptions = [{ id: ALL, displayName: t('common.all') }, ...props.userOptions]
 
 const roleEditOptions = [
   { label: t('common.role_customer'), value: 'customer' },
   { label: t('common.role_supplier'), value: 'supplier' },
   { label: t('common.role_admin'), value: 'admin' },
 ]
+
+function buildFilterParams() {
+  return {
+    search: filterSearch.value || undefined,
+    role: filterRole.value === ALL ? undefined : filterRole.value,
+    userId: filterUserId.value === ALL ? undefined : filterUserId.value,
+  }
+}
+
+const lastAppliedFilterParams = ref(buildFilterParams())
 
 function updateRole(userId: number, role: string) {
   router.put(`/admin/users/${userId}`, { role }, { preserveState: true })
@@ -84,21 +99,30 @@ function toggleKiosk(userId: number, isKiosk: boolean) {
 }
 
 function applyFilters() {
+  const nextParams = buildFilterParams()
+  const page = areFilterParamsEqual(nextParams, lastAppliedFilterParams.value)
+    ? props.users.meta.currentPage
+    : 1
   router.get(
     '/admin/users',
     {
-      search: filterSearch.value || undefined,
-      role: filterRole.value || undefined,
-      page: 1,
+      ...nextParams,
+      page,
     },
     { preserveState: true, only: ['users', 'filters'] }
   )
+  lastAppliedFilterParams.value = nextParams
 }
 
 function clearFilters() {
   filterSearch.value = ''
-  filterRole.value = ''
-  router.get('/admin/users', {}, { preserveState: true, only: ['users', 'filters'] })
+  filterRole.value = ALL
+  filterUserId.value = ALL
+  lastAppliedFilterParams.value = buildFilterParams()
+  router.get('/admin/users', buildFilterParams(), {
+    preserveState: true,
+    only: ['users', 'filters'],
+  })
 }
 
 function onPageChange(event: any) {
@@ -106,8 +130,7 @@ function onPageChange(event: any) {
     '/admin/users',
     {
       page: event.page + 1,
-      search: filterSearch.value || undefined,
-      role: filterRole.value || undefined,
+      ...buildFilterParams(),
     },
     { preserveState: true, only: ['users', 'filters'] }
   )
@@ -145,6 +168,19 @@ function impersonateUser(userId: number) {
           optionLabel="label"
           optionValue="value"
           class="w-40"
+        />
+      </div>
+      <div>
+        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
+          t('admin.users_filter_user')
+        }}</label>
+        <Select
+          v-model="filterUserId"
+          :options="userFilterOptions"
+          optionLabel="displayName"
+          optionValue="id"
+          filter
+          class="w-56"
         />
       </div>
       <Button

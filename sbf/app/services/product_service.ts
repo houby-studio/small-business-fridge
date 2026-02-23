@@ -7,24 +7,21 @@ import { cuid } from '@adonisjs/core/helpers'
 
 export default class ProductService {
   /**
-   * Create a new product with optional image upload.
+   * Create a new product with required image upload.
    */
   async createProduct(data: {
     displayName: string
     description: string
     categoryId: number
     barcode?: string | null
-    image?: MultipartFile | null
+    image: MultipartFile
     allergenIds?: number[]
   }): Promise<Product> {
     // Auto-assign next keypad ID
     const maxKeypad = await Product.query().max('keypad_id as max').first()
     const nextKeypadId = (maxKeypad?.$extras.max ?? 0) + 1
 
-    let imagePath: string | null = null
-    if (data.image) {
-      imagePath = await this.saveImage(data.image)
-    }
+    const imagePath = await this.saveImage(data.image)
 
     const product = await Product.create({
       keypadId: nextKeypadId,

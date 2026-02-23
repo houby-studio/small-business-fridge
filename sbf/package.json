@@ -14,7 +14,9 @@
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
     "format": "prettier --write .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "npm run typecheck:backend && npm run typecheck:frontend",
+    "typecheck:backend": "tsc --noEmit",
+    "typecheck:frontend": "vue-tsc --noEmit -p tsconfig.frontend.json"
   },
   "imports": {
     "#controllers/*": "./app/controllers/*.js",
@@ -60,7 +62,8 @@
     "ts-node-maintained": "^10.9.5",
     "tsx": "^4.21.0",
     "typescript": "~5.8.3",
-    "vite": "^6.3.5"
+    "vite": "^6.3.5",
+    "vue-tsc": "^3.2.5"
   },
   "dependencies": {
     "@adonisjs/ally": "^5.1.1",

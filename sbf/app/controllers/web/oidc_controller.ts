@@ -3,9 +3,12 @@ import logger from '@adonisjs/core/services/logger'
 import User from '#models/user'
 import AuditService from '#services/audit_service'
 import NotificationService from '#services/notification_service'
+import OidcIdentityService from '#services/oidc_identity_service'
 import env from '#start/env'
 
 export default class OidcController {
+  private oidcIdentity = new OidcIdentityService()
+
   async redirect({ ally }: HttpContext) {
     return ally.use('microsoft').redirect()
   }
@@ -40,14 +43,47 @@ export default class OidcController {
     const displayName = (msUser.displayName as string | null) || email.split('@')[0]
     const phone = (msUser.mobilePhone as string | null) || null
 
-    // Find existing user by OID (preferred) or email fallback
-    let user = await User.query().where('oid', oid).first()
+    // Resolve identity safely and reject ambiguous mappings.
+    const identityMatch = await this.oidcIdentity.resolve({ oid, email })
+    let user = identityMatch.kind === 'matched' ? identityMatch.user : null
 
-    if (!user && email) {
-      user = await User.query().where('email', email).first()
+    if (identityMatch.kind === 'ambiguous_email') {
+      logger.warn(
+        { email: identityMatch.email, userIds: identityMatch.userIds },
+        'OIDC login denied: multiple local users share the same email'
+      )
+      session.flash('alert', { type: 'danger', message: i18n.t('messages.login_failed') })
+      return response.redirect('/login')
+    }
+
+    if (identityMatch.kind === 'oid_conflict') {
+      logger.warn(
+        { email: identityMatch.email, userId: identityMatch.userId, oid },
+        'OIDC login denied: OID conflicts with existing user mapping'
+      )
+      session.flash('alert', { type: 'danger', message: i18n.t('messages.login_failed') })
+      return response.redirect('/login')
+    }
+
+    if (identityMatch.kind === 'missing_oid') {
+      logger.warn(
+        { email: identityMatch.email },
+        'OIDC login denied: provider did not return OID for email fallback'
+      )
+      session.flash('alert', { type: 'danger', message: i18n.t('messages.login_failed') })
+      return response.redirect('/login')
     }
 
     if (!user) {
+      if (!oid || !email) {
+        logger.warn(
+          { oidPresent: !!oid, emailPresent: !!email },
+          'OIDC login denied: provider payload missing required identity fields'
+        )
+        session.flash('alert', { type: 'danger', message: i18n.t('messages.login_failed') })
+        return response.redirect('/login')
+      }
+
       if (!env.get('OIDC_AUTO_REGISTER', false)) {
         logger.warn({ email }, 'OIDC login denied: user not found in app')
         session.flash('alert', {
@@ -109,8 +145,20 @@ export default class OidcController {
       dirty = true
     }
     if (email && user.email !== email) {
-      user.email = email
-      dirty = true
+      const emailTaken = await User.query()
+        .whereRaw('LOWER(email) = ?', [email.toLowerCase()])
+        .whereNot('id', user.id)
+        .first()
+
+      if (emailTaken) {
+        logger.warn(
+          { userId: user.id, email, emailTakenBy: emailTaken.id },
+          'OIDC email sync skipped: target email is already used by another user'
+        )
+      } else {
+        user.email = email
+        dirty = true
+      }
     }
     if (phone && !user.phone) {
       user.phone = phone

@@ -1,9 +1,12 @@
+import '#tests/test_context'
 import { test } from '@japa/runner'
 import mail from '@adonisjs/mail/services/main'
 import type { FakeMailer } from '@adonisjs/mail'
 import { DateTime } from 'luxon'
 import { UserFactory } from '#database/factories/user_factory'
 import { InvoiceFactory } from '#database/factories/invoice_factory'
+import { OrderFactory } from '#database/factories/order_factory'
+import { DeliveryFactory } from '#database/factories/delivery_factory'
 import NotificationService from '#services/notification_service'
 import db from '@adonisjs/lucid/services/db'
 
@@ -241,5 +244,100 @@ test.group('NotificationService - sendPendingApprovalReminders', (group) => {
   test('sends nothing when no pending invoices exist', async ({ assert }) => {
     await notificationService.sendPendingApprovalReminders()
     assert.equal(fakeMailer.messages.sent().length, 0)
+  })
+})
+
+test.group('NotificationService - purchase confirmations', (group) => {
+  let fakeMailer: FakeMailer
+
+  group.each.setup(async () => {
+    await cleanAll()
+    fakeMailer = mail.fake()
+  })
+  group.each.teardown(async () => {
+    mail.restore()
+    await cleanAll()
+  })
+
+  test('skips single purchase confirmation for non-kiosk when buyer disabled purchase emails', async ({
+    assert,
+  }) => {
+    const buyer = await UserFactory.merge({ sendMailOnPurchase: false }).create()
+    const supplier = await UserFactory.apply('supplier').create()
+    const delivery = await DeliveryFactory.with('product', 1, (p) => p.with('category'))
+      .merge({ supplierId: supplier.id })
+      .create()
+    const order = await OrderFactory.merge({ buyerId: buyer.id, deliveryId: delivery.id }).create()
+
+    await notificationService.sendPurchaseConfirmation(order)
+
+    assert.equal(fakeMailer.messages.sent().length, 0)
+  })
+
+  test('sends single purchase confirmation for kiosk even when buyer disabled purchase emails', async ({
+    assert,
+  }) => {
+    const buyer = await UserFactory.merge({ sendMailOnPurchase: false }).create()
+    const supplier = await UserFactory.apply('supplier').create()
+    const delivery = await DeliveryFactory.with('product', 1, (p) => p.with('category'))
+      .merge({ supplierId: supplier.id })
+      .create()
+    const order = await OrderFactory.apply('kiosk')
+      .merge({ buyerId: buyer.id, deliveryId: delivery.id })
+      .create()
+
+    await notificationService.sendPurchaseConfirmation(order)
+
+    assert.equal(fakeMailer.messages.sent().length, 1)
+    fakeMailer.messages.assertSent((msg) => msg.hasTo(buyer.email))
+  })
+
+  test('skips batch purchase confirmation for non-kiosk when buyer disabled purchase emails', async ({
+    assert,
+  }) => {
+    const buyer = await UserFactory.merge({ sendMailOnPurchase: false }).create()
+    const supplier = await UserFactory.apply('supplier').create()
+    const firstDelivery = await DeliveryFactory.with('product', 1, (p) => p.with('category'))
+      .merge({ supplierId: supplier.id })
+      .create()
+    const secondDelivery = await DeliveryFactory.with('product', 1, (p) => p.with('category'))
+      .merge({ supplierId: supplier.id })
+      .create()
+    const first = await OrderFactory.merge({
+      buyerId: buyer.id,
+      deliveryId: firstDelivery.id,
+    }).create()
+    const second = await OrderFactory.merge({
+      buyerId: buyer.id,
+      deliveryId: secondDelivery.id,
+    }).create()
+
+    await notificationService.sendBatchPurchaseConfirmation([first, second], buyer.id)
+
+    assert.equal(fakeMailer.messages.sent().length, 0)
+  })
+
+  test('sends batch purchase confirmation for kiosk even when buyer disabled purchase emails', async ({
+    assert,
+  }) => {
+    const buyer = await UserFactory.merge({ sendMailOnPurchase: false }).create()
+    const supplier = await UserFactory.apply('supplier').create()
+    const firstDelivery = await DeliveryFactory.with('product', 1, (p) => p.with('category'))
+      .merge({ supplierId: supplier.id })
+      .create()
+    const secondDelivery = await DeliveryFactory.with('product', 1, (p) => p.with('category'))
+      .merge({ supplierId: supplier.id })
+      .create()
+    const first = await OrderFactory.apply('kiosk')
+      .merge({ buyerId: buyer.id, deliveryId: firstDelivery.id })
+      .create()
+    const second = await OrderFactory.apply('kiosk')
+      .merge({ buyerId: buyer.id, deliveryId: secondDelivery.id })
+      .create()
+
+    await notificationService.sendBatchPurchaseConfirmation([first, second], buyer.id)
+
+    assert.equal(fakeMailer.messages.sent().length, 1)
+    fakeMailer.messages.assertSent((msg) => msg.hasTo(buyer.email))
   })
 })

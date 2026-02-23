@@ -75,10 +75,8 @@ export default class ShopController {
     return inertia.render('shop/index', {
       products,
       categories,
-      filters: {
-        category: categoryId ?? null,
-        excludeAllergens,
-      },
+      filters: { category: categoryId ?? '' },
+      excludeAllergens,
     })
   }
 

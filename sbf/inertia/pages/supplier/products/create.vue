@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { Head, router } from '@inertiajs/vue3'
+import { Head, router, useForm } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
@@ -25,38 +24,31 @@ interface AllergenOption {
 const props = defineProps<{ categories: CategoryOption[]; allergens: AllergenOption[] }>()
 const { t } = useI18n()
 
-const form = ref({
+const form = useForm({
   displayName: '',
   description: '',
   categoryId: null as number | null,
   barcode: '',
   allergenIds: [] as number[],
+  image: null as File | null,
 })
-const imageFile = ref<File | null>(null)
-const submitting = ref(false)
 
 function onImageSelect(event: any) {
-  imageFile.value = event.files[0] ?? null
+  form.image = event.files[0] ?? null
+  if (form.image) {
+    form.clearErrors('image')
+  }
 }
 
 function submit() {
-  if (!form.value.displayName || !form.value.categoryId) return
-  submitting.value = true
-
-  const formData = new FormData()
-  formData.append('displayName', form.value.displayName)
-  formData.append('description', form.value.description)
-  formData.append('categoryId', String(form.value.categoryId))
-  if (form.value.barcode) {
-    formData.append('barcode', form.value.barcode)
-  }
-  if (imageFile.value) {
-    formData.append('image', imageFile.value)
+  if (!form.image) {
+    form.setError('image', t('supplier.products_image_required'))
+    return
   }
   formData.append('allergenIds', JSON.stringify(form.value.allergenIds))
 
-  router.post('/supplier/products', formData, {
-    onFinish: () => (submitting.value = false),
+  form.post('/supplier/products', {
+    forceFormData: true,
   })
 }
 </script>
@@ -80,7 +72,11 @@ function submit() {
               v-model="form.displayName"
               :placeholder="t('supplier.products_name_placeholder')"
               class="w-full"
+              :invalid="!!form.errors.displayName"
             />
+            <small v-if="form.errors.displayName" class="text-red-600 dark:text-red-400">{{
+              form.errors.displayName
+            }}</small>
           </div>
 
           <div>
@@ -92,7 +88,11 @@ function submit() {
               rows="3"
               :placeholder="t('supplier.products_description_placeholder')"
               class="w-full"
+              :invalid="!!form.errors.description"
             />
+            <small v-if="form.errors.description" class="text-red-600 dark:text-red-400">{{
+              form.errors.description
+            }}</small>
           </div>
 
           <div>
@@ -106,7 +106,11 @@ function submit() {
               optionValue="id"
               :placeholder="t('supplier.products_category_label')"
               class="w-full"
+              :invalid="!!form.errors.categoryId"
             />
+            <small v-if="form.errors.categoryId" class="text-red-600 dark:text-red-400">{{
+              form.errors.categoryId
+            }}</small>
           </div>
 
           <div>
@@ -117,7 +121,11 @@ function submit() {
               v-model="form.barcode"
               :placeholder="t('supplier.products_barcode_placeholder')"
               class="w-full"
+              :invalid="!!form.errors.barcode"
             />
+            <small v-if="form.errors.barcode" class="text-red-600 dark:text-red-400">{{
+              form.errors.barcode
+            }}</small>
           </div>
 
           <div>
@@ -146,6 +154,9 @@ function submit() {
               @select="onImageSelect"
               :auto="false"
             />
+            <small v-if="form.errors.image" class="text-red-600 dark:text-red-400">{{
+              form.errors.image
+            }}</small>
           </div>
 
           <div class="flex gap-2 pt-2">
@@ -153,8 +164,8 @@ function submit() {
               type="submit"
               :label="t('supplier.products_create_submit')"
               icon="pi pi-check"
-              :loading="submitting"
-              :disabled="!form.displayName || !form.categoryId"
+              :loading="form.processing"
+              :disabled="!form.displayName || !form.categoryId || !form.image"
             />
             <Button
               :label="t('common.cancel')"
