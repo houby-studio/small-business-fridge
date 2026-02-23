@@ -10,7 +10,7 @@ export default defineConfig({
     inertia({ ssr: { enabled: true, entrypoint: 'inertia/app/ssr.ts' } }),
     vue(),
     adonisjs({
-      entrypoints: ['inertia/app/app.ts'],
+      entrypoints: ['inertia/css/app.css', 'inertia/app/app.ts'],
       reload: ['resources/views/**/*.edge'],
     }),
     tailwindcss(),

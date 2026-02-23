@@ -3,7 +3,7 @@ import { renderToString } from '@vue/server-renderer'
 import { createSSRApp, h, type DefineComponent } from 'vue'
 import PrimeVue from 'primevue/config'
 import Aura from '@primeuix/themes/aura'
-import { definePreset } from '@primeuix/themes'
+import { definePreset, Theme } from '@primeuix/themes'
 import ToastService from 'primevue/toastservice'
 import ConfirmationService from 'primevue/confirmationservice'
 
@@ -95,5 +95,14 @@ export default function render(page: any) {
         .use(ToastService)
         .use(ConfirmationService)
     },
+  }).then((result) => {
+    // PrimeVue injects theme CSS via document.head (DOM), which is a no-op on the server
+    // because _loadStyles() only runs in beforeMount — a lifecycle hook that renderToString
+    // never calls. So we generate the CSS custom properties synchronously from the Theme
+    // singleton (already configured by app.use(PrimeVue) above) and prepend them to the
+    // SSR <head> so the browser has all --p-* variables on the very first paint.
+    const commonCSS = Theme.getCommonStyleSheet('base', undefined, {})
+    if (commonCSS) result.head = [commonCSS, ...result.head]
+    return result
   })
 }
