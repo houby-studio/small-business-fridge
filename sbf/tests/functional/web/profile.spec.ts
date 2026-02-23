@@ -138,7 +138,7 @@ test.group('Web Profile - API tokens', (group) => {
 
     response.assertStatus(302)
 
-    const remaining = await db.from('auth_access_tokens').where('id', token.identifier)
+    const remaining = await db.from('auth_access_tokens').where('id', String(token.identifier))
 
     assert.lengthOf(remaining, 0)
   })
@@ -162,7 +162,7 @@ test.group('Web Profile - API tokens', (group) => {
     response.assertStatus(302)
 
     // Token still exists
-    const remaining = await db.from('auth_access_tokens').where('id', otherToken.identifier)
+    const remaining = await db.from('auth_access_tokens').where('id', String(otherToken.identifier))
     assert.lengthOf(remaining, 1)
   })
 
