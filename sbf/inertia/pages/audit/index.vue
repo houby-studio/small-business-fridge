@@ -32,11 +32,11 @@ const props = defineProps<{
 }>()
 const { t } = useI18n()
 
-const filterAction = ref(props.filters.action)
+const filterAction = ref(props.filters.action ?? '')
 const filterSortOrder = ref(props.filters.sortOrder || 'desc')
 
 const actionOptions = [
-  { label: '—', value: '' },
+  { label: t('common.all'), value: '' },
   { label: t('audit.action_order_created'), value: 'order.created' },
   { label: t('audit.action_invoice_generated'), value: 'invoice.generated' },
   { label: t('audit.action_payment_requested'), value: 'payment.requested' },

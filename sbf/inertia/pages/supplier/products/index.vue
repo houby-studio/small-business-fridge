@@ -37,8 +37,8 @@ const props = defineProps<{
 }>()
 const { t } = useI18n()
 
-const filterSearch = ref(props.filters.search)
-const filterCategoryId = ref(props.filters.categoryId)
+const filterSearch = ref(props.filters.search ?? '')
+const filterCategoryId = ref(props.filters.categoryId ?? '')
 
 const categoryOptions = ref([
   { label: t('common.all'), value: '' },

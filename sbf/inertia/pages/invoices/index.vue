@@ -43,7 +43,7 @@ const props = defineProps<{
 const { t } = useI18n()
 const confirm = useConfirm()
 
-const filterStatus = ref(props.filters.status)
+const filterStatus = ref(props.filters.status ?? '')
 const filterSortBy = ref(props.filters.sortBy || 'createdAt')
 const filterSortOrder = ref(props.filters.sortOrder || 'desc')
 const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))

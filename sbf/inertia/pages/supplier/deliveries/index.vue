@@ -46,7 +46,7 @@ const amount = ref<number | null>(null)
 const price = ref<number | null>(null)
 const submitting = ref(false)
 
-const filterProductId = ref(props.filters.productId)
+const filterProductId = ref(props.filters.productId ?? '')
 const filterSortBy = ref(props.filters.sortBy || 'createdAt')
 const filterSortOrder = ref(props.filters.sortOrder || 'desc')
 const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))

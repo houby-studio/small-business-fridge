@@ -45,8 +45,8 @@ const props = defineProps<{
 
 const { t } = useI18n()
 
-const filterChannel = ref(props.filters.channel)
-const filterInvoiced = ref(props.filters.invoiced)
+const filterChannel = ref(props.filters.channel ?? '')
+const filterInvoiced = ref(props.filters.invoiced ?? '')
 const filterSortBy = ref(props.filters.sortBy || 'createdAt')
 const filterSortOrder = ref(props.filters.sortOrder || 'desc')
 const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))

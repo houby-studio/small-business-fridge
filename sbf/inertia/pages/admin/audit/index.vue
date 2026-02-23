@@ -33,15 +33,15 @@ const props = defineProps<{
 }>()
 const { t } = useI18n()
 
-const filterAction = ref(props.filters.action)
-const filterEntity = ref(props.filters.entityType)
-const filterUserId = ref(props.filters.userId ? Number(props.filters.userId) : null)
+const filterAction = ref(props.filters.action ?? '')
+const filterEntity = ref(props.filters.entityType ?? '')
+const filterUserId = ref<number | ''>(props.filters.userId ? Number(props.filters.userId) : '')
 const filterSortOrder = ref(props.filters.sortOrder || 'desc')
 
-const userOptions = [{ id: null, displayName: '—' }, ...props.users]
+const userOptions = [{ id: '', displayName: t('common.all') }, ...props.users]
 
 const actionOptions = [
-  { label: '—', value: '' },
+  { label: t('common.all'), value: '' },
   { label: t('audit.action_order_created'), value: 'order.created' },
   { label: t('audit.action_invoice_generated'), value: 'invoice.generated' },
   { label: t('audit.action_payment_requested'), value: 'payment.requested' },
@@ -62,7 +62,7 @@ const actionOptions = [
 ]
 
 const entityOptions = [
-  { label: '—', value: '' },
+  { label: t('common.all'), value: '' },
   { label: 'order', value: 'order' },
   { label: 'invoice', value: 'invoice' },
   { label: 'delivery', value: 'delivery' },
@@ -113,7 +113,7 @@ function buildParams() {
   return {
     action: filterAction.value || undefined,
     entityType: filterEntity.value || undefined,
-    userId: filterUserId.value ?? undefined,
+    userId: filterUserId.value || undefined,
     sortOrder: filterSortOrder.value || undefined,
   }
 }
@@ -129,7 +129,7 @@ function applyFilters() {
 function clearFilters() {
   filterAction.value = ''
   filterEntity.value = ''
-  filterUserId.value = null
+  filterUserId.value = ''
   filterSortOrder.value = 'desc'
   router.get('/admin/audit', {}, { preserveState: true, only: ['logs', 'filters'] })
 }

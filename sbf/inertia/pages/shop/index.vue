@@ -33,7 +33,7 @@ interface ShopCategory {
 const props = defineProps<{
   products: ShopProduct[]
   categories: ShopCategory[]
-  filters: { category: number | null }
+  filters: { category: number | '' }
 }>()
 
 const confirm = useConfirm()
@@ -43,20 +43,20 @@ const INITIAL_COUNT = 48
 const PAGE_SIZE = 24
 
 const search = ref('')
-const selectedCategory = ref<number | null>(props.filters.category)
+const selectedCategory = ref<number | ''>(props.filters.category ?? '')
 const showFavoritesOnly = ref(false)
 const visibleCount = ref(INITIAL_COUNT)
 const sentinel = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null
 
 const categoryOptions = computed(() => [
-  { label: t('common.all'), value: null },
+  { label: t('common.all'), value: '' },
   ...props.categories.map((c) => ({ label: c.name, value: c.id })),
 ])
 
 const filteredProducts = computed(() => {
   return props.products.filter((p) => {
-    if (selectedCategory.value && p.category.id !== selectedCategory.value) return false
+    if (selectedCategory.value !== '' && p.category.id !== selectedCategory.value) return false
     if (showFavoritesOnly.value && !p.isFavorite) return false
     if (search.value) {
       const s = search.value.toLowerCase()

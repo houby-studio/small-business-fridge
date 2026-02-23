@@ -45,8 +45,8 @@ const props = defineProps<{
 
 const { t } = useI18n()
 
-const filterName = ref(props.filters.name)
-const filterCategoryId = ref(props.filters.categoryId)
+const filterName = ref(props.filters.name ?? '')
+const filterCategoryId = ref(props.filters.categoryId ?? '')
 const filterInStock = ref(props.filters.inStock === '1')
 const filterSortBy = ref(props.filters.sortBy || 'productName')
 const filterSortOrder = ref(props.filters.sortOrder || 'asc')

@@ -42,8 +42,8 @@ const page = usePage<SharedProps>()
 const currentUserId = computed(() => page.props.user?.id)
 const confirm = useConfirm()
 
-const filterSearch = ref(props.filters.search)
-const filterRole = ref(props.filters.role)
+const filterSearch = ref(props.filters.search ?? '')
+const filterRole = ref(props.filters.role ?? '')
 
 const roleOptions = [
   { label: t('common.all'), value: '' },

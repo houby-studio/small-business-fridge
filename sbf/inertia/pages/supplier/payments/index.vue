@@ -35,13 +35,13 @@ const props = defineProps<{
 const { t } = useI18n()
 const confirm = useConfirm()
 
-const filterStatus = ref(props.filters.status)
+const filterStatus = ref(props.filters.status ?? '')
 const filterSortBy = ref(props.filters.sortBy || 'createdAt')
 const filterSortOrder = ref(props.filters.sortOrder || 'desc')
-const filterBuyerId = ref(props.filters.buyerId ? Number(props.filters.buyerId) : null)
+const filterBuyerId = ref<number | ''>(props.filters.buyerId ? Number(props.filters.buyerId) : '')
 const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
 
-const buyerOptions = [{ id: null, displayName: '—' }, ...props.buyers]
+const buyerOptions = [{ id: '', displayName: t('common.all') }, ...props.buyers]
 
 const statusOptions = [
   { label: t('common.all'), value: '' },
@@ -93,7 +93,7 @@ function buildFilterParams() {
     status: filterStatus.value || undefined,
     sortBy: filterSortBy.value || undefined,
     sortOrder: filterSortOrder.value || undefined,
-    buyerId: filterBuyerId.value ?? undefined,
+    buyerId: filterBuyerId.value || undefined,
   }
 }
 
@@ -109,7 +109,7 @@ function clearFilters() {
   filterStatus.value = ''
   filterSortBy.value = 'createdAt'
   filterSortOrder.value = 'desc'
-  filterBuyerId.value = null
+  filterBuyerId.value = ''
   router.get('/supplier/payments', {}, { preserveState: true, only: ['invoices', 'filters'] })
 }
 
