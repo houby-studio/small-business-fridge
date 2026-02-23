@@ -65,7 +65,7 @@
   "products_search": "Hledat produkt",
   "products_filter_category": "Kategorie",
 
-  "stock_filter_name": "Hledat název",
+  "stock_filter_product": "Filtrovat produkt",
   "stock_filter_in_stock": "Pouze skladem",
 
   "review_payment_header": "Potvrdit platbu",

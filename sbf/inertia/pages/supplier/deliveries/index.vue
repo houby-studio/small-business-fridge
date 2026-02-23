@@ -211,6 +211,8 @@ function onSort(event: any) {
           :options="productFilterOptions"
           optionLabel="label"
           optionValue="value"
+          :placeholder="t('supplier.deliveries_filter_product')"
+          filter
         />
       </div>
       <Button
