@@ -13,7 +13,9 @@ test.group('API Products', (group) => {
     await db.from('user_favorites').delete()
     await db.from('orders').delete()
     await db.from('deliveries').delete()
+    await db.from('product_allergen').delete()
     await db.from('products').delete()
+    await db.from('allergens').delete()
     await db.from('categories').delete()
     await db.from('auth_access_tokens').delete()
     await db.from('users').delete()
@@ -50,6 +52,7 @@ test.group('API Products', (group) => {
     assert.lengthOf(response.body().data, 1)
     assert.equal(response.body().data[0].displayName, product.displayName)
     assert.equal(response.body().data[0].price, 15)
+    assert.isArray(response.body().data[0].allergens)
   })
 
   test('get product by barcode', async ({ client, assert }) => {
@@ -76,6 +79,7 @@ test.group('API Products', (group) => {
     response.assertStatus(200)
     assert.equal(response.body().data.barcode, 'SCAN001')
     assert.equal(response.body().data.stockSum, 3)
+    assert.isArray(response.body().data.allergens)
   })
 
   test('non-existent barcode returns 404', async ({ client }) => {

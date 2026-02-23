@@ -13,7 +13,9 @@ const cleanAll = async () => {
   await db.from('orders').delete()
   await db.from('invoices').delete()
   await db.from('deliveries').delete()
+  await db.from('product_allergen').delete()
   await db.from('products').delete()
+  await db.from('allergens').delete()
   await db.from('categories').delete()
   await db.from('auth_access_tokens').delete()
   await db.from('users').delete()
@@ -302,5 +304,17 @@ test.group('Web Shop - add_favorite', (group) => {
 
     response.assertStatus(302)
     assert.equal(response.header('location'), '/shop')
+  })
+})
+
+test.group('Web Shop - exclude_allergens filter', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('exclude_allergens param returns 200 and filters in props', async ({ client, assert }) => {
+    const user = await UserFactory.create()
+    const response = await client.get('/shop?exclude_allergens=1,2').loginAs(user)
+    response.assertStatus(200)
+    assert.include(response.text(), 'excludeAllergens')
   })
 })
