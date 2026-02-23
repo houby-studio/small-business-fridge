@@ -108,6 +108,8 @@ export default class ProductsController {
     const data = await request.validateUsing(updateProductValidator)
 
     const service = new ProductService()
+    const beforeProduct = await service.getProduct(Number(params.id))
+
     const product = await service.updateProduct(Number(params.id), {
       displayName: data.displayName,
       description: data.description,
@@ -117,9 +119,52 @@ export default class ProductsController {
       allergenIds: data.allergenIds,
     })
 
-    AuditService.log(auth.user!.id, 'product.updated', 'product', product.id, null, {
-      name: product.displayName,
-    })
+    await product.load('category')
+    await product.load('allergens')
+
+    const changes: Record<string, { from: unknown; to: unknown }> = {}
+    if (beforeProduct.displayName !== product.displayName) {
+      changes.name = { from: beforeProduct.displayName, to: product.displayName }
+    }
+    if (beforeProduct.description !== product.description) {
+      changes.description = {
+        from: beforeProduct.description ?? '—',
+        to: product.description ?? '—',
+      }
+    }
+    if (beforeProduct.barcode !== product.barcode) {
+      changes.barcode = { from: beforeProduct.barcode ?? '—', to: product.barcode ?? '—' }
+    }
+    if (beforeProduct.categoryId !== product.categoryId) {
+      changes.category = {
+        from: beforeProduct.category?.name ?? `#${beforeProduct.categoryId}`,
+        to: product.category?.name ?? `#${product.categoryId}`,
+      }
+    }
+    if (beforeProduct.imagePath !== product.imagePath) {
+      changes.image = { from: beforeProduct.imagePath ?? '—', to: product.imagePath ?? '—' }
+    }
+
+    const beforeAllergens = beforeProduct.allergens
+      .map((a) => a.name)
+      .sort((a, b) => a.localeCompare(b))
+      .join(', ')
+    const afterAllergens = product.allergens
+      .map((a) => a.name)
+      .sort((a, b) => a.localeCompare(b))
+      .join(', ')
+    if (beforeAllergens !== afterAllergens) {
+      changes.allergens = { from: beforeAllergens || '—', to: afterAllergens || '—' }
+    }
+
+    AuditService.log(
+      auth.user!.id,
+      'product.updated',
+      'product',
+      product.id,
+      null,
+      Object.keys(changes).length ? changes : null
+    )
 
     session.flash('alert', {
       type: 'success',
