@@ -45,6 +45,7 @@ const inertiaConfig = defineConfig({
           isKiosk: ctx.auth.user.isKiosk,
           colorMode: ctx.auth.user.colorMode,
           keypadId: ctx.auth.user.keypadId,
+          excludedAllergenIds: ctx.auth.user.excludedAllergenIds ?? [],
         }
       }),
     flash: (ctx) =>

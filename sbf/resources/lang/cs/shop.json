@@ -5,5 +5,7 @@
   "confirm_accept": "Koupit",
   "no_products": "Žádné produkty k zobrazení.",
   "favorite": "Oblíbené",
-  "forYou": "Doporučeno pro vás"
+  "forYou": "Doporučeno pro vás",
+  "exclude_allergens": "Vyloučit alergeny",
+  "allergens_filter_placeholder": "Vyberte alergeny, které chcete vyloučit"
 }
