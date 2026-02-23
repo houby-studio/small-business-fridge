@@ -336,7 +336,7 @@ function copyToken() {
                 <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">
                   {{ t('profile.tokens_new_name') }}
                 </label>
-                <InputText v-model="newTokenName" class="w-full" />
+                <InputText v-model="newTokenName" fluid />
               </div>
               <div class="min-w-0 lg:col-span-3">
                 <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">
@@ -344,20 +344,20 @@ function copyToken() {
                 </label>
                 <InputNumber
                   v-model="newTokenExpiresDays"
+                  fluid
                   :min="1"
                   :max="3650"
                   :placeholder="t('profile.tokens_never_expires')"
-                  class="w-full"
                 />
               </div>
               <div class="lg:col-span-3 lg:flex lg:justify-end">
                 <Button
                   :label="t('profile.tokens_create')"
+                  fluid
                   icon="pi pi-plus"
                   :loading="creatingToken"
                   :disabled="!newTokenName.trim()"
                   @click="createToken"
-                  class=" justify-center whitespace-nowrap lg:w-auto"
                 />
               </div>
             </div>

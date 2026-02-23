@@ -149,55 +149,49 @@ function onSort(event: any) {
     <!-- Add stock form -->
     <Card class="mb-8">
       <template #content>
-        <form
-          @submit.prevent="submit"
-          class="grid grid-cols-1 items-end gap-4 md:grid-cols-[minmax(0,1fr)_8rem_8rem_auto]"
-        >
-          <div class="min-w-0">
+        <form @submit.prevent="submit" class="grid grid-cols-1 items-end gap-2 lg:grid-cols-12">
+          <div class="min-w-0 lg:col-span-6">
             <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
               t('supplier.deliveries_product')
             }}</label>
             <Select
               v-model="selectedProduct"
+              fluid
               :options="products"
               optionLabel="displayName"
               optionValue="id"
               :placeholder="t('supplier.deliveries_product')"
               filter
-              class="w-full min-w-0"
             />
           </div>
-          <div class="min-w-0">
+          <div class="min-w-0 lg:col-span-2">
             <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
               t('supplier.deliveries_amount')
             }}</label>
-            <InputNumber
-              v-model="amount"
-              :min="1"
-              :placeholder="t('common.pieces')"
-              class="w-full min-w-0"
-            />
+            <InputNumber v-model="amount" fluid :min="1" :placeholder="t('common.pieces')" />
           </div>
-          <div class="min-w-0">
+          <div class="lg:col-span-2">
             <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
               t('supplier.deliveries_price')
             }}</label>
             <InputNumber
               v-model="price"
+              fluid
               :min="1"
               :suffix="' ' + t('common.currency')"
               :placeholder="t('common.currency')"
-              class="w-full min-w-0"
             />
           </div>
-          <Button
-            type="submit"
-            :label="t('supplier.deliveries_submit')"
-            icon="pi pi-plus"
-            :loading="submitting"
-            :disabled="!selectedProduct || !amount || !price"
-            class="w-full justify-center md:w-auto md:justify-self-end"
-          />
+          <div class="lg:col-span-2 lg:flex lg:justify-end">
+            <Button
+              type="submit"
+              fluid
+              :label="t('supplier.deliveries_submit')"
+              icon="pi pi-plus"
+              :loading="submitting"
+              :disabled="!selectedProduct || !amount || !price"
+            />
+          </div>
         </form>
       </template>
     </Card>
@@ -218,7 +212,6 @@ function onSort(event: any) {
           :options="productFilterOptions"
           optionLabel="label"
           optionValue="value"
-          class="w-52"
         />
       </div>
       <Button
