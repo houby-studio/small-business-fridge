@@ -6,6 +6,7 @@ import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import ToggleSwitch from 'primevue/toggleswitch'
 import SelectButton from 'primevue/selectbutton'
+import MultiSelect from 'primevue/multiselect'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import DataTable from 'primevue/datatable'
@@ -30,7 +31,13 @@ interface UserData {
   sendDailyReport: boolean
   colorMode: 'light' | 'dark'
   keypadDisabled: boolean
+  excludedAllergenIds: number[]
   createdAt: string
+}
+
+interface AllergenOption {
+  id: number
+  name: string
 }
 
 interface ApiToken {
@@ -41,7 +48,7 @@ interface ApiToken {
   expires_at: string | null
 }
 
-const props = defineProps<{ user: UserData; tokens: ApiToken[] }>()
+const props = defineProps<{ user: UserData; tokens: ApiToken[]; allergens: AllergenOption[] }>()
 const { t } = useI18n()
 const page = usePage<SharedProps>()
 
@@ -57,6 +64,7 @@ const form = ref({
   sendDailyReport: props.user.sendDailyReport,
   colorMode: props.user.colorMode,
   keypadDisabled: props.user.keypadDisabled,
+  excludedAllergenIds: [...(props.user.excludedAllergenIds ?? [])],
 })
 
 const colorModeOptions = [
@@ -82,6 +90,7 @@ function submit() {
       sendDailyReport: form.value.sendDailyReport,
       colorMode: form.value.colorMode,
       keypadDisabled: form.value.keypadDisabled,
+      excludedAllergenIds: form.value.excludedAllergenIds,
     },
     {
       onFinish: () => (submitting.value = false),
@@ -227,6 +236,23 @@ function copyToken() {
                 optionLabel="label"
                 optionValue="value"
               />
+            </div>
+
+            <div v-if="allergens.length">
+              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
+                t('profile.exclude_allergens')
+              }}</label>
+              <MultiSelect
+                v-model="form.excludedAllergenIds"
+                :options="allergens"
+                optionLabel="name"
+                optionValue="id"
+                :placeholder="t('shop.allergens_filter_placeholder')"
+                class="w-full"
+              />
+              <p class="mt-1 text-xs text-gray-500 dark:text-zinc-400">
+                {{ t('profile.exclude_allergens_hint') }}
+              </p>
             </div>
 
             <div class="pt-2">
