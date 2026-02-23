@@ -112,7 +112,7 @@ function createToken() {
 }
 
 function revokeToken(tokenId: number) {
-  router.delete(`/profile/tokens/${tokenId}`, {}, { preserveScroll: true })
+  router.delete(`/profile/tokens/${tokenId}`, { preserveScroll: true })
 }
 
 // Show-once new token dialog — driven by flash
@@ -331,32 +331,35 @@ function copyToken() {
             </DataTable>
 
             <!-- Create new token -->
-            <div class="flex flex-wrap items-end gap-3">
-              <div class="flex-1">
+            <div class="grid grid-cols-1 items-end gap-2 lg:grid-cols-12">
+              <div class="min-w-0 lg:col-span-6">
                 <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">
                   {{ t('profile.tokens_new_name') }}
                 </label>
-                <InputText v-model="newTokenName" class="w-full" maxlength="100" />
+                <InputText v-model="newTokenName" fluid />
               </div>
-              <div class="w-56">
+              <div class="min-w-0 lg:col-span-3">
                 <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">
                   {{ t('profile.tokens_new_expires') }}
                 </label>
                 <InputNumber
                   v-model="newTokenExpiresDays"
+                  fluid
                   :min="1"
                   :max="3650"
                   :placeholder="t('profile.tokens_never_expires')"
-                  class="w-full"
                 />
               </div>
-              <Button
-                :label="t('profile.tokens_create')"
-                icon="pi pi-plus"
-                :loading="creatingToken"
-                :disabled="!newTokenName.trim()"
-                @click="createToken"
-              />
+              <div class="lg:col-span-3 lg:flex lg:justify-end">
+                <Button
+                  :label="t('profile.tokens_create')"
+                  fluid
+                  icon="pi pi-plus"
+                  :loading="creatingToken"
+                  :disabled="!newTokenName.trim()"
+                  @click="createToken"
+                />
+              </div>
             </div>
           </div>
         </template>

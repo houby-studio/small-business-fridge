@@ -51,7 +51,7 @@ onUnmounted(() => {
           <div class="flex h-80 w-full items-center justify-center">
             <img
               v-if="products[currentIndex].imagePath"
-              :src="products[currentIndex].imagePath"
+              :src="products[currentIndex].imagePath ?? undefined"
               :alt="products[currentIndex].displayName"
               class="h-full w-full object-contain drop-shadow-2xl"
             />

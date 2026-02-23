@@ -8,7 +8,7 @@ const config = {
   description:
     'REST API for the Small Business Fridge (Lednice IT) self-service shop system. ' +
     'Authenticate with a Bearer token obtained from the profile page or via POST /api/v1/auth/token.',
-  tagIndex: 2,
+  tagIndex: 3,
   snakeCase: true,
   debug: false,
   ignore: [],

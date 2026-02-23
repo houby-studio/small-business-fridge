@@ -9,6 +9,7 @@ import Select from 'primevue/select'
 import Button from 'primevue/button'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDateTime } from '~/composables/use_format_date'
+import { areFilterParamsEqual } from '~/composables/use_filter_params'
 
 interface AuditRow {
   id: number
@@ -31,12 +32,13 @@ const props = defineProps<{
   filters: { action: string; sortOrder: string }
 }>()
 const { t } = useI18n()
+const ALL = '__all__'
 
-const filterAction = ref(props.filters.action)
+const filterAction = ref(props.filters.action || ALL)
 const filterSortOrder = ref(props.filters.sortOrder || 'desc')
 
 const actionOptions = [
-  { label: '—', value: '' },
+  { label: t('common.all'), value: ALL },
   { label: t('audit.action_order_created'), value: 'order.created' },
   { label: t('audit.action_invoice_generated'), value: 'invoice.generated' },
   { label: t('audit.action_payment_requested'), value: 'payment.requested' },
@@ -45,6 +47,8 @@ const actionOptions = [
   { label: t('audit.action_delivery_created'), value: 'delivery.created' },
   { label: t('audit.action_product_created'), value: 'product.created' },
   { label: t('audit.action_product_updated'), value: 'product.updated' },
+  { label: t('audit.action_category_created'), value: 'category.created' },
+  { label: t('audit.action_category_updated'), value: 'category.updated' },
   { label: t('audit.action_profile_updated'), value: 'profile.updated' },
   { label: t('audit.action_user_updated'), value: 'user.updated' },
   { label: t('audit.action_order_storno'), value: 'order.storno' },
@@ -65,6 +69,8 @@ const actionLabels: Record<string, string> = {
   'delivery.created': 'audit.action_delivery_created',
   'product.created': 'audit.action_product_created',
   'product.updated': 'audit.action_product_updated',
+  'category.created': 'audit.action_category_created',
+  'category.updated': 'audit.action_category_updated',
   'profile.updated': 'audit.action_profile_updated',
   'user.updated': 'audit.action_user_updated',
   'order.storno': 'audit.action_order_storno',
@@ -97,23 +103,27 @@ function formatMetadata(meta: Record<string, any> | null): string {
 
 function buildParams() {
   return {
-    action: filterAction.value || undefined,
+    action: filterAction.value === ALL ? undefined : filterAction.value,
     sortOrder: filterSortOrder.value || undefined,
   }
 }
 
+const lastAppliedFilterParams = ref(buildParams())
+
 function applyFilters() {
-  router.get(
-    '/audit',
-    { ...buildParams(), page: 1 },
-    { preserveState: true, only: ['logs', 'filters'] }
-  )
+  const nextParams = buildParams()
+  const page = areFilterParamsEqual(nextParams, lastAppliedFilterParams.value)
+    ? props.logs.meta.currentPage
+    : 1
+  router.get('/audit', { ...nextParams, page }, { preserveState: true, only: ['logs', 'filters'] })
+  lastAppliedFilterParams.value = nextParams
 }
 
 function clearFilters() {
-  filterAction.value = ''
+  filterAction.value = ALL
   filterSortOrder.value = 'desc'
-  router.get('/audit', {}, { preserveState: true, only: ['logs', 'filters'] })
+  lastAppliedFilterParams.value = buildParams()
+  router.get('/audit', buildParams(), { preserveState: true, only: ['logs', 'filters'] })
 }
 
 function onPageChange(event: any) {

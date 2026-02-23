@@ -27,11 +27,13 @@ export default class UsersController {
     const page = request.input('page', 1)
     const search = request.input('search')
     const role = request.input('role')
+    const userId = request.input('userId')
 
     const service = new AdminService()
     const paginator = await service.getUsers(page, 20, {
       search: search || undefined,
       role: role || undefined,
+      userId: userId ? Number(userId) : undefined,
     })
 
     const users = paginator.all()
@@ -42,6 +44,8 @@ export default class UsersController {
       invoiceService.getUninvoicedBuyerIds(userIds),
       invoiceService.getUnpaidBuyerIds(userIds),
     ])
+
+    const userOptions = await User.query().select('id', 'displayName').orderBy('displayName', 'asc')
 
     return inertia.render('admin/users/index', {
       users: {
@@ -60,7 +64,8 @@ export default class UsersController {
         })),
         meta: paginator.getMeta(),
       },
-      filters: { search: search || '', role: role || '' },
+      filters: { search: search || '', role: role || '', userId: userId || '' },
+      userOptions: userOptions.map((u) => ({ id: u.id, displayName: u.displayName })),
     })
   }
 

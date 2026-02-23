@@ -32,6 +32,7 @@
   "products_image_label": "Image",
   "products_image_choose": "Choose image",
   "products_image_upload": "Upload new image",
+  "products_image_required": "Image is required.",
   "products_create_submit": "Create product",
   "products_edit_title": "Edit product",
   "products_edit_heading": "Edit product",
@@ -64,7 +65,7 @@
   "products_search": "Search product",
   "products_filter_category": "Category",
 
-  "stock_filter_name": "Search by name",
+  "stock_filter_product": "Filter by product",
   "stock_filter_in_stock": "In stock only",
 
   "review_payment_header": "Review Payment",

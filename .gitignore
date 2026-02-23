@@ -139,3 +139,5 @@ database-backup/*.tar.gz
 public/images/*
 !public/images/.gitkeep
 
+sbf/swagger.json
+sbf/swagger.yml

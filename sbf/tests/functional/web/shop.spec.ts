@@ -1,3 +1,4 @@
+import '#tests/test_context'
 import { test } from '@japa/runner'
 import { UserFactory } from '#database/factories/user_factory'
 import { ProductFactory } from '#database/factories/product_factory'
@@ -9,6 +10,7 @@ import db from '@adonisjs/lucid/services/db'
 
 const cleanAll = async () => {
   await db.from('audit_logs').delete()
+  await db.from('recommendations').delete()
   await db.from('user_favorites').delete()
   await db.from('orders').delete()
   await db.from('invoices').delete()
@@ -56,6 +58,61 @@ test.group('Web Shop - index', (group) => {
     const user = await UserFactory.create()
     const response = await client.get('/shop').loginAs(user)
     response.assertStatus(200)
+  })
+
+  test('shop recommendations backfill from lower ranks when higher-ranked product is out of stock', async ({
+    client,
+    assert,
+  }) => {
+    const user = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const outOfStockTopRank = await ProductFactory.merge({ categoryId: category.id }).create()
+    const inStockLowerRank = await ProductFactory.merge({ categoryId: category.id }).create()
+
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: outOfStockTopRank.id,
+      amountLeft: 0,
+      amountSupplied: 5,
+      price: 20,
+    }).create()
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: inStockLowerRank.id,
+      amountLeft: 5,
+      price: 20,
+    }).create()
+
+    const now = new Date()
+    await db.table('recommendations').insert([
+      {
+        user_id: user.id,
+        product_id: outOfStockTopRank.id,
+        score: 0.9,
+        model: 'statistical',
+        rank: 1,
+        generated_at: now,
+        created_at: now,
+      },
+      {
+        user_id: user.id,
+        product_id: inStockLowerRank.id,
+        score: 0.8,
+        model: 'statistical',
+        rank: 2,
+        generated_at: now,
+        created_at: now,
+      },
+    ])
+
+    const response = await client.get('/shop').loginAs(user)
+
+    response.assertStatus(200)
+    response.assertTextIncludes(inStockLowerRank.displayName)
+    assert.notInclude(response.text(), outOfStockTopRank.displayName)
+    assert.match(response.text(), /(?:&quot;|")isRecommended(?:&quot;|")\s*:\s*true/)
+    assert.match(response.text(), /(?:&quot;|")recommendationRank(?:&quot;|")\s*:\s*1/)
   })
 })
 

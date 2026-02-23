@@ -220,7 +220,7 @@ function handleBarcode(code: string) {
  * preserveState: true keeps all client-side refs (basket, customer, etc.) intact.
  */
 function refreshProducts() {
-  router.reload({ only: ['allProducts', 'featuredProducts'], preserveState: true })
+  router.reload({ only: ['allProducts', 'featuredProducts'] })
 }
 
 // ── Customer identification ───────────────────────────────────────────────────

@@ -9,6 +9,7 @@ import Tag from 'primevue/tag'
 import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
 import { useI18n } from '~/composables/use_i18n'
+import { areFilterParamsEqual } from '~/composables/use_filter_params'
 
 interface ProductRow {
   id: number
@@ -36,39 +37,56 @@ const props = defineProps<{
   filters: { search: string; categoryId: string }
 }>()
 const { t } = useI18n()
+const ALL = '__all__'
 
-const filterSearch = ref(props.filters.search)
-const filterCategoryId = ref(props.filters.categoryId)
+const filterSearch = ref(props.filters.search ?? '')
+const filterCategoryId = ref(props.filters.categoryId || ALL)
 
 const categoryOptions = ref([
-  { label: t('common.all'), value: '' },
+  { label: t('common.all'), value: ALL },
   ...props.categories.map((c) => ({ label: c.name, value: String(c.id) })),
 ])
 
+function buildFilterParams() {
+  return {
+    search: filterSearch.value || undefined,
+    categoryId: filterCategoryId.value === ALL ? undefined : filterCategoryId.value,
+  }
+}
+
+const lastAppliedFilterParams = ref(buildFilterParams())
+
 function applyFilters() {
+  const nextParams = buildFilterParams()
+  const page = areFilterParamsEqual(nextParams, lastAppliedFilterParams.value)
+    ? props.products.meta.currentPage
+    : 1
   router.get(
     '/supplier/products',
     {
-      search: filterSearch.value || undefined,
-      categoryId: filterCategoryId.value || undefined,
-      page: 1,
+      ...nextParams,
+      page,
     },
     { preserveState: true, only: ['products', 'filters'] }
   )
+  lastAppliedFilterParams.value = nextParams
 }
 
 function clearFilters() {
   filterSearch.value = ''
-  filterCategoryId.value = ''
-  router.get('/supplier/products', {}, { preserveState: true, only: ['products', 'filters'] })
+  filterCategoryId.value = ALL
+  lastAppliedFilterParams.value = buildFilterParams()
+  router.get('/supplier/products', buildFilterParams(), {
+    preserveState: true,
+    only: ['products', 'filters'],
+  })
 }
 
 function onPageChange(event: any) {
   router.get(
     '/supplier/products',
     {
-      search: filterSearch.value || undefined,
-      categoryId: filterCategoryId.value || undefined,
+      ...buildFilterParams(),
       page: event.page + 1,
     },
     { preserveState: true, only: ['products', 'filters'] }

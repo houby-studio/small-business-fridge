@@ -11,6 +11,7 @@ import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDate } from '~/composables/use_format_date'
+import { areFilterParamsEqual } from '~/composables/use_filter_params'
 
 interface InvoiceRow {
   id: number
@@ -34,17 +35,20 @@ const props = defineProps<{
 }>()
 const { t } = useI18n()
 const confirm = useConfirm()
+const ALL = '__all__'
 
-const filterStatus = ref(props.filters.status)
+const filterStatus = ref(props.filters.status || ALL)
 const filterSortBy = ref(props.filters.sortBy || 'createdAt')
 const filterSortOrder = ref(props.filters.sortOrder || 'desc')
-const filterBuyerId = ref(props.filters.buyerId ? Number(props.filters.buyerId) : null)
+const filterBuyerId = ref<number | string>(
+  props.filters.buyerId ? Number(props.filters.buyerId) : ALL
+)
 const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
 
-const buyerOptions = [{ id: null, displayName: '—' }, ...props.buyers]
+const buyerOptions = [{ id: ALL, displayName: t('common.all') }, ...props.buyers]
 
 const statusOptions = [
-  { label: t('common.all'), value: '' },
+  { label: t('common.all'), value: ALL },
   { label: t('invoices.filter_paid'), value: 'paid' },
   { label: t('invoices.filter_unpaid'), value: 'unpaid' },
   { label: t('invoices.filter_awaiting'), value: 'awaiting' },
@@ -90,27 +94,38 @@ function reject(id: number) {
 
 function buildFilterParams() {
   return {
-    status: filterStatus.value || undefined,
+    status: filterStatus.value === ALL ? undefined : filterStatus.value,
     sortBy: filterSortBy.value || undefined,
     sortOrder: filterSortOrder.value || undefined,
-    buyerId: filterBuyerId.value ?? undefined,
+    buyerId: filterBuyerId.value === ALL ? undefined : filterBuyerId.value,
   }
 }
 
+const lastAppliedFilterParams = ref(buildFilterParams())
+
 function applyFilters() {
+  const nextParams = buildFilterParams()
+  const page = areFilterParamsEqual(nextParams, lastAppliedFilterParams.value)
+    ? props.invoices.meta.currentPage
+    : 1
   router.get(
     '/supplier/payments',
-    { ...buildFilterParams(), page: 1 },
+    { ...nextParams, page },
     { preserveState: true, only: ['invoices', 'filters'] }
   )
+  lastAppliedFilterParams.value = nextParams
 }
 
 function clearFilters() {
-  filterStatus.value = ''
+  filterStatus.value = ALL
   filterSortBy.value = 'createdAt'
   filterSortOrder.value = 'desc'
-  filterBuyerId.value = null
-  router.get('/supplier/payments', {}, { preserveState: true, only: ['invoices', 'filters'] })
+  filterBuyerId.value = ALL
+  lastAppliedFilterParams.value = buildFilterParams()
+  router.get('/supplier/payments', buildFilterParams(), {
+    preserveState: true,
+    only: ['invoices', 'filters'],
+  })
 }
 
 function onPageChange(event: any) {
