@@ -34,7 +34,7 @@ interface ShopCategory {
 const props = defineProps<{
   products: ShopProduct[]
   categories: ShopCategory[]
-  filters: { category: number | null }
+  filters: { category: number | null; excludeAllergens?: number[] }
 }>()
 
 const page = usePage()
@@ -44,9 +44,11 @@ const { t } = useI18n()
 const INITIAL_COUNT = 48
 const PAGE_SIZE = 24
 
-const excludedAllergenIds = computed(
-  () =>
-    (page.props as { user?: { excludedAllergenIds?: number[] } }).user?.excludedAllergenIds ?? []
+const excludedAllergenIds = computed(() =>
+  props.filters.excludeAllergens && props.filters.excludeAllergens.length > 0
+    ? props.filters.excludeAllergens
+    : ((page.props as { user?: { excludedAllergenIds?: number[] } }).user?.excludedAllergenIds ??
+      [])
 )
 
 const search = ref('')

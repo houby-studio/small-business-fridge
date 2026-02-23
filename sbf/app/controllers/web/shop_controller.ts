@@ -46,6 +46,14 @@ export default class ShopController {
 
     const rawCategory = request.input('category')
     const categoryId = rawCategory ? Number(rawCategory) : undefined
+    const rawExcludeAllergens = request.input('exclude_allergens')
+    const excludeAllergens =
+      typeof rawExcludeAllergens === 'string'
+        ? rawExcludeAllergens
+            .split(',')
+            .map((part) => Number(part.trim()))
+            .filter((id) => Number.isInteger(id) && id > 0)
+        : []
 
     const recommendationService = new RecommendationService()
     const [rawProducts, categories, recommendedIds] = await Promise.all([
@@ -67,7 +75,10 @@ export default class ShopController {
     return inertia.render('shop/index', {
       products,
       categories,
-      filters: { category: categoryId ?? null },
+      filters: {
+        category: categoryId ?? null,
+        excludeAllergens,
+      },
     })
   }
 
