@@ -31,6 +31,7 @@ export default class ProductsController {
     const product = await Product.query()
       .where('barcode', params.barcode)
       .preload('category')
+      .preload('allergens')
       .preload('deliveries', (q) => q.where('amountLeft', '>', 0))
       .first()
 
@@ -48,6 +49,7 @@ export default class ProductsController {
         displayName: product.displayName,
         barcode: product.barcode,
         category: product.category.name,
+        allergens: product.allergens.map((a) => ({ id: a.id, name: a.name })),
         stockSum,
         price: cheapest?.price ?? null,
         deliveryId: cheapest?.id ?? null,

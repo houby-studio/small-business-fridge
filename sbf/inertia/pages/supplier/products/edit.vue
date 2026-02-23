@@ -5,6 +5,7 @@ import AppLayout from '~/layouts/AppLayout.vue'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Select from 'primevue/select'
+import MultiSelect from 'primevue/multiselect'
 import FileUpload from 'primevue/fileupload'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
@@ -16,6 +17,11 @@ interface CategoryOption {
   color: string
 }
 
+interface AllergenOption {
+  id: number
+  name: string
+}
+
 interface ProductData {
   id: number
   keypadId: number
@@ -24,9 +30,14 @@ interface ProductData {
   imagePath: string | null
   barcode: string | null
   categoryId: number
+  allergenIds: number[]
 }
 
-const props = defineProps<{ product: ProductData; categories: CategoryOption[] }>()
+const props = defineProps<{
+  product: ProductData
+  categories: CategoryOption[]
+  allergens: AllergenOption[]
+}>()
 const { t } = useI18n()
 
 const form = ref({
@@ -34,6 +45,7 @@ const form = ref({
   description: props.product.description ?? '',
   categoryId: props.product.categoryId,
   barcode: props.product.barcode ?? '',
+  allergenIds: [...props.product.allergenIds],
 })
 const imageFile = ref<File | null>(null)
 const submitting = ref(false)
@@ -56,6 +68,7 @@ function submit() {
   if (imageFile.value) {
     formData.append('image', imageFile.value)
   }
+  formData.append('allergenIds', JSON.stringify(form.value.allergenIds))
   router.post(`/supplier/products/${props.product.id}?_method=PUT`, formData, {
     onFinish: () => (submitting.value = false),
   })
@@ -110,6 +123,20 @@ function submit() {
               t('supplier.products_barcode_label')
             }}</label>
             <InputText v-model="form.barcode" class="w-full" />
+          </div>
+
+          <div>
+            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
+              t('supplier.products_allergens_label')
+            }}</label>
+            <MultiSelect
+              v-model="form.allergenIds"
+              :options="allergens"
+              optionLabel="name"
+              optionValue="id"
+              :placeholder="t('supplier.products_allergens_label')"
+              class="w-full"
+            />
           </div>
 
           <div>

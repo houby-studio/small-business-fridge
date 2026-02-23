@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { Head, router } from '@inertiajs/vue3'
+import { Head, router, usePage } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
@@ -15,6 +15,7 @@ interface ShopProduct {
   description: string | null
   imagePath: string | null
   category: { id: number; name: string; color: string }
+  allergens: { id: number; name: string }[]
   stockSum: number
   price: number | null
   deliveryId: number | null
@@ -32,15 +33,23 @@ interface ShopCategory {
 const props = defineProps<{
   products: ShopProduct[]
   categories: ShopCategory[]
-  filters: { category: number | '' }
+  filters: { category: number | ''; excludeAllergens?: number[] }
 }>()
 
+const page = usePage()
 const confirm = useConfirm()
 const { t } = useI18n()
 const ALL = '__all__'
 
 const INITIAL_COUNT = 48
 const PAGE_SIZE = 24
+
+const excludedAllergenIds = computed(() =>
+  props.filters.excludeAllergens && props.filters.excludeAllergens.length > 0
+    ? props.filters.excludeAllergens
+    : ((page.props as { user?: { excludedAllergenIds?: number[] } }).user?.excludedAllergenIds ??
+      [])
+)
 
 const search = ref('')
 const selectedCategory = ref<number | string>(props.filters.category || ALL)
@@ -50,9 +59,11 @@ const sentinel = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null
 
 const filteredProducts = computed(() => {
+  const excludeIds = excludedAllergenIds.value
   return props.products.filter((p) => {
     if (selectedCategory.value !== ALL && p.category.id !== selectedCategory.value) return false
     if (showFavoritesOnly.value && !p.isFavorite) return false
+    if (excludeIds.length > 0 && p.allergens.some((a) => excludeIds.includes(a.id))) return false
     if (search.value) {
       const s = search.value.toLowerCase()
       if (
@@ -268,6 +279,16 @@ function categoryButtonStyle(isSelected: boolean, color?: string): Record<string
               <p v-if="product.description" class="text-sm text-gray-500 dark:text-zinc-400">
                 {{ product.description }}
               </p>
+              <!-- Allergens (subtle) -->
+              <div v-if="product.allergens.length" class="mt-2 flex flex-wrap gap-1">
+                <span
+                  v-for="a in product.allergens"
+                  :key="a.id"
+                  class="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-500 dark:bg-zinc-800 dark:text-zinc-400"
+                >
+                  {{ a.name }}
+                </span>
+              </div>
             </div>
 
             <!-- Price + stock (pinned above button) -->

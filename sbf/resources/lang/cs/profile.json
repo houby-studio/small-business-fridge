@@ -15,6 +15,8 @@
   "color_mode_light": "Světlý",
   "color_mode_dark": "Tmavý",
   "keypad_disabled": "Zakázat přihlášení klávesnicí",
+  "exclude_allergens": "V obchodě vyloučit alergeny",
+  "exclude_allergens_hint": "Produkty obsahující vybrané alergeny se v obchodě nebudou zobrazovat.",
   "username": "Uživatelské jméno",
   "keypad_id": "ID klávesnice",
   "card_id": "ID karty",

@@ -1,9 +1,14 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import db from '@adonisjs/lucid/services/db'
-import { updateProfileValidator, toggleColorModeValidator } from '#validators/user'
+import {
+  updateProfileValidator,
+  toggleColorModeValidator,
+  updateExcludedAllergensValidator,
+} from '#validators/user'
 import { createApiTokenValidator } from '#validators/auth'
 import AuditService from '#services/audit_service'
 import User from '#models/user'
+import Allergen from '#models/allergen'
 
 export default class ProfileController {
   async show({ inertia, auth }: HttpContext) {
@@ -18,7 +23,16 @@ export default class ProfileController {
       .orderBy('created_at', 'desc')
       .select(['id', 'name', 'created_at', 'last_used_at', 'expires_at'])
 
-    return inertia.render('profile/show', { user: user.serialize(), tokens })
+    const allergens = await Allergen.query()
+      .where('isDisabled', false)
+      .orderBy('name', 'asc')
+      .select('id', 'name')
+
+    return inertia.render('profile/show', {
+      user: user.serialize(),
+      tokens,
+      allergens: allergens.map((a) => ({ id: a.id, name: a.name })),
+    })
   }
 
   async update({ request, auth, response, session, i18n }: HttpContext) {
@@ -34,6 +48,9 @@ export default class ProfileController {
     user.sendDailyReport = data.sendDailyReport
     user.colorMode = data.colorMode
     user.keypadDisabled = data.keypadDisabled
+    if (data.excludedAllergenIds !== undefined) {
+      user.excludedAllergenIds = data.excludedAllergenIds
+    }
 
     await user.save()
 
@@ -100,6 +117,14 @@ export default class ProfileController {
 
     session.flash('alert', { type: 'success', message: i18n.t('messages.token_revoked') })
     return response.redirect('/profile')
+  }
+
+  async updateExcludedAllergens({ request, auth, response }: HttpContext) {
+    const user = auth.user!
+    const data = await request.validateUsing(updateExcludedAllergensValidator)
+    user.excludedAllergenIds = data.excludedAllergenIds
+    await user.save()
+    return response.redirect().back()
   }
 
   async toggleFavorite({ params, auth, response }: HttpContext) {

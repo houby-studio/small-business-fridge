@@ -1,0 +1,46 @@
+import type { HttpContext } from '@adonisjs/core/http'
+import AdminService from '#services/admin_service'
+import { createAllergenValidator, updateAllergenValidator } from '#validators/allergen'
+
+export default class AllergensController {
+  async index({ inertia }: HttpContext) {
+    const service = new AdminService()
+    const allergens = await service.getAllergens()
+
+    return inertia.render('admin/allergens/index', {
+      allergens: allergens.map((a) => ({
+        id: a.id,
+        name: a.name,
+        isDisabled: a.isDisabled,
+      })),
+    })
+  }
+
+  async store({ request, response, session, i18n }: HttpContext) {
+    const data = await request.validateUsing(createAllergenValidator)
+
+    const service = new AdminService()
+    await service.createAllergen(data.name)
+
+    session.flash('alert', {
+      type: 'success',
+      message: i18n.t('messages.allergen_created', { name: data.name }),
+    })
+
+    return response.redirect('/admin/allergens')
+  }
+
+  async update({ params, request, response, session, i18n }: HttpContext) {
+    const data = await request.validateUsing(updateAllergenValidator)
+
+    const service = new AdminService()
+    const allergen = await service.updateAllergen(Number(params.id), data)
+
+    session.flash('alert', {
+      type: 'success',
+      message: i18n.t('messages.allergen_updated', { name: allergen.name }),
+    })
+
+    return response.redirect('/admin/allergens')
+  }
+}

@@ -1,6 +1,7 @@
 import { DateTime } from 'luxon'
 import { BaseModel, column, belongsTo, hasMany, manyToMany } from '@adonisjs/lucid/orm'
 import type { BelongsTo, HasMany, ManyToMany } from '@adonisjs/lucid/types/relations'
+import Allergen from '#models/allergen'
 import Category from '#models/category'
 import Delivery from '#models/delivery'
 import User from '#models/user'
@@ -46,4 +47,9 @@ export default class Product extends BaseModel {
     pivotTimestamps: { createdAt: 'created_at', updatedAt: false },
   })
   declare favoritedBy: ManyToMany<typeof User>
+
+  @manyToMany(() => Allergen, {
+    pivotTable: 'product_allergen',
+  })
+  declare allergens: ManyToMany<typeof Allergen>
 }

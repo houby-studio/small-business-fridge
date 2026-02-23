@@ -1,5 +1,6 @@
 import Product from '#models/product'
 import Category from '#models/category'
+import Allergen from '#models/allergen'
 import type { MultipartFile } from '@adonisjs/core/bodyparser'
 import app from '@adonisjs/core/services/app'
 import { cuid } from '@adonisjs/core/helpers'
@@ -14,6 +15,7 @@ export default class ProductService {
     categoryId: number
     barcode?: string | null
     image: MultipartFile
+    allergenIds?: number[]
   }): Promise<Product> {
     // Auto-assign next keypad ID
     const maxKeypad = await Product.query().max('keypad_id as max').first()
@@ -21,7 +23,7 @@ export default class ProductService {
 
     const imagePath = await this.saveImage(data.image)
 
-    return Product.create({
+    const product = await Product.create({
       keypadId: nextKeypadId,
       displayName: data.displayName,
       description: data.description,
@@ -29,6 +31,13 @@ export default class ProductService {
       categoryId: data.categoryId,
       barcode: data.barcode || null,
     })
+
+    const ids = data.allergenIds ?? []
+    if (ids.length > 0) {
+      await product.related('allergens').attach(ids)
+    }
+
+    return product
   }
 
   /**
@@ -42,6 +51,7 @@ export default class ProductService {
       categoryId: number
       barcode?: string | null
       image?: MultipartFile | null
+      allergenIds?: number[]
     }
   ): Promise<Product> {
     const product = await Product.findOrFail(productId)
@@ -56,6 +66,11 @@ export default class ProductService {
     }
 
     await product.save()
+
+    if (data.allergenIds !== undefined) {
+      await product.related('allergens').sync(data.allergenIds)
+    }
+
     return product
   }
 
@@ -74,7 +89,10 @@ export default class ProductService {
     perPage: number = 20,
     filters?: { search?: string; categoryId?: number }
   ) {
-    const query = Product.query().preload('category').orderBy('displayName', 'asc')
+    const query = Product.query()
+      .preload('category')
+      .preload('allergens')
+      .orderBy('displayName', 'asc')
 
     if (filters?.search) {
       const term = `%${filters.search}%`
@@ -94,7 +112,11 @@ export default class ProductService {
    * Get a product by ID with relationships.
    */
   async getProduct(productId: number) {
-    return Product.query().where('id', productId).preload('category').firstOrFail()
+    return Product.query()
+      .where('id', productId)
+      .preload('category')
+      .preload('allergens')
+      .firstOrFail()
   }
 
   /**
@@ -102,6 +124,13 @@ export default class ProductService {
    */
   async getCategories() {
     return Category.query().where('isDisabled', false).orderBy('name', 'asc')
+  }
+
+  /**
+   * Get all active allergens.
+   */
+  async getAllergens() {
+    return Allergen.query().where('isDisabled', false).orderBy('name', 'asc')
   }
 
   /**

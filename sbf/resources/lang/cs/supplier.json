@@ -29,6 +29,7 @@
   "products_category_label": "Kategorie",
   "products_barcode_label": "Čárový kód",
   "products_barcode_placeholder": "Volitelné — EAN kód",
+  "products_allergens_label": "Alergeny",
   "products_image_label": "Obrázek",
   "products_image_choose": "Vybrat obrázek",
   "products_image_upload": "Nahrát nový obrázek",

@@ -18,6 +18,7 @@ interface ProductRow {
   imagePath: string | null
   barcode: string | null
   category: { id: number; name: string; color: string } | null
+  allergens: { id: number; name: string }[]
 }
 
 interface PaginatedProducts {
@@ -185,6 +186,14 @@ function onPageChange(event: any) {
       </Column>
       <Column :header="t('supplier.products_barcode_label')">
         <template #body="{ data }">{{ data.barcode ?? '—' }}</template>
+      </Column>
+      <Column :header="t('supplier.products_allergens_label')">
+        <template #body="{ data }">
+          <span v-if="data.allergens?.length">
+            {{ data.allergens.map((a) => a.name).join(', ') }}
+          </span>
+          <span v-else class="text-gray-400 dark:text-zinc-500">—</span>
+        </template>
       </Column>
       <Column :header="t('common.actions')" style="width: 100px">
         <template #body="{ data }">

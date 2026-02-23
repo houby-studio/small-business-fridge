@@ -7,6 +7,7 @@ import { ProductFactory } from '#database/factories/product_factory'
 import { DeliveryFactory } from '#database/factories/delivery_factory'
 import { OrderFactory } from '#database/factories/order_factory'
 import Invoice from '#models/invoice'
+import Allergen from '#models/allergen'
 import db from '@adonisjs/lucid/services/db'
 
 const cleanAll = async () => {
@@ -15,7 +16,9 @@ const cleanAll = async () => {
   await db.from('orders').delete()
   await db.from('invoices').delete()
   await db.from('deliveries').delete()
+  await db.from('product_allergen').delete()
   await db.from('products').delete()
+  await db.from('allergens').delete()
   await db.from('categories').delete()
   await db.from('auth_access_tokens').delete()
   await db.from('users').delete()
@@ -377,6 +380,70 @@ test.group('Admin - users index flags', (group) => {
   })
 })
 
+test.group('Admin - allergens CRUD', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('admin can view allergens page', async ({ client }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const response = await client.get('/admin/allergens').loginAs(admin)
+    response.assertStatus(200)
+  })
+
+  test('admin can create allergen', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const response = await client
+      .post('/admin/allergens')
+      .loginAs(admin)
+      .withCsrfToken()
+      .form({ name: 'Lepek' })
+      .redirects(0)
+
+    response.assertStatus(302)
+    assert.equal(response.header('location'), '/admin/allergens')
+
+    const allergen = await Allergen.findBy('name', 'Lepek')
+    assert.isNotNull(allergen)
+    assert.equal(allergen!.name, 'Lepek')
+    assert.isFalse(allergen!.isDisabled)
+  })
+
+  test('admin can update allergen', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const allergen = await Allergen.create({ name: 'Lepek', isDisabled: false })
+
+    const response = await client
+      .put(`/admin/allergens/${allergen.id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .form({ name: 'Gluten' })
+      .redirects(0)
+
+    response.assertStatus(302)
+    await allergen.refresh()
+    assert.equal(allergen.name, 'Gluten')
+  })
+
+  test('admin can toggle allergen isDisabled', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const allergen = await Allergen.create({ name: 'Lepek', isDisabled: false })
+
+    const response = await client
+      .put(`/admin/allergens/${allergen.id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .form({ isDisabled: 'true' })
+      .redirects(0)
+
+    response.assertStatus(302)
+    await allergen.refresh()
+    assert.isTrue(allergen.isDisabled)
+  })
+
+  test('customer cannot access admin allergens page', async ({ client }) => {
+    const customer = await UserFactory.create()
+    const response = await client.get('/admin/allergens').loginAs(customer).redirects(0)
+    response.assertStatus(302)
 test.group('Admin - category audit logging', (group) => {
   group.each.setup(cleanAll)
   group.each.teardown(cleanAll)

@@ -5,5 +5,7 @@
   "confirm_accept": "Buy",
   "no_products": "No products to display.",
   "favorite": "Favorites",
-  "forYou": "Recommended for you"
+  "forYou": "Recommended for you",
+  "exclude_allergens": "Exclude allergens",
+  "allergens_filter_placeholder": "Select allergens to exclude"
 }

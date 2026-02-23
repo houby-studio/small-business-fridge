@@ -1,5 +1,6 @@
 import Product from '#models/product'
 import Category from '#models/category'
+import Allergen from '#models/allergen'
 import db from '@adonisjs/lucid/services/db'
 import { normalizeImagePath } from '#helpers/image_url'
 
@@ -11,6 +12,7 @@ export default class ShopService {
   async getProducts(options: { showAll?: boolean; userId?: number } = {}) {
     const query = Product.query()
       .preload('category')
+      .preload('allergens')
       .preload('deliveries', (q) => {
         q.where('amountLeft', '>', 0)
       })
@@ -50,6 +52,7 @@ export default class ShopService {
             name: product.category.name,
             color: product.category.color,
           },
+          allergens: product.allergens.map((a) => ({ id: a.id, name: a.name })),
           stockSum,
           price: cheapestDelivery?.price ?? null,
           deliveryId: cheapestDelivery?.id ?? null,
@@ -110,5 +113,12 @@ export default class ShopService {
    */
   async getCategories() {
     return Category.query().where('isDisabled', false).orderBy('name', 'asc')
+  }
+
+  /**
+   * Get all active allergens.
+   */
+  async getAllergens() {
+    return Allergen.query().where('isDisabled', false).orderBy('name', 'asc')
   }
 }

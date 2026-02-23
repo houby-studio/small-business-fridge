@@ -4,6 +4,7 @@ import AppLayout from '~/layouts/AppLayout.vue'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Select from 'primevue/select'
+import MultiSelect from 'primevue/multiselect'
 import FileUpload from 'primevue/fileupload'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
@@ -15,7 +16,12 @@ interface CategoryOption {
   color: string
 }
 
-const props = defineProps<{ categories: CategoryOption[] }>()
+interface AllergenOption {
+  id: number
+  name: string
+}
+
+const props = defineProps<{ categories: CategoryOption[]; allergens: AllergenOption[] }>()
 const { t } = useI18n()
 
 const form = useForm({
@@ -23,6 +29,7 @@ const form = useForm({
   description: '',
   categoryId: null as number | null,
   barcode: '',
+  allergenIds: [] as number[],
   image: null as File | null,
 })
 
@@ -38,6 +45,7 @@ function submit() {
     form.setError('image', t('supplier.products_image_required'))
     return
   }
+  formData.append('allergenIds', JSON.stringify(form.value.allergenIds))
 
   form.post('/supplier/products', {
     forceFormData: true,
@@ -118,6 +126,20 @@ function submit() {
             <small v-if="form.errors.barcode" class="text-red-600 dark:text-red-400">{{
               form.errors.barcode
             }}</small>
+          </div>
+
+          <div>
+            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
+              t('supplier.products_allergens_label')
+            }}</label>
+            <MultiSelect
+              v-model="form.allergenIds"
+              :options="allergens"
+              optionLabel="name"
+              optionValue="id"
+              :placeholder="t('supplier.products_allergens_label')"
+              class="w-full"
+            />
           </div>
 
           <div>

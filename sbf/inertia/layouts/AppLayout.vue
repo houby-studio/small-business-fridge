@@ -100,6 +100,7 @@ const menuItems = computed(() => {
         { label: 'Dashboard', icon: 'pi pi-chart-bar', url: '/admin/dashboard' },
         { label: 'Uživatelé', icon: 'pi pi-users', url: '/admin/users' },
         { label: 'Kategorie', icon: 'pi pi-palette', url: '/admin/categories' },
+        { label: 'Alergeny', icon: 'pi pi-tags', url: '/admin/allergens' },
         { label: 'Objednávky', icon: 'pi pi-list-check', url: '/admin/orders' },
         { label: 'Faktury', icon: 'pi pi-file-check', url: '/admin/invoices' },
         { label: 'Audit log', icon: 'pi pi-history', url: '/admin/audit' },
