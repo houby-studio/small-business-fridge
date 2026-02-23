@@ -3,7 +3,6 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import Button from 'primevue/button'
-import SelectButton from 'primevue/selectbutton'
 import InputText from 'primevue/inputtext'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
@@ -49,11 +48,6 @@ const showFavoritesOnly = ref(false)
 const visibleCount = ref(INITIAL_COUNT)
 const sentinel = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null
-
-const categoryOptions = computed(() => [
-  { label: t('common.all'), value: ALL },
-  ...props.categories.map((c) => ({ label: c.name, value: c.id })),
-])
 
 const filteredProducts = computed(() => {
   return props.products.filter((p) => {
@@ -142,6 +136,11 @@ function nameClass(name: string): string {
   if (name.length > 22) return 'text-base leading-snug'
   return 'text-lg leading-tight'
 }
+
+function categoryButtonStyle(isSelected: boolean, color?: string): Record<string, string> {
+  if (isSelected && color) return { backgroundColor: color }
+  return {}
+}
 </script>
 
 <template>
@@ -165,14 +164,32 @@ function nameClass(name: string): string {
     </div>
 
     <!-- Category filter -->
-    <div class="mb-6">
-      <SelectButton
-        v-model="selectedCategory"
-        :options="categoryOptions"
-        optionLabel="label"
-        optionValue="value"
-        :allowEmpty="false"
-      />
+    <div class="mb-6 flex gap-2 overflow-x-auto py-1" style="scrollbar-width: none">
+      <button
+        class="flex-shrink-0 rounded-full px-5 py-2 text-sm font-semibold transition-all sm:text-base"
+        :class="
+          selectedCategory === ALL
+            ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'
+        "
+        @click="selectedCategory = ALL"
+      >
+        {{ t('common.all') }}
+      </button>
+      <button
+        v-for="category in categories"
+        :key="category.id"
+        class="flex-shrink-0 rounded-full px-5 py-2 text-sm font-semibold transition-all sm:text-base"
+        :class="
+          selectedCategory === category.id
+            ? 'text-white'
+            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'
+        "
+        :style="categoryButtonStyle(selectedCategory === category.id, category.color)"
+        @click="selectedCategory = category.id"
+      >
+        {{ category.name }}
+      </button>
     </div>
 
     <!-- Product grid -->

@@ -52,6 +52,8 @@ const actionOptions = [
   { label: t('audit.action_delivery_created'), value: 'delivery.created' },
   { label: t('audit.action_product_created'), value: 'product.created' },
   { label: t('audit.action_product_updated'), value: 'product.updated' },
+  { label: t('audit.action_category_created'), value: 'category.created' },
+  { label: t('audit.action_category_updated'), value: 'category.updated' },
   { label: t('audit.action_profile_updated'), value: 'profile.updated' },
   { label: t('audit.action_user_updated'), value: 'user.updated' },
   { label: t('audit.action_order_storno'), value: 'order.storno' },
@@ -69,6 +71,7 @@ const entityOptions = [
   { label: 'invoice', value: 'invoice' },
   { label: 'delivery', value: 'delivery' },
   { label: 'product', value: 'product' },
+  { label: 'category', value: 'category' },
   { label: 'user', value: 'user' },
 ]
 
@@ -81,6 +84,8 @@ const actionLabels: Record<string, string> = {
   'delivery.created': 'audit.action_delivery_created',
   'product.created': 'audit.action_product_created',
   'product.updated': 'audit.action_product_updated',
+  'category.created': 'audit.action_category_created',
+  'category.updated': 'audit.action_category_updated',
   'profile.updated': 'audit.action_profile_updated',
   'user.updated': 'audit.action_user_updated',
   'order.storno': 'audit.action_order_storno',
