@@ -111,11 +111,7 @@ function applyFilters() {
   const page = areFilterParamsEqual(nextParams, lastAppliedFilterParams.value)
     ? props.logs.meta.currentPage
     : 1
-  router.get(
-    '/audit',
-    { ...nextParams, page },
-    { preserveState: true, only: ['logs', 'filters'] }
-  )
+  router.get('/audit', { ...nextParams, page }, { preserveState: true, only: ['logs', 'filters'] })
   lastAppliedFilterParams.value = nextParams
 }
 

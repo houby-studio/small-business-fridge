@@ -149,8 +149,11 @@ function onSort(event: any) {
     <!-- Add stock form -->
     <Card class="mb-8">
       <template #content>
-        <form @submit.prevent="submit" class="flex flex-wrap items-end gap-4">
-          <div class="min-w-[250px] flex-1">
+        <form
+          @submit.prevent="submit"
+          class="grid grid-cols-1 items-end gap-4 md:grid-cols-[minmax(0,1fr)_8rem_8rem_auto]"
+        >
+          <div class="min-w-0">
             <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
               t('supplier.deliveries_product')
             }}</label>
@@ -161,10 +164,10 @@ function onSort(event: any) {
               optionValue="id"
               :placeholder="t('supplier.deliveries_product')"
               filter
-              class="w-full"
+              class="w-full min-w-0"
             />
           </div>
-          <div class="w-32">
+          <div class="min-w-0">
             <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
               t('supplier.deliveries_amount')
             }}</label>
@@ -172,10 +175,10 @@ function onSort(event: any) {
               v-model="amount"
               :min="1"
               :placeholder="t('common.pieces')"
-              class="w-full"
+              class="w-full min-w-0"
             />
           </div>
-          <div class="w-32">
+          <div class="min-w-0">
             <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
               t('supplier.deliveries_price')
             }}</label>
@@ -184,7 +187,7 @@ function onSort(event: any) {
               :min="1"
               :suffix="' ' + t('common.currency')"
               :placeholder="t('common.currency')"
-              class="w-full"
+              class="w-full min-w-0"
             />
           </div>
           <Button
@@ -193,6 +196,7 @@ function onSort(event: any) {
             icon="pi pi-plus"
             :loading="submitting"
             :disabled="!selectedProduct || !amount || !price"
+            class="w-full justify-center md:w-auto md:justify-self-end"
           />
         </form>
       </template>
