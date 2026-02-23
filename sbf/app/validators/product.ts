@@ -1,22 +1,27 @@
 import vine from '@vinejs/vine'
 
 function parseAllergenIds() {
-  return vine.any().optional().transform((v) => {
-    if (v === undefined || v === null) return []
-    if (Array.isArray(v)) return v.filter((n): n is number => typeof n === 'number' && n > 0)
-    if (typeof v === 'string') {
-      try {
-        const p = JSON.parse(v) as unknown
-        return Array.isArray(p) ? p.filter((n): n is number => typeof n === 'number' && n > 0) : []
-      } catch {
-        return v
-          .split(',')
-          .map((s) => Number(s.trim()))
-          .filter((n) => Number.isInteger(n) && n > 0)
+  return vine
+    .any()
+    .optional()
+    .transform((v) => {
+      if (v === undefined || v === null) return []
+      if (Array.isArray(v)) return v.filter((n): n is number => typeof n === 'number' && n > 0)
+      if (typeof v === 'string') {
+        try {
+          const p = JSON.parse(v) as unknown
+          return Array.isArray(p)
+            ? p.filter((n): n is number => typeof n === 'number' && n > 0)
+            : []
+        } catch {
+          return v
+            .split(',')
+            .map((s) => Number(s.trim()))
+            .filter((n) => Number.isInteger(n) && n > 0)
+        }
       }
-    }
-    return []
-  })
+      return []
+    })
 }
 
 export const createProductValidator = vine.compile(

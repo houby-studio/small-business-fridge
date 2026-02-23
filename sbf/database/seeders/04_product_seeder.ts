@@ -62,7 +62,7 @@ export default class extends BaseSeeder {
       'Coca-Cola 0.5L': [],
       'Mattoni 0.5L': [],
       'Plzeň 0.5L': ['Lepek (obiloviny)'],
-      Snickers: ['Arašídy', 'Mléko', 'Skořápkové plody'],
+      'Snickers': ['Arašídy', 'Mléko', 'Skořápkové plody'],
       "Chipsy Lay's": ['Sója'],
     }
 

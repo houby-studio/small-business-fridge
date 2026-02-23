@@ -73,7 +73,8 @@ export default class User extends compose(BaseModel, AuthFinder) {
 
   @column({
     prepare: (value: number[]) => JSON.stringify(value ?? []),
-    consume: (value: string | number[]) => (Array.isArray(value) ? value : JSON.parse(value ?? '[]')),
+    consume: (value: string | number[]) =>
+      Array.isArray(value) ? value : JSON.parse(value ?? '[]'),
   })
   declare excludedAllergenIds: number[]
 

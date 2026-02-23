@@ -203,10 +203,7 @@ export default class AdminService {
   /**
    * Update an allergen.
    */
-  async updateAllergen(
-    allergenId: number,
-    data: { name?: string; isDisabled?: boolean }
-  ) {
+  async updateAllergen(allergenId: number, data: { name?: string; isDisabled?: boolean }) {
     const allergen = await Allergen.findOrFail(allergenId)
 
     if (data.name !== undefined) allergen.name = data.name

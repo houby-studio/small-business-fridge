@@ -45,7 +45,8 @@ const INITIAL_COUNT = 48
 const PAGE_SIZE = 24
 
 const excludedAllergenIds = computed(
-  () => (page.props as { user?: { excludedAllergenIds?: number[] } }).user?.excludedAllergenIds ?? []
+  () =>
+    (page.props as { user?: { excludedAllergenIds?: number[] } }).user?.excludedAllergenIds ?? []
 )
 
 const search = ref('')
@@ -259,10 +260,7 @@ function nameClass(name: string): string {
                 {{ product.description }}
               </p>
               <!-- Allergens (subtle) -->
-              <div
-                v-if="product.allergens.length"
-                class="mt-2 flex flex-wrap gap-1"
-              >
+              <div v-if="product.allergens.length" class="mt-2 flex flex-wrap gap-1">
                 <span
                   v-for="a in product.allergens"
                   :key="a.id"
