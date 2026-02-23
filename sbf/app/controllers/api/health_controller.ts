@@ -3,6 +3,7 @@ import db from '@adonisjs/lucid/services/db'
 
 export default class HealthController {
   /**
+   * @index
    * @summary Health check
    * @description Returns service health status including database connectivity and uptime.
    * @tag Health

@@ -5,10 +5,11 @@ import env from '#start/env'
 
 export default class AuthController {
   /**
+   * @login
    * @summary Kiosk login (keypad/card ID)
    * @description Authenticates a kiosk device user by keypadId or cardId plus the shared API secret. Returns a short-lived token valid for 24 hours.
    * @tag Auth
-   * @requestBody {"keypadId": 1, "apiSecret": "your-api-secret"}
+   * @requestBody <apiKeypadLoginValidator>
    * @responseBody 200 - {"token": "oat_...", "user": {"id": 1, "displayName": "John Doe", "keypadId": 1, "role": "customer"}}
    * @responseBody 400 - {"error": "Either keypadId or cardId is required."}
    * @responseBody 401 - {"error": "Invalid API secret."}
@@ -54,10 +55,11 @@ export default class AuthController {
   }
 
   /**
+   * @token
    * @summary Obtain a personal API token
    * @description Authenticates with username and password, returns a Bearer token valid for 30 days.
    * @tag Auth
-   * @requestBody {"username": "john", "password": "secret"}
+   * @requestBody <apiTokenLoginValidator>
    * @responseBody 200 - {"token": "oat_...", "user": {"id": 1, "displayName": "John Doe", "email": "john@example.com", "role": "customer"}}
    * @responseBody 401 - {"error": "Invalid credentials."}
    * @noAuth true

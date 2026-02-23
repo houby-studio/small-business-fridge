@@ -6,10 +6,11 @@ import logger from '@adonisjs/core/services/logger'
 
 export default class OrdersController {
   /**
+   * @store
    * @summary Create an order (purchase a product)
    * @description Purchases a product by delivery ID. Optionally specify a channel (e.g. "api", "kiosk").
    * @tag Orders
-   * @requestBody {"deliveryId": 3, "channel": "api"}
+   * @requestBody <apiOrderValidator>
    * @responseBody 201 - {"data": {"id": 42, "userId": 1, "deliveryId": 3, "price": 25, "channel": "api", "createdAt": "2024-01-01T12:00:00.000Z"}}
    * @responseBody 401 - {"error": "Unauthorized"}
    * @responseBody 409 - {"error": "Product is out of stock."}
@@ -38,6 +39,7 @@ export default class OrdersController {
   }
 
   /**
+   * @latest
    * @summary List recent orders
    * @description Returns the 10 most recent orders for the authenticated user.
    * @tag Orders
