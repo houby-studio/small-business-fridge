@@ -3,10 +3,9 @@ import { renderToString } from '@vue/server-renderer'
 import { createSSRApp, h, type DefineComponent } from 'vue'
 import PrimeVue from 'primevue/config'
 import Aura from '@primeuix/themes/aura'
-import { definePreset } from '@primeuix/themes'
+import { definePreset, Theme } from '@primeuix/themes'
 import ToastService from 'primevue/toastservice'
 import ConfirmationService from 'primevue/confirmationservice'
-import BaseStyle from '@primevue/core/base/style'
 
 // ─── Custom SBF theme preset (must match app.ts) ─────────────────────────────
 const SBFPreset = definePreset(Aura, {
@@ -97,18 +96,13 @@ export default function render(page: any) {
         .use(ConfirmationService)
     },
   }).then((result) => {
-    // PrimeVue injects theme CSS via document.head (DOM) which is a no-op on the server.
-    // _loadStyles() also only fires in beforeMount, which renderToString never calls.
-    // So we collect the CSS synchronously using PrimeVue's static generators (which
-    // read from the Theme singleton already configured by app.use(PrimeVue)) and
-    // prepend them to the SSR head so the browser has styles on first paint.
-    const primeVueStyles = [
-      BaseStyle.getStyleSheet(), // base utility classes (.p-hidden-accessible etc.)
-      BaseStyle.getCommonThemeStyleSheet(), // all --p-* CSS custom property variables
-      BaseStyle.getThemeStyleSheet(), // base component theme CSS
-    ].filter(Boolean)
-
-    result.head = [...primeVueStyles, ...result.head]
+    // PrimeVue injects theme CSS via document.head (DOM), which is a no-op on the server
+    // because _loadStyles() only runs in beforeMount — a lifecycle hook that renderToString
+    // never calls. So we generate the CSS custom properties synchronously from the Theme
+    // singleton (already configured by app.use(PrimeVue) above) and prepend them to the
+    // SSR <head> so the browser has all --p-* variables on the very first paint.
+    const commonCSS = Theme.getCommonStyleSheet('base', undefined, {})
+    if (commonCSS) result.head = [commonCSS, ...result.head]
     return result
   })
 }
