@@ -1,3 +1,4 @@
+import '#tests/test_context'
 import { test } from '@japa/runner'
 import mail from '@adonisjs/mail/services/main'
 import type { FakeMailer } from '@adonisjs/mail'

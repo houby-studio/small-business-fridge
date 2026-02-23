@@ -1,3 +1,4 @@
+import '#tests/test_context'
 import { test } from '@japa/runner'
 import { UserFactory } from '#database/factories/user_factory'
 import { InvoiceFactory } from '#database/factories/invoice_factory'

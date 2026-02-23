@@ -1,3 +1,4 @@
+import '#tests/test_context'
 import { test } from '@japa/runner'
 import db from '@adonisjs/lucid/services/db'
 import User from '#models/user'
