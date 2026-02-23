@@ -32,7 +32,7 @@
   "tokens_never_expires": "Neomezená",
   "tokens_revoke": "Odvolat",
   "tokens_new_name": "Název tokenu",
-  "tokens_new_expires": "Platnost (dní, prázdné = neomezená)",
+  "tokens_new_expires": "Platnost (dny)",
   "tokens_create": "Vytvořit token",
   "tokens_new_value_heading": "Nový API token",
   "tokens_new_value_info": "Zkopírujte tuto hodnotu nyní. Po zavření ji nebude možné znovu zobrazit.",

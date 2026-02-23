@@ -331,14 +331,14 @@ function copyToken() {
             </DataTable>
 
             <!-- Create new token -->
-            <div class="grid grid-cols-1 items-end gap-3 md:grid-cols-[minmax(0,1fr)_14rem_auto]">
-              <div class="min-w-0">
+            <div class="grid grid-cols-1 items-end gap-2 lg:grid-cols-12">
+              <div class="min-w-0 lg:col-span-6">
                 <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">
                   {{ t('profile.tokens_new_name') }}
                 </label>
-                <InputText v-model="newTokenName" class="w-full min-w-0" maxlength="100" />
+                <InputText v-model="newTokenName" class="w-full" />
               </div>
-              <div class="min-w-0">
+              <div class="min-w-0 lg:col-span-3">
                 <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">
                   {{ t('profile.tokens_new_expires') }}
                 </label>
@@ -347,17 +347,19 @@ function copyToken() {
                   :min="1"
                   :max="3650"
                   :placeholder="t('profile.tokens_never_expires')"
-                  class="w-full min-w-0"
+                  class="w-full"
                 />
               </div>
-              <Button
-                :label="t('profile.tokens_create')"
-                icon="pi pi-plus"
-                :loading="creatingToken"
-                :disabled="!newTokenName.trim()"
-                @click="createToken"
-                class="w-full justify-center md:w-auto md:justify-self-end"
-              />
+              <div class="lg:col-span-3 lg:flex lg:justify-end">
+                <Button
+                  :label="t('profile.tokens_create')"
+                  icon="pi pi-plus"
+                  :loading="creatingToken"
+                  :disabled="!newTokenName.trim()"
+                  @click="createToken"
+                  class=" justify-center whitespace-nowrap lg:w-auto"
+                />
+              </div>
             </div>
           </div>
         </template>
