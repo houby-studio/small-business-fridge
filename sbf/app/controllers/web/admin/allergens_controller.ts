@@ -8,12 +8,16 @@ export default class AllergensController {
   async index({ inertia }: HttpContext) {
     const service = new AdminService()
     const allergens = await service.getAllergens()
+    const allergenIdsWithProducts = await service.getAllergenIdsWithProducts(
+      allergens.map((allergen) => allergen.id)
+    )
 
     return inertia.render('admin/allergens/index', {
       allergens: allergens.map((a) => ({
         id: a.id,
         name: a.name,
         isDisabled: a.isDisabled,
+        hasProducts: allergenIdsWithProducts.has(a.id),
       })),
     })
   }
@@ -47,7 +51,19 @@ export default class AllergensController {
     }
 
     const service = new AdminService()
-    const allergen = await service.updateAllergen(Number(params.id), data)
+    let allergen: Allergen
+    try {
+      allergen = await service.updateAllergen(Number(params.id), data)
+    } catch (err) {
+      if (err instanceof Error && err.message === 'ALLERGEN_HAS_PRODUCTS') {
+        session.flash('alert', {
+          type: 'warn',
+          message: i18n.t('messages.allergen_has_products'),
+        })
+        return response.redirect('/admin/allergens')
+      }
+      throw err
+    }
 
     const changes: Record<string, { from: unknown; to: unknown }> = {}
     for (const key of ['name', 'isDisabled'] as const) {

@@ -8,6 +8,9 @@ export default class CategoriesController {
   async index({ inertia }: HttpContext) {
     const service = new AdminService()
     const categories = await service.getCategories()
+    const categoryIdsWithProducts = await service.getCategoryIdsWithProducts(
+      categories.map((category) => category.id)
+    )
 
     return inertia.render('admin/categories/index', {
       categories: categories.map((c) => ({
@@ -15,6 +18,7 @@ export default class CategoriesController {
         name: c.name,
         color: c.color,
         isDisabled: c.isDisabled,
+        hasProducts: categoryIdsWithProducts.has(c.id),
       })),
     })
   }
@@ -50,7 +54,19 @@ export default class CategoriesController {
     }
 
     const service = new AdminService()
-    const category = await service.updateCategory(params.id, data)
+    let category: Category
+    try {
+      category = await service.updateCategory(params.id, data)
+    } catch (err) {
+      if (err instanceof Error && err.message === 'CATEGORY_HAS_PRODUCTS') {
+        session.flash('alert', {
+          type: 'warn',
+          message: i18n.t('messages.category_has_products'),
+        })
+        return response.redirect('/admin/categories')
+      }
+      throw err
+    }
 
     const changes: Record<string, { from: unknown; to: unknown }> = {}
     for (const key of ['name', 'color', 'isDisabled'] as const) {
