@@ -12,6 +12,7 @@ import Button from 'primevue/button'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from '~/composables/use_i18n'
+import { areFilterParamsEqual } from '~/composables/use_filter_params'
 import type { SharedProps } from '~/types'
 
 interface UserRow {
@@ -59,6 +60,15 @@ const roleEditOptions = [
   { label: t('common.role_admin'), value: 'admin' },
 ]
 
+function buildFilterParams() {
+  return {
+    search: filterSearch.value || undefined,
+    role: filterRole.value === ALL ? undefined : filterRole.value,
+  }
+}
+
+const lastAppliedFilterParams = ref(buildFilterParams())
+
 function updateRole(userId: number, role: string) {
   router.put(`/admin/users/${userId}`, { role }, { preserveState: true })
 }
@@ -85,20 +95,25 @@ function toggleKiosk(userId: number, isKiosk: boolean) {
 }
 
 function applyFilters() {
+  const nextParams = buildFilterParams()
+  const page = areFilterParamsEqual(nextParams, lastAppliedFilterParams.value)
+    ? props.users.meta.currentPage
+    : 1
   router.get(
     '/admin/users',
     {
-      search: filterSearch.value || undefined,
-      role: filterRole.value === ALL ? undefined : filterRole.value,
-      page: 1,
+      ...nextParams,
+      page,
     },
     { preserveState: true, only: ['users', 'filters'] }
   )
+  lastAppliedFilterParams.value = nextParams
 }
 
 function clearFilters() {
   filterSearch.value = ''
   filterRole.value = ALL
+  lastAppliedFilterParams.value = {}
   router.get('/admin/users', {}, { preserveState: true, only: ['users', 'filters'] })
 }
 
@@ -107,8 +122,7 @@ function onPageChange(event: any) {
     '/admin/users',
     {
       page: event.page + 1,
-      search: filterSearch.value || undefined,
-      role: filterRole.value === ALL ? undefined : filterRole.value,
+      ...buildFilterParams(),
     },
     { preserveState: true, only: ['users', 'filters'] }
   )

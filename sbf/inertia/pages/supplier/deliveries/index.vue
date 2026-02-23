@@ -10,6 +10,7 @@ import Column from 'primevue/column'
 import Card from 'primevue/card'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDate } from '~/composables/use_format_date'
+import { areFilterParamsEqual } from '~/composables/use_filter_params'
 
 interface ProductOption {
   id: number
@@ -86,18 +87,26 @@ function buildFilterParams() {
   }
 }
 
+const lastAppliedFilterParams = ref(buildFilterParams())
+
 function applyFilters() {
+  const nextParams = buildFilterParams()
+  const page = areFilterParamsEqual(nextParams, lastAppliedFilterParams.value)
+    ? props.recentDeliveries.meta.currentPage
+    : 1
   router.get(
     '/supplier/deliveries',
-    { ...buildFilterParams(), page: 1 },
+    { ...nextParams, page },
     { preserveState: true, only: ['recentDeliveries', 'filters'] }
   )
+  lastAppliedFilterParams.value = nextParams
 }
 
 function clearFilters() {
   filterProductId.value = ALL
   filterSortBy.value = 'createdAt'
   filterSortOrder.value = 'desc'
+  lastAppliedFilterParams.value = {}
   router.get(
     '/supplier/deliveries',
     {},

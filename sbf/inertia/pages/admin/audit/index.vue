@@ -9,6 +9,7 @@ import Select from 'primevue/select'
 import Button from 'primevue/button'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDateTime } from '~/composables/use_format_date'
+import { areFilterParamsEqual } from '~/composables/use_filter_params'
 
 interface AuditRow {
   id: number
@@ -119,12 +120,19 @@ function buildParams() {
   }
 }
 
+const lastAppliedFilterParams = ref(buildParams())
+
 function applyFilters() {
+  const nextParams = buildParams()
+  const page = areFilterParamsEqual(nextParams, lastAppliedFilterParams.value)
+    ? props.logs.meta.currentPage
+    : 1
   router.get(
     '/admin/audit',
-    { ...buildParams(), page: 1 },
+    { ...nextParams, page },
     { preserveState: true, only: ['logs', 'filters'] }
   )
+  lastAppliedFilterParams.value = nextParams
 }
 
 function clearFilters() {
@@ -132,6 +140,7 @@ function clearFilters() {
   filterEntity.value = ALL
   filterUserId.value = ALL
   filterSortOrder.value = 'desc'
+  lastAppliedFilterParams.value = {}
   router.get('/admin/audit', {}, { preserveState: true, only: ['logs', 'filters'] })
 }
 

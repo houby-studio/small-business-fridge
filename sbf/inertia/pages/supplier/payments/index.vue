@@ -11,6 +11,7 @@ import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDate } from '~/composables/use_format_date'
+import { areFilterParamsEqual } from '~/composables/use_filter_params'
 
 interface InvoiceRow {
   id: number
@@ -39,7 +40,9 @@ const ALL = '__all__'
 const filterStatus = ref(props.filters.status || ALL)
 const filterSortBy = ref(props.filters.sortBy || 'createdAt')
 const filterSortOrder = ref(props.filters.sortOrder || 'desc')
-const filterBuyerId = ref<number | string>(props.filters.buyerId ? Number(props.filters.buyerId) : ALL)
+const filterBuyerId = ref<number | string>(
+  props.filters.buyerId ? Number(props.filters.buyerId) : ALL
+)
 const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
 
 const buyerOptions = [{ id: ALL, displayName: t('common.all') }, ...props.buyers]
@@ -98,12 +101,19 @@ function buildFilterParams() {
   }
 }
 
+const lastAppliedFilterParams = ref(buildFilterParams())
+
 function applyFilters() {
+  const nextParams = buildFilterParams()
+  const page = areFilterParamsEqual(nextParams, lastAppliedFilterParams.value)
+    ? props.invoices.meta.currentPage
+    : 1
   router.get(
     '/supplier/payments',
-    { ...buildFilterParams(), page: 1 },
+    { ...nextParams, page },
     { preserveState: true, only: ['invoices', 'filters'] }
   )
+  lastAppliedFilterParams.value = nextParams
 }
 
 function clearFilters() {
@@ -111,6 +121,7 @@ function clearFilters() {
   filterSortBy.value = 'createdAt'
   filterSortOrder.value = 'desc'
   filterBuyerId.value = ALL
+  lastAppliedFilterParams.value = {}
   router.get('/supplier/payments', {}, { preserveState: true, only: ['invoices', 'filters'] })
 }
 

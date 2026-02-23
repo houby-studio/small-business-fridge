@@ -12,6 +12,7 @@ import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDate } from '~/composables/use_format_date'
+import { areFilterParamsEqual } from '~/composables/use_filter_params'
 
 interface OrderRow {
   id: number
@@ -69,12 +70,19 @@ function buildFilterParams() {
   }
 }
 
+const lastAppliedFilterParams = ref(buildFilterParams())
+
 function applyFilters() {
+  const nextParams = buildFilterParams()
+  const page = areFilterParamsEqual(nextParams, lastAppliedFilterParams.value)
+    ? props.orders.meta.currentPage
+    : 1
   router.get(
     '/admin/orders',
-    { ...buildFilterParams(), page: 1 },
+    { ...nextParams, page },
     { preserveState: true, only: ['orders', 'filters'] }
   )
+  lastAppliedFilterParams.value = nextParams
 }
 
 function clearFilters() {
@@ -83,6 +91,7 @@ function clearFilters() {
   filterInvoiced.value = ALL
   filterSortBy.value = 'createdAt'
   filterSortOrder.value = 'desc'
+  lastAppliedFilterParams.value = {}
   router.get('/admin/orders', {}, { preserveState: true, only: ['orders', 'filters'] })
 }
 

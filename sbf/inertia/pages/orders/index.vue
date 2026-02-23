@@ -10,6 +10,7 @@ import Select from 'primevue/select'
 import Button from 'primevue/button'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDate } from '~/composables/use_format_date'
+import { areFilterParamsEqual } from '~/composables/use_filter_params'
 
 interface OrderRow {
   id: number
@@ -74,12 +75,19 @@ function buildFilterParams() {
   }
 }
 
+const lastAppliedFilterParams = ref(buildFilterParams())
+
 function applyFilters() {
+  const nextParams = buildFilterParams()
+  const page = areFilterParamsEqual(nextParams, lastAppliedFilterParams.value)
+    ? props.orders.meta.currentPage
+    : 1
   router.get(
     '/orders',
-    { ...buildFilterParams(), page: 1 },
+    { ...nextParams, page },
     { preserveState: true, only: ['orders', 'filters'] }
   )
+  lastAppliedFilterParams.value = nextParams
 }
 
 function clearFilters() {
@@ -87,6 +95,7 @@ function clearFilters() {
   filterInvoiced.value = ALL
   filterSortBy.value = 'createdAt'
   filterSortOrder.value = 'desc'
+  lastAppliedFilterParams.value = {}
   router.get('/orders', {}, { preserveState: true, only: ['orders', 'filters'] })
 }
 

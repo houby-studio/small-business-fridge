@@ -12,6 +12,7 @@ import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDate } from '~/composables/use_format_date'
+import { areFilterParamsEqual } from '~/composables/use_filter_params'
 
 interface InvoiceOrder {
   id: number
@@ -128,18 +129,26 @@ function buildFilterParams() {
   }
 }
 
+const lastAppliedFilterParams = ref(buildFilterParams())
+
 function applyFilters() {
+  const nextParams = buildFilterParams()
+  const page = areFilterParamsEqual(nextParams, lastAppliedFilterParams.value)
+    ? props.invoices.meta.currentPage
+    : 1
   router.get(
     '/invoices',
-    { ...buildFilterParams(), page: 1 },
+    { ...nextParams, page },
     { preserveState: true, only: ['invoices', 'filters'] }
   )
+  lastAppliedFilterParams.value = nextParams
 }
 
 function clearFilters() {
   filterStatus.value = ALL
   filterSortBy.value = 'createdAt'
   filterSortOrder.value = 'desc'
+  lastAppliedFilterParams.value = {}
   router.get('/invoices', {}, { preserveState: true, only: ['invoices', 'filters'] })
 }
 
