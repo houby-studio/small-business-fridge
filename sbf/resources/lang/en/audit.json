@@ -38,6 +38,7 @@
   "action_user_registered": "Registration",
   "action_user_logout": "Logout",
   "action_profile_token_created": "API token created",
+  "action_profile_token_revoked": "API token revoked",
   "action_admin_impersonate_start": "Impersonation started",
   "action_admin_impersonate_stop": "Impersonation stopped"
 }
