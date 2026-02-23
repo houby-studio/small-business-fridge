@@ -23,6 +23,8 @@
   "delivery_created": "Naskladněno {amount} ks za {price} Kč/ks.",
   "category_created": "Kategorie „{name}“ byla vytvořena.",
   "category_updated": "Kategorie „{name}“ byla upravena.",
+  "allergen_created": "Alergen „{name}“ byl vytvořen.",
+  "allergen_updated": "Alergen „{name}“ byl upraven.",
   "user_updated": "Uživatel „{name}“ byl upraven.",
   "storno_success": "Objednávka #{id} byla stornována.",
   "storno_already_invoiced": "Objednávku nelze stornovat — je již fakturována.",

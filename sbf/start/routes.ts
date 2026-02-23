@@ -34,6 +34,7 @@ const SupplierProductsController = () => import('#controllers/web/supplier/produ
 const AdminDashboardController = () => import('#controllers/web/admin/dashboard_controller')
 const AdminUsersController = () => import('#controllers/web/admin/users_controller')
 const AdminCategoriesController = () => import('#controllers/web/admin/categories_controller')
+const AdminAllergensController = () => import('#controllers/web/admin/allergens_controller')
 const AdminOrdersController = () => import('#controllers/web/admin/orders_controller')
 const AdminInvoicesController = () => import('#controllers/web/admin/invoices_controller')
 const AdminStornoController = () => import('#controllers/web/admin/storno_controller')
@@ -108,6 +109,7 @@ router
     // Profile
     router.get('/profile', [ProfileController, 'show'])
     router.put('/profile', [ProfileController, 'update'])
+    router.put('/profile/excluded-allergens', [ProfileController, 'updateExcludedAllergens'])
     router.post('/profile/color-mode', [ProfileController, 'toggleColorMode'])
     router.post('/profile/favorites/:id', [ProfileController, 'toggleFavorite'])
 
@@ -172,6 +174,11 @@ router
     router.get('/categories', [AdminCategoriesController, 'index'])
     router.post('/categories', [AdminCategoriesController, 'store'])
     router.put('/categories/:id', [AdminCategoriesController, 'update'])
+
+    // Allergen management
+    router.get('/allergens', [AdminAllergensController, 'index'])
+    router.post('/allergens', [AdminAllergensController, 'store'])
+    router.put('/allergens/:id', [AdminAllergensController, 'update'])
 
     // Orders & invoices oversight
     router.get('/orders', [AdminOrdersController, 'index'])

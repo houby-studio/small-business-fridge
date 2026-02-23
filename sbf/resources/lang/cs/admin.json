@@ -21,6 +21,12 @@
   "categories_color": "Barva",
   "categories_name_placeholder": "Název kategorie",
 
+  "allergens_title": "Správa alergenů",
+  "allergens_heading": "Správa alergenů",
+  "allergens_new": "Nový alergen",
+  "allergens_new_heading": "Nový alergen",
+  "allergens_name_placeholder": "Název alergenu",
+
   "orders_title": "Všechny objednávky",
   "orders_heading": "Všechny objednávky",
   "orders_no_orders": "Žádné objednávky.",

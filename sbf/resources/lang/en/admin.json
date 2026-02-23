@@ -21,6 +21,12 @@
   "categories_color": "Color",
   "categories_name_placeholder": "Category name",
 
+  "allergens_title": "Allergen Management",
+  "allergens_heading": "Allergen Management",
+  "allergens_new": "New allergen",
+  "allergens_new_heading": "New allergen",
+  "allergens_name_placeholder": "Allergen name",
+
   "orders_title": "All Orders",
   "orders_heading": "All Orders",
   "orders_no_orders": "No orders.",

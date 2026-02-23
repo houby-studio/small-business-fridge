@@ -2,6 +2,7 @@ import User from '#models/user'
 import Order from '#models/order'
 import Invoice from '#models/invoice'
 import Category from '#models/category'
+import Allergen from '#models/allergen'
 import db from '@adonisjs/lucid/services/db'
 import InvoiceService from '#services/invoice_service'
 
@@ -183,6 +184,36 @@ export default class AdminService {
 
     await category.save()
     return category
+  }
+
+  /**
+   * Get all allergens for admin management.
+   */
+  async getAllergens() {
+    return Allergen.query().orderBy('name', 'asc')
+  }
+
+  /**
+   * Create a new allergen.
+   */
+  async createAllergen(name: string) {
+    return Allergen.create({ name, isDisabled: false })
+  }
+
+  /**
+   * Update an allergen.
+   */
+  async updateAllergen(
+    allergenId: number,
+    data: { name?: string; isDisabled?: boolean }
+  ) {
+    const allergen = await Allergen.findOrFail(allergenId)
+
+    if (data.name !== undefined) allergen.name = data.name
+    if (data.isDisabled !== undefined) allergen.isDisabled = data.isDisabled
+
+    await allergen.save()
+    return allergen
   }
 
   /**
