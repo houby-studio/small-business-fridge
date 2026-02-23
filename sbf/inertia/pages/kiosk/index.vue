@@ -292,7 +292,7 @@ function playAlarm() {
       ctx.close()
     }, 1200)
   } catch {
-    // AudioContext not available (SSR/test env)
+    // AudioContext not available (test env / restricted browser context)
   }
 }
 

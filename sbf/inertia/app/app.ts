@@ -2,7 +2,7 @@
 /// <reference path="../../config/inertia.ts" />
 
 import 'primeicons/primeicons.css'
-import { createSSRApp, h } from 'vue'
+import { createApp, h } from 'vue'
 import type { DefineComponent } from 'vue'
 import { createInertiaApp } from '@inertiajs/vue3'
 import { resolvePageComponent } from '@adonisjs/inertia/helpers'
@@ -92,7 +92,7 @@ createInertiaApp({
   },
 
   setup({ el, App, props, plugin }) {
-    createSSRApp({ render: () => h(App, props) })
+    createApp({ render: () => h(App, props) })
       .use(plugin)
       .use(PrimeVue, {
         theme: {
@@ -108,5 +108,11 @@ createInertiaApp({
       .use(ConfirmationService)
       .directive('tooltip', Tooltip)
       .mount(el)
+
+    document.documentElement.classList.remove('sbf-app-booting')
+    const bootLoader = document.getElementById('sbf-boot-loader')
+    if (bootLoader) {
+      window.setTimeout(() => bootLoader.remove(), 250)
+    }
   },
 })

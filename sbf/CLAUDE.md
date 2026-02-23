@@ -36,7 +36,7 @@ node ace test --no-color # 91 tests: unit + functional (Japa)
 
 - **Runtime**: AdonisJS 6 (Node.js 22+), ESM modules
 - **Database**: PostgreSQL 17 via Lucid ORM
-- **Frontend**: Vue 3 + Inertia.js + PrimeVue (SSR-capable)
+- **Frontend**: Vue 3 + Inertia.js + PrimeVue
 - **Auth**: Session-based web + token-based API
 - **Lang**: TypeScript throughout (strict mode)
 - **Locale**: Czech (cs) primary, English (en) secondary
@@ -175,7 +175,7 @@ await user.load((loader) => loader.load('orders'))
 ### Vue / Inertia Patterns
 
 ```typescript
-// NEVER use v-tooltip (causes SSR errors) — use aria-label instead
+// NEVER use v-tooltip (causes runtime errors) — use aria-label instead
 // Images served from /uploads/* route
 // useI18n() for translations — simple {param} substitution
 // useFlash() for flash messages from controllers
@@ -292,4 +292,4 @@ When adding user-facing text:
 - Uploads: served via `/uploads/*` route, stored in `storage/uploads/`
 - CSRF: API routes are exempted via function in `config/shield.ts`
 - Scheduler provider: only registered in console environment (`adonisrc.ts`)
-- `v-tooltip` → SSR crash → use `aria-label` or PrimeVue Tooltip component with mount
+- `v-tooltip` → runtime crash → use `aria-label` or PrimeVue Tooltip component with mount

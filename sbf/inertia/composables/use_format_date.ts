@@ -1,7 +1,7 @@
 /**
  * Shared date formatting utilities that produce consistent output on both
- * SSR (Node.js) and the browser by always using the Europe/Prague timezone.
- * This prevents Vue hydration mismatches caused by server/client timezone differences.
+ * Node.js and the browser by always using the Europe/Prague timezone.
+ * This keeps output stable across environments.
  */
 
 const CS_DATE_OPTIONS: Intl.DateTimeFormatOptions = {

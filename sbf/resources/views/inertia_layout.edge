@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="cs" data-theme="dark">
+<html lang="cs" data-theme="dark" class="sbf-app-booting">
 
   <head>
     <meta charset="utf-8" />
@@ -12,12 +12,66 @@
     <link rel="preconnect" href="https://fonts.bunny.net" />
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet" />
 
+    <style>
+      html.sbf-app-booting #sbf-app-shell {
+        visibility: hidden;
+      }
+      
+      #sbf-boot-loader {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: grid;
+        place-items: center;
+        gap: 12px;
+        background: radial-gradient(circle at top, #3f3f46 0%, #18181b 55%, #09090b 100%);
+        color: #ffffff;
+        opacity: 1;
+        transition: opacity 0.25s ease;
+      }
+      
+      html:not(.sbf-app-booting) #sbf-boot-loader {
+        opacity: 0;
+        pointer-events: none;
+      }
+      
+      #sbf-boot-loader .brand {
+        font-size: 1.2rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+      
+      #sbf-boot-loader .spinner {
+        width: 36px;
+        height: 36px;
+        border: 3px solid rgba(255, 255, 255, 0.25);
+        border-top-color: #cf112a;
+        border-radius: 9999px;
+        animation: sbf-boot-spin 0.8s linear infinite;
+      }
+      
+      @keyframes sbf-boot-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+
     @vite(['inertia/css/app.css', 'inertia/app/app.ts', `inertia/pages/${page.component}.vue`])
     @inertiaHead()
   </head>
 
   <body class="min-h-screen font-sans antialiased">
-    @inertia()
+    <div id="sbf-boot-loader" role="status" aria-live="polite">
+      <div class="spinner" aria-hidden="true">
+      </div>
+      <div class="brand">
+        Lednice IT
+      </div>
+    </div>
+    <div id="sbf-app-shell">
+      @inertia()
+    </div>
   </body>
 
 </html>

@@ -65,14 +65,6 @@ const inertiaConfig = defineConfig({
       return loadTranslations(locale)
     },
   },
-
-  /**
-   * Options for the server-side rendering
-   */
-  ssr: {
-    enabled: true,
-    entrypoint: 'inertia/app/ssr.ts',
-  },
 })
 
 export default inertiaConfig
