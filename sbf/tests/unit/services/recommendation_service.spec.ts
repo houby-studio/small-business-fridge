@@ -170,4 +170,70 @@ test.group('RecommendationService.getRecommendedIds', (group) => {
     assert.include(result, product.id)
     result.forEach((id) => assert.isNumber(id))
   })
+
+  test('skips out-of-stock precomputed rows and backfills from lower ranks', async ({ assert }) => {
+    const buyer = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+
+    const productRank1 = await ProductFactory.merge({ categoryId: category.id }).create()
+    const productRank2 = await ProductFactory.merge({ categoryId: category.id }).create()
+    const productRank3 = await ProductFactory.merge({ categoryId: category.id }).create()
+
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: productRank1.id,
+      amountLeft: 0,
+      amountSupplied: 5,
+      price: 20,
+    }).create()
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: productRank2.id,
+      amountLeft: 5,
+      price: 20,
+    }).create()
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: productRank3.id,
+      amountLeft: 5,
+      price: 20,
+    }).create()
+
+    const now = new Date()
+    await db.table('recommendations').insert([
+      {
+        user_id: buyer.id,
+        product_id: productRank1.id,
+        score: 0.9,
+        model: 'statistical',
+        rank: 1,
+        generated_at: now,
+        created_at: now,
+      },
+      {
+        user_id: buyer.id,
+        product_id: productRank2.id,
+        score: 0.8,
+        model: 'statistical',
+        rank: 2,
+        generated_at: now,
+        created_at: now,
+      },
+      {
+        user_id: buyer.id,
+        product_id: productRank3.id,
+        score: 0.7,
+        model: 'statistical',
+        rank: 3,
+        generated_at: now,
+        created_at: now,
+      },
+    ])
+
+    const result = await service.getRecommendedIds(buyer.id, 2)
+
+    assert.deepEqual(result, [productRank2.id, productRank3.id])
+    assert.notInclude(result, productRank1.id)
+  })
 })

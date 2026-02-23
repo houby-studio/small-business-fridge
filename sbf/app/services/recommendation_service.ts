@@ -89,13 +89,18 @@ export default class RecommendationService {
   /**
    * Return the top-N recommended product IDs for a user (ordered by rank).
    * Uses precomputed rows if available, falls back to live computation.
-   * Stock filtering is NOT done here — callers merge against the product list
-   * from ShopService, which already excludes out-of-stock items.
+   * Keeps only products that are currently in stock before applying the limit.
    */
   async getRecommendedIds(userId: number, limit: number = 4): Promise<number[]> {
     const precomputed = await Recommendation.query()
       .where('userId', userId)
       .where('model', 'statistical')
+      .whereExists((q) => {
+        q.from('deliveries')
+          .select(db.raw('1'))
+          .whereColumn('deliveries.product_id', 'recommendations.product_id')
+          .where('deliveries.amount_left', '>', 0)
+      })
       .orderBy('rank', 'asc')
       .limit(limit)
       .select('productId')
