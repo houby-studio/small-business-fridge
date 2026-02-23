@@ -6,6 +6,7 @@ import Aura from '@primeuix/themes/aura'
 import { definePreset } from '@primeuix/themes'
 import ToastService from 'primevue/toastservice'
 import ConfirmationService from 'primevue/confirmationservice'
+import BaseStyle from '@primevue/core/base/style'
 
 // ─── Custom SBF theme preset (must match app.ts) ─────────────────────────────
 const SBFPreset = definePreset(Aura, {
@@ -95,5 +96,19 @@ export default function render(page: any) {
         .use(ToastService)
         .use(ConfirmationService)
     },
+  }).then((result) => {
+    // PrimeVue injects theme CSS via document.head (DOM) which is a no-op on the server.
+    // _loadStyles() also only fires in beforeMount, which renderToString never calls.
+    // So we collect the CSS synchronously using PrimeVue's static generators (which
+    // read from the Theme singleton already configured by app.use(PrimeVue)) and
+    // prepend them to the SSR head so the browser has styles on first paint.
+    const primeVueStyles = [
+      BaseStyle.getStyleSheet(), // base utility classes (.p-hidden-accessible etc.)
+      BaseStyle.getCommonThemeStyleSheet(), // all --p-* CSS custom property variables
+      BaseStyle.getThemeStyleSheet(), // base component theme CSS
+    ].filter(Boolean)
+
+    result.head = [...primeVueStyles, ...result.head]
+    return result
   })
 }
