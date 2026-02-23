@@ -32,16 +32,17 @@ const props = defineProps<{
   users: { id: number; displayName: string }[]
 }>()
 const { t } = useI18n()
+const ALL = '__all__'
 
-const filterAction = ref(props.filters.action ?? '')
-const filterEntity = ref(props.filters.entityType ?? '')
-const filterUserId = ref<number | ''>(props.filters.userId ? Number(props.filters.userId) : '')
+const filterAction = ref(props.filters.action || ALL)
+const filterEntity = ref(props.filters.entityType || ALL)
+const filterUserId = ref<number | string>(props.filters.userId ? Number(props.filters.userId) : ALL)
 const filterSortOrder = ref(props.filters.sortOrder || 'desc')
 
-const userOptions = [{ id: '', displayName: t('common.all') }, ...props.users]
+const userOptions = [{ id: ALL, displayName: t('common.all') }, ...props.users]
 
 const actionOptions = [
-  { label: t('common.all'), value: '' },
+  { label: t('common.all'), value: ALL },
   { label: t('audit.action_order_created'), value: 'order.created' },
   { label: t('audit.action_invoice_generated'), value: 'invoice.generated' },
   { label: t('audit.action_payment_requested'), value: 'payment.requested' },
@@ -62,7 +63,7 @@ const actionOptions = [
 ]
 
 const entityOptions = [
-  { label: t('common.all'), value: '' },
+  { label: t('common.all'), value: ALL },
   { label: 'order', value: 'order' },
   { label: 'invoice', value: 'invoice' },
   { label: 'delivery', value: 'delivery' },
@@ -111,9 +112,9 @@ function formatMetadata(meta: Record<string, any> | null): string {
 
 function buildParams() {
   return {
-    action: filterAction.value || undefined,
-    entityType: filterEntity.value || undefined,
-    userId: filterUserId.value || undefined,
+    action: filterAction.value === ALL ? undefined : filterAction.value,
+    entityType: filterEntity.value === ALL ? undefined : filterEntity.value,
+    userId: filterUserId.value === ALL ? undefined : filterUserId.value,
     sortOrder: filterSortOrder.value || undefined,
   }
 }
@@ -127,9 +128,9 @@ function applyFilters() {
 }
 
 function clearFilters() {
-  filterAction.value = ''
-  filterEntity.value = ''
-  filterUserId.value = ''
+  filterAction.value = ALL
+  filterEntity.value = ALL
+  filterUserId.value = ALL
   filterSortOrder.value = 'desc'
   router.get('/admin/audit', {}, { preserveState: true, only: ['logs', 'filters'] })
 }

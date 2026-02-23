@@ -30,14 +30,15 @@ const props = defineProps<{
   filters: { status: string; sortBy: string; sortOrder: string }
 }>()
 const { t } = useI18n()
+const ALL = '__all__'
 
-const filterStatus = ref(props.filters.status ?? '')
+const filterStatus = ref(props.filters.status || ALL)
 const filterSortBy = ref(props.filters.sortBy || 'createdAt')
 const filterSortOrder = ref(props.filters.sortOrder || 'desc')
 const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
 
 const statusOptions = [
-  { label: t('common.all'), value: '' },
+  { label: t('common.all'), value: ALL },
   { label: t('invoices.filter_paid'), value: 'paid' },
   { label: t('invoices.filter_unpaid'), value: 'unpaid' },
   { label: t('invoices.filter_awaiting'), value: 'awaiting' },
@@ -57,7 +58,7 @@ function statusLabel(inv: InvoiceRow) {
 
 function buildFilterParams() {
   return {
-    status: filterStatus.value || undefined,
+    status: filterStatus.value === ALL ? undefined : filterStatus.value,
     sortBy: filterSortBy.value || undefined,
     sortOrder: filterSortOrder.value || undefined,
   }
@@ -72,7 +73,7 @@ function applyFilters() {
 }
 
 function clearFilters() {
-  filterStatus.value = ''
+  filterStatus.value = ALL
   filterSortBy.value = 'createdAt'
   filterSortOrder.value = 'desc'
   router.get('/admin/invoices', {}, { preserveState: true, only: ['invoices', 'filters'] })

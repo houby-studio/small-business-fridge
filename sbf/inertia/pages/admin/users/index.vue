@@ -41,12 +41,13 @@ const { t } = useI18n()
 const page = usePage<SharedProps>()
 const currentUserId = computed(() => page.props.user?.id)
 const confirm = useConfirm()
+const ALL = '__all__'
 
 const filterSearch = ref(props.filters.search ?? '')
-const filterRole = ref(props.filters.role ?? '')
+const filterRole = ref(props.filters.role || ALL)
 
 const roleOptions = [
-  { label: t('common.all'), value: '' },
+  { label: t('common.all'), value: ALL },
   { label: t('common.role_customer'), value: 'customer' },
   { label: t('common.role_supplier'), value: 'supplier' },
   { label: t('common.role_admin'), value: 'admin' },
@@ -88,7 +89,7 @@ function applyFilters() {
     '/admin/users',
     {
       search: filterSearch.value || undefined,
-      role: filterRole.value || undefined,
+      role: filterRole.value === ALL ? undefined : filterRole.value,
       page: 1,
     },
     { preserveState: true, only: ['users', 'filters'] }
@@ -97,7 +98,7 @@ function applyFilters() {
 
 function clearFilters() {
   filterSearch.value = ''
-  filterRole.value = ''
+  filterRole.value = ALL
   router.get('/admin/users', {}, { preserveState: true, only: ['users', 'filters'] })
 }
 
@@ -107,7 +108,7 @@ function onPageChange(event: any) {
     {
       page: event.page + 1,
       search: filterSearch.value || undefined,
-      role: filterRole.value || undefined,
+      role: filterRole.value === ALL ? undefined : filterRole.value,
     },
     { preserveState: true, only: ['users', 'filters'] }
   )

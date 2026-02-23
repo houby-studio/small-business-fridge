@@ -44,23 +44,24 @@ const props = defineProps<{
 }>()
 
 const { t } = useI18n()
+const ALL = '__all__'
 
 const filterName = ref(props.filters.name ?? '')
-const filterCategoryId = ref(props.filters.categoryId ?? '')
+const filterCategoryId = ref(props.filters.categoryId || ALL)
 const filterInStock = ref(props.filters.inStock === '1')
 const filterSortBy = ref(props.filters.sortBy || 'productName')
 const filterSortOrder = ref(props.filters.sortOrder || 'asc')
 const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
 
 const categoryOptions = computed(() => [
-  { label: t('common.all'), value: '' },
+  { label: t('common.all'), value: ALL },
   ...props.categories.map((c) => ({ label: c.name, value: String(c.id) })),
 ])
 
 function buildFilterParams() {
   return {
     name: filterName.value || undefined,
-    categoryId: filterCategoryId.value || undefined,
+    categoryId: filterCategoryId.value === ALL ? undefined : filterCategoryId.value,
     inStock: filterInStock.value ? '1' : undefined,
     sortBy: filterSortBy.value || undefined,
     sortOrder: filterSortOrder.value || undefined,
@@ -77,7 +78,7 @@ function applyFilters() {
 
 function clearFilters() {
   filterName.value = ''
-  filterCategoryId.value = ''
+  filterCategoryId.value = ALL
   filterInStock.value = false
   filterSortBy.value = 'productName'
   filterSortOrder.value = 'asc'

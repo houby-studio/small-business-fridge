@@ -36,12 +36,13 @@ const props = defineProps<{
   filters: { search: string; categoryId: string }
 }>()
 const { t } = useI18n()
+const ALL = '__all__'
 
 const filterSearch = ref(props.filters.search ?? '')
-const filterCategoryId = ref(props.filters.categoryId ?? '')
+const filterCategoryId = ref(props.filters.categoryId || ALL)
 
 const categoryOptions = ref([
-  { label: t('common.all'), value: '' },
+  { label: t('common.all'), value: ALL },
   ...props.categories.map((c) => ({ label: c.name, value: String(c.id) })),
 ])
 
@@ -50,7 +51,7 @@ function applyFilters() {
     '/supplier/products',
     {
       search: filterSearch.value || undefined,
-      categoryId: filterCategoryId.value || undefined,
+      categoryId: filterCategoryId.value === ALL ? undefined : filterCategoryId.value,
       page: 1,
     },
     { preserveState: true, only: ['products', 'filters'] }
@@ -59,7 +60,7 @@ function applyFilters() {
 
 function clearFilters() {
   filterSearch.value = ''
-  filterCategoryId.value = ''
+  filterCategoryId.value = ALL
   router.get('/supplier/products', {}, { preserveState: true, only: ['products', 'filters'] })
 }
 
@@ -68,7 +69,7 @@ function onPageChange(event: any) {
     '/supplier/products',
     {
       search: filterSearch.value || undefined,
-      categoryId: filterCategoryId.value || undefined,
+      categoryId: filterCategoryId.value === ALL ? undefined : filterCategoryId.value,
       page: event.page + 1,
     },
     { preserveState: true, only: ['products', 'filters'] }

@@ -38,25 +38,26 @@ const props = defineProps<{
 
 const confirm = useConfirm()
 const { t } = useI18n()
+const ALL = '__all__'
 
 const INITIAL_COUNT = 48
 const PAGE_SIZE = 24
 
 const search = ref('')
-const selectedCategory = ref<number | ''>(props.filters.category ?? '')
+const selectedCategory = ref<number | string>(props.filters.category || ALL)
 const showFavoritesOnly = ref(false)
 const visibleCount = ref(INITIAL_COUNT)
 const sentinel = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null
 
 const categoryOptions = computed(() => [
-  { label: t('common.all'), value: '' },
+  { label: t('common.all'), value: ALL },
   ...props.categories.map((c) => ({ label: c.name, value: c.id })),
 ])
 
 const filteredProducts = computed(() => {
   return props.products.filter((p) => {
-    if (selectedCategory.value !== '' && p.category.id !== selectedCategory.value) return false
+    if (selectedCategory.value !== ALL && p.category.id !== selectedCategory.value) return false
     if (showFavoritesOnly.value && !p.isFavorite) return false
     if (search.value) {
       const s = search.value.toLowerCase()

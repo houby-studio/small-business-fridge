@@ -31,12 +31,13 @@ const props = defineProps<{
   filters: { action: string; sortOrder: string }
 }>()
 const { t } = useI18n()
+const ALL = '__all__'
 
-const filterAction = ref(props.filters.action ?? '')
+const filterAction = ref(props.filters.action || ALL)
 const filterSortOrder = ref(props.filters.sortOrder || 'desc')
 
 const actionOptions = [
-  { label: t('common.all'), value: '' },
+  { label: t('common.all'), value: ALL },
   { label: t('audit.action_order_created'), value: 'order.created' },
   { label: t('audit.action_invoice_generated'), value: 'invoice.generated' },
   { label: t('audit.action_payment_requested'), value: 'payment.requested' },
@@ -97,7 +98,7 @@ function formatMetadata(meta: Record<string, any> | null): string {
 
 function buildParams() {
   return {
-    action: filterAction.value || undefined,
+    action: filterAction.value === ALL ? undefined : filterAction.value,
     sortOrder: filterSortOrder.value || undefined,
   }
 }
@@ -111,7 +112,7 @@ function applyFilters() {
 }
 
 function clearFilters() {
-  filterAction.value = ''
+  filterAction.value = ALL
   filterSortOrder.value = 'desc'
   router.get('/audit', {}, { preserveState: true, only: ['logs', 'filters'] })
 }

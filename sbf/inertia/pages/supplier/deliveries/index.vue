@@ -40,19 +40,20 @@ const props = defineProps<{
 }>()
 
 const { t } = useI18n()
+const ALL = '__all__'
 
 const selectedProduct = ref<number | null>(props.preselect ?? null)
 const amount = ref<number | null>(null)
 const price = ref<number | null>(null)
 const submitting = ref(false)
 
-const filterProductId = ref(props.filters.productId ?? '')
+const filterProductId = ref(props.filters.productId || ALL)
 const filterSortBy = ref(props.filters.sortBy || 'createdAt')
 const filterSortOrder = ref(props.filters.sortOrder || 'desc')
 const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
 
 const productFilterOptions = computed(() => [
-  { label: t('common.all'), value: '' },
+  { label: t('common.all'), value: ALL },
   ...props.products.map((p) => ({ label: p.displayName, value: String(p.id) })),
 ])
 
@@ -79,7 +80,7 @@ function submit() {
 
 function buildFilterParams() {
   return {
-    productId: filterProductId.value || undefined,
+    productId: filterProductId.value === ALL ? undefined : filterProductId.value,
     sortBy: filterSortBy.value || undefined,
     sortOrder: filterSortOrder.value || undefined,
   }
@@ -94,7 +95,7 @@ function applyFilters() {
 }
 
 function clearFilters() {
-  filterProductId.value = ''
+  filterProductId.value = ALL
   filterSortBy.value = 'createdAt'
   filterSortOrder.value = 'desc'
   router.get(

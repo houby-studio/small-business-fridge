@@ -44,30 +44,31 @@ const props = defineProps<{
 }>()
 
 const { t } = useI18n()
+const ALL = '__all__'
 
-const filterChannel = ref(props.filters.channel ?? '')
-const filterInvoiced = ref(props.filters.invoiced ?? '')
+const filterChannel = ref(props.filters.channel || ALL)
+const filterInvoiced = ref(props.filters.invoiced || ALL)
 const filterSortBy = ref(props.filters.sortBy || 'createdAt')
 const filterSortOrder = ref(props.filters.sortOrder || 'desc')
 const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
 
 const channelOptions = [
-  { label: t('common.all'), value: '' },
+  { label: t('common.all'), value: ALL },
   { label: t('common.channel_web'), value: 'web' },
   { label: t('common.channel_kiosk'), value: 'kiosk' },
   { label: t('common.channel_scanner'), value: 'scanner' },
 ]
 
 const invoicedOptions = [
-  { label: t('common.all'), value: '' },
+  { label: t('common.all'), value: ALL },
   { label: t('orders.filter_invoiced_yes'), value: 'yes' },
   { label: t('orders.filter_invoiced_no'), value: 'no' },
 ]
 
 function buildFilterParams() {
   return {
-    channel: filterChannel.value || undefined,
-    invoiced: filterInvoiced.value || undefined,
+    channel: filterChannel.value === ALL ? undefined : filterChannel.value,
+    invoiced: filterInvoiced.value === ALL ? undefined : filterInvoiced.value,
     sortBy: filterSortBy.value || undefined,
     sortOrder: filterSortOrder.value || undefined,
   }
@@ -82,8 +83,8 @@ function applyFilters() {
 }
 
 function clearFilters() {
-  filterChannel.value = ''
-  filterInvoiced.value = ''
+  filterChannel.value = ALL
+  filterInvoiced.value = ALL
   filterSortBy.value = 'createdAt'
   filterSortOrder.value = 'desc'
   router.get('/orders', {}, { preserveState: true, only: ['orders', 'filters'] })

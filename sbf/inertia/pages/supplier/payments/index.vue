@@ -34,17 +34,18 @@ const props = defineProps<{
 }>()
 const { t } = useI18n()
 const confirm = useConfirm()
+const ALL = '__all__'
 
-const filterStatus = ref(props.filters.status ?? '')
+const filterStatus = ref(props.filters.status || ALL)
 const filterSortBy = ref(props.filters.sortBy || 'createdAt')
 const filterSortOrder = ref(props.filters.sortOrder || 'desc')
-const filterBuyerId = ref<number | ''>(props.filters.buyerId ? Number(props.filters.buyerId) : '')
+const filterBuyerId = ref<number | string>(props.filters.buyerId ? Number(props.filters.buyerId) : ALL)
 const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
 
-const buyerOptions = [{ id: '', displayName: t('common.all') }, ...props.buyers]
+const buyerOptions = [{ id: ALL, displayName: t('common.all') }, ...props.buyers]
 
 const statusOptions = [
-  { label: t('common.all'), value: '' },
+  { label: t('common.all'), value: ALL },
   { label: t('invoices.filter_paid'), value: 'paid' },
   { label: t('invoices.filter_unpaid'), value: 'unpaid' },
   { label: t('invoices.filter_awaiting'), value: 'awaiting' },
@@ -90,10 +91,10 @@ function reject(id: number) {
 
 function buildFilterParams() {
   return {
-    status: filterStatus.value || undefined,
+    status: filterStatus.value === ALL ? undefined : filterStatus.value,
     sortBy: filterSortBy.value || undefined,
     sortOrder: filterSortOrder.value || undefined,
-    buyerId: filterBuyerId.value || undefined,
+    buyerId: filterBuyerId.value === ALL ? undefined : filterBuyerId.value,
   }
 }
 
@@ -106,10 +107,10 @@ function applyFilters() {
 }
 
 function clearFilters() {
-  filterStatus.value = ''
+  filterStatus.value = ALL
   filterSortBy.value = 'createdAt'
   filterSortOrder.value = 'desc'
-  filterBuyerId.value = ''
+  filterBuyerId.value = ALL
   router.get('/supplier/payments', {}, { preserveState: true, only: ['invoices', 'filters'] })
 }
 
