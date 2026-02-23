@@ -32,6 +32,7 @@
   "products_image_label": "Obrázek",
   "products_image_choose": "Vybrat obrázek",
   "products_image_upload": "Nahrát nový obrázek",
+  "products_image_required": "Obrázek je povinný.",
   "products_create_submit": "Vytvořit produkt",
   "products_edit_title": "Upravit produkt",
   "products_edit_heading": "Upravit produkt",

@@ -32,6 +32,7 @@
   "products_image_label": "Image",
   "products_image_choose": "Choose image",
   "products_image_upload": "Upload new image",
+  "products_image_required": "Image is required.",
   "products_create_submit": "Create product",
   "products_edit_title": "Edit product",
   "products_edit_heading": "Edit product",
