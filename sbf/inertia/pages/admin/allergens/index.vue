@@ -42,7 +42,6 @@ function toggleDisabled(allergenId: number, isDisabled: boolean) {
   router.put(`/admin/allergens/${allergenId}`, { isDisabled }, { preserveState: true })
 }
 
-// Inline editing
 const editingId = ref<number | null>(null)
 const editName = ref('')
 
@@ -129,7 +128,6 @@ function cancelEdit() {
       </Column>
     </DataTable>
 
-    <!-- Create dialog -->
     <Dialog
       v-model:visible="showCreateDialog"
       :header="t('admin.allergens_new_heading')"

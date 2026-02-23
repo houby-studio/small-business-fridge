@@ -187,7 +187,7 @@ export default class AdminService {
   }
 
   /**
-   * Get all allergens for admin management.
+   * Get all allergens.
    */
   async getAllergens() {
     return Allergen.query().orderBy('name', 'asc')

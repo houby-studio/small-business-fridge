@@ -130,7 +130,7 @@ export default class ProductService {
   }
 
   /**
-   * Get all active allergens for form dropdowns and shop filter.
+   * Get all active allergens.
    */
   async getAllergens() {
     return Allergen.query().where('isDisabled', false).orderBy('name', 'asc')

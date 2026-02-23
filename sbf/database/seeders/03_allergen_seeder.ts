@@ -1,11 +1,7 @@
 import { BaseSeeder } from '@adonisjs/lucid/seeders'
 import Allergen from '#models/allergen'
 
-/**
- * Seeds the EU 14 major food allergens (names in Czech).
- * Safe to run multiple times: uses updateOrCreateMany by name.
- * Must run before product seeder so products can be linked to allergens.
- */
+/** EU 14 major allergens (Czech). Safe to run multiple times. */
 export default class extends BaseSeeder {
   async run() {
     await Allergen.updateOrCreateMany('name', [

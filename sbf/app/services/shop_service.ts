@@ -116,7 +116,7 @@ export default class ShopService {
   }
 
   /**
-   * Get all active allergens for shop filter.
+   * Get all active allergens.
    */
   async getAllergens() {
     return Allergen.query().where('isDisabled', false).orderBy('name', 'asc')

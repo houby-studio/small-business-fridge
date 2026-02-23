@@ -44,7 +44,6 @@ const { t } = useI18n()
 const INITIAL_COUNT = 48
 const PAGE_SIZE = 24
 
-/** Excluded allergens from user profile (filter applied in profile settings). */
 const excludedAllergenIds = computed(
   () => (page.props as { user?: { excludedAllergenIds?: number[] } }).user?.excludedAllergenIds ?? []
 )
@@ -66,7 +65,7 @@ const filteredProducts = computed(() => {
   return props.products.filter((p) => {
     if (selectedCategory.value && p.category.id !== selectedCategory.value) return false
     if (showFavoritesOnly.value && !p.isFavorite) return false
-    if (excludeIds.length > 0 && p.allergens?.some((a) => excludeIds.includes(a.id))) return false
+    if (excludeIds.length > 0 && p.allergens.some((a) => excludeIds.includes(a.id))) return false
     if (search.value) {
       const s = search.value.toLowerCase()
       if (
@@ -261,7 +260,7 @@ function nameClass(name: string): string {
               </p>
               <!-- Allergens (subtle) -->
               <div
-                v-if="product.allergens?.length"
+                v-if="product.allergens.length"
                 class="mt-2 flex flex-wrap gap-1"
               >
                 <span
