@@ -7,8 +7,14 @@ export interface ProductItem {
   displayName: string
   imagePath: string | null
   price: number | null
-  deliveryId: number | null
+  remainingStock: number
   stockSum: number
+  deliveryLots: Array<{
+    deliveryId: number
+    price: number
+    amountLeft: number
+    createdAt: string
+  }>
   allergens: { id: number; name: string }[]
   isFavorite: boolean
   isRecommended: boolean
@@ -111,26 +117,28 @@ function glowStyle(product: ProductItem): Record<string, string> {
           :key="product.id"
           class="relative flex cursor-pointer flex-col rounded-2xl border transition-all active:scale-95"
           :class="
-            product.isRecommended && product.isFavorite
-              ? 'sbf-card-both border-purple-500/50 bg-purple-900/10'
-              : product.isFavorite
-                ? 'sbf-card-favorite border-pink-500/50 bg-pink-900/10'
-                : product.isRecommended
-                  ? 'sbf-card-recommended border-blue-500/50 bg-blue-900/10'
-                  : 'border-gray-700/50 bg-gray-800/60 hover:border-gray-600'
+            product.remainingStock <= 0
+              ? 'border-gray-800 bg-gray-900/60 opacity-60'
+              : product.isRecommended && product.isFavorite
+                ? 'sbf-card-both border-purple-500/50 bg-purple-900/10'
+                : product.isFavorite
+                  ? 'sbf-card-favorite border-pink-500/50 bg-pink-900/10'
+                  : product.isRecommended
+                    ? 'sbf-card-recommended border-blue-500/50 bg-blue-900/10'
+                    : 'border-gray-700/50 bg-gray-800/60 hover:border-gray-600'
           "
           :style="{
             borderBottom: `3px solid ${product.category.color}`,
             ...glowStyle(product),
           }"
-          @click="emit('addProduct', product)"
+          @click="product.remainingStock > 0 && emit('addProduct', product)"
         >
           <!-- In-basket quantity badge -->
           <div
-            v-if="basketQtyMap.get(product.deliveryId ?? -1)"
+            v-if="basketQtyMap.get(product.id)"
             class="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-green-600 text-sm font-bold text-white shadow-lg"
           >
-            {{ basketQtyMap.get(product.deliveryId ?? -1) }}
+            {{ basketQtyMap.get(product.id) }}
           </div>
 
           <!-- Product name at top -->
@@ -159,7 +167,7 @@ function glowStyle(product: ProductItem): Record<string, string> {
               {{ t('common.price_with_currency', { price: product.price ?? 0 }) }}
             </p>
             <p class="text-xs text-gray-500">
-              {{ t('common.pieces_in_stock', { count: product.stockSum }) }}
+              {{ t('common.pieces_in_stock', { count: product.remainingStock }) }}
             </p>
           </div>
         </div>

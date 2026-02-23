@@ -83,7 +83,7 @@ into the image) reads them via the `file:` identifier. No secrets appear in envi
 
 For local development, run services via Docker Compose and the app directly with Node.
 
-**1. Start infrastructure services (PostgreSQL, MailDev, pgAdmin):**
+**1. Start infrastructure services (PostgreSQL, Mailpit, pgAdmin):**
 
 ```bash
 docker compose -f compose.dev.yaml up -d
@@ -91,17 +91,17 @@ docker compose -f compose.dev.yaml up -d
 
 | Service  | URL / port                       |
 | -------- | -------------------------------- |
-| Postgres | `localhost:5433`                 |
-| MailDev  | `http://localhost:8082` (web UI) |
-| pgAdmin  | `http://localhost:8083`          |
+| Postgres | `localhost:5432`                 |
+| Mailpit  | `http://localhost:8025` (web UI) |
+| pgAdmin  | `http://localhost:8080`          |
 
 **2. Copy and configure `.env`:**
 
 ```bash
 cp .env.example .env
-# Set: DB_PORT=5433, DB_USER=sbf, DB_PASSWORD=sbf, DB_DATABASE=sbf
+# Set: DB_PORT=5432, DB_USER=sbf, DB_PASSWORD=sbf, DB_DATABASE=sbf
 # Set: APP_KEY=<generated value>
-# Set: SMTP_HOST=localhost, SMTP_PORT=1026
+# Set: SMTP_HOST=localhost, SMTP_PORT=1025
 ```
 
 **3. Install dependencies and start the dev server:**

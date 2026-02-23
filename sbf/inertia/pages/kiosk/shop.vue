@@ -21,6 +21,12 @@ interface ProductItem {
   imagePath: string | null
   price: number | null
   deliveryId: number | null
+  deliveryLots: Array<{
+    deliveryId: number
+    price: number
+    amountLeft: number
+    createdAt: string
+  }>
   stockSum: number
   isFavorite: boolean
   isRecommended: boolean
@@ -59,10 +65,12 @@ const sortedProducts = computed(() => {
 })
 
 function purchase(product: ProductItem) {
-  if (!props.customer || !product.deliveryId) return
+  if (!props.customer) return
+  const firstLot = product.deliveryLots[0]
+  if (!firstLot) return
 
   confirm.require({
-    message: t('kiosk.purchase_confirm', { name: product.displayName, price: product.price ?? 0 }),
+    message: t('kiosk.purchase_confirm', { name: product.displayName, price: firstLot.price }),
     header: t('kiosk.purchase_confirm_title'),
     icon: 'pi pi-shopping-cart',
     acceptLabel: t('kiosk.purchase_accept'),
@@ -70,7 +78,7 @@ function purchase(product: ProductItem) {
     accept: () => {
       router.post('/kiosk/purchase', {
         customerId: props.customer!.id,
-        deliveryId: product.deliveryId,
+        deliveryId: firstLot.deliveryId,
       })
     },
   })

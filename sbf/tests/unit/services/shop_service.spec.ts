@@ -118,6 +118,52 @@ test.group('ShopService', (group) => {
     assert.equal(products[0].price, 12) // cheapest
   })
 
+  test('getKioskProducts returns FIFO delivery lots and first FIFO price', async ({ assert }) => {
+    const category = await CategoryFactory.create()
+    const supplier = await UserFactory.apply('supplier').create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+
+    const newer = await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountLeft: 6,
+      price: 30,
+    }).create()
+    const older = await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountLeft: 10,
+      price: 15,
+    }).create()
+
+    await db
+      .from('deliveries')
+      .where('id', older.id)
+      .update({ created_at: new Date('2026-01-10T10:00:00.000Z') })
+    await db
+      .from('deliveries')
+      .where('id', newer.id)
+      .update({ created_at: new Date('2026-01-11T10:00:00.000Z') })
+
+    const products = await shopService.getKioskProducts()
+
+    assert.lengthOf(products, 1)
+    assert.equal(products[0].stockSum, 16)
+    assert.equal(products[0].price, 15)
+    assert.equal(products[0].deliveryId, older.id)
+    assert.deepEqual(
+      products[0].deliveryLots.map((lot) => ({
+        deliveryId: lot.deliveryId,
+        price: lot.price,
+        amountLeft: lot.amountLeft,
+      })),
+      [
+        { deliveryId: older.id, price: 15, amountLeft: 10 },
+        { deliveryId: newer.id, price: 30, amountLeft: 6 },
+      ]
+    )
+  })
+
   test('getProducts marks favorites for authenticated user', async ({ assert }) => {
     const category = await CategoryFactory.create()
     const supplier = await UserFactory.apply('supplier').create()

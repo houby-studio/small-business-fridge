@@ -78,6 +78,24 @@ test.group('Kiosk index - GET /kiosk', (group) => {
     assert.include(response.text(), 'allProducts')
   })
 
+  test('GET /kiosk includes deliveryLots in allProducts payload', async ({ client, assert }) => {
+    const kioskDevice = await UserFactory.apply('kiosk').create()
+    const category = await CategoryFactory.create()
+    const supplier = await UserFactory.apply('supplier').create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountLeft: 4,
+      price: 20,
+    }).create()
+
+    const response = await client.get('/kiosk').loginAs(kioskDevice)
+    response.assertStatus(200)
+    assert.include(response.text(), 'deliveryLots')
+  })
+
   test('GET /kiosk/customer?keypadId=valid returns 200 with customer info', async ({
     client,
     assert,

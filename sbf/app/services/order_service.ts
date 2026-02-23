@@ -12,6 +12,13 @@ export class OutOfStockError extends Error {
   }
 }
 
+export class FifoViolationError extends Error {
+  constructor(public readonly productId: number) {
+    super('FIFO_VIOLATION')
+    this.name = 'FifoViolationError'
+  }
+}
+
 export default class OrderService {
   /**
    * Unified purchase logic for ALL channels.
@@ -68,30 +75,103 @@ export default class OrderService {
     return db.transaction(async (trx) => {
       const orders: Order[] = []
 
+      const requestedByDelivery = new Map<number, number>()
       for (const item of items) {
-        // Lock row and validate sufficient stock for full quantity
-        const delivery = await Delivery.query({ client: trx })
-          .where('id', item.deliveryId)
-          .where('amountLeft', '>=', item.quantity)
-          .forUpdate()
-          .first()
+        requestedByDelivery.set(
+          item.deliveryId,
+          (requestedByDelivery.get(item.deliveryId) ?? 0) + item.quantity
+        )
+      }
 
-        if (!delivery) {
-          throw new OutOfStockError(item.deliveryId)
+      const requestedDeliveryIds = [...requestedByDelivery.keys()]
+      const requestedDeliveries = await Delivery.query({ client: trx })
+        .whereIn('id', requestedDeliveryIds)
+        .forUpdate()
+
+      const deliveryMap = new Map(requestedDeliveries.map((d) => [d.id, d]))
+
+      for (const [deliveryId, quantity] of requestedByDelivery) {
+        const delivery = deliveryMap.get(deliveryId)
+        if (!delivery || delivery.amountLeft < quantity) {
+          throw new OutOfStockError(deliveryId)
+        }
+      }
+
+      const requestedByProduct = new Map<number, Map<number, number>>()
+      const totalRequestedByProduct = new Map<number, number>()
+
+      for (const [deliveryId, quantity] of requestedByDelivery) {
+        const delivery = deliveryMap.get(deliveryId)!
+        const productId = delivery.productId
+        const productMap = requestedByProduct.get(productId) ?? new Map<number, number>()
+        productMap.set(deliveryId, quantity)
+        requestedByProduct.set(productId, productMap)
+        totalRequestedByProduct.set(
+          productId,
+          (totalRequestedByProduct.get(productId) ?? 0) + quantity
+        )
+      }
+
+      const requestedProductIds = [...requestedByProduct.keys()]
+      const fifoDeliveries = await Delivery.query({ client: trx })
+        .whereIn('productId', requestedProductIds)
+        .where('amountLeft', '>', 0)
+        .orderBy('productId', 'asc')
+        .orderBy('createdAt', 'asc')
+        .orderBy('id', 'asc')
+        .forUpdate()
+
+      const fifoByProduct = new Map<number, Delivery[]>()
+      for (const delivery of fifoDeliveries) {
+        const productDeliveries = fifoByProduct.get(delivery.productId) ?? []
+        productDeliveries.push(delivery)
+        fifoByProduct.set(delivery.productId, productDeliveries)
+      }
+
+      for (const productId of requestedProductIds) {
+        const requestedForProduct = requestedByProduct.get(productId) ?? new Map<number, number>()
+        const totalRequested = totalRequestedByProduct.get(productId) ?? 0
+        const fifo = fifoByProduct.get(productId) ?? []
+
+        let remaining = totalRequested
+        const expectedByDelivery = new Map<number, number>()
+
+        for (const delivery of fifo) {
+          if (remaining <= 0) break
+          const take = Math.min(delivery.amountLeft, remaining)
+          if (take > 0) {
+            expectedByDelivery.set(delivery.id, take)
+            remaining -= take
+          }
         }
 
-        // Decrement stock by full quantity at once
-        delivery.amountLeft -= item.quantity
+        if (remaining > 0) {
+          const firstRequestedDeliveryId = requestedForProduct.keys().next().value as number
+          throw new OutOfStockError(firstRequestedDeliveryId)
+        }
+
+        for (const [deliveryId, quantity] of requestedForProduct) {
+          if ((expectedByDelivery.get(deliveryId) ?? 0) !== quantity) {
+            throw new FifoViolationError(productId)
+          }
+        }
+
+        for (const [deliveryId, quantity] of expectedByDelivery) {
+          if ((requestedForProduct.get(deliveryId) ?? 0) !== quantity) {
+            throw new FifoViolationError(productId)
+          }
+        }
+      }
+
+      for (const [deliveryId, quantity] of requestedByDelivery) {
+        const delivery = deliveryMap.get(deliveryId)!
+
+        delivery.amountLeft -= quantity
         await delivery.save()
 
-        // Create one Order row per unit (preserving existing model)
-        for (let q = 0; q < item.quantity; q++) {
-          const order = await Order.create(
-            { buyerId, deliveryId: item.deliveryId, channel },
-            { client: trx }
-          )
+        for (let q = 0; q < quantity; q++) {
+          const order = await Order.create({ buyerId, deliveryId, channel }, { client: trx })
           orders.push(order)
-
           AuditService.log(buyerId, 'order.created', 'order', order.id, delivery.supplierId, {
             productId: delivery.productId,
             price: delivery.price,

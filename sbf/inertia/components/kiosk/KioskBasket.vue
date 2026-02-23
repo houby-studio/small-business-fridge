@@ -9,12 +9,12 @@ interface CustomerInfo {
 }
 
 export interface BasketItem {
-  deliveryId: number
+  productId: number
   displayName: string
   imagePath: string | null
-  price: number
   quantity: number
-  maxStock: number
+  totalPrice: number
+  canIncrement: boolean
 }
 
 const props = defineProps<{
@@ -22,19 +22,19 @@ const props = defineProps<{
   items: BasketItem[]
   countdown: number
   checkoutLoading: boolean
-  outOfStockDeliveryId: number | null
+  outOfStockProductId: number | null
 }>()
 
 const emit = defineEmits<{
-  updateQty: [deliveryId: number, qty: number]
-  remove: [deliveryId: number]
+  increment: [productId: number]
+  decrement: [productId: number]
   checkout: []
   cancel: []
 }>()
 
 const { t } = useI18n()
 
-const total = computed(() => props.items.reduce((sum, i) => sum + i.price * i.quantity, 0))
+const total = computed(() => props.items.reduce((sum, i) => sum + i.totalPrice, 0))
 const totalCount = computed(() => props.items.reduce((sum, i) => sum + i.quantity, 0))
 
 const countdownClass = computed(() => {
@@ -70,10 +70,10 @@ const countdownClass = computed(() => {
       <div v-else class="space-y-3">
         <div
           v-for="item in items"
-          :key="item.deliveryId"
+          :key="item.productId"
           class="flex items-center gap-4 rounded-2xl p-4 transition-colors"
           :class="
-            item.deliveryId === outOfStockDeliveryId
+            item.productId === outOfStockProductId
               ? 'bg-red-900/40 ring-1 ring-red-500'
               : 'bg-gray-800/60'
           "
@@ -96,10 +96,10 @@ const countdownClass = computed(() => {
           <div class="min-w-0 flex-1">
             <p class="truncate text-lg font-semibold text-white">{{ item.displayName }}</p>
             <p class="text-base text-green-400">
-              {{ t('common.price_with_currency', { price: item.price * item.quantity }) }}
+              {{ t('common.price_with_currency', { price: item.totalPrice }) }}
             </p>
-            <p v-if="item.deliveryId === outOfStockDeliveryId" class="text-sm text-red-400">
-              {{ t('kiosk.item_out_of_stock_other_buyer') }}
+            <p v-if="item.productId === outOfStockProductId" class="text-sm text-red-400">
+              {{ t('kiosk.item_fifo_only') }}
             </p>
           </div>
 
@@ -107,27 +107,20 @@ const countdownClass = computed(() => {
           <div class="flex items-center gap-2">
             <button
               class="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-700 text-white transition-colors hover:bg-gray-600 active:scale-95"
-              @click="
-                item.quantity > 1
-                  ? emit('updateQty', item.deliveryId, item.quantity - 1)
-                  : emit('remove', item.deliveryId)
-              "
+              @click="emit('decrement', item.productId)"
             >
-              <i :class="item.quantity > 1 ? 'pi pi-minus' : 'pi pi-trash'" />
+              <i class="pi pi-minus" />
             </button>
             <span class="w-8 text-center text-xl font-bold text-white">{{ item.quantity }}</span>
             <button
               class="flex h-12 w-12 items-center justify-center rounded-xl transition-colors active:scale-95"
               :class="
-                item.quantity >= item.maxStock
+                !item.canIncrement
                   ? 'cursor-not-allowed bg-gray-800 text-gray-600'
                   : 'bg-gray-700 text-white hover:bg-gray-600'
               "
-              :disabled="item.quantity >= item.maxStock"
-              @click="
-                item.quantity < item.maxStock &&
-                emit('updateQty', item.deliveryId, item.quantity + 1)
-              "
+              :disabled="!item.canIncrement"
+              @click="item.canIncrement && emit('increment', item.productId)"
             >
               <i class="pi pi-plus" />
             </button>

@@ -4,7 +4,7 @@ services:
     container_name: postgres
     restart: always
     ports:
-      - '5433:5432'
+      - '5432:5432'
     environment:
       POSTGRES_USER: sbf
       POSTGRES_PASSWORD: sbf
@@ -29,11 +29,12 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4
+    container_name: pgadmin
     restart: always
     ports:
-      - '8083:80'
+      - '8080:80'
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@localhost.com
+      PGADMIN_DEFAULT_EMAIL: admin@localhost.localdomain
       PGADMIN_DEFAULT_PASSWORD: admin
     depends_on:
       - postgres

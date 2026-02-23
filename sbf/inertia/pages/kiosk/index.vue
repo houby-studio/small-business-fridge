@@ -7,7 +7,9 @@ import ConfirmDialog from 'primevue/confirmdialog'
 import KioskLayout from '~/layouts/KioskLayout.vue'
 import KioskKeypad from '~/components/kiosk/KioskKeypad.vue'
 import KioskSlideshow from '~/components/kiosk/KioskSlideshow.vue'
-import KioskBasket, { type BasketItem } from '~/components/kiosk/KioskBasket.vue'
+import KioskBasket, {
+  type BasketItem as BasketDisplayItem,
+} from '~/components/kiosk/KioskBasket.vue'
 import KioskCatalog, { type ProductItem } from '~/components/kiosk/KioskCatalog.vue'
 import KioskThankYou from '~/components/kiosk/KioskThankYou.vue'
 import { useI18n } from '~/composables/use_i18n'
@@ -23,9 +25,30 @@ interface FeaturedProduct {
   category: { name: string; color: string }
 }
 
+interface ServerProduct {
+  id: number
+  displayName: string
+  imagePath: string | null
+  price: number | null
+  deliveryId: number | null
+  stockSum: number
+  deliveryLots: Array<{
+    deliveryId: number
+    price: number
+    amountLeft: number
+    createdAt: string
+  }>
+  allergens: { id: number; name: string }[]
+  isFavorite: boolean
+  isRecommended?: boolean
+  recommendationRank?: number
+  barcode: string | null
+  category: { name: string; color: string }
+}
+
 const props = defineProps<{
   featuredProducts: FeaturedProduct[]
-  allProducts: ProductItem[]
+  allProducts: ServerProduct[]
 }>()
 
 // ── Composables ───────────────────────────────────────────────────────────────
@@ -44,6 +67,16 @@ interface CustomerInfo {
   keypadId: number
 }
 
+interface BasketLine {
+  productId: number
+  deliveryId: number
+  displayName: string
+  imagePath: string | null
+  price: number
+  quantity: number
+  maxStock: number
+}
+
 const appState = ref<AppState>('idle')
 const customer = ref<CustomerInfo | null>(null)
 const keypadLoading = ref(false)
@@ -53,8 +86,80 @@ const favoriteIds = ref<number[]>([])
 const recommendedIds = ref<number[]>([])
 const excludedAllergenIds = ref<number[]>([])
 
+// ── Basket ────────────────────────────────────────────────────────────────────
+
+const basket = ref<BasketLine[]>([])
+const checkoutLoading = ref(false)
+const outOfStockDeliveryId = ref<number | null>(null)
+
+// ── Thank-you modal ────────────────────────────────────────────────────────────
+const showThankYou = ref(false)
+const lastPurchaseItems = ref<BasketLine[]>([])
+const lastOrderCount = ref(0)
+
+const basketQtyMap = computed<Map<number, number>>(() => {
+  const m = new Map<number, number>()
+  for (const item of basket.value) {
+    m.set(item.productId, (m.get(item.productId) ?? 0) + item.quantity)
+  }
+  return m
+})
+
+const basketItems = computed<BasketDisplayItem[]>(() => {
+  const grouped = new Map<number, BasketDisplayItem>()
+
+  for (const line of basket.value) {
+    const existing = grouped.get(line.productId)
+    if (existing) {
+      existing.quantity += line.quantity
+      existing.totalPrice += line.price * line.quantity
+      continue
+    }
+
+    grouped.set(line.productId, {
+      productId: line.productId,
+      displayName: line.displayName,
+      imagePath: line.imagePath,
+      quantity: line.quantity,
+      totalPrice: line.price * line.quantity,
+      canIncrement:
+        (personalizedProducts.value.find((p) => p.id === line.productId)?.remainingStock ?? 0) > 0,
+    })
+  }
+
+  return [...grouped.values()]
+})
+
+const outOfStockProductId = computed<number | null>(() => {
+  if (!outOfStockDeliveryId.value) {
+    return null
+  }
+  const line = basket.value.find((item) => item.deliveryId === outOfStockDeliveryId.value)
+  return line?.productId ?? null
+})
+
+function getReservedQty(deliveryId: number): number {
+  return basket.value
+    .filter((item) => item.deliveryId === deliveryId)
+    .reduce((sum, item) => sum + item.quantity, 0)
+}
+
+function getNextAvailableLot(product: ServerProduct) {
+  return (
+    product.deliveryLots.find((lot) => lot.amountLeft - getReservedQty(lot.deliveryId) > 0) ?? null
+  )
+}
+
+function getRemainingStock(product: ServerProduct): number {
+  return product.deliveryLots.reduce(
+    (sum, lot) => sum + Math.max(lot.amountLeft - getReservedQty(lot.deliveryId), 0),
+    0
+  )
+}
+
 const personalizedProducts = computed<ProductItem[]>(() => {
   const recommendedRankMap = new Map(recommendedIds.value.map((id, i) => [id, i + 1]))
+
   return props.allProducts
     .filter((p) =>
       excludedAllergenIds.value.length === 0
@@ -63,73 +168,83 @@ const personalizedProducts = computed<ProductItem[]>(() => {
     )
     .map((p) => {
       const rank = recommendedRankMap.get(p.id) ?? 0
+      const nextLot = getNextAvailableLot(p)
       return {
         ...p,
+        price: nextLot?.price ?? null,
+        deliveryId: nextLot?.deliveryId ?? null,
+        remainingStock: getRemainingStock(p),
         isFavorite: favoriteIds.value.includes(p.id),
-        isRecommended: rank > 0 && rank <= 3, // only top-3 get the recommended highlight
+        isRecommended: rank > 0 && rank <= 3,
         recommendationRank: rank,
       }
     })
 })
 
-// ── Basket ────────────────────────────────────────────────────────────────────
-
-const basket = ref<BasketItem[]>([])
-const checkoutLoading = ref(false)
-const outOfStockDeliveryId = ref<number | null>(null)
-
-// ── Thank-you modal ────────────────────────────────────────────────────────────
-const showThankYou = ref(false)
-const lastPurchaseItems = ref<BasketItem[]>([])
-const lastOrderCount = ref(0)
-
-const basketQtyMap = computed<Map<number, number>>(() => {
-  const m = new Map<number, number>()
-  for (const item of basket.value) {
-    m.set(item.deliveryId, item.quantity)
-  }
-  return m
-})
-
 function addToBasket(product: ProductItem) {
-  if (!product.deliveryId) return
   resetIdleTimer()
 
-  const existing = basket.value.find((i) => i.deliveryId === product.deliveryId)
+  const source = props.allProducts.find((p) => p.id === product.id)
+  if (!source) {
+    return
+  }
+
+  const nextLot = getNextAvailableLot(source)
+  if (!nextLot) {
+    toast.add({ severity: 'warn', summary: t('kiosk.max_stock_reached'), life: 2000 })
+    return
+  }
+
+  const existing = basket.value.find((i) => i.deliveryId === nextLot.deliveryId)
   if (existing) {
-    if (existing.quantity >= product.stockSum) {
+    if (existing.quantity >= existing.maxStock) {
       toast.add({ severity: 'warn', summary: t('kiosk.max_stock_reached'), life: 2000 })
       return
     }
     existing.quantity++
   } else {
     basket.value.push({
-      deliveryId: product.deliveryId,
+      productId: product.id,
+      deliveryId: nextLot.deliveryId,
       displayName: product.displayName,
       imagePath: product.imagePath,
-      price: product.price ?? 0,
+      price: nextLot.price,
       quantity: 1,
-      maxStock: product.stockSum,
+      maxStock: nextLot.amountLeft,
     })
   }
 
   // Clear any previous out-of-stock highlight
-  if (outOfStockDeliveryId.value === product.deliveryId) {
+  if (outOfStockDeliveryId.value === nextLot.deliveryId) {
     outOfStockDeliveryId.value = null
   }
 
   toast.add({ severity: 'success', summary: product.displayName, life: 1200 })
 }
 
-function updateQty(deliveryId: number, qty: number) {
-  resetIdleTimer()
-  const item = basket.value.find((i) => i.deliveryId === deliveryId)
-  if (item) item.quantity = qty
+function incrementProduct(productId: number) {
+  const product = personalizedProducts.value.find((p) => p.id === productId)
+  if (!product) {
+    return
+  }
+  addToBasket(product)
 }
 
-function removeFromBasket(deliveryId: number) {
+function decrementProduct(productId: number) {
   resetIdleTimer()
-  basket.value = basket.value.filter((i) => i.deliveryId !== deliveryId)
+  const lastIndex = [...basket.value.keys()]
+    .reverse()
+    .find((index) => basket.value[index].productId === productId)
+  if (lastIndex === undefined) {
+    return
+  }
+
+  const line = basket.value[lastIndex]
+  if (line.quantity > 1) {
+    line.quantity--
+  } else {
+    basket.value.splice(lastIndex, 1)
+  }
 }
 
 // ── Idle timer (90 seconds) ───────────────────────────────────────────────────
@@ -212,7 +327,7 @@ function onGlobalKeydown(e: KeyboardEvent) {
 
 function handleBarcode(code: string) {
   resetIdleTimer()
-  const product = props.allProducts.find((p) => p.barcode === code)
+  const product = personalizedProducts.value.find((p) => p.barcode === code)
   if (!product) {
     toast.add({ severity: 'warn', summary: t('kiosk.product_not_found'), life: 2500 })
     return
@@ -320,6 +435,13 @@ async function submitBasket() {
       toast.add({
         severity: 'error',
         summary: t('kiosk.item_out_of_stock_other_buyer'),
+        life: 4000,
+      })
+    } else if (data.error === 'fifo_violation') {
+      outOfStockDeliveryId.value = null
+      toast.add({
+        severity: 'error',
+        summary: t('kiosk.item_fifo_only'),
         life: 4000,
       })
     } else {
@@ -457,12 +579,12 @@ onUnmounted(() => {
             v-else
             key="basket"
             :customer="customer!"
-            :items="basket"
+            :items="basketItems"
             :countdown="countdown"
             :checkout-loading="checkoutLoading"
-            :out-of-stock-delivery-id="outOfStockDeliveryId"
-            @update-qty="updateQty"
-            @remove="removeFromBasket"
+            :out-of-stock-product-id="outOfStockProductId"
+            @increment="incrementProduct"
+            @decrement="decrementProduct"
             @checkout="requestCheckout"
             @cancel="requestCancel"
           />

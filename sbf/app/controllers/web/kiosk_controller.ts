@@ -1,7 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import User from '#models/user'
 import ShopService from '#services/shop_service'
-import OrderService, { OutOfStockError } from '#services/order_service'
+import OrderService, { FifoViolationError, OutOfStockError } from '#services/order_service'
 import NotificationService from '#services/notification_service'
 import RecommendationService from '#services/recommendation_service'
 import logger from '@adonisjs/core/services/logger'
@@ -17,8 +17,8 @@ export default class KioskController {
   async index({ inertia }: HttpContext) {
     const shopService = new ShopService()
     const [featuredProducts, allProducts] = await Promise.all([
-      shopService.getFeaturedProducts(8),
-      shopService.getProducts({ showAll: false }),
+      shopService.getKioskFeaturedProducts(8),
+      shopService.getKioskProducts({ showAll: false }),
     ])
 
     return inertia.render('kiosk/index', { featuredProducts, allProducts })
@@ -89,6 +89,9 @@ export default class KioskController {
       if (err instanceof OutOfStockError) {
         return response.json({ ok: false, error: 'out_of_stock', deliveryId: err.deliveryId })
       }
+      if (err instanceof FifoViolationError) {
+        return response.json({ ok: false, error: 'fifo_violation', productId: err.productId })
+      }
       logger.error({ err }, 'Basket purchase failed')
       return response.json({ ok: false, error: 'failed' })
     }
@@ -131,7 +134,7 @@ export default class KioskController {
     const shopService = new ShopService()
     const recommendationService = new RecommendationService()
     const [rawProducts, categories, recommendedIds] = await Promise.all([
-      shopService.getProducts({ showAll: false, userId: customer.id }),
+      shopService.getKioskProducts({ showAll: false, userId: customer.id }),
       shopService.getCategories(),
       recommendationService.getRecommendedIds(customer.id),
     ])
