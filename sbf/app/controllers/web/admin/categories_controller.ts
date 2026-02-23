@@ -75,14 +75,9 @@ export default class CategoriesController {
       }
     }
 
-    AuditService.log(
-      auth.user!.id,
-      'category.updated',
-      'category',
-      category.id,
-      null,
-      Object.keys(changes).length ? changes : null
-    )
+    if (Object.keys(changes).length > 0) {
+      AuditService.log(auth.user!.id, 'category.updated', 'category', category.id, null, changes)
+    }
 
     session.flash('alert', {
       type: 'success',

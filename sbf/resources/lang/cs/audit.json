@@ -24,6 +24,8 @@
   "action_delivery_created": "Naskladnění",
   "action_product_created": "Produkt vytvořen",
   "action_product_updated": "Produkt upraven",
+  "action_allergen_created": "Alergen vytvořen",
+  "action_allergen_updated": "Alergen upraven",
   "action_category_created": "Kategorie vytvořena",
   "action_category_updated": "Kategorie upravena",
   "action_profile_updated": "Profil upraven",

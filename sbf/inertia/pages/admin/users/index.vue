@@ -241,13 +241,13 @@ function impersonateUser(userId: number) {
       <Column :header="t('admin.users_disabled')" style="width: 110px">
         <template #body="{ data }">
           <!-- If user has pending issues and is currently active, show warning instead of toggle -->
-          <Tag
+          <span
             v-if="!data.isDisabled && (data.hasUninvoicedOrders || data.hasUnpaidInvoices)"
-            severity="warn"
-            icon="pi pi-exclamation-circle"
             :title="t('messages.user_has_uninvoiced_orders')"
             :aria-label="t('messages.user_has_uninvoiced_orders')"
-          />
+          >
+            <Tag severity="warn" icon="pi pi-exclamation-circle" />
+          </span>
           <ToggleSwitch
             v-else
             :modelValue="data.isDisabled"

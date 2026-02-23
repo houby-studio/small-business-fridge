@@ -114,13 +114,13 @@ function cancelEdit() {
       </Column>
       <Column :header="t('common.active')" style="width: 100px">
         <template #body="{ data }">
-          <Tag
+          <span
             v-if="!data.isDisabled && data.hasProducts"
-            severity="warn"
-            icon="pi pi-exclamation-circle"
             :title="t('messages.category_has_products')"
             :aria-label="t('messages.category_has_products')"
-          />
+          >
+            <Tag severity="warn" icon="pi pi-exclamation-circle" />
+          </span>
           <ToggleSwitch
             v-else
             :modelValue="!data.isDisabled"

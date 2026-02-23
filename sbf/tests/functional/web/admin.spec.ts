@@ -538,6 +538,32 @@ test.group('Admin - allergens CRUD', (group) => {
     assert.deepEqual(metadata!.isDisabled, { from: false, to: true })
   })
 
+  test('updating an allergen with no real change does not write allergen.updated audit entry', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const allergen = await Allergen.create({ name: 'Lepek', isDisabled: false })
+
+    const response = await client
+      .put(`/admin/allergens/${allergen.id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .form({ name: 'Lepek' })
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    const log = await db
+      .from('audit_logs')
+      .where('action', 'allergen.updated')
+      .where('entity_type', 'allergen')
+      .where('entity_id', allergen.id)
+      .first()
+
+    assert.isNull(log)
+  })
+
   test('customer cannot access admin allergens page', async ({ client }) => {
     const customer = await UserFactory.create()
     const response = await client.get('/admin/allergens').loginAs(customer).redirects(0)
@@ -642,5 +668,31 @@ test.group('Admin - category audit logging', (group) => {
 
     assert.isDefined(categoryRow, 'category should appear in categories list')
     assert.isTrue(categoryRow.hasProducts)
+  })
+
+  test('updating a category with no real change does not write category.updated audit entry', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const category = await CategoryFactory.merge({ name: 'Food', color: '#aaaaaa' }).create()
+
+    const response = await client
+      .put(`/admin/categories/${category.id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .form({ name: 'Food', color: '#aaaaaa' })
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    const log = await db
+      .from('audit_logs')
+      .where('action', 'category.updated')
+      .where('entity_type', 'category')
+      .where('entity_id', category.id)
+      .first()
+
+    assert.isNull(log)
   })
 })

@@ -72,14 +72,9 @@ export default class AllergensController {
       }
     }
 
-    AuditService.log(
-      auth.user!.id,
-      'allergen.updated',
-      'allergen',
-      allergen.id,
-      null,
-      Object.keys(changes).length ? changes : null
-    )
+    if (Object.keys(changes).length > 0) {
+      AuditService.log(auth.user!.id, 'allergen.updated', 'allergen', allergen.id, null, changes)
+    }
 
     session.flash('alert', {
       type: 'success',
