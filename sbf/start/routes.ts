@@ -263,7 +263,17 @@ if (env.get('SWAGGER_ENABLED')) {
   router.get('/swagger', async ({ response }) => {
     const routes = router.toJSON()
     const apiRoutes = { root: routes.root.filter((r) => r.pattern.startsWith('/api/v1')) }
-    return response.json(await swagger.json(apiRoutes, swaggerConfig))
+    try {
+      return response.json(await swagger.json(apiRoutes, swaggerConfig))
+    } catch (error: any) {
+      // In production, adonis-autoswagger reads a pre-generated swagger.json.
+      // If the file is missing in the image, generate docs at runtime as fallback.
+      if (error?.code === 'ENOENT') {
+        const runtimeSwagger = swagger as any
+        return response.json(await runtimeSwagger.generate(apiRoutes, swaggerConfig))
+      }
+      throw error
+    }
   })
 
   router.get('/docs', async ({ response }) => {
