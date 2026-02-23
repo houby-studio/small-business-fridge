@@ -30,6 +30,7 @@ export default class ProductsController {
           category: p.category
             ? { id: p.category.id, name: p.category.name, color: p.category.color }
             : null,
+          allergens: p.allergens.map((a) => ({ id: a.id, name: a.name })),
         })),
         meta: paginator.getMeta(),
       },
@@ -40,10 +41,14 @@ export default class ProductsController {
 
   async create({ inertia }: HttpContext) {
     const service = new ProductService()
-    const categories = await service.getCategories()
+    const [categories, allergens] = await Promise.all([
+      service.getCategories(),
+      service.getAllergens(),
+    ])
 
     return inertia.render('supplier/products/create', {
       categories: categories.map((c) => ({ id: c.id, name: c.name, color: c.color })),
+      allergens: allergens.map((a) => ({ id: a.id, name: a.name })),
     })
   }
 
@@ -57,6 +62,7 @@ export default class ProductsController {
       categoryId: data.categoryId,
       barcode: data.barcode,
       image: data.image,
+      allergenIds: data.allergenIds,
     })
 
     AuditService.log(auth.user!.id, 'product.created', 'product', product.id, null, {
@@ -73,9 +79,10 @@ export default class ProductsController {
 
   async edit({ params, inertia }: HttpContext) {
     const service = new ProductService()
-    const [product, categories] = await Promise.all([
+    const [product, categories, allergens] = await Promise.all([
       service.getProduct(params.id),
       service.getCategories(),
+      service.getAllergens(),
     ])
 
     return inertia.render('supplier/products/edit', {
@@ -90,8 +97,10 @@ export default class ProductsController {
         category: product.category
           ? { id: product.category.id, name: product.category.name }
           : null,
+        allergenIds: product.allergens.map((a) => a.id),
       },
       categories: categories.map((c) => ({ id: c.id, name: c.name, color: c.color })),
+      allergens: allergens.map((a) => ({ id: a.id, name: a.name })),
     })
   }
 
@@ -99,12 +108,13 @@ export default class ProductsController {
     const data = await request.validateUsing(updateProductValidator)
 
     const service = new ProductService()
-    const product = await service.updateProduct(params.id, {
+    const product = await service.updateProduct(Number(params.id), {
       displayName: data.displayName,
       description: data.description,
       categoryId: data.categoryId,
       barcode: data.barcode,
       image: data.image,
+      allergenIds: data.allergenIds,
     })
 
     AuditService.log(auth.user!.id, 'product.updated', 'product', product.id, null, {

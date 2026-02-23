@@ -29,6 +29,7 @@
   "products_category_label": "Category",
   "products_barcode_label": "Barcode",
   "products_barcode_placeholder": "Optional — EAN code",
+  "products_allergens_label": "Allergens",
   "products_image_label": "Image",
   "products_image_choose": "Choose image",
   "products_image_upload": "Upload new image",
