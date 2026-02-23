@@ -59,6 +59,14 @@ test.group('Admin - users search and filter', (group) => {
     const response = await client.get('/admin/users?search=john&role=customer').loginAs(admin)
     response.assertStatus(200)
   })
+
+  test('filter by userId returns 200', async ({ client }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const user = await UserFactory.create()
+
+    const response = await client.get(`/admin/users?userId=${user.id}`).loginAs(admin)
+    response.assertStatus(200)
+  })
 })
 
 test.group('Admin - orders filter', (group) => {

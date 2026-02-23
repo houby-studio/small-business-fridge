@@ -36,7 +36,8 @@ interface PaginatedUsers {
 
 const props = defineProps<{
   users: PaginatedUsers
-  filters: { search: string; role: string }
+  filters: { search: string; role: string; userId: string }
+  userOptions: { id: number; displayName: string }[]
 }>()
 const { t } = useI18n()
 const page = usePage<SharedProps>()
@@ -46,6 +47,7 @@ const ALL = '__all__'
 
 const filterSearch = ref(props.filters.search ?? '')
 const filterRole = ref(props.filters.role || ALL)
+const filterUserId = ref<number | string>(props.filters.userId ? Number(props.filters.userId) : ALL)
 
 const roleOptions = [
   { label: t('common.all'), value: ALL },
@@ -53,6 +55,7 @@ const roleOptions = [
   { label: t('common.role_supplier'), value: 'supplier' },
   { label: t('common.role_admin'), value: 'admin' },
 ]
+const userFilterOptions = [{ id: ALL, displayName: t('common.all') }, ...props.userOptions]
 
 const roleEditOptions = [
   { label: t('common.role_customer'), value: 'customer' },
@@ -64,6 +67,7 @@ function buildFilterParams() {
   return {
     search: filterSearch.value || undefined,
     role: filterRole.value === ALL ? undefined : filterRole.value,
+    userId: filterUserId.value === ALL ? undefined : filterUserId.value,
   }
 }
 
@@ -113,6 +117,7 @@ function applyFilters() {
 function clearFilters() {
   filterSearch.value = ''
   filterRole.value = ALL
+  filterUserId.value = ALL
   lastAppliedFilterParams.value = buildFilterParams()
   router.get('/admin/users', buildFilterParams(), {
     preserveState: true,
@@ -163,6 +168,19 @@ function impersonateUser(userId: number) {
           optionLabel="label"
           optionValue="value"
           class="w-40"
+        />
+      </div>
+      <div>
+        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
+          t('admin.users_filter_user')
+        }}</label>
+        <Select
+          v-model="filterUserId"
+          :options="userFilterOptions"
+          optionLabel="displayName"
+          optionValue="id"
+          filter
+          class="w-56"
         />
       </div>
       <Button

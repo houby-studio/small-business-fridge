@@ -101,7 +101,7 @@ export default class AdminService {
   async getUsers(
     page: number = 1,
     perPage: number = 20,
-    filters?: { search?: string; role?: string }
+    filters?: { search?: string; role?: string; userId?: number }
   ) {
     const query = User.query().orderBy('displayName', 'asc')
 
@@ -116,6 +116,10 @@ export default class AdminService {
 
     if (filters?.role) {
       query.where('role', filters.role)
+    }
+
+    if (filters?.userId) {
+      query.where('id', filters.userId)
     }
 
     return query.paginate(page, perPage)
