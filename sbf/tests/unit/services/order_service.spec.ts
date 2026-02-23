@@ -4,6 +4,9 @@ import { UserFactory } from '#database/factories/user_factory'
 import { DeliveryFactory } from '#database/factories/delivery_factory'
 import OrderService from '#services/order_service'
 import Order from '#models/order'
+import { ProductFactory } from '#database/factories/product_factory'
+import { CategoryFactory } from '#database/factories/category_factory'
+import db from '@adonisjs/lucid/services/db'
 
 const orderService = new OrderService()
 
@@ -113,5 +116,48 @@ test.group('OrderService', (group) => {
     assert.equal(result.stats.totalSpend, 45) // 3 × 15
     assert.equal(result.stats.totalUnpaid, 45) // none invoiced
     assert.lengthOf(result.orders.toJSON().data, 3)
+  })
+
+  test('purchaseBasket rejects FIFO skip within same product', async ({ assert }) => {
+    const buyer = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+
+    const older = await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountSupplied: 3,
+      amountLeft: 3,
+      price: 10,
+    }).create()
+    const newer = await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountSupplied: 3,
+      amountLeft: 3,
+      price: 20,
+    }).create()
+
+    await db
+      .from('deliveries')
+      .where('id', older.id)
+      .update({ created_at: new Date('2026-01-10T10:00:00.000Z') })
+    await db
+      .from('deliveries')
+      .where('id', newer.id)
+      .update({ created_at: new Date('2026-01-11T10:00:00.000Z') })
+
+    await assert.rejects(
+      () =>
+        orderService.purchaseBasket(
+          buyer.id,
+          [
+            { deliveryId: newer.id, quantity: 1 }, // tries to skip older stock
+          ],
+          'kiosk'
+        ),
+      'FIFO_VIOLATION'
+    )
   })
 })

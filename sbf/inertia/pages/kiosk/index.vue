@@ -7,7 +7,9 @@ import ConfirmDialog from 'primevue/confirmdialog'
 import KioskLayout from '~/layouts/KioskLayout.vue'
 import KioskKeypad from '~/components/kiosk/KioskKeypad.vue'
 import KioskSlideshow from '~/components/kiosk/KioskSlideshow.vue'
-import KioskBasket, { type BasketItem } from '~/components/kiosk/KioskBasket.vue'
+import KioskBasket, {
+  type BasketItem as BasketDisplayItem,
+} from '~/components/kiosk/KioskBasket.vue'
 import KioskCatalog, { type ProductItem } from '~/components/kiosk/KioskCatalog.vue'
 import KioskThankYou from '~/components/kiosk/KioskThankYou.vue'
 import { useI18n } from '~/composables/use_i18n'
@@ -65,6 +67,16 @@ interface CustomerInfo {
   keypadId: number
 }
 
+interface BasketLine {
+  productId: number
+  deliveryId: number
+  displayName: string
+  imagePath: string | null
+  price: number
+  quantity: number
+  maxStock: number
+}
+
 const appState = ref<AppState>('idle')
 const customer = ref<CustomerInfo | null>(null)
 const keypadLoading = ref(false)
@@ -76,13 +88,13 @@ const excludedAllergenIds = ref<number[]>([])
 
 // ── Basket ────────────────────────────────────────────────────────────────────
 
-const basket = ref<BasketItem[]>([])
+const basket = ref<BasketLine[]>([])
 const checkoutLoading = ref(false)
 const outOfStockDeliveryId = ref<number | null>(null)
 
 // ── Thank-you modal ────────────────────────────────────────────────────────────
 const showThankYou = ref(false)
-const lastPurchaseItems = ref<BasketItem[]>([])
+const lastPurchaseItems = ref<BasketLine[]>([])
 const lastOrderCount = ref(0)
 
 const basketQtyMap = computed<Map<number, number>>(() => {
@@ -91,6 +103,39 @@ const basketQtyMap = computed<Map<number, number>>(() => {
     m.set(item.productId, (m.get(item.productId) ?? 0) + item.quantity)
   }
   return m
+})
+
+const basketItems = computed<BasketDisplayItem[]>(() => {
+  const grouped = new Map<number, BasketDisplayItem>()
+
+  for (const line of basket.value) {
+    const existing = grouped.get(line.productId)
+    if (existing) {
+      existing.quantity += line.quantity
+      existing.totalPrice += line.price * line.quantity
+      continue
+    }
+
+    grouped.set(line.productId, {
+      productId: line.productId,
+      displayName: line.displayName,
+      imagePath: line.imagePath,
+      quantity: line.quantity,
+      totalPrice: line.price * line.quantity,
+      canIncrement:
+        (personalizedProducts.value.find((p) => p.id === line.productId)?.remainingStock ?? 0) > 0,
+    })
+  }
+
+  return [...grouped.values()]
+})
+
+const outOfStockProductId = computed<number | null>(() => {
+  if (!outOfStockDeliveryId.value) {
+    return null
+  }
+  const line = basket.value.find((item) => item.deliveryId === outOfStockDeliveryId.value)
+  return line?.productId ?? null
 })
 
 function getReservedQty(deliveryId: number): number {
@@ -177,15 +222,29 @@ function addToBasket(product: ProductItem) {
   toast.add({ severity: 'success', summary: product.displayName, life: 1200 })
 }
 
-function updateQty(deliveryId: number, qty: number) {
-  resetIdleTimer()
-  const item = basket.value.find((i) => i.deliveryId === deliveryId)
-  if (item) item.quantity = qty
+function incrementProduct(productId: number) {
+  const product = personalizedProducts.value.find((p) => p.id === productId)
+  if (!product) {
+    return
+  }
+  addToBasket(product)
 }
 
-function removeFromBasket(deliveryId: number) {
+function decrementProduct(productId: number) {
   resetIdleTimer()
-  basket.value = basket.value.filter((i) => i.deliveryId !== deliveryId)
+  const lastIndex = [...basket.value.keys()]
+    .reverse()
+    .find((index) => basket.value[index].productId === productId)
+  if (lastIndex === undefined) {
+    return
+  }
+
+  const line = basket.value[lastIndex]
+  if (line.quantity > 1) {
+    line.quantity--
+  } else {
+    basket.value.splice(lastIndex, 1)
+  }
 }
 
 // ── Idle timer (90 seconds) ───────────────────────────────────────────────────
@@ -378,6 +437,13 @@ async function submitBasket() {
         summary: t('kiosk.item_out_of_stock_other_buyer'),
         life: 4000,
       })
+    } else if (data.error === 'fifo_violation') {
+      outOfStockDeliveryId.value = null
+      toast.add({
+        severity: 'error',
+        summary: t('kiosk.item_fifo_only'),
+        life: 4000,
+      })
     } else {
       toast.add({ severity: 'error', summary: t('kiosk.purchase_retry'), life: 4000 })
     }
@@ -513,12 +579,12 @@ onUnmounted(() => {
             v-else
             key="basket"
             :customer="customer!"
-            :items="basket"
+            :items="basketItems"
             :countdown="countdown"
             :checkout-loading="checkoutLoading"
-            :out-of-stock-delivery-id="outOfStockDeliveryId"
-            @update-qty="updateQty"
-            @remove="removeFromBasket"
+            :out-of-stock-product-id="outOfStockProductId"
+            @increment="incrementProduct"
+            @decrement="decrementProduct"
             @checkout="requestCheckout"
             @cancel="requestCancel"
           />

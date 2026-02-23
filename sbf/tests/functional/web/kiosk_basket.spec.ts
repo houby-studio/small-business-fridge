@@ -112,6 +112,57 @@ test.group('POST /kiosk/purchase-basket', (group) => {
     const count = await Order.query().where('buyerId', customer.id).count('* as total')
     assert.equal(Number(count[0].$extras.total), 0)
   })
+
+  test('returns fifo_violation when request tries to skip older delivery of same product', async ({
+    client,
+    assert,
+  }) => {
+    const kioskDevice = await UserFactory.apply('kiosk').create()
+    const customer = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+
+    const older = await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountLeft: 5,
+      price: 15,
+    }).create()
+    const newer = await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountLeft: 5,
+      price: 30,
+    }).create()
+
+    await db
+      .from('deliveries')
+      .where('id', older.id)
+      .update({ created_at: new Date('2026-01-10T10:00:00.000Z') })
+    await db
+      .from('deliveries')
+      .where('id', newer.id)
+      .update({ created_at: new Date('2026-01-11T10:00:00.000Z') })
+
+    const response = await client
+      .post('/kiosk/purchase-basket')
+      .json({
+        customerId: customer.id,
+        items: [{ deliveryId: newer.id, quantity: 1 }],
+      })
+      .loginAs(kioskDevice)
+      .withCsrfToken()
+
+    response.assertStatus(200)
+    const body = JSON.parse(response.text())
+    assert.isFalse(body.ok)
+    assert.equal(body.error, 'fifo_violation')
+    assert.equal(body.productId, product.id)
+
+    const count = await Order.query().where('buyerId', customer.id).count('* as total')
+    assert.equal(Number(count[0].$extras.total), 0)
+  })
 })
 
 test.group('GET /kiosk/customer', (group) => {

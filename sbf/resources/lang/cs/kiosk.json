@@ -32,6 +32,7 @@
   "confirm_checkout_title": "Potvrdit nákup",
   "checkout_success": "Nákup {count} položek proběhl úspěšně!",
   "item_out_of_stock_other_buyer": "Někdo jiný to koupil dřív!",
+  "item_fifo_only": "Tento produkt je nutné koupit nejdříve ze starší zásoby.",
   "purchase_retry": "Chyba nákupu, zkuste znovu",
   "idle_welcome": "Vítejte v Lednici IT!",
   "session_expiring": "Relace vyprší za: {seconds} s",
