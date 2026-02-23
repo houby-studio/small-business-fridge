@@ -3,6 +3,7 @@ import Product from '#models/product'
 import Category from '#models/category'
 import Delivery from '#models/delivery'
 import User from '#models/user'
+import Allergen from '#models/allergen'
 import app from '@adonisjs/core/services/app'
 
 export default class extends BaseSeeder {
@@ -11,10 +12,12 @@ export default class extends BaseSeeder {
     if (!app.inDev) return
 
     const categories = await Category.all()
+    const allergens = await Allergen.all()
     const supplier = await User.findBy('username', 'supplier')
     if (!supplier) return
 
     const categoryMap = new Map(categories.map((c) => [c.name, c.id]))
+    const allergenMap = new Map(allergens.map((a) => [a.name, a.id]))
 
     const products = await Product.updateOrCreateMany('displayName', [
       {
@@ -53,6 +56,23 @@ export default class extends BaseSeeder {
         categoryId: categoryMap.get('Jídlo'),
       },
     ])
+
+    // Assign allergens per product (by displayName)
+    const productAllergens: Record<string, string[]> = {
+      'Coca-Cola 0.5L': [],
+      'Mattoni 0.5L': [],
+      'Plzeň 0.5L': ['Lepek (obiloviny)'],
+      Snickers: ['Arašídy', 'Mléko', 'Skořápkové plody'],
+      "Chipsy Lay's": ['Sója'],
+    }
+
+    for (const product of products) {
+      const allergenNames = productAllergens[product.displayName] ?? []
+      const allergenIds = allergenNames
+        .map((name) => allergenMap.get(name))
+        .filter((id): id is number => id !== undefined)
+      await product.related('allergens').sync(allergenIds)
+    }
 
     // Create deliveries for each product
     for (const product of products) {
