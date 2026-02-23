@@ -168,6 +168,17 @@ test.group('Web Invoices - cancelPaid', (group) => {
 
     await invoice.refresh()
     assert.isFalse(invoice.isPaymentRequested)
+
+    const log = await db
+      .from('audit_logs')
+      .where('action', 'payment.request_cancelled')
+      .where('user_id', buyer.id)
+      .where('entity_type', 'invoice')
+      .where('entity_id', invoice.id)
+      .first()
+    assert.isDefined(log)
+    const metadata = log.metadata as { isPaymentRequested?: { from: boolean; to: boolean } } | null
+    assert.deepEqual(metadata?.isPaymentRequested, { from: true, to: false })
   })
 
   test("buyer cannot cancel another buyer's payment request", async ({ client, assert }) => {

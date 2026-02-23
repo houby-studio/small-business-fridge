@@ -29,6 +29,16 @@ test.group('Web Profile - color mode toggle', (group) => {
 
     const updated = await User.findOrFail(user.id)
     assert.equal(updated.colorMode, 'dark')
+
+    const log = await db
+      .from('audit_logs')
+      .where('action', 'profile.updated')
+      .where('user_id', user.id)
+      .orderBy('id', 'desc')
+      .first()
+    assert.isDefined(log)
+    const metadata = log.metadata as { colorMode?: { from: string; to: string } } | null
+    assert.deepEqual(metadata?.colorMode, { from: 'light', to: 'dark' })
   })
 
   test('POST /profile/color-mode saves light mode and redirects', async ({ client, assert }) => {
@@ -75,6 +85,72 @@ test.group('Web Profile - color mode toggle', (group) => {
       .redirects(0)
 
     response.assertStatus(302)
+  })
+})
+
+test.group('Web Profile - update audit details', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('PUT /profile stores field-level metadata for changed values', async ({
+    client,
+    assert,
+  }) => {
+    const user = await UserFactory.merge({
+      displayName: 'Alice Old',
+      email: 'alice.old@example.com',
+      phone: '111',
+      iban: 'CZ6508000000192000145399',
+      showAllProducts: false,
+      sendMailOnPurchase: true,
+      sendDailyReport: true,
+      colorMode: 'dark',
+      keypadDisabled: false,
+    }).create()
+
+    const response = await client
+      .put('/profile')
+      .json({
+        displayName: 'Alice New',
+        email: 'alice.new@example.com',
+        phone: '222',
+        iban: 'CZ6508000000192000145400',
+        showAllProducts: true,
+        sendMailOnPurchase: false,
+        sendDailyReport: false,
+        colorMode: 'light',
+        keypadDisabled: true,
+      })
+      .loginAs(user)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    const log = await db
+      .from('audit_logs')
+      .where('action', 'profile.updated')
+      .where('user_id', user.id)
+      .orderBy('id', 'desc')
+      .first()
+    assert.isDefined(log)
+
+    const metadata = log.metadata as Record<string, { from: unknown; to: unknown }> | null
+    assert.deepEqual(metadata?.displayName, { from: 'Alice Old', to: 'Alice New' })
+    assert.deepEqual(metadata?.email, {
+      from: 'alice.old@example.com',
+      to: 'alice.new@example.com',
+    })
+    assert.deepEqual(metadata?.phone, { from: '111', to: '222' })
+    assert.deepEqual(metadata?.iban, {
+      from: 'CZ6508000000192000145399',
+      to: 'CZ6508000000192000145400',
+    })
+    assert.deepEqual(metadata?.showAllProducts, { from: false, to: true })
+    assert.deepEqual(metadata?.sendMailOnPurchase, { from: true, to: false })
+    assert.deepEqual(metadata?.sendDailyReport, { from: true, to: false })
+    assert.deepEqual(metadata?.colorMode, { from: 'dark', to: 'light' })
+    assert.deepEqual(metadata?.keypadDisabled, { from: false, to: true })
   })
 })
 

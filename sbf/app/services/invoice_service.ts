@@ -182,10 +182,13 @@ export default class InvoiceService {
       throw new Error('ALREADY_PAID')
     }
 
+    const wasPaymentRequested = invoice.isPaymentRequested
     invoice.isPaymentRequested = true
     await invoice.save()
 
-    AuditService.log(buyerId, 'payment.requested', 'invoice', invoiceId, invoice.supplierId)
+    AuditService.log(buyerId, 'payment.requested', 'invoice', invoiceId, invoice.supplierId, {
+      isPaymentRequested: { from: wasPaymentRequested, to: invoice.isPaymentRequested },
+    })
 
     return invoice
   }
@@ -203,8 +206,20 @@ export default class InvoiceService {
       throw new Error('ALREADY_PAID')
     }
 
+    const wasPaymentRequested = invoice.isPaymentRequested
     invoice.isPaymentRequested = false
     await invoice.save()
+
+    AuditService.log(
+      buyerId,
+      'payment.request_cancelled',
+      'invoice',
+      invoiceId,
+      invoice.supplierId,
+      {
+        isPaymentRequested: { from: wasPaymentRequested, to: invoice.isPaymentRequested },
+      }
+    )
     return invoice
   }
 
@@ -218,10 +233,15 @@ export default class InvoiceService {
       throw new Error('FORBIDDEN')
     }
 
+    const wasPaid = invoice.isPaid
+    const wasPaymentRequested = invoice.isPaymentRequested
     invoice.isPaid = true
     await invoice.save()
 
-    AuditService.log(supplierId, 'payment.approved', 'invoice', invoiceId, invoice.buyerId)
+    AuditService.log(supplierId, 'payment.approved', 'invoice', invoiceId, invoice.buyerId, {
+      isPaid: { from: wasPaid, to: invoice.isPaid },
+      wasRequestedByCustomer: wasPaymentRequested,
+    })
 
     return invoice
   }
@@ -236,11 +256,16 @@ export default class InvoiceService {
       throw new Error('FORBIDDEN')
     }
 
+    const wasPaid = invoice.isPaid
+    const wasPaymentRequested = invoice.isPaymentRequested
     invoice.isPaid = false
     invoice.isPaymentRequested = false
     await invoice.save()
 
-    AuditService.log(supplierId, 'payment.rejected', 'invoice', invoiceId, invoice.buyerId)
+    AuditService.log(supplierId, 'payment.rejected', 'invoice', invoiceId, invoice.buyerId, {
+      isPaid: { from: wasPaid, to: invoice.isPaid },
+      isPaymentRequested: { from: wasPaymentRequested, to: invoice.isPaymentRequested },
+    })
 
     return invoice
   }

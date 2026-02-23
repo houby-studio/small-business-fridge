@@ -345,6 +345,21 @@ test.group('Web Supplier - payments (approve/reject)', (group) => {
 
     await invoice.refresh()
     assert.isTrue(invoice.isPaid)
+
+    const log = await db
+      .from('audit_logs')
+      .where('action', 'payment.approved')
+      .where('user_id', supplier.id)
+      .where('entity_type', 'invoice')
+      .where('entity_id', invoice.id)
+      .first()
+    assert.isDefined(log)
+    const metadata = log.metadata as {
+      isPaid?: { from: boolean; to: boolean }
+      wasRequestedByCustomer?: boolean
+    } | null
+    assert.deepEqual(metadata?.isPaid, { from: false, to: true })
+    assert.isTrue(metadata?.wasRequestedByCustomer)
   })
 
   test('supplier can reject a payment request', async ({ client, assert }) => {

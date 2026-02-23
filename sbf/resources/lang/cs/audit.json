@@ -19,6 +19,7 @@
   "action_order_created": "Nákup",
   "action_invoice_generated": "Faktura vytvořena",
   "action_payment_requested": "Platba označena",
+  "action_payment_request_cancelled": "Platba odznačena",
   "action_payment_approved": "Platba schválena",
   "action_payment_rejected": "Platba zamítnuta",
   "action_delivery_created": "Naskladnění",
@@ -29,12 +30,15 @@
   "action_category_created": "Kategorie vytvořena",
   "action_category_updated": "Kategorie upravena",
   "action_profile_updated": "Profil upraven",
+  "action_favorite_added": "Přidáno do oblíbených",
+  "action_favorite_removed": "Odebráno z oblíbených",
   "action_user_updated": "Uživatel upraven",
   "action_order_storno": "Storno objednávky",
   "action_user_login": "Přihlášení",
   "action_user_registered": "Registrace",
   "action_user_logout": "Odhlášení",
   "action_profile_token_created": "Token vytvořen",
+  "action_profile_token_revoked": "Token zrušen",
   "action_admin_impersonate_start": "Impersonace zahájena",
   "action_admin_impersonate_stop": "Impersonace ukončena"
 }

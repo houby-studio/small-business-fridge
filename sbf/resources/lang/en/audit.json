@@ -19,6 +19,7 @@
   "action_order_created": "Purchase",
   "action_invoice_generated": "Invoice generated",
   "action_payment_requested": "Payment marked",
+  "action_payment_request_cancelled": "Payment marking cancelled",
   "action_payment_approved": "Payment approved",
   "action_payment_rejected": "Payment rejected",
   "action_delivery_created": "Stock delivery",
@@ -29,12 +30,15 @@
   "action_category_created": "Category created",
   "action_category_updated": "Category updated",
   "action_profile_updated": "Profile updated",
+  "action_favorite_added": "Added to favorites",
+  "action_favorite_removed": "Removed from favorites",
   "action_user_updated": "User updated",
   "action_order_storno": "Order cancelled",
   "action_user_login": "Login",
   "action_user_registered": "Registration",
   "action_user_logout": "Logout",
   "action_profile_token_created": "API token created",
+  "action_profile_token_revoked": "API token revoked",
   "action_admin_impersonate_start": "Impersonation started",
   "action_admin_impersonate_stop": "Impersonation stopped"
 }

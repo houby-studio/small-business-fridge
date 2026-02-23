@@ -3,6 +3,7 @@ import ShopService from '#services/shop_service'
 import OrderService from '#services/order_service'
 import NotificationService from '#services/notification_service'
 import RecommendationService from '#services/recommendation_service'
+import AuditService from '#services/audit_service'
 import { purchaseValidator } from '#validators/order'
 import logger from '@adonisjs/core/services/logger'
 import Product from '#models/product'
@@ -27,6 +28,9 @@ export default class ShopController {
             .first()
           if (!existing) {
             await user.related('favoriteProducts').attach([productId])
+            AuditService.log(user.id, 'favorite.added', 'product', productId, null, {
+              name: product.displayName,
+            })
             session.flash('alert', { type: 'success', message: i18n.t('messages.favorite_added') })
           } else {
             session.flash('alert', {

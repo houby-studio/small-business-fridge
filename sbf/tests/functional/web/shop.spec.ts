@@ -391,6 +391,17 @@ test.group('Web Shop - add_favorite', (group) => {
     const freshUser = await User.find(user.id)
     await freshUser!.load((loader) => loader.load('favoriteProducts'))
     assert.isTrue(freshUser!.favoriteProducts.some((p) => p.id === product.id))
+
+    const log = await db
+      .from('audit_logs')
+      .where('action', 'favorite.added')
+      .where('user_id', user.id)
+      .where('entity_type', 'product')
+      .where('entity_id', product.id)
+      .first()
+    assert.isDefined(log)
+    const metadata = log.metadata as { name?: string } | null
+    assert.equal(metadata?.name, product.displayName)
   })
 
   test('?add_favorite when already a favorite does not duplicate and redirects', async ({

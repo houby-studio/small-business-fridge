@@ -9,6 +9,7 @@ import { createApiTokenValidator } from '#validators/auth'
 import AuditService from '#services/audit_service'
 import User from '#models/user'
 import Allergen from '#models/allergen'
+import Product from '#models/product'
 
 export default class ProfileController {
   async show({ inertia, auth }: HttpContext) {
@@ -38,6 +39,18 @@ export default class ProfileController {
   async update({ request, auth, response, session, i18n }: HttpContext) {
     const user = auth.user!
     const data = await request.validateUsing(updateProfileValidator)
+    const before = {
+      displayName: user.displayName,
+      email: user.email,
+      phone: user.phone,
+      iban: user.iban,
+      showAllProducts: user.showAllProducts,
+      sendMailOnPurchase: user.sendMailOnPurchase,
+      sendDailyReport: user.sendDailyReport,
+      colorMode: user.colorMode,
+      keypadDisabled: user.keypadDisabled,
+      excludedAllergenIds: [...(user.excludedAllergenIds ?? [])].sort((a, b) => a - b),
+    }
 
     user.displayName = data.displayName
     user.email = data.email
@@ -54,7 +67,51 @@ export default class ProfileController {
 
     await user.save()
 
-    AuditService.log(user.id, 'profile.updated', 'user', user.id)
+    const changes: Record<string, { from: unknown; to: unknown }> = {}
+    for (const key of [
+      'displayName',
+      'email',
+      'phone',
+      'iban',
+      'showAllProducts',
+      'sendMailOnPurchase',
+      'sendDailyReport',
+      'colorMode',
+      'keypadDisabled',
+    ] as const) {
+      if (before[key] !== user[key]) {
+        changes[key] = { from: before[key], to: user[key] }
+      }
+    }
+
+    const afterExcluded = [...(user.excludedAllergenIds ?? [])].sort((a, b) => a - b)
+    if (
+      before.excludedAllergenIds.length !== afterExcluded.length ||
+      before.excludedAllergenIds.some((id, index) => id !== afterExcluded[index])
+    ) {
+      const allergenIds = [...new Set([...before.excludedAllergenIds, ...afterExcluded])]
+      const allergenRows =
+        allergenIds.length > 0
+          ? await Allergen.query().whereIn('id', allergenIds).select('id', 'name')
+          : []
+      const namesById = new Map(allergenRows.map((a) => [a.id, a.name]))
+      const toLabel = (ids: number[]) =>
+        ids.map((id) => namesById.get(id) ?? `#${id}`).join(', ') || '—'
+
+      changes.excludedAllergens = {
+        from: toLabel(before.excludedAllergenIds),
+        to: toLabel(afterExcluded),
+      }
+    }
+
+    AuditService.log(
+      user.id,
+      'profile.updated',
+      'user',
+      user.id,
+      null,
+      Object.keys(changes).length ? changes : null
+    )
 
     session.flash('alert', { type: 'success', message: i18n.t('messages.profile_updated') })
     return response.redirect('/profile')
@@ -62,9 +119,15 @@ export default class ProfileController {
 
   async toggleColorMode({ request, auth, response }: HttpContext) {
     const user = auth.user!
+    const before = user.colorMode
     const data = await request.validateUsing(toggleColorModeValidator)
     user.colorMode = data.colorMode
     await user.save()
+    if (before !== user.colorMode) {
+      AuditService.log(user.id, 'profile.updated', 'user', user.id, null, {
+        colorMode: { from: before, to: user.colorMode },
+      })
+    }
     return response.redirect().back()
   }
 
@@ -121,15 +184,37 @@ export default class ProfileController {
 
   async updateExcludedAllergens({ request, auth, response }: HttpContext) {
     const user = auth.user!
+    const before = [...(user.excludedAllergenIds ?? [])].sort((a, b) => a - b)
     const data = await request.validateUsing(updateExcludedAllergensValidator)
     user.excludedAllergenIds = data.excludedAllergenIds
     await user.save()
+
+    const after = [...(user.excludedAllergenIds ?? [])].sort((a, b) => a - b)
+    if (before.length !== after.length || before.some((id, index) => id !== after[index])) {
+      const allergenIds = [...new Set([...before, ...after])]
+      const allergenRows =
+        allergenIds.length > 0
+          ? await Allergen.query().whereIn('id', allergenIds).select('id', 'name')
+          : []
+      const namesById = new Map(allergenRows.map((a) => [a.id, a.name]))
+      const toLabel = (ids: number[]) =>
+        ids.map((id) => namesById.get(id) ?? `#${id}`).join(', ') || '—'
+
+      AuditService.log(user.id, 'profile.updated', 'user', user.id, null, {
+        excludedAllergens: { from: toLabel(before), to: toLabel(after) },
+      })
+    }
+
     return response.redirect().back()
   }
 
   async toggleFavorite({ params, auth, response }: HttpContext) {
     const user = auth.user!
     const productId = Number(params.id)
+    const product = await Product.find(productId)
+    if (!product) {
+      return response.redirect('/shop')
+    }
 
     // Check if already favorited
     const existing = await user
@@ -140,8 +225,14 @@ export default class ProfileController {
 
     if (existing) {
       await user.related('favoriteProducts').detach([productId])
+      AuditService.log(user.id, 'favorite.removed', 'product', productId, null, {
+        name: product.displayName,
+      })
     } else {
       await user.related('favoriteProducts').attach([productId])
+      AuditService.log(user.id, 'favorite.added', 'product', productId, null, {
+        name: product.displayName,
+      })
     }
 
     return response.redirect('/shop')
