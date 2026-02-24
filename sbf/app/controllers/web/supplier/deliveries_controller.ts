@@ -4,6 +4,20 @@ import NotificationService from '#services/notification_service'
 import { createDeliveryValidator } from '#validators/delivery'
 import { normalizeImagePath } from '#helpers/image_url'
 import logger from '@adonisjs/core/services/logger'
+import type { Request } from '@adonisjs/core/http'
+
+function deliveryReturnUrl(request: Request): string {
+  const referer = request.header('referer') ?? ''
+  try {
+    const { pathname, search } = new URL(referer)
+    if (pathname === '/supplier/stock' || pathname === '/supplier/deliveries') {
+      return pathname + search
+    }
+  } catch {
+    // invalid URL — use fallback
+  }
+  return '/supplier/deliveries'
+}
 
 export default class DeliveriesController {
   async index({ inertia, auth, request }: HttpContext) {
@@ -57,6 +71,6 @@ export default class DeliveriesController {
       message: i18n.t('messages.delivery_created', { amount: data.amount, price: data.price }),
     })
 
-    return response.redirect('/supplier/deliveries')
+    return response.redirect(deliveryReturnUrl(request))
   }
 }

@@ -69,6 +69,87 @@ test.group('Web Supplier - stock index', (group) => {
       .loginAs(supplier)
     response.assertStatus(200)
   })
+
+  test('stock page defaults to store-wide scope', async ({ client, assert }) => {
+    const supplierA = await UserFactory.apply('supplier').create()
+    const supplierB = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const productA = await ProductFactory.merge({
+      categoryId: category.id,
+      displayName: 'A',
+    }).create()
+    const productB = await ProductFactory.merge({
+      categoryId: category.id,
+      displayName: 'B',
+    }).create()
+
+    await DeliveryFactory.merge({
+      supplierId: supplierA.id,
+      productId: productA.id,
+      amountSupplied: 5,
+      amountLeft: 5,
+      price: 10,
+    }).create()
+    await DeliveryFactory.merge({
+      supplierId: supplierB.id,
+      productId: productB.id,
+      amountSupplied: 5,
+      amountLeft: 5,
+      price: 10,
+    }).create()
+
+    const response = await client
+      .get('/supplier/stock')
+      .loginAs(supplierA)
+      .header('X-Inertia', 'true')
+      .header('X-Inertia-Version', '1')
+    response.assertStatus(200)
+
+    const rows: any[] = response.body().props.stock.data
+    const productIds = rows.map((row) => row.productId)
+    assert.includeMembers(productIds, [productA.id, productB.id])
+  })
+
+  test('stock page supports scope=mine filter', async ({ client, assert }) => {
+    const supplierA = await UserFactory.apply('supplier').create()
+    const supplierB = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const productA = await ProductFactory.merge({
+      categoryId: category.id,
+      displayName: 'A',
+    }).create()
+    const productB = await ProductFactory.merge({
+      categoryId: category.id,
+      displayName: 'B',
+    }).create()
+
+    await DeliveryFactory.merge({
+      supplierId: supplierA.id,
+      productId: productA.id,
+      amountSupplied: 5,
+      amountLeft: 5,
+      price: 10,
+    }).create()
+    await DeliveryFactory.merge({
+      supplierId: supplierB.id,
+      productId: productB.id,
+      amountSupplied: 5,
+      amountLeft: 5,
+      price: 10,
+    }).create()
+
+    const response = await client
+      .get('/supplier/stock?scope=mine')
+      .loginAs(supplierA)
+      .header('X-Inertia', 'true')
+      .header('X-Inertia-Version', '1')
+    response.assertStatus(200)
+
+    const rows: any[] = response.body().props.stock.data
+    const productIds = rows.map((row) => row.productId)
+    assert.include(productIds, productA.id)
+    assert.notInclude(productIds, productB.id)
+  })
 })
 
 test.group('Web Supplier - invoice index and generate', (group) => {

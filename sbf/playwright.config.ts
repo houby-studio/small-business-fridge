@@ -44,7 +44,7 @@ export default defineConfig({
       DB_PASSWORD: 'sbf',
       DB_DATABASE: 'sbf_test',
       SMTP_HOST: '127.0.0.1',
-      SMTP_PORT: '1026',
+      SMTP_PORT: '1025',
       SMTP_USERNAME: '',
       SMTP_PASSWORD: '',
       SMTP_FROM_ADDRESS: 'noreply@test.local',

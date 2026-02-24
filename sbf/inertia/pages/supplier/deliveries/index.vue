@@ -3,11 +3,9 @@ import { ref, computed } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import Select from 'primevue/select'
-import InputNumber from 'primevue/inputnumber'
 import Button from 'primevue/button'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
-import Card from 'primevue/card'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDate } from '~/composables/use_format_date'
 import { areFilterParamsEqual } from '~/composables/use_filter_params'
@@ -43,11 +41,6 @@ const props = defineProps<{
 const { t } = useI18n()
 const ALL = '__all__'
 
-const selectedProduct = ref<number | null>(props.preselect ?? null)
-const amount = ref<number | null>(null)
-const price = ref<number | null>(null)
-const submitting = ref(false)
-
 const filterProductId = ref(props.filters.productId || ALL)
 const filterSortBy = ref(props.filters.sortBy || 'createdAt')
 const filterSortOrder = ref(props.filters.sortOrder || 'desc')
@@ -57,27 +50,6 @@ const productFilterOptions = computed(() => [
   { label: t('common.all'), value: ALL },
   ...props.products.map((p) => ({ label: p.displayName, value: String(p.id) })),
 ])
-
-function submit() {
-  if (!selectedProduct.value || !amount.value || !price.value) return
-  submitting.value = true
-  router.post(
-    '/supplier/deliveries',
-    {
-      productId: selectedProduct.value,
-      amount: amount.value,
-      price: price.value,
-    },
-    {
-      onFinish: () => {
-        submitting.value = false
-        selectedProduct.value = null
-        amount.value = null
-        price.value = null
-      },
-    }
-  )
-}
 
 function buildFilterParams() {
   return {
@@ -142,63 +114,17 @@ function onSort(event: any) {
     <Head :title="t('supplier.deliveries_title')" />
 
     <h1 class="mb-6 text-2xl font-bold text-gray-900 dark:text-zinc-100">
-      {{ t('supplier.deliveries_heading') }}
+      {{ t('supplier.deliveries_recent') }}
     </h1>
 
-    <!-- Add stock form -->
-    <Card class="mb-8">
-      <template #content>
-        <form @submit.prevent="submit" class="grid grid-cols-1 items-end gap-2 lg:grid-cols-12">
-          <div class="min-w-0 lg:col-span-6">
-            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
-              t('supplier.deliveries_product')
-            }}</label>
-            <Select
-              v-model="selectedProduct"
-              fluid
-              :options="products"
-              optionLabel="displayName"
-              optionValue="id"
-              :placeholder="t('supplier.deliveries_product')"
-              filter
-            />
-          </div>
-          <div class="min-w-0 lg:col-span-2">
-            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
-              t('supplier.deliveries_amount')
-            }}</label>
-            <InputNumber v-model="amount" fluid :min="1" :placeholder="t('common.pieces')" />
-          </div>
-          <div class="lg:col-span-2">
-            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
-              t('supplier.deliveries_price')
-            }}</label>
-            <InputNumber
-              v-model="price"
-              fluid
-              :min="1"
-              :suffix="' ' + t('common.currency')"
-              :placeholder="t('common.currency')"
-            />
-          </div>
-          <div class="lg:col-span-2 lg:flex lg:justify-end">
-            <Button
-              type="submit"
-              fluid
-              :label="t('supplier.deliveries_submit')"
-              icon="pi pi-plus"
-              :loading="submitting"
-              :disabled="!selectedProduct || !amount || !price"
-            />
-          </div>
-        </form>
-      </template>
-    </Card>
-
-    <!-- Recent deliveries -->
-    <h2 class="mb-4 text-lg font-semibold text-gray-800 dark:text-zinc-200">
-      {{ t('supplier.deliveries_recent') }}
-    </h2>
+    <div class="mb-4">
+      <Button
+        :label="t('supplier.deliveries_open_inventory')"
+        icon="pi pi-warehouse"
+        size="small"
+        @click="router.get('/supplier/stock')"
+      />
+    </div>
 
     <!-- Filter bar -->
     <div class="mb-4 flex flex-wrap items-end gap-3">

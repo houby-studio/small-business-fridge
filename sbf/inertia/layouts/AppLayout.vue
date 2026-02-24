@@ -95,7 +95,6 @@ const menuItems = computed(() => {
       icon: 'pi pi-box',
       compactIconOnly: true,
       items: [
-        { label: 'Naskladnit', icon: 'pi pi-plus', url: '/supplier/deliveries' },
         { label: 'Sklad', icon: 'pi pi-warehouse', url: '/supplier/stock' },
         { label: 'Produkty', icon: 'pi pi-tags', url: '/supplier/products' },
         { label: 'Fakturace', icon: 'pi pi-file-export', url: '/supplier/invoice' },
