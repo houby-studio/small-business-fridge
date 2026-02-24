@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { Head, router, useForm } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import InputText from 'primevue/inputtext'
@@ -34,6 +34,9 @@ const form = useForm({
   image: null as File | null,
 })
 const imagePreviewUrl = ref<string | null>(null)
+const nameInput = ref<any>(null)
+const descriptionInput = ref<any>(null)
+const categorySelect = ref<any>(null)
 
 const previewTitle = computed(() => form.displayName || t('supplier.products_name_label'))
 
@@ -53,6 +56,39 @@ function onImageSelect(event: any) {
   if (form.image) {
     form.clearErrors('image')
   }
+}
+
+function getRootElement(target: any): HTMLElement | null {
+  const candidate = target?.$el ?? target
+  return candidate instanceof HTMLElement ? candidate : null
+}
+
+function focusTextControl(target: any) {
+  const root = getRootElement(target)
+  if (root instanceof HTMLInputElement || root instanceof HTMLTextAreaElement) {
+    root.focus()
+    return
+  }
+  const field = root?.querySelector('input, textarea') as
+    | HTMLInputElement
+    | HTMLTextAreaElement
+    | null
+  field?.focus()
+}
+
+function focusSelectControl(target: any) {
+  const instance = target
+  const root = getRootElement(instance)
+  const trigger = root?.querySelector('[role="combobox"]') as HTMLElement | null
+  trigger?.focus()
+}
+
+function onNameEnter() {
+  focusTextControl(descriptionInput.value)
+}
+
+function onDescriptionEnter() {
+  focusSelectControl(categorySelect.value)
 }
 
 function submit() {
@@ -76,6 +112,17 @@ function goBack() {
 
 onUnmounted(() => {
   resetPreviewUrl()
+})
+
+onMounted(() => {
+  nextTick(() => {
+    const retries = [0, 100, 300]
+    retries.forEach((delay) => {
+      window.setTimeout(() => {
+        focusTextControl(nameInput.value)
+      }, delay)
+    })
+  })
 })
 </script>
 
@@ -124,10 +171,14 @@ onUnmounted(() => {
                 t('supplier.products_name_label')
               }}</label>
               <InputText
+                ref="nameInput"
+                id="product-name"
                 v-model="form.displayName"
+                autofocus
                 :placeholder="t('supplier.products_name_placeholder')"
                 class="w-full"
                 :invalid="!!form.errors.displayName"
+                @keydown.enter.prevent="onNameEnter"
               />
               <small v-if="form.errors.displayName" class="text-red-600 dark:text-red-400">{{
                 form.errors.displayName
@@ -139,11 +190,14 @@ onUnmounted(() => {
                 t('supplier.products_description_label')
               }}</label>
               <Textarea
+                ref="descriptionInput"
+                id="product-description"
                 v-model="form.description"
                 rows="3"
                 :placeholder="t('supplier.products_description_placeholder')"
                 class="w-full"
                 :invalid="!!form.errors.description"
+                @keydown.enter.prevent="onDescriptionEnter"
               />
               <small v-if="form.errors.description" class="text-red-600 dark:text-red-400">{{
                 form.errors.description
@@ -155,6 +209,8 @@ onUnmounted(() => {
                 t('supplier.products_category_label')
               }}</label>
               <Select
+                ref="categorySelect"
+                inputId="product-category"
                 v-model="form.categoryId"
                 :options="categories"
                 optionLabel="name"
@@ -173,6 +229,7 @@ onUnmounted(() => {
                 t('supplier.products_barcode_label')
               }}</label>
               <InputText
+                id="product-barcode"
                 v-model="form.barcode"
                 :placeholder="t('supplier.products_barcode_placeholder')"
                 class="w-full"
@@ -188,6 +245,7 @@ onUnmounted(() => {
                 t('supplier.products_allergens_label')
               }}</label>
               <MultiSelect
+                inputId="product-allergens"
                 v-model="form.allergenIds"
                 :options="allergens"
                 optionLabel="name"

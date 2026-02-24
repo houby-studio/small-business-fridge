@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted } from 'vue'
+import { ref, computed, nextTick, onBeforeUnmount, onMounted } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
@@ -98,7 +98,9 @@ const amount = ref<number | null>(null)
 const price = ref<number | null>(null)
 const submitting = ref(false)
 const showFullTable = ref(false)
+const productSelect = ref<any>(null)
 const amountInput = ref<any>(null)
+const priceInput = ref<any>(null)
 
 const categoryOptions = computed(() => [
   { label: t('common.all'), value: ALL },
@@ -119,15 +121,166 @@ const insightPeriodLabel = computed(() => t('supplier.stock_period_30d'))
 function focusAmountField() {
   const el = amountInput.value?.$el as HTMLElement | undefined
   const input = el?.querySelector('input') as HTMLInputElement | null
+  if (!input) return
+
+  input.focus()
+  window.setTimeout(() => {
+    input.focus()
+  }, 0)
+  window.setTimeout(() => {
+    input.focus()
+  }, 120)
+}
+
+function focusPriceField() {
+  const el = priceInput.value?.$el as HTMLElement | undefined
+  const input = el?.querySelector('input') as HTMLInputElement | null
   input?.focus()
 }
 
+function focusProductSearchField() {
+  const filterInput = document.querySelector(
+    '.p-select-overlay .p-select-filter'
+  ) as HTMLInputElement | null
+  if (filterInput) {
+    filterInput.focus()
+    filterInput.select()
+  }
+}
+
+function openProductSelectAndFocusSearch() {
+  const instance = productSelect.value
+  const root = instance?.$el as HTMLElement | undefined
+  const trigger = root?.querySelector('[role="combobox"]') as HTMLElement | null
+  trigger?.focus()
+
+  if (typeof instance?.show === 'function') {
+    instance.show()
+  } else {
+    trigger?.click()
+  }
+
+  nextTick(() => {
+    focusProductSearchField()
+  })
+}
+
+function selectTopOrFocusedProductOption(filterInput: HTMLInputElement | null) {
+  const activeDescendantId = filterInput?.getAttribute('aria-activedescendant')
+  const activeDescendantOption = activeDescendantId
+    ? (document.getElementById(activeDescendantId) as HTMLElement | null)
+    : null
+  const focusedOption = document.querySelector(
+    '.p-select-overlay .p-select-option.p-focus, .p-select-overlay .p-select-option[data-p-focused="true"]'
+  ) as HTMLElement | null
+  const topOption = document.querySelector(
+    '.p-select-overlay .p-select-option'
+  ) as HTMLElement | null
+  const option = activeDescendantOption ?? focusedOption ?? topOption
+
+  const optionLabel = option?.textContent?.trim()
+  const query = filterInput?.value?.trim().toLocaleLowerCase() ?? ''
+
+  const matchedOptionByHighlight = optionLabel
+    ? quickProductOptions.value.find((item) => item.label === optionLabel)
+    : null
+  const matchedOptionByQuery = quickProductOptions.value.find((item) =>
+    item.label.toLocaleLowerCase().includes(query)
+  )
+  const matchedOption =
+    matchedOptionByHighlight ?? matchedOptionByQuery ?? quickProductOptions.value[0]
+
+  if (matchedOption) {
+    selectedProduct.value = matchedOption.value
+    if (typeof productSelect.value?.hide === 'function') {
+      productSelect.value.hide()
+    }
+    return true
+  }
+
+  if (!option) return false
+  option.click()
+  return true
+}
+
+function onProductEnter(event: KeyboardEvent) {
+  const overlayOpen = productSelect.value?.overlayVisible === true
+  if (overlayOpen) {
+    event.preventDefault()
+    const filterInput = document.querySelector(
+      '.p-select-overlay .p-select-filter'
+    ) as HTMLInputElement | null
+    const selected = selectTopOrFocusedProductOption(filterInput)
+    if (!selected) return
+
+    nextTick(() => {
+      focusAmountField()
+    })
+    window.setTimeout(() => {
+      focusAmountField()
+    }, 120)
+    return
+  }
+
+  event.preventDefault()
+  openProductSelectAndFocusSearch()
+}
+
+function onProductSelectShow() {
+  nextTick(() => {
+    focusProductSearchField()
+  })
+}
+
+function onProductSelectHide() {
+  if (selectedProduct.value && !amount.value) {
+    nextTick(() => {
+      focusAmountField()
+    })
+  }
+}
+
+function onProductChange() {
+  nextTick(() => {
+    focusAmountField()
+  })
+}
+
+function onQuickDeliveryKeydown(event: KeyboardEvent) {
+  if (event.key !== 'Enter') return
+  if (productSelect.value?.overlayVisible !== true) return
+
+  const filterInput = document.querySelector(
+    '.p-select-overlay .p-select-filter'
+  ) as HTMLInputElement | null
+  if (!filterInput) return
+
+  event.preventDefault()
+  event.stopPropagation()
+
+  const selected = selectTopOrFocusedProductOption(filterInput)
+  if (!selected) return
+
+  nextTick(() => {
+    focusAmountField()
+  })
+  window.setTimeout(() => {
+    focusAmountField()
+  }, 120)
+}
+
 onMounted(() => {
+  document.addEventListener('keydown', onQuickDeliveryKeydown, true)
+
   if (props.preselect) {
     nextTick(() => {
       focusAmountField()
     })
   }
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onQuickDeliveryKeydown, true)
 })
 
 function buildFilterParams() {
@@ -201,14 +354,29 @@ function submitQuickDelivery() {
       price: price.value,
     },
     {
-      onFinish: () => {
-        submitting.value = false
+      onSuccess: () => {
         selectedProduct.value = null
         amount.value = null
         price.value = null
+        nextTick(() => {
+          openProductSelectAndFocusSearch()
+        })
+      },
+      onFinish: () => {
+        submitting.value = false
       },
     }
   )
+}
+
+function onAmountEnter() {
+  focusPriceField()
+}
+
+function onPriceEnter() {
+  if (selectedProduct.value && amount.value && price.value) {
+    submitQuickDelivery()
+  }
 }
 
 function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
@@ -255,6 +423,7 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
               t('supplier.deliveries_product')
             }}</label>
             <Select
+              ref="productSelect"
               v-model="selectedProduct"
               fluid
               :options="quickProductOptions"
@@ -262,9 +431,13 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
               optionValue="value"
               :placeholder="t('supplier.deliveries_product')"
               filter
+              @show="onProductSelectShow"
+              @hide="onProductSelectHide"
+              @change="onProductChange"
+              @keydown.enter.capture.prevent="onProductEnter"
             />
           </div>
-          <div class="min-w-0 lg:col-span-2">
+          <div class="min-w-0 lg:col-span-2" @keydown.enter.prevent="onAmountEnter">
             <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
               t('supplier.deliveries_amount')
             }}</label>
@@ -276,11 +449,12 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
               :placeholder="t('common.pieces')"
             />
           </div>
-          <div class="lg:col-span-2">
+          <div class="lg:col-span-2" @keydown.enter.prevent="onPriceEnter">
             <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
               t('supplier.deliveries_price')
             }}</label>
             <InputNumber
+              ref="priceInput"
               v-model="price"
               fluid
               :min="1"

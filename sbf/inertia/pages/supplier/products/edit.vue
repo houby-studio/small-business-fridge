@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import InputText from 'primevue/inputtext'
@@ -50,6 +50,9 @@ const form = ref({
 const imageFile = ref<File | null>(null)
 const submitting = ref(false)
 const imagePreviewUrl = ref<string | null>(null)
+const nameInput = ref<any>(null)
+const descriptionInput = ref<any>(null)
+const categorySelect = ref<any>(null)
 
 const displayedImageSrc = computed(() => imagePreviewUrl.value || props.product.imagePath || null)
 const previewTitle = computed(() => form.value.displayName || props.product.displayName)
@@ -67,6 +70,39 @@ function onImageSelect(event: any) {
   if (imageFile.value) {
     imagePreviewUrl.value = URL.createObjectURL(imageFile.value)
   }
+}
+
+function getRootElement(target: any): HTMLElement | null {
+  const candidate = target?.$el ?? target
+  return candidate instanceof HTMLElement ? candidate : null
+}
+
+function focusTextControl(target: any) {
+  const root = getRootElement(target)
+  if (root instanceof HTMLInputElement || root instanceof HTMLTextAreaElement) {
+    root.focus()
+    return
+  }
+  const field = root?.querySelector('input, textarea') as
+    | HTMLInputElement
+    | HTMLTextAreaElement
+    | null
+  field?.focus()
+}
+
+function focusSelectControl(target: any) {
+  const instance = target
+  const root = getRootElement(instance)
+  const trigger = root?.querySelector('[role="combobox"]') as HTMLElement | null
+  trigger?.focus()
+}
+
+function onNameEnter() {
+  focusTextControl(descriptionInput.value)
+}
+
+function onDescriptionEnter() {
+  focusSelectControl(categorySelect.value)
 }
 
 function submit() {
@@ -99,6 +135,17 @@ function goBack() {
 
 onUnmounted(() => {
   resetPreviewUrl()
+})
+
+onMounted(() => {
+  nextTick(() => {
+    const retries = [0, 100, 300]
+    retries.forEach((delay) => {
+      window.setTimeout(() => {
+        focusTextControl(nameInput.value)
+      }, delay)
+    })
+  })
 })
 </script>
 
@@ -150,14 +197,28 @@ onUnmounted(() => {
               <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
                 t('supplier.products_name_label')
               }}</label>
-              <InputText v-model="form.displayName" class="w-full" />
+              <InputText
+                ref="nameInput"
+                id="edit-product-name"
+                v-model="form.displayName"
+                autofocus
+                class="w-full"
+                @keydown.enter.prevent="onNameEnter"
+              />
             </div>
 
             <div>
               <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
                 t('supplier.products_description_label')
               }}</label>
-              <Textarea v-model="form.description" rows="3" class="w-full" />
+              <Textarea
+                ref="descriptionInput"
+                id="edit-product-description"
+                v-model="form.description"
+                rows="3"
+                class="w-full"
+                @keydown.enter.prevent="onDescriptionEnter"
+              />
             </div>
 
             <div>
@@ -165,6 +226,8 @@ onUnmounted(() => {
                 t('supplier.products_category_label')
               }}</label>
               <Select
+                ref="categorySelect"
+                inputId="edit-product-category"
                 v-model="form.categoryId"
                 :options="categories"
                 optionLabel="name"
@@ -178,7 +241,7 @@ onUnmounted(() => {
               <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
                 t('supplier.products_barcode_label')
               }}</label>
-              <InputText v-model="form.barcode" class="w-full" />
+              <InputText id="edit-product-barcode" v-model="form.barcode" class="w-full" />
             </div>
 
             <div>
@@ -186,6 +249,7 @@ onUnmounted(() => {
                 t('supplier.products_allergens_label')
               }}</label>
               <MultiSelect
+                inputId="edit-product-allergens"
                 v-model="form.allergenIds"
                 :options="allergens"
                 optionLabel="name"
