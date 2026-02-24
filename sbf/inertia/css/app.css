@@ -501,19 +501,28 @@ html:not(.sbf-app-booting) #sbf-boot-loader {
 }
 
 #sbf-boot-loader .fridge-bottle {
+  --sbf-bottle-gradient: linear-gradient(
+    180deg,
+    #f82843 0%,
+    #e5112d 45%,
+    #cf112a 72%,
+    #8c1321 100%
+  );
+  --sbf-bottle-gradient-height: 149px;
   position: absolute;
   left: calc(50% - 19px);
   bottom: 12px;
   width: 38px;
   height: 118px;
   border-radius: 17px 17px 12px 12px / 28px 28px 14px 14px;
-  background: linear-gradient(180deg, #f82843 0%, #e5112d 45%, #cf112a 72%, #8c1321 100%);
+  background: var(--sbf-bottle-gradient);
+  background-size: 100% var(--sbf-bottle-gradient-height);
+  background-position: 0 -31px;
   border: 1px solid #8c1321;
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.06),
     0 4px 10px rgba(0, 0, 0, 0.35);
   opacity: 0.9;
-  animation: sbf-fridge-bottle 1.35s ease-in-out infinite;
 }
 
 #sbf-boot-loader .fridge-bottle::before {
@@ -524,8 +533,11 @@ html:not(.sbf-app-booting) #sbf-boot-loader {
   width: 18px;
   height: 29px;
   border-radius: 8px 8px 3px 3px;
-  background: linear-gradient(180deg, #f82843 0%, #e5112d 60%, #cf112a 100%);
+  background: var(--sbf-bottle-gradient);
+  background-size: 100% var(--sbf-bottle-gradient-height);
+  background-position: 0 -7px;
   border: 1px solid #8c1321;
+  border-bottom: 0;
 }
 
 #sbf-boot-loader .fridge-bottle::after {
@@ -536,8 +548,11 @@ html:not(.sbf-app-booting) #sbf-boot-loader {
   width: 14px;
   height: 8px;
   border-radius: 4px 4px 1px 1px;
-  background: #cf112a;
+  background: var(--sbf-bottle-gradient);
+  background-size: 100% var(--sbf-bottle-gradient-height);
+  background-position: 0 0;
   border: 1px solid #8c1321;
+  border-bottom: 0;
 }
 
 #sbf-boot-loader .fridge-door {
@@ -555,7 +570,7 @@ html:not(.sbf-app-booting) #sbf-boot-loader {
     0 8px 18px rgba(0, 0, 0, 0.35);
   backface-visibility: hidden;
   transform-style: preserve-3d;
-  animation: sbf-fridge-door 1.35s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation: sbf-fridge-door-open 0.75s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 #sbf-boot-loader .fridge-door::before {
@@ -579,24 +594,11 @@ html:not(.sbf-app-booting) #sbf-boot-loader {
   z-index: 2;
 }
 
-@keyframes sbf-fridge-door {
-  0%,
-  100% {
+@keyframes sbf-fridge-door-open {
+  0% {
     transform: translateX(0) rotateY(0deg);
   }
-  50% {
-    transform: translateX(-15px) rotateY(-62deg);
-  }
-}
-
-@keyframes sbf-fridge-bottle {
-  0%,
   100% {
-    opacity: 0.18;
-    transform: translateX(0);
-  }
-  50% {
-    opacity: 0.92;
-    transform: translateX(1px);
+    transform: translateX(-15px) rotateY(-62deg);
   }
 }
