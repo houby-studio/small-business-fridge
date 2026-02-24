@@ -436,6 +436,21 @@ html {
 /* ─── Full-page boot loader ───────────────────────────────────────── */
 html.sbf-app-booting #sbf-app-shell {
   visibility: hidden;
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+#sbf-app-shell {
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+}
+
+html:not(.sbf-app-booting) #sbf-app-shell {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 #sbf-boot-loader {
@@ -443,7 +458,8 @@ html.sbf-app-booting #sbf-app-shell {
     radial-gradient(120% 75% at 50% -10%, #1f2937 0%, transparent 58%),
     linear-gradient(180deg, #09090b 0%, #0b0b10 55%, #07070a 100%);
   opacity: 1;
-  transition: opacity 0.25s ease;
+  transition: opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity;
 }
 
 html:not(.sbf-app-booting) #sbf-boot-loader {
@@ -469,6 +485,7 @@ html:not(.sbf-app-booting) #sbf-boot-loader {
   position: relative;
   width: 80px;
   height: 112px;
+  perspective: 560px;
 }
 
 #sbf-boot-loader .fridge-body {
@@ -495,6 +512,8 @@ html:not(.sbf-app-booting) #sbf-boot-loader {
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.55),
     0 8px 18px rgba(0, 0, 0, 0.35);
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
   animation: sbf-fridge-door 1.9s ease-in-out infinite;
 }
 
@@ -537,11 +556,11 @@ html:not(.sbf-app-booting) #sbf-boot-loader {
   0%,
   25%,
   100% {
-    transform: perspective(360px) rotateY(0deg);
+    transform: rotateY(0deg) translateX(0);
   }
   45%,
   62% {
-    transform: perspective(360px) rotateY(-38deg);
+    transform: rotateY(-64deg) translateX(-2px);
   }
 }
 

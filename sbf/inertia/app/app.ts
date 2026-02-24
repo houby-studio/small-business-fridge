@@ -14,6 +14,9 @@ import ConfirmationService from 'primevue/confirmationservice'
 import Tooltip from 'primevue/tooltip'
 
 const appName = import.meta.env.VITE_APP_NAME || 'Lednice IT'
+const BOOT_MIN_VISIBLE_MS = 500
+const BOOT_SETTLE_MS = 140
+const BOOT_FADE_OUT_MS = 420
 
 // ─── Custom SBF theme preset ─────────────────────────────────────────────────
 // Extends Aura with the Czech red (#cf112a) brand palette and refined tokens
@@ -92,6 +95,8 @@ createInertiaApp({
   },
 
   setup({ el, App, props, plugin }) {
+    const bootStart = typeof performance !== 'undefined' ? performance.now() : Date.now()
+
     createApp({ render: () => h(App, props) })
       .use(plugin)
       .use(PrimeVue, {
@@ -109,15 +114,27 @@ createInertiaApp({
       .directive('tooltip', Tooltip)
       .mount(el)
 
-    const appShell = document.getElementById('sbf-app-shell')
-    if (appShell) {
-      appShell.style.visibility = 'visible'
-    }
-
-    document.documentElement.classList.remove('sbf-app-booting')
     const bootLoader = document.getElementById('sbf-boot-loader')
-    if (bootLoader) {
-      window.setTimeout(() => bootLoader.remove(), 250)
-    }
+    const appShell = document.getElementById('sbf-app-shell')
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now()
+    const elapsed = now - bootStart
+    const holdFor = Math.max(0, BOOT_MIN_VISIBLE_MS - elapsed) + BOOT_SETTLE_MS
+
+    window.setTimeout(() => {
+      if (appShell) {
+        appShell.style.visibility = 'visible'
+      }
+
+      // Wait two frames to let mounted layout settle before we fade from loader to app.
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          document.documentElement.classList.remove('sbf-app-booting')
+        })
+      })
+
+      if (bootLoader) {
+        window.setTimeout(() => bootLoader.remove(), BOOT_FADE_OUT_MS)
+      }
+    }, holdFor)
   },
 })
