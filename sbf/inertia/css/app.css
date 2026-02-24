@@ -240,6 +240,51 @@
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
+  flex-wrap: nowrap;
+  overflow-x: clip;
+}
+
+.sbf-nav .p-menubar-start,
+.sbf-nav .p-menubar-end {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.sbf-nav .p-menubar-root-list {
+  flex-wrap: nowrap;
+}
+
+.sbf-nav .p-menuitem-link {
+  white-space: nowrap;
+}
+
+@media (max-width: 576px) {
+  .sbf-nav .sbf-brand-link {
+    display: none;
+  }
+}
+
+@media (min-width: 961px) and (max-width: 1199px) {
+  .sbf-nav .sbf-nav-compact-target {
+    min-width: 2.4rem;
+    justify-content: center;
+  }
+
+  .sbf-nav .sbf-nav-compact-target > .pi:first-child {
+    margin-right: 0 !important;
+  }
+
+  .sbf-nav .sbf-nav-compact-target .sbf-nav-item-label {
+    display: none;
+  }
+
+  .sbf-nav .sbf-nav-compact-target .pi-angle-down {
+    margin-left: 0.25rem !important;
+  }
+
+  .sbf-nav .sbf-nav-profile-name {
+    display: none;
+  }
 }
 
 /* ─── Active nav link ─────────────────────────────────────────────── */
