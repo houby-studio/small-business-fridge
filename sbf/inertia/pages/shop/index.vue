@@ -301,8 +301,8 @@ function categoryButtonStyle(isSelected: boolean, color?: string): Record<string
                   class="inline-block h-2 w-2 rounded-full"
                   :class="{
                     'bg-green-500': product.stockSum >= 5,
-                    'sbf-stock-low bg-red-500': product.stockSum > 0 && product.stockSum < 5,
-                    'bg-gray-400 dark:bg-zinc-600': product.stockSum === 0,
+                    'sbf-stock-low bg-amber-500': product.stockSum > 0 && product.stockSum < 5,
+                    'bg-red-500': product.stockSum === 0,
                   }"
                 />
                 <span class="text-xs text-gray-400 dark:text-zinc-500">{{
