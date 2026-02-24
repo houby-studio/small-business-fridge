@@ -23,6 +23,11 @@ export default class CacheGuardMiddleware {
   async handle(ctx: HttpContext, next: NextFn) {
     await next()
 
+    const path = ctx.request.url()
+    if (path.startsWith('/uploads/')) {
+      return
+    }
+
     ctx.response.header('Cache-Control', 'no-store, no-cache, must-revalidate, private')
     ctx.response.header('Pragma', 'no-cache')
     ctx.response.header('Expires', '0')

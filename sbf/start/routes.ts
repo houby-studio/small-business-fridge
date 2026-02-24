@@ -11,6 +11,7 @@ import router from '@adonisjs/core/services/router'
 import { middleware } from '#start/kernel'
 import app from '@adonisjs/core/services/app'
 import env from '#start/env'
+import { extname } from 'node:path'
 
 /*
 |--------------------------------------------------------------------------
@@ -60,6 +61,24 @@ router.get('/', [HomeController, 'index'])
 
 // Serve uploaded files from storage
 router.get('/uploads/*', async ({ request, response }) => {
+  const imageExtensions = new Set([
+    '.avif',
+    '.gif',
+    '.ico',
+    '.jpg',
+    '.jpeg',
+    '.png',
+    '.svg',
+    '.webp',
+  ])
+  const extension = extname(request.url().split('?')[0] ?? '').toLowerCase()
+  const isImage = imageExtensions.has(extension)
+
+  response.header(
+    'Cache-Control',
+    isImage ? 'public, max-age=31536000, immutable' : 'public, max-age=3600'
+  )
+
   const filePath = app.makePath('storage', request.url())
   return response.download(filePath)
 })
