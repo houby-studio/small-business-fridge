@@ -109,6 +109,11 @@ createInertiaApp({
       .directive('tooltip', Tooltip)
       .mount(el)
 
+    const appShell = document.getElementById('sbf-app-shell')
+    if (appShell) {
+      appShell.style.visibility = 'visible'
+    }
+
     document.documentElement.classList.remove('sbf-app-booting')
     const bootLoader = document.getElementById('sbf-boot-loader')
     if (bootLoader) {
