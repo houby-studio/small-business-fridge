@@ -14,6 +14,7 @@ const page = usePage<SharedProps>()
 const { t } = useI18n()
 const user = computed(() => page.props.user)
 const impersonation = computed(() => page.props.impersonation)
+const appName = computed(() => page.props.appName ?? 'Small Business Fridge')
 
 const isSupplier = computed(() => user.value?.role === 'supplier' || user.value?.role === 'admin')
 const isAdmin = computed(() => user.value?.role === 'admin')
@@ -187,7 +188,7 @@ onUnmounted(() => {
       >
         <template #start>
           <Link href="/shop" class="sbf-brand-link mr-6 flex items-center gap-2">
-            <span class="sbf-brand text-xl font-bold tracking-tight"> Lednice IT </span>
+            <span class="sbf-brand text-xl font-bold tracking-tight"> {{ appName }} </span>
           </Link>
         </template>
         <template #item="{ item, props }">

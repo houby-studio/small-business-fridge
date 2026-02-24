@@ -17,6 +17,10 @@ export default class NotificationService {
     return env.get('APP_URL') || `http://${env.get('HOST')}:${env.get('PORT')}`
   }
 
+  private get appName() {
+    return env.get('APP_NAME', 'Small Business Fridge')
+  }
+
   /**
    * Send purchase confirmation email to the buyer.
    */
@@ -56,6 +60,7 @@ export default class NotificationService {
           date: order.createdAt.toFormat('dd.MM.yyyy HH:mm'),
           addFavoriteUrl,
           appUrl: this.appUrl,
+          appName: this.appName,
         })
     })
   }
@@ -128,6 +133,7 @@ export default class NotificationService {
           date,
           orderCount: orders.length,
           appUrl: this.appUrl,
+          appName: this.appName,
         })
     })
   }
@@ -177,6 +183,7 @@ export default class NotificationService {
           qrImageData,
           confirmPaymentUrl: `${this.appUrl}/invoices?confirmId=${invoice.id}`,
           appUrl: this.appUrl,
+          appName: this.appName,
         })
     })
   }
@@ -203,6 +210,7 @@ export default class NotificationService {
           totalCost: invoice.totalCost,
           reviewUrl: `${this.appUrl}/supplier/payments?reviewId=${invoice.id}`,
           appUrl: this.appUrl,
+          appName: this.appName,
         })
     })
   }
@@ -230,6 +238,7 @@ export default class NotificationService {
           totalCost: invoice.totalCost,
           action,
           appUrl: this.appUrl,
+          appName: this.appName,
         })
     })
   }
@@ -271,6 +280,7 @@ export default class NotificationService {
             totalSpent,
             orderCount: todayOrders.length,
             appUrl: this.appUrl,
+            appName: this.appName,
           })
       })
     }
@@ -310,6 +320,7 @@ export default class NotificationService {
             totalCost: invoice.totalCost,
             supplierIban: invoice.supplier.iban,
             appUrl: this.appUrl,
+            appName: this.appName,
           })
       })
 
@@ -361,6 +372,7 @@ export default class NotificationService {
             })),
             totalPending,
             appUrl: this.appUrl,
+            appName: this.appName,
           })
       })
     }
@@ -386,6 +398,7 @@ export default class NotificationService {
           supplierName: order.delivery.supplier.displayName,
           price: order.delivery.price,
           appUrl: this.appUrl,
+          appName: this.appName,
         })
     })
   }
@@ -399,12 +412,13 @@ export default class NotificationService {
     await mail.send((message) => {
       message
         .to(user.email)
-        .subject(this.i18n.t('emails.welcome_subject'))
+        .subject(this.i18n.t('emails.welcome_subject', { app_name: this.appName }))
         .htmlView('emails/welcome', {
           i18n: this.i18n,
           name: user.displayName,
           keypadId: user.keypadId,
           appUrl: this.appUrl,
+          appName: this.appName,
         })
     })
   }
@@ -442,6 +456,7 @@ export default class NotificationService {
             price: delivery.price,
             shopUrl: this.appUrl,
             appUrl: this.appUrl,
+            appName: this.appName,
           })
       })
     }
@@ -468,6 +483,7 @@ export default class NotificationService {
           invoiceId: invoice.id,
           totalCost: invoice.totalCost,
           appUrl: this.appUrl,
+          appName: this.appName,
         })
     })
   }

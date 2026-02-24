@@ -25,6 +25,7 @@ export interface SharedProps {
   user: User | null
   flash: FlashMessages
   impersonation: Impersonation | null
+  appName: string
   [key: string]: unknown
 }
 

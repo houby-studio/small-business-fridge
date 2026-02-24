@@ -1,6 +1,6 @@
 {
   "title": "Kiosk",
-  "heading": "Lednice IT",
+  "heading": "{app_name}",
   "enter_number": "Zadejte své číslo na klávesnici",
   "shop_title": "Kiosk - Obchod",
   "greeting": "Ahoj, {name}!",
@@ -34,7 +34,7 @@
   "item_out_of_stock_other_buyer": "Někdo jiný to koupil dřív!",
   "item_fifo_only": "Během nákupu se změnil stav skladu. Upravte košík a zkuste to znovu.",
   "purchase_retry": "Chyba nákupu, zkuste znovu",
-  "idle_welcome": "Vítejte v Lednici IT!",
+  "idle_welcome": "Vítejte v {app_name}!",
   "session_expiring": "Relace vyprší za: {seconds} s",
   "logout": "Odhlásit",
   "product_not_found": "Produkt nenalezen",

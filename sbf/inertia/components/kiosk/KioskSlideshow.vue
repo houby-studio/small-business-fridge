@@ -40,7 +40,9 @@ onUnmounted(() => {
     <!-- Empty state -->
     <div v-if="products.length === 0" class="text-center">
       <i class="pi pi-box mb-6 text-8xl text-gray-600" />
-      <h2 class="text-3xl font-bold text-white">{{ t('kiosk.idle_welcome') }}</h2>
+      <h2 class="text-3xl font-bold text-white">
+        {{ t('kiosk.idle_welcome', { app_name: t('common.app_name') }) }}
+      </h2>
     </div>
 
     <!-- Product slide — fixed structure so dots never shift -->

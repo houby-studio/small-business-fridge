@@ -55,8 +55,8 @@
   "order_cancelled_intro": "Hi {buyerName}, your order #{id} for {productName} from supplier {supplierName} for {price} CZK has been cancelled by an administrator.",
   "order_cancelled_note": "If you have the product with you, please return it to its original place.",
 
-  "welcome_subject": "Welcome to Lednice IT!",
-  "welcome_heading": "Welcome to Lednice IT!",
+  "welcome_subject": "Welcome to {app_name}!",
+  "welcome_heading": "Welcome to {app_name}!",
   "welcome_intro": "Hi {name}, your account has been automatically created. You can now order products from the fridge.",
   "welcome_keypad_label": "Your keypad code: {keypadId}",
   "welcome_note": "If you have any questions or issues, please contact the system administrator.",

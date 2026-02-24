@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
+import { usePage } from '@inertiajs/vue3'
 import Toast from 'primevue/toast'
 import { useFlash } from '~/composables/use_flash'
+import type { SharedProps } from '~/types'
 
 useFlash()
+const page = usePage<SharedProps>()
 
 // Guest pages are always dark — enforce it regardless of any previous state
 onMounted(() => {
@@ -36,7 +39,9 @@ onMounted(() => {
             <span class="pi pi-shopping-cart text-xl" />
           </span>
         </div>
-        <h1 class="text-3xl font-bold tracking-tight text-zinc-100">Lednice IT</h1>
+        <h1 class="text-3xl font-bold tracking-tight text-zinc-100">
+          {{ page.props.appName ?? 'Small Business Fridge' }}
+        </h1>
         <p class="mt-1.5 text-sm text-zinc-400">Sdílení nápojů a svačin</p>
       </div>
 

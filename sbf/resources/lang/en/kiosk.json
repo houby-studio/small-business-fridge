@@ -1,6 +1,6 @@
 {
   "title": "Kiosk",
-  "heading": "Lednice IT",
+  "heading": "{app_name}",
   "enter_number": "Enter your number on the keypad",
   "shop_title": "Kiosk - Shop",
   "greeting": "Hi, {name}!",
@@ -34,7 +34,7 @@
   "item_out_of_stock_other_buyer": "Someone else bought it first!",
   "item_fifo_only": "Stock changed while you were shopping. Please adjust basket and try again.",
   "purchase_retry": "Purchase failed, please try again",
-  "idle_welcome": "Welcome to Lednice IT!",
+  "idle_welcome": "Welcome to {app_name}!",
   "session_expiring": "Session expires in: {seconds} s",
   "logout": "Log out",
   "product_not_found": "Product not found",

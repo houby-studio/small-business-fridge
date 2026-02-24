@@ -13,7 +13,7 @@ import ToastService from 'primevue/toastservice'
 import ConfirmationService from 'primevue/confirmationservice'
 import Tooltip from 'primevue/tooltip'
 
-const appName = import.meta.env.VITE_APP_NAME || 'Lednice IT'
+const DEFAULT_APP_NAME = 'Small Business Fridge'
 const BOOT_MIN_VISIBLE_MS = 1000
 const BOOT_SETTLE_MS = 140
 const BOOT_FADE_OUT_MS = 420
@@ -85,7 +85,12 @@ const SBFPreset = definePreset(Aura, {
 createInertiaApp({
   progress: { color: '#cf112a' },
 
-  title: (title) => (title ? `${title} | ${appName}` : appName),
+  title: (title) => {
+    const pageAppName =
+      (document.querySelector('meta[name="sbf-app-name"]')?.getAttribute('content') ?? '').trim() ||
+      DEFAULT_APP_NAME
+    return title ? `${title} | ${pageAppName}` : pageAppName
+  },
 
   resolve: (name) => {
     return resolvePageComponent(
