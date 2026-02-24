@@ -165,13 +165,17 @@ function formatAllergenList(allergens: ProductRow['allergens']) {
       </Column>
       <Column :header="t('supplier.products_image_label')" style="width: 60px">
         <template #body="{ data }">
-          <img
-            v-if="data.imagePath"
-            :src="data.imagePath"
-            :alt="data.displayName"
-            class="h-10 w-10 rounded object-cover"
-          />
-          <span v-else class="pi pi-image text-2xl text-gray-300 dark:text-zinc-600" />
+          <div
+            class="flex h-10 w-10 items-center justify-center rounded-md bg-gray-100 p-0.5 dark:bg-zinc-800"
+          >
+            <img
+              v-if="data.imagePath"
+              :src="data.imagePath"
+              :alt="data.displayName"
+              class="h-full w-full rounded object-contain"
+            />
+            <span v-else class="pi pi-image text-lg text-gray-300 dark:text-zinc-600" />
+          </div>
         </template>
       </Column>
       <Column :header="t('supplier.products_name_label')">

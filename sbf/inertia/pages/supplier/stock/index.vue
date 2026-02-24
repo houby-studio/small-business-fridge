@@ -295,12 +295,17 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
       <Column :header="t('common.product')" field="productName" sortable>
         <template #body="{ data }">
           <div class="flex items-center gap-3">
-            <img
-              v-if="data.imagePath"
-              :src="data.imagePath"
-              :alt="data.productName"
-              class="h-8 w-8 rounded object-cover"
-            />
+            <div
+              class="flex h-9 w-9 items-center justify-center rounded-md bg-gray-100 p-0.5 dark:bg-zinc-800"
+            >
+              <img
+                v-if="data.imagePath"
+                :src="data.imagePath"
+                :alt="data.productName"
+                class="h-full w-full rounded object-contain"
+              />
+              <span v-else class="pi pi-image text-sm text-gray-300 dark:text-zinc-600" />
+            </div>
             <div>
               <div class="font-medium">{{ data.productName }}</div>
               <Tag
