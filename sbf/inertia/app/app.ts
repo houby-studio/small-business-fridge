@@ -14,7 +14,7 @@ import ConfirmationService from 'primevue/confirmationservice'
 import Tooltip from 'primevue/tooltip'
 
 const appName = import.meta.env.VITE_APP_NAME || 'Lednice IT'
-const BOOT_MIN_VISIBLE_MS = 500
+const BOOT_MIN_VISIBLE_MS = 1000
 const BOOT_SETTLE_MS = 140
 const BOOT_FADE_OUT_MS = 420
 
