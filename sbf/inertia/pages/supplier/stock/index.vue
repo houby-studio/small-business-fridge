@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick, onMounted } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
@@ -98,6 +98,7 @@ const amount = ref<number | null>(null)
 const price = ref<number | null>(null)
 const submitting = ref(false)
 const showFullTable = ref(false)
+const amountInput = ref<any>(null)
 
 const categoryOptions = computed(() => [
   { label: t('common.all'), value: ALL },
@@ -114,6 +115,20 @@ const scopeOptions = computed(() => [
 ])
 
 const insightPeriodLabel = computed(() => t('supplier.stock_period_30d'))
+
+function focusAmountField() {
+  const el = amountInput.value?.$el as HTMLElement | undefined
+  const input = el?.querySelector('input') as HTMLInputElement | null
+  input?.focus()
+}
+
+onMounted(() => {
+  if (props.preselect) {
+    nextTick(() => {
+      focusAmountField()
+    })
+  }
+})
 
 function buildFilterParams() {
   return {
@@ -253,7 +268,13 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
             <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
               t('supplier.deliveries_amount')
             }}</label>
-            <InputNumber v-model="amount" fluid :min="1" :placeholder="t('common.pieces')" />
+            <InputNumber
+              ref="amountInput"
+              v-model="amount"
+              fluid
+              :min="1"
+              :placeholder="t('common.pieces')"
+            />
           </div>
           <div class="lg:col-span-2">
             <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{

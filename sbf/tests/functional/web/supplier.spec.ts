@@ -7,6 +7,7 @@ import { CategoryFactory } from '#database/factories/category_factory'
 import { InvoiceFactory } from '#database/factories/invoice_factory'
 import { OrderFactory } from '#database/factories/order_factory'
 import Invoice from '#models/invoice'
+import Product from '#models/product'
 import db from '@adonisjs/lucid/services/db'
 
 const cleanAll = async () => {
@@ -149,6 +150,61 @@ test.group('Web Supplier - stock index', (group) => {
     const productIds = rows.map((row) => row.productId)
     assert.include(productIds, productA.id)
     assert.notInclude(productIds, productB.id)
+  })
+})
+
+test.group('Web Supplier - products', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('creating product redirects to stock with preselected product id', async ({
+    client,
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const pngImage = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9WlH0JkAAAAASUVORK5CYII=',
+      'base64'
+    )
+
+    const response = await client
+      .post('/supplier/products')
+      .loginAs(supplier)
+      .withCsrfToken()
+      .field('displayName', 'Prefill Product')
+      .field('description', 'Auto prefill after create')
+      .field('categoryId', category.id)
+      .field('barcode', '123456789')
+      .field('allergenIds', JSON.stringify([]))
+      .file('image', pngImage, {
+        filename: 'prefill.png',
+        contentType: 'image/png',
+      })
+      .redirects(0)
+
+    response.assertStatus(302)
+    const location = response.header('location') || ''
+    assert.match(location, /^\/supplier\/stock\?preselect=\d+$/)
+
+    const match = location.match(/preselect=(\d+)/)
+    assert.isNotNull(match)
+
+    const productId = Number(match![1])
+    const product = await Product.find(productId)
+    assert.isNotNull(product)
+  })
+
+  test('stock page returns preselect value from query string', async ({ client, assert }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const response = await client
+      .get('/supplier/stock?preselect=42')
+      .loginAs(supplier)
+      .header('X-Inertia', 'true')
+      .header('X-Inertia-Version', '1')
+
+    response.assertStatus(200)
+    assert.equal(response.body().props.preselect, 42)
   })
 })
 

@@ -110,6 +110,7 @@ function formatAllergenList(allergens: ProductRow['allergens']) {
       <Button
         :label="t('supplier.products_new_title')"
         icon="pi pi-plus"
+        size="small"
         @click="router.get('/supplier/products/new')"
       />
     </div>
