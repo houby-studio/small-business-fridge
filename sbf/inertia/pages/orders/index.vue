@@ -40,6 +40,10 @@ const props = defineProps<{
     totalOrders: number
     totalSpend: number
     totalUninvoiced: number
+    filteredOrders: number
+    filteredSpend: number
+    filteredUninvoiced: number
+    filtersApplied: boolean
   }
   filters: { channel: string; invoiced: string; sortBy: string; sortOrder: string }
 }>()
@@ -85,7 +89,7 @@ function applyFilters() {
   router.get(
     '/orders',
     { ...nextParams, page },
-    { preserveState: true, only: ['orders', 'filters'] }
+    { preserveState: true, only: ['orders', 'filters', 'stats'] }
   )
   lastAppliedFilterParams.value = nextParams
 }
@@ -96,14 +100,17 @@ function clearFilters() {
   filterSortBy.value = 'createdAt'
   filterSortOrder.value = 'desc'
   lastAppliedFilterParams.value = buildFilterParams()
-  router.get('/orders', buildFilterParams(), { preserveState: true, only: ['orders', 'filters'] })
+  router.get('/orders', buildFilterParams(), {
+    preserveState: true,
+    only: ['orders', 'filters', 'stats'],
+  })
 }
 
 function onPageChange(event: any) {
   router.get(
     '/orders',
     { ...buildFilterParams(), page: event.page + 1 },
-    { preserveState: true, only: ['orders', 'filters'] }
+    { preserveState: true, only: ['orders', 'filters', 'stats'] }
   )
 }
 
@@ -118,7 +125,7 @@ function onSort(event: any) {
       sortOrder: event.sortOrder === 1 ? 'asc' : 'desc',
       page: 1,
     },
-    { preserveState: true, only: ['orders', 'filters'] }
+    { preserveState: true, only: ['orders', 'filters', 'stats'] }
   )
 }
 
@@ -149,6 +156,13 @@ function channelLabel(channel: string) {
             <div>
               <div class="text-3xl font-bold text-gray-900 dark:text-zinc-100">
                 {{ stats.totalOrders }}
+                <span
+                  v-if="stats.filtersApplied"
+                  class="ml-2 inline-flex items-center gap-1 align-middle text-sm font-semibold text-gray-500 dark:text-zinc-400"
+                >
+                  <span class="pi pi-filter text-xs" />
+                  {{ stats.filteredOrders }}
+                </span>
               </div>
               <div class="text-sm text-gray-500 dark:text-zinc-400">
                 {{ t('orders.total_orders') }}
@@ -169,6 +183,13 @@ function channelLabel(channel: string) {
             <div>
               <div class="text-2xl font-bold text-gray-900 dark:text-zinc-100">
                 {{ t('common.price_with_currency', { price: stats.totalSpend }) }}
+                <span
+                  v-if="stats.filtersApplied"
+                  class="ml-2 inline-flex items-center gap-1 align-middle text-sm font-semibold text-gray-500 dark:text-zinc-400"
+                >
+                  <span class="pi pi-filter text-xs" />
+                  {{ t('common.price_with_currency', { price: stats.filteredSpend }) }}
+                </span>
               </div>
               <div class="text-sm text-gray-500 dark:text-zinc-400">
                 {{ t('orders.total_spent') }}
@@ -189,6 +210,13 @@ function channelLabel(channel: string) {
             <div>
               <div class="text-2xl font-bold text-red-600">
                 {{ t('common.price_with_currency', { price: stats.totalUninvoiced }) }}
+                <span
+                  v-if="stats.filtersApplied"
+                  class="ml-2 inline-flex items-center gap-1 align-middle text-sm font-semibold text-gray-500 dark:text-zinc-400"
+                >
+                  <span class="pi pi-filter text-xs" />
+                  {{ t('common.price_with_currency', { price: stats.filteredUninvoiced }) }}
+                </span>
               </div>
               <div class="text-sm text-gray-500 dark:text-zinc-400">
                 {{ t('orders.total_uninvoiced') }}

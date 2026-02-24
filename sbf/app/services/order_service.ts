@@ -217,25 +217,48 @@ export default class OrderService {
 
     const orders = await ordersQuery.paginate(page, perPage)
 
-    // Get summary stats
-    const stats = await Order.query()
-      .where('buyerId', userId)
-      .join('deliveries', 'orders.delivery_id', 'deliveries.id')
-      .select(
-        db.rawQuery('COUNT(*)::int as total_orders'),
-        db.rawQuery('COALESCE(SUM(deliveries.price), 0)::numeric as total_spend'),
-        db.rawQuery(
-          'COALESCE(SUM(CASE WHEN orders.invoice_id IS NULL THEN deliveries.price ELSE 0 END), 0)::numeric as total_uninvoiced'
+    const buildStatsQuery = () =>
+      Order.query()
+        .where('buyerId', userId)
+        .join('deliveries', 'orders.delivery_id', 'deliveries.id')
+        .select(
+          db.rawQuery('COUNT(*)::int as total_orders'),
+          db.rawQuery('COALESCE(SUM(deliveries.price), 0)::numeric as total_spend'),
+          db.rawQuery(
+            'COALESCE(SUM(CASE WHEN orders.invoice_id IS NULL THEN deliveries.price ELSE 0 END), 0)::numeric as total_uninvoiced'
+          )
         )
-      )
-      .first()
+
+    const applyFiltersToStatsQuery = (query: ReturnType<typeof buildStatsQuery>) => {
+      if (filters?.channel) {
+        query.where('channel', filters.channel)
+      }
+
+      if (filters?.invoiced === 'yes') {
+        query.whereNotNull('invoiceId')
+      } else if (filters?.invoiced === 'no') {
+        query.whereNull('invoiceId')
+      }
+
+      return query
+    }
+
+    const totalStats = await buildStatsQuery().first()
+    const filtersApplied = Boolean(filters?.channel || filters?.invoiced)
+    const filteredStats = filtersApplied
+      ? await applyFiltersToStatsQuery(buildStatsQuery()).first()
+      : totalStats
 
     return {
       orders,
       stats: {
-        totalOrders: stats?.$extras.total_orders ?? 0,
-        totalSpend: Number(stats?.$extras.total_spend ?? 0),
-        totalUninvoiced: Number(stats?.$extras.total_uninvoiced ?? 0),
+        totalOrders: totalStats?.$extras.total_orders ?? 0,
+        totalSpend: Number(totalStats?.$extras.total_spend ?? 0),
+        totalUninvoiced: Number(totalStats?.$extras.total_uninvoiced ?? 0),
+        filteredOrders: filteredStats?.$extras.total_orders ?? 0,
+        filteredSpend: Number(filteredStats?.$extras.total_spend ?? 0),
+        filteredUninvoiced: Number(filteredStats?.$extras.total_uninvoiced ?? 0),
+        filtersApplied,
       },
     }
   }
