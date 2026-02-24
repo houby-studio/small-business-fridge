@@ -51,6 +51,23 @@ function isActive(url: string | undefined): boolean {
   return currentPath.value === url || currentPath.value.startsWith(url + '/')
 }
 
+type NavItem = {
+  url?: string
+  items?: NavItem[]
+}
+
+function isSubmenuActive(item: NavItem): boolean {
+  if (!item.items?.length) return false
+
+  return item.items.some((child) => {
+    if (isActive(child.url)) return true
+    if (child.items?.length) {
+      return isSubmenuActive(child)
+    }
+    return false
+  })
+}
+
 onMounted(() => {
   document.documentElement.setAttribute('data-theme', localIsDark.value ? 'dark' : 'light')
   window.addEventListener('scroll', handleScroll, { passive: true })
@@ -175,7 +192,11 @@ function stopImpersonation() {
           <a v-else v-bind="props.action">
             <span :class="item.icon" class="mr-2" />
             <span>{{ item.label }}</span>
-            <span v-if="item.items" class="pi pi-angle-down ml-2" />
+            <span
+              v-if="item.items"
+              class="pi pi-angle-down ml-2"
+              :class="{ 'sbf-nav-active': isSubmenuActive(item) }"
+            />
           </a>
         </template>
         <template #end>
