@@ -225,7 +225,7 @@ export default class OrderService {
         db.rawQuery('COUNT(*)::int as total_orders'),
         db.rawQuery('COALESCE(SUM(deliveries.price), 0)::numeric as total_spend'),
         db.rawQuery(
-          'COALESCE(SUM(CASE WHEN orders.invoice_id IS NULL THEN deliveries.price ELSE 0 END), 0)::numeric as total_unpaid'
+          'COALESCE(SUM(CASE WHEN orders.invoice_id IS NULL THEN deliveries.price ELSE 0 END), 0)::numeric as total_uninvoiced'
         )
       )
       .first()
@@ -235,7 +235,7 @@ export default class OrderService {
       stats: {
         totalOrders: stats?.$extras.total_orders ?? 0,
         totalSpend: Number(stats?.$extras.total_spend ?? 0),
-        totalUnpaid: Number(stats?.$extras.total_unpaid ?? 0),
+        totalUninvoiced: Number(stats?.$extras.total_uninvoiced ?? 0),
       },
     }
   }

@@ -114,7 +114,7 @@ test.group('OrderService', (group) => {
 
     assert.equal(result.stats.totalOrders, 3)
     assert.equal(result.stats.totalSpend, 45) // 3 × 15
-    assert.equal(result.stats.totalUnpaid, 45) // none invoiced
+    assert.equal(result.stats.totalUninvoiced, 45) // none invoiced
     assert.lengthOf(result.orders.toJSON().data, 3)
   })
 

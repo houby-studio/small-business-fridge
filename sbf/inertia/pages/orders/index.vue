@@ -39,7 +39,7 @@ const props = defineProps<{
   stats: {
     totalOrders: number
     totalSpend: number
-    totalUnpaid: number
+    totalUninvoiced: number
   }
   filters: { channel: string; invoiced: string; sortBy: string; sortOrder: string }
 }>()
@@ -188,10 +188,10 @@ function channelLabel(channel: string) {
             </div>
             <div>
               <div class="text-2xl font-bold text-red-600">
-                {{ t('common.price_with_currency', { price: stats.totalUnpaid }) }}
+                {{ t('common.price_with_currency', { price: stats.totalUninvoiced }) }}
               </div>
               <div class="text-sm text-gray-500 dark:text-zinc-400">
-                {{ t('orders.total_unpaid') }}
+                {{ t('orders.total_uninvoiced') }}
               </div>
             </div>
           </div>
