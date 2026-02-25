@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test'
 
 const E2E_PORT = '3345'
 const E2E_BASE_URL = `http://localhost:${E2E_PORT}`
+const isCI = !!process.env.CI
 
 /**
  * Playwright E2E test configuration.
@@ -60,9 +61,8 @@ export default defineConfig({
   },
 
   projects: [
-    {
-      name: 'msedge',
-      use: { ...devices['Desktop Edge'] },
-    },
+    isCI
+      ? { name: 'chromium', use: { ...devices['Desktop Chrome'] } }
+      : { name: 'msedge', use: { ...devices['Desktop Edge'], channel: 'msedge' } },
   ],
 })

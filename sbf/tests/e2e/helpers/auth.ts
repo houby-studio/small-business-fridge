@@ -13,7 +13,6 @@ const PASSWORDS: Record<TestUser, string> = {
 const cachedSessionCookies = new Map<string, any[]>()
 
 function resolveSessionKey(user: TestUser) {
-  if (user === 'customer2') return 'customer'
   return user
 }
 

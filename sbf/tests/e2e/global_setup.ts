@@ -156,9 +156,11 @@ export default async function globalSetup() {
     },
   ]
 
-  // 3. Insert/upsert users into the test DB
+  // 3. Insert/upsert all seed data inside a single transaction so a partial
+  //    failure rolls back cleanly instead of leaving corrupt state.
   const client = new Client(DB_CONFIG)
   await client.connect()
+  await client.query('BEGIN')
 
   for (const user of users) {
     await client.query(
@@ -517,5 +519,6 @@ export default async function globalSetup() {
     await client.query(`UPDATE orders SET invoice_id = $1 WHERE id = $2`, [inv3Id, orderIds[i]])
   }
 
+  await client.query('COMMIT')
   await client.end()
 }

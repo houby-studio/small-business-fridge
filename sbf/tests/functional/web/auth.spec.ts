@@ -3,6 +3,7 @@ import { test } from '@japa/runner'
 import { UserFactory } from '#database/factories/user_factory'
 import db from '@adonisjs/lucid/services/db'
 import User from '#models/user'
+import { store as throttleStore } from '#middleware/throttle_middleware'
 
 test.group('Web Auth', (group) => {
   group.each.setup(async () => {
@@ -68,6 +69,7 @@ test.group('Web Auth', (group) => {
 
 test.group('Web Auth - Remember Me', (group) => {
   const cleanAll = async () => {
+    throttleStore.clear()
     await db.from('remember_me_tokens').delete()
     await db.from('users').delete()
   }
