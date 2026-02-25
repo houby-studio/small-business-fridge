@@ -304,9 +304,11 @@ let barcodeTimeout: ReturnType<typeof setTimeout> | null = null
 
 function onGlobalKeydown(e: KeyboardEvent) {
   if (appState.value !== 'identified') return
+  if (e.metaKey || e.ctrlKey || e.altKey) return
 
   // Enter = end of scan
   if (e.key === 'Enter' && barcodeBuffer.length > 0) {
+    e.preventDefault()
     const code = barcodeBuffer
     barcodeBuffer = ''
     if (barcodeTimeout) clearTimeout(barcodeTimeout)
@@ -316,12 +318,13 @@ function onGlobalKeydown(e: KeyboardEvent) {
 
   // Accumulate printable chars
   if (e.key.length === 1) {
+    e.preventDefault()
     barcodeBuffer += e.key
-    // Reset buffer if no Enter arrives within 100ms (human typing, not scanner)
+    // Keep buffer briefly for scanner bursts while still allowing slower typing + Enter.
     if (barcodeTimeout) clearTimeout(barcodeTimeout)
     barcodeTimeout = setTimeout(() => {
       barcodeBuffer = ''
-    }, 100)
+    }, 2000)
   }
 }
 

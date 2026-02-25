@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useI18n } from '~/composables/use_i18n'
 
 defineProps<{
@@ -12,11 +12,6 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const keypadInput = ref('')
-const hiddenRef = ref<HTMLInputElement | null>(null)
-
-onMounted(() => {
-  hiddenRef.value?.focus()
-})
 
 function pressKey(key: string) {
   if (key === 'clear') {
@@ -36,16 +31,32 @@ function pressKey(key: string) {
 }
 
 function onKeydown(e: KeyboardEvent) {
+  if (e.metaKey || e.ctrlKey || e.altKey) {
+    return
+  }
+
   if (e.key >= '0' && e.key <= '9') {
+    e.preventDefault()
     pressKey(e.key)
   } else if (e.key === 'Backspace') {
+    e.preventDefault()
     pressKey('back')
   } else if (e.key === 'Delete' || e.key === 'Escape') {
+    e.preventDefault()
     pressKey('clear')
   } else if (e.key === 'Enter') {
+    e.preventDefault()
     pressKey('enter')
   }
 }
+
+onMounted(() => {
+  document.addEventListener('keydown', onKeydown)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', onKeydown)
+})
 
 const keys = [
   ['1', '2', '3'],
@@ -70,13 +81,6 @@ const keys = [
       >
         {{ keypadInput || '—' }}
       </div>
-      <!-- Hidden input captures keyboard/scanner input -->
-      <input
-        ref="hiddenRef"
-        class="absolute inset-0 opacity-0"
-        aria-label="keypad input"
-        @keydown="onKeydown"
-      />
     </div>
 
     <!-- Keypad grid -->
