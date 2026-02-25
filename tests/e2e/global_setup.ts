@@ -38,8 +38,22 @@ const TEST_ENV = getTestRuntimeEnv({
 export default async function globalSetup() {
   await ensureTestDatabaseExists()
 
-  // 1. Run migrations
-  execSync('node ace migration:run --force', { env: TEST_ENV, stdio: 'pipe' })
+  // 1. Run migrations on the test DB.
+  // In some environments the AdonisJS CLI can print "Already up to date" but still
+  // exit with a non-zero code. Treat that specific case as success while surfacing
+  // any real migration errors.
+  try {
+    execSync('node ace migration:run --force', { env: TEST_ENV, stdio: 'pipe' })
+  } catch (error: any) {
+    const stdout = error?.stdout?.toString?.() ?? ''
+    const stderr = error?.stderr?.toString?.() ?? ''
+    const combined = stdout + stderr
+
+    if (!combined.includes('Already up to date')) {
+      // Re-throw unexpected migration failures so Playwright setup fails loudly.
+      throw error
+    }
+  }
 
   // 2. Hash passwords using AdonisJS scrypt driver
   const scrypt = new Scrypt(SCRYPT_CONFIG)

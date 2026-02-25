@@ -62,7 +62,7 @@ export default class InvoiceService {
 
         invoices.push(invoice)
 
-        AuditService.log(supplierId, 'invoice.generated', 'invoice', invoice.id, buyerId, {
+        await AuditService.log(supplierId, 'invoice.generated', 'invoice', invoice.id, buyerId, {
           total: totalCost,
           orderCount: orders.length,
         })
@@ -186,7 +186,7 @@ export default class InvoiceService {
     invoice.isPaymentRequested = true
     await invoice.save()
 
-    AuditService.log(buyerId, 'payment.requested', 'invoice', invoiceId, invoice.supplierId, {
+    await AuditService.log(buyerId, 'payment.requested', 'invoice', invoiceId, invoice.supplierId, {
       isPaymentRequested: { from: wasPaymentRequested, to: invoice.isPaymentRequested },
     })
 
@@ -210,15 +210,17 @@ export default class InvoiceService {
     invoice.isPaymentRequested = false
     await invoice.save()
 
-    AuditService.log(
+    const metadata = {
+      isPaymentRequested: { from: wasPaymentRequested, to: invoice.isPaymentRequested },
+    }
+
+    await AuditService.log(
       buyerId,
       'payment.request_cancelled',
       'invoice',
       invoiceId,
       invoice.supplierId,
-      {
-        isPaymentRequested: { from: wasPaymentRequested, to: invoice.isPaymentRequested },
-      }
+      metadata
     )
     return invoice
   }
@@ -238,10 +240,19 @@ export default class InvoiceService {
     invoice.isPaid = true
     await invoice.save()
 
-    AuditService.log(supplierId, 'payment.approved', 'invoice', invoiceId, invoice.buyerId, {
+    const metadata = {
       isPaid: { from: wasPaid, to: invoice.isPaid },
       wasRequestedByCustomer: wasPaymentRequested,
-    })
+    }
+
+    await AuditService.log(
+      supplierId,
+      'payment.approved',
+      'invoice',
+      invoiceId,
+      invoice.buyerId,
+      metadata
+    )
 
     return invoice
   }
@@ -262,7 +273,7 @@ export default class InvoiceService {
     invoice.isPaymentRequested = false
     await invoice.save()
 
-    AuditService.log(supplierId, 'payment.rejected', 'invoice', invoiceId, invoice.buyerId, {
+    await AuditService.log(supplierId, 'payment.rejected', 'invoice', invoiceId, invoice.buyerId, {
       isPaid: { from: wasPaid, to: invoice.isPaid },
       isPaymentRequested: { from: wasPaymentRequested, to: invoice.isPaymentRequested },
     })
@@ -311,7 +322,7 @@ export default class InvoiceService {
         )
         .update({ invoiceId: invoice.id })
 
-      AuditService.log(supplierId, 'invoice.generated', 'invoice', invoice.id, buyerId, {
+      await AuditService.log(supplierId, 'invoice.generated', 'invoice', invoice.id, buyerId, {
         total: totalCost,
         orderCount: orders.length,
       })
@@ -371,7 +382,7 @@ export default class InvoiceService {
 
         invoices.push(invoice)
 
-        AuditService.log(actorId, 'invoice.generated', 'invoice', invoice.id, buyerId, {
+        await AuditService.log(actorId, 'invoice.generated', 'invoice', invoice.id, buyerId, {
           total: totalCost,
           orderCount: orders.length,
           supplierId,

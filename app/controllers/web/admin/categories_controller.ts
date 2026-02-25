@@ -29,11 +29,20 @@ export default class CategoriesController {
     const service = new AdminService()
     const category = await service.createCategory(data.name, data.color)
 
-    AuditService.log(auth.user!.id, 'category.created', 'category', category.id, null, {
+    const metadata = {
       name: category.name,
       color: category.color,
       isDisabled: category.isDisabled,
-    })
+    }
+
+    await AuditService.log(
+      auth.user!.id,
+      'category.created',
+      'category',
+      category.id,
+      null,
+      metadata
+    )
 
     session.flash('alert', {
       type: 'success',
@@ -76,7 +85,14 @@ export default class CategoriesController {
     }
 
     if (Object.keys(changes).length > 0) {
-      AuditService.log(auth.user!.id, 'category.updated', 'category', category.id, null, changes)
+      await AuditService.log(
+        auth.user!.id,
+        'category.updated',
+        'category',
+        category.id,
+        null,
+        changes
+      )
     }
 
     session.flash('alert', {

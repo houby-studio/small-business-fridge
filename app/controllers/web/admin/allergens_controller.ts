@@ -28,7 +28,7 @@ export default class AllergensController {
     const service = new AdminService()
     const allergen = await service.createAllergen(data.name)
 
-    AuditService.log(auth.user!.id, 'allergen.created', 'allergen', allergen.id, null, {
+    await AuditService.log(auth.user!.id, 'allergen.created', 'allergen', allergen.id, null, {
       name: allergen.name,
       isDisabled: allergen.isDisabled,
     })
@@ -73,7 +73,14 @@ export default class AllergensController {
     }
 
     if (Object.keys(changes).length > 0) {
-      AuditService.log(auth.user!.id, 'allergen.updated', 'allergen', allergen.id, null, changes)
+      await AuditService.log(
+        auth.user!.id,
+        'allergen.updated',
+        'allergen',
+        allergen.id,
+        null,
+        changes
+      )
     }
 
     session.flash('alert', {

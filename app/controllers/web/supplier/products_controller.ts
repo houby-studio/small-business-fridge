@@ -65,7 +65,7 @@ export default class ProductsController {
       allergenIds: data.allergenIds,
     })
 
-    AuditService.log(auth.user!.id, 'product.created', 'product', product.id, null, {
+    await AuditService.log(auth.user!.id, 'product.created', 'product', product.id, null, {
       name: product.displayName,
     })
 
@@ -157,7 +157,7 @@ export default class ProductsController {
       changes.allergens = { from: beforeAllergens || '—', to: afterAllergens || '—' }
     }
 
-    AuditService.log(
+    await AuditService.log(
       auth.user!.id,
       'product.updated',
       'product',

@@ -98,7 +98,7 @@ export default class UsersController {
       }
     }
 
-    AuditService.log(
+    await AuditService.log(
       auth.user!.id,
       'user.updated',
       'user',

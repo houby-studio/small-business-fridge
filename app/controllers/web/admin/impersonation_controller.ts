@@ -46,10 +46,19 @@ export default class ImpersonationController {
       { adminId: admin.id, targetId: target.id },
       `Admin started impersonating user ${target.displayName}`
     )
-    AuditService.log(admin.id, 'admin.impersonate.start', 'user', target.id, target.id, {
+    const metadata = {
       adminId: admin.id,
       targetName: target.displayName,
-    })
+    }
+
+    await AuditService.log(
+      admin.id,
+      'admin.impersonate.start',
+      'user',
+      target.id,
+      target.id,
+      metadata
+    )
 
     session.flash('alert', {
       type: 'info',
@@ -72,16 +81,17 @@ export default class ImpersonationController {
       { adminId: impersonation.byId, targetId: impersonation.asId },
       'Admin stopped impersonation'
     )
-    AuditService.log(
+    const stopMetadata = {
+      adminId: impersonation.byId,
+      targetName: impersonation.asName,
+    }
+    await AuditService.log(
       impersonation.byId,
       'admin.impersonate.stop',
       'user',
       impersonation.asId,
       impersonation.asId,
-      {
-        adminId: impersonation.byId,
-        targetName: impersonation.asName,
-      }
+      stopMetadata
     )
 
     session.forget('__impersonation')

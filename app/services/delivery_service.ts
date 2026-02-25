@@ -22,7 +22,7 @@ export default class DeliveryService {
       price,
     })
 
-    AuditService.log(supplierId, 'delivery.created', 'delivery', delivery.id, null, {
+    await AuditService.log(supplierId, 'delivery.created', 'delivery', delivery.id, null, {
       productId,
       amount,
       price,
