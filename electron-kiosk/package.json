@@ -6,7 +6,7 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "build:snap": "electron-builder --linux snap",
+    "build:snap": "electron-builder --linux dir && snapcraft --destructive-mode",
     "build:dir": "electron-builder --linux dir"
   },
   "build": {
@@ -15,28 +15,10 @@
     "copyright": "Copyright © 2025 Houby Studio",
     "linux": {
       "target": [
-        "snap"
+        "dir"
       ],
       "category": "Utility",
       "executableName": "sbf-kiosk"
-    },
-    "snap": {
-      "confinement": "strict",
-      "grade": "stable",
-      "base": "core24",
-      "hooks": "snap/hooks",
-      "plugs": [
-        "default",
-        "browser-support",
-        "network-observe",
-        "wayland",
-        "opengl",
-        "audio-playback"
-      ],
-      "environment": {
-        "ELECTRON_OZONE_PLATFORM_HINT": "auto",
-        "TMPDIR": "$XDG_RUNTIME_DIR"
-      }
     }
   },
   "devDependencies": {

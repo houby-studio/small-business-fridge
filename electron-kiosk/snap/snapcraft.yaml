@@ -1,0 +1,39 @@
+name: sbf-kiosk
+version: '1.0.0'
+summary: Small Business Fridge — kiosk client
+description: |
+  Kiosk client for the Small Business Fridge office inventory system.
+  Configure the server URL after installation:
+    snap set sbf-kiosk kiosk-url=https://your-server.example.com
+
+base: core22
+confinement: strict
+grade: stable
+
+apps:
+  sbf-kiosk:
+    command: sbf-kiosk
+    extensions: [gnome]
+    plugs:
+      - browser-support
+      - network-observe
+      - wayland
+      - opengl
+      - audio-playback
+    environment:
+      ELECTRON_OZONE_PLATFORM_HINT: auto
+      TMPDIR: $XDG_RUNTIME_DIR
+
+parts:
+  sbf-kiosk:
+    plugin: dump
+    source: dist/linux-unpacked
+    stage-packages:
+      - libnspr4
+      - libnss3
+      - libatk-bridge2.0-0
+      - libcups2
+      - libdrm2
+      - libxss1
+      - libxtst6
+      - libgbm1

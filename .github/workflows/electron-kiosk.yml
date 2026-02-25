@@ -43,7 +43,7 @@ jobs:
       - name: Locate snap file
         id: snap
         run: |
-          SNAP_FILE=$(ls electron-kiosk/dist/*.snap | head -1)
+          SNAP_FILE=$(find electron-kiosk -maxdepth 1 -name "*.snap" | head -1)
           echo "file=${SNAP_FILE}" >> "$GITHUB_OUTPUT"
           echo "name=$(basename ${SNAP_FILE})" >> "$GITHUB_OUTPUT"
 
