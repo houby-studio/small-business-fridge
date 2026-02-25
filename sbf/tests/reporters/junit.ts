@@ -47,6 +47,65 @@ function resolveTitle(title: unknown): string {
  */
 export function junitReporter(options: { outputFile?: string } = {}) {
   const outputFile = options.outputFile ?? 'test-results/junit-japa.xml'
+  const absPath = join(process.cwd(), outputFile)
+
+  function writeReport(suiteTests: Map<string, TestRecord[]>, startTime: number) {
+    const totalDurationSec = (Date.now() - startTime) / 1000
+
+    let totalTests = 0
+    let totalFailures = 0
+    let totalSkipped = 0
+
+    for (const records of suiteTests.values()) {
+      totalTests += records.length
+      totalFailures += records.filter((r) => r.failed).length
+      totalSkipped += records.filter((r) => r.skipped).length
+    }
+
+    const lines: string[] = []
+    lines.push('<?xml version="1.0" encoding="UTF-8"?>')
+    lines.push(
+      `<testsuites name="Japa" tests="${totalTests}" failures="${totalFailures}" skipped="${totalSkipped}" errors="0" time="${totalDurationSec.toFixed(3)}">`
+    )
+
+    for (const [suiteName, records] of suiteTests.entries()) {
+      const suiteFailures = records.filter((r) => r.failed).length
+      const suiteSkipped = records.filter((r) => r.skipped).length
+      const suiteDurationSec = records.reduce((acc, r) => acc + r.duration, 0) / 1000
+
+      lines.push(
+        `  <testsuite name="${escapeXml(suiteName)}" tests="${records.length}" failures="${suiteFailures}" skipped="${suiteSkipped}" errors="0" time="${suiteDurationSec.toFixed(3)}">`
+      )
+
+      for (const rec of records) {
+        const classname = rec.groupName
+          ? escapeXml(`${rec.suiteName}.${rec.groupName}`)
+          : escapeXml(rec.suiteName)
+        const durationSec = (rec.duration / 1000).toFixed(3)
+
+        lines.push(
+          `    <testcase name="${escapeXml(rec.title)}" classname="${classname}" time="${durationSec}">`
+        )
+
+        if (rec.skipped) {
+          lines.push('      <skipped/>')
+        } else if (rec.failed) {
+          const msg = escapeXml(rec.errorMessage ?? 'Test failed')
+          const stack = escapeXml(rec.errorStack ?? '')
+          lines.push(`      <failure message="${msg}" type="AssertionError">${stack}</failure>`)
+        }
+
+        lines.push('    </testcase>')
+      }
+
+      lines.push('  </testsuite>')
+    }
+
+    lines.push('</testsuites>')
+
+    mkdirSync(dirname(absPath), { recursive: true })
+    writeFileSync(absPath, lines.join('\n') + '\n', 'utf-8')
+  }
 
   return {
     name: 'junit' as const,
@@ -56,6 +115,9 @@ export function junitReporter(options: { outputFile?: string } = {}) {
       let currentSuite = 'unknown'
       let currentGroup: string | undefined
       const startTime = Date.now()
+
+      // Ensure the file exists even if the process exits early.
+      writeReport(suiteTests, startTime)
 
       emitter.on('suite:start', (payload: any) => {
         currentSuite = payload.name
@@ -100,66 +162,13 @@ export function junitReporter(options: { outputFile?: string } = {}) {
         })
 
         suiteTests.set(currentSuite, records)
+
+        // Flush incrementally since Adonis test runner can force-exit.
+        writeReport(suiteTests, startTime)
       })
 
-      emitter.on('runner:end', () => {
-        const totalDurationSec = (Date.now() - startTime) / 1000
-
-        let totalTests = 0
-        let totalFailures = 0
-        let totalSkipped = 0
-
-        for (const records of suiteTests.values()) {
-          totalTests += records.length
-          totalFailures += records.filter((r) => r.failed).length
-          totalSkipped += records.filter((r) => r.skipped).length
-        }
-
-        const lines: string[] = []
-        lines.push('<?xml version="1.0" encoding="UTF-8"?>')
-        lines.push(
-          `<testsuites name="Japa" tests="${totalTests}" failures="${totalFailures}" skipped="${totalSkipped}" errors="0" time="${totalDurationSec.toFixed(3)}">`
-        )
-
-        for (const [suiteName, records] of suiteTests.entries()) {
-          const suiteFailures = records.filter((r) => r.failed).length
-          const suiteSkipped = records.filter((r) => r.skipped).length
-          const suiteDurationSec = records.reduce((acc, r) => acc + r.duration, 0) / 1000
-
-          lines.push(
-            `  <testsuite name="${escapeXml(suiteName)}" tests="${records.length}" failures="${suiteFailures}" skipped="${suiteSkipped}" errors="0" time="${suiteDurationSec.toFixed(3)}">`
-          )
-
-          for (const rec of records) {
-            const classname = rec.groupName
-              ? escapeXml(`${rec.suiteName}.${rec.groupName}`)
-              : escapeXml(rec.suiteName)
-            const durationSec = (rec.duration / 1000).toFixed(3)
-
-            lines.push(
-              `    <testcase name="${escapeXml(rec.title)}" classname="${classname}" time="${durationSec}">`
-            )
-
-            if (rec.skipped) {
-              lines.push('      <skipped/>')
-            } else if (rec.failed) {
-              const msg = escapeXml(rec.errorMessage ?? 'Test failed')
-              const stack = escapeXml(rec.errorStack ?? '')
-              lines.push(`      <failure message="${msg}" type="AssertionError">${stack}</failure>`)
-            }
-
-            lines.push('    </testcase>')
-          }
-
-          lines.push('  </testsuite>')
-        }
-
-        lines.push('</testsuites>')
-
-        const absPath = join(process.cwd(), outputFile)
-        mkdirSync(dirname(absPath), { recursive: true })
-        writeFileSync(absPath, lines.join('\n') + '\n', 'utf-8')
-      })
+      emitter.on('suite:end', () => writeReport(suiteTests, startTime))
+      emitter.on('runner:end', () => writeReport(suiteTests, startTime))
     },
   }
 }

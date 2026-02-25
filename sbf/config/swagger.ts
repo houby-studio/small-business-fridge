@@ -1,12 +1,15 @@
 import path from 'node:path'
 import url from 'node:url'
+import env from '#start/env'
+
+const appName = env.get('APP_NAME', 'Small Business Fridge')
 
 const config = {
   path: path.dirname(url.fileURLToPath(import.meta.url)) + '/../',
-  title: 'Lednice IT API',
+  title: `${appName} API`,
   version: '1.0.0',
   description:
-    'REST API for the Small Business Fridge (Lednice IT) self-service shop system. ' +
+    `REST API for the Small Business Fridge (${appName}) self-service shop system. ` +
     'Authenticate with a Bearer token obtained from the profile page or via POST /api/v1/auth/token.',
   tagIndex: 3,
   snakeCase: true,

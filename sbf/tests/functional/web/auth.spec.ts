@@ -3,6 +3,7 @@ import { test } from '@japa/runner'
 import { UserFactory } from '#database/factories/user_factory'
 import db from '@adonisjs/lucid/services/db'
 import User from '#models/user'
+import { store as throttleStore } from '#middleware/throttle_middleware'
 
 test.group('Web Auth', (group) => {
   group.each.setup(async () => {
@@ -16,6 +17,9 @@ test.group('Web Auth', (group) => {
   test('login page renders for guests', async ({ client }) => {
     const response = await client.get('/login')
     response.assertStatus(200)
+    response.assertHeader('cache-control', 'no-store, no-cache, must-revalidate, private')
+    response.assertHeader('pragma', 'no-cache')
+    response.assertHeader('expires', '0')
   })
 
   test('unauthenticated user is redirected from /shop', async ({ client }) => {
@@ -27,6 +31,21 @@ test.group('Web Auth', (group) => {
     const user = await UserFactory.create()
     const response = await client.get('/shop').loginAs(user)
     response.assertStatus(200)
+  })
+
+  test('authenticated pages include anti-cache vary headers', async ({ client, assert }) => {
+    const user = await UserFactory.create()
+    const response = await client.get('/shop').loginAs(user)
+
+    response.assertStatus(200)
+    response.assertHeader('cache-control', 'no-store, no-cache, must-revalidate, private')
+    response.assertHeader('pragma', 'no-cache')
+    response.assertHeader('expires', '0')
+
+    const vary = response.header('vary') ?? ''
+    assert.include(vary, 'Cookie')
+    assert.include(vary, 'Authorization')
+    assert.include(vary, 'X-Inertia')
   })
 
   test('authenticated user can access /orders', async ({ client }) => {
@@ -50,6 +69,7 @@ test.group('Web Auth', (group) => {
 
 test.group('Web Auth - Remember Me', (group) => {
   const cleanAll = async () => {
+    throttleStore.clear()
     await db.from('remember_me_tokens').delete()
     await db.from('users').delete()
   }

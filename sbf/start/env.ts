@@ -39,6 +39,7 @@ export default await Env.create(new URL('../', import.meta.url), {
   APP_KEY: Env.schema.string(),
   HOST: Env.schema.string({ format: 'host' }),
   LOG_LEVEL: Env.schema.string(),
+  APP_NAME: Env.schema.string.optional(),
 
   /*
   |----------------------------------------------------------
@@ -90,6 +91,7 @@ export default await Env.create(new URL('../', import.meta.url), {
   |----------------------------------------------------------
   */
   API_SECRET: Env.schema.string.optional(),
+  KIOSK_LOGOUT_CODE: Env.schema.string.optional(),
 
   /*
   |----------------------------------------------------------

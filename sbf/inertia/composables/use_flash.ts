@@ -24,7 +24,7 @@ export function useFlash() {
   }
 
   // Fire on mount so the Toast component is ready to receive messages.
-  // immediate: true would fire before <Toast> mounts (lost on full-page loads / SSR hydration).
+  // immediate: true would fire before <Toast> mounts on full page loads.
   onMounted(() => showFlash(page.props.flash))
 
   // Watch for flash changes from subsequent Inertia navigations.

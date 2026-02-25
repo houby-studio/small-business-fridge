@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 280" role="img" aria-labelledby="title desc">
+  <title id="title">SnackCommons red black logo concept 02</title>
+  <desc id="desc">Compact emblem with shared nodes in red and charcoal palette.</desc>
+  <defs>
+    <linearGradient id="redLine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#cf112a" />
+      <stop offset="100%" stop-color="#e8334a" />
+    </linearGradient>
+  </defs>
+
+  <rect width="980" height="280" fill="#ffffff" />
+
+  <g transform="translate(52 38)">
+    <rect x="0" y="0" width="204" height="204" rx="42" fill="#09090b" />
+    <rect x="22" y="22" width="160" height="160" rx="28" fill="#18181b" />
+
+    <path d="M56 90 C86 58, 122 58, 148 90" fill="none" stroke="url(#redLine)" stroke-width="6" />
+    <path d="M56 120 C86 152, 122 152, 148 120" fill="none" stroke="#52525b" stroke-width="6" />
+
+    <circle cx="56" cy="90" r="8" fill="#f82843" />
+    <circle cx="102" cy="76" r="8" fill="#cf112a" />
+    <circle cx="148" cy="90" r="8" fill="#e8334a" />
+    <circle cx="56" cy="120" r="8" fill="#71717a" />
+    <circle cx="102" cy="134" r="8" fill="#a1a1aa" />
+    <circle cx="148" cy="120" r="8" fill="#71717a" />
+  </g>
+
+  <g transform="translate(294 96)">
+    <text x="0" y="52" font-family="'Sora','Manrope','Segoe UI',sans-serif" font-size="68" font-weight="700" fill="#18181b" letter-spacing="0.2">SnackCommons</text>
+    <text x="1" y="96" font-family="'Sora','Manrope','Segoe UI',sans-serif" font-size="23" font-weight="600" fill="#cf112a" letter-spacing="0.9">foss-powered coworker snack culture</text>
+  </g>
+</svg>

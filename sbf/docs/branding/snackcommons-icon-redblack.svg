@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">SnackCommons icon red black</title>
+  <desc id="desc">Rounded fridge icon with red open-source signal accent.</desc>
+  <defs>
+    <linearGradient id="iconGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#09090b" />
+      <stop offset="100%" stop-color="#27272a" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#cf112a" />
+      <stop offset="100%" stop-color="#e8334a" />
+    </linearGradient>
+  </defs>
+
+  <rect width="256" height="256" rx="56" fill="url(#iconGrad)" />
+  <rect x="40" y="30" width="176" height="196" rx="34" fill="#18181b" />
+  <line x1="40" y1="124" x2="216" y2="124" stroke="#3f3f46" stroke-width="4" />
+  <rect x="176" y="82" width="10" height="24" rx="4" fill="#e4e4e7" />
+  <rect x="176" y="146" width="10" height="24" rx="4" fill="#e4e4e7" />
+  <circle cx="74" cy="84" r="9" fill="#f82843" />
+  <circle cx="104" cy="84" r="9" fill="#e5112d" />
+  <circle cx="134" cy="84" r="9" fill="#cf112a" />
+  <path d="M66 168 C92 144, 124 144, 150 168" fill="none" stroke="url(#accentGrad)" stroke-width="8" stroke-linecap="round" />
+</svg>

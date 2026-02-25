@@ -11,13 +11,14 @@ x-app-env: &app-env
   DB_DATABASE: sbf
   SESSION_DRIVER: cookie
   TZ: ${TZ:-UTC}
+  APP_NAME: ${APP_NAME:-Small Business Fridge}
   APP_URL: ${APP_URL:-http://localhost:3000}
   LOG_LEVEL: ${LOG_LEVEL:-info}
   SMTP_HOST: ${SMTP_HOST:-localhost}
   SMTP_PORT: ${SMTP_PORT:-587}
   SMTP_USERNAME: ${SMTP_USERNAME:-}
   SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS:-noreply@localhost.localdomain}
-  SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Lednice IT}
+  SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Small Business Fridge}
   SMTP_IGNORE_TLS: ${SMTP_IGNORE_TLS:-false}
   OIDC_ENABLED: ${OIDC_ENABLED:-false}
   OIDC_AUTO_REGISTER: ${OIDC_AUTO_REGISTER:-false}

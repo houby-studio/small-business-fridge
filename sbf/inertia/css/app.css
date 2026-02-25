@@ -240,6 +240,51 @@
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
+  flex-wrap: nowrap;
+  overflow-x: clip;
+}
+
+.sbf-nav .p-menubar-start,
+.sbf-nav .p-menubar-end {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.sbf-nav .p-menubar-root-list {
+  flex-wrap: nowrap;
+}
+
+.sbf-nav .p-menuitem-link {
+  white-space: nowrap;
+}
+
+@media (max-width: 576px) {
+  .sbf-nav .sbf-brand-link {
+    display: none;
+  }
+}
+
+@media (min-width: 961px) and (max-width: 1199px) {
+  .sbf-nav .sbf-nav-compact-target {
+    min-width: 2.4rem;
+    justify-content: center;
+  }
+
+  .sbf-nav .sbf-nav-compact-target > .pi:first-child {
+    margin-right: 0 !important;
+  }
+
+  .sbf-nav .sbf-nav-compact-target .sbf-nav-item-label {
+    display: none;
+  }
+
+  .sbf-nav .sbf-nav-compact-target .pi-angle-down {
+    margin-left: 0.25rem !important;
+  }
+
+  .sbf-nav .sbf-nav-profile-name {
+    display: none;
+  }
 }
 
 /* ─── Active nav link ─────────────────────────────────────────────── */
@@ -320,13 +365,13 @@
 /* ─── Low stock pulse ────────────────────────────────────────────── */
 @keyframes sbf-pulse-ring {
   0% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5);
   }
   70% {
-    box-shadow: 0 0 0 5px rgba(239, 68, 68, 0);
+    box-shadow: 0 0 0 5px rgba(245, 158, 11, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
   }
 }
 
@@ -431,4 +476,174 @@ html {
   background:
     radial-gradient(ellipse 80% 60% at 50% -10%, rgba(207, 17, 42, 0.1) 0%, transparent 70%),
     linear-gradient(180deg, #09090b 0%, #18181b 100%);
+}
+
+/* ─── Full-page boot loader ───────────────────────────────────────── */
+html.sbf-app-booting #sbf-app-shell {
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+#sbf-app-shell {
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+}
+
+html:not(.sbf-app-booting) #sbf-app-shell {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+#sbf-boot-loader {
+  background:
+    radial-gradient(120% 75% at 50% -10%, #1f2937 0%, transparent 58%),
+    linear-gradient(180deg, #09090b 0%, #0b0b10 55%, #07070a 100%);
+  opacity: 1;
+  transition: opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity;
+}
+
+html:not(.sbf-app-booting) #sbf-boot-loader {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#sbf-boot-loader .brand {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1;
+}
+
+#sbf-boot-loader .sub {
+  margin-top: -4px;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.68);
+  letter-spacing: 0.02em;
+}
+
+#sbf-boot-loader .fridge-wrap {
+  position: relative;
+  width: 120px;
+  height: 168px;
+  perspective: 780px;
+}
+
+#sbf-boot-loader .fridge-body {
+  position: absolute;
+  inset: 0;
+  border-radius: 21px;
+  background: linear-gradient(180deg, #2d3440 0%, #1f2937 45%, #111827 100%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 10px 24px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+#sbf-boot-loader .fridge-bottle {
+  --sbf-bottle-gradient: linear-gradient(
+    180deg,
+    #f82843 0%,
+    #e5112d 45%,
+    #cf112a 72%,
+    #8c1321 100%
+  );
+  --sbf-bottle-gradient-height: 108px;
+  position: absolute;
+  left: calc(50% - 15px);
+  top: calc(50% - 56px);
+  width: 30px;
+  height: 56px;
+  border-radius: 13px 13px 10px 10px / 20px 20px 12px 12px;
+  background: var(--sbf-bottle-gradient);
+  background-size: 100% var(--sbf-bottle-gradient-height);
+  background-position: 0 -20px;
+  border: 1px solid #8c1321;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 4px 10px rgba(0, 0, 0, 0.35);
+  opacity: 0.9;
+}
+
+#sbf-boot-loader .fridge-bottle::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: -16px;
+  width: 14px;
+  height: 18px;
+  border-radius: 6px 6px 2px 2px;
+  background: var(--sbf-bottle-gradient);
+  background-size: 100% var(--sbf-bottle-gradient-height);
+  background-position: 0 -4px;
+  border: 1px solid #8c1321;
+  border-bottom: 0;
+}
+
+#sbf-boot-loader .fridge-bottle::after {
+  content: '';
+  position: absolute;
+  left: 9px;
+  top: -22px;
+  width: 12px;
+  height: 6px;
+  border-radius: 3px 3px 1px 1px;
+  background: var(--sbf-bottle-gradient);
+  background-size: 100% var(--sbf-bottle-gradient-height);
+  background-position: 0 0;
+  border: 1px solid #8c1321;
+  border-bottom: 0;
+}
+
+#sbf-boot-loader .fridge-door {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 92%;
+  height: 100%;
+  border-radius: 21px 18px 18px 21px;
+  transform-origin: left center;
+  background: linear-gradient(180deg, #f3f4f6 0%, #e5e7eb 55%, #d1d5db 100%);
+  border: 1px solid rgba(0, 0, 0, 0.28);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.55),
+    0 8px 18px rgba(0, 0, 0, 0.35);
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
+  animation: sbf-fridge-door-open 0.75s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+#sbf-boot-loader .fridge-door::before {
+  content: '';
+  position: absolute;
+  right: 10px;
+  top: 36px;
+  width: 6px;
+  height: 36px;
+  border-radius: 999px;
+  background: rgba(31, 41, 55, 0.65);
+}
+
+#sbf-boot-loader .fridge-seam {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 50%;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.18);
+  z-index: 2;
+}
+
+@keyframes sbf-fridge-door-open {
+  0% {
+    transform: translateX(0) rotateY(0deg);
+  }
+  100% {
+    transform: translateX(-15px) rotateY(-62deg);
+  }
 }

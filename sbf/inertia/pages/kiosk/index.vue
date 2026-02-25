@@ -292,7 +292,7 @@ function playAlarm() {
       ctx.close()
     }, 1200)
   } catch {
-    // AudioContext not available (SSR/test env)
+    // AudioContext not available (test env / restricted browser context)
   }
 }
 
@@ -360,6 +360,20 @@ async function onKeypadSubmit(keypadId: string) {
       headers: { Accept: 'application/json' },
     })
     const data = await res.json()
+
+    if (data.action === 'logout') {
+      window.location.assign('/logout')
+      return
+    }
+
+    if (data.action === 'easter_egg') {
+      toast.add({
+        severity: 'info',
+        summary: data.message ?? t('kiosk.easter_egg_666'),
+        life: 3500,
+      })
+      return
+    }
 
     if (!res.ok) {
       toast.add({

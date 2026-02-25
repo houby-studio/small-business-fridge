@@ -2,6 +2,7 @@ import { defineConfig } from '@adonisjs/inertia'
 import type { InferSharedProps } from '@adonisjs/inertia/types'
 import { readFileSync, readdirSync } from 'node:fs'
 import app from '@adonisjs/core/services/app'
+import env from '#start/env'
 
 /**
  * Load all translation JSON files for a given locale.
@@ -9,6 +10,7 @@ import app from '@adonisjs/core/services/app'
  */
 function loadTranslations(locale: string): Record<string, Record<string, string>> {
   const langDir = app.languageFilesPath(locale)
+  const appName = env.get('APP_NAME', 'Small Business Fridge')
   try {
     const files = readdirSync(langDir).filter((f) => f.endsWith('.json'))
     const translations: Record<string, Record<string, string>> = {}
@@ -16,6 +18,9 @@ function loadTranslations(locale: string): Record<string, Record<string, string>
     for (const file of files) {
       const namespace = file.replace('.json', '')
       translations[namespace] = JSON.parse(readFileSync(`${langDir}/${file}`, 'utf-8'))
+      if (namespace === 'common') {
+        translations[namespace].app_name = appName
+      }
     }
 
     return translations
@@ -60,18 +65,11 @@ const inertiaConfig = defineConfig({
         return imp ? { asName: imp.asName } : null
       }),
     locale: (ctx) => ctx.i18n?.locale ?? 'cs',
+    appName: () => env.get('APP_NAME', 'Small Business Fridge'),
     translations: (ctx) => {
       const locale = ctx.i18n?.locale ?? 'cs'
       return loadTranslations(locale)
     },
-  },
-
-  /**
-   * Options for the server-side rendering
-   */
-  ssr: {
-    enabled: true,
-    entrypoint: 'inertia/app/ssr.ts',
   },
 })
 

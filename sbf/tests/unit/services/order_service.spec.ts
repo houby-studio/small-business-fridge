@@ -114,8 +114,36 @@ test.group('OrderService', (group) => {
 
     assert.equal(result.stats.totalOrders, 3)
     assert.equal(result.stats.totalSpend, 45) // 3 × 15
-    assert.equal(result.stats.totalUnpaid, 45) // none invoiced
+    assert.equal(result.stats.totalUninvoiced, 45) // none invoiced
+    assert.equal(result.stats.filteredOrders, 3)
+    assert.equal(result.stats.filteredSpend, 45)
+    assert.equal(result.stats.filteredUninvoiced, 45)
+    assert.isFalse(result.stats.filtersApplied)
     assert.lengthOf(result.orders.toJSON().data, 3)
+  })
+
+  test('getOrdersForUser returns filtered stats when channel filter is active', async ({
+    assert,
+  }) => {
+    const buyer = await UserFactory.create()
+    const delivery = await DeliveryFactory.with('supplier', 1, (s) => s.apply('supplier'))
+      .with('product', 1, (p) => p.with('category'))
+      .merge({ amountSupplied: 10, amountLeft: 10, price: 20 })
+      .create()
+
+    await orderService.purchase(buyer.id, delivery.id, 'web')
+    await orderService.purchase(buyer.id, delivery.id, 'web')
+    await orderService.purchase(buyer.id, delivery.id, 'kiosk')
+
+    const result = await orderService.getOrdersForUser(buyer.id, 1, 20, { channel: 'web' })
+
+    assert.equal(result.stats.totalOrders, 3)
+    assert.equal(result.stats.filteredOrders, 2)
+    assert.equal(result.stats.totalSpend, 60)
+    assert.equal(result.stats.filteredSpend, 40)
+    assert.equal(result.stats.totalUninvoiced, 60)
+    assert.equal(result.stats.filteredUninvoiced, 40)
+    assert.isTrue(result.stats.filtersApplied)
   })
 
   test('purchaseBasket rejects FIFO skip within same product', async ({ assert }) => {

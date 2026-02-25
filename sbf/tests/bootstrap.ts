@@ -48,7 +48,7 @@ export const runnerHooks: Required<Pick<Config, 'setup' | 'teardown'>> = {
  * Configure suites by tapping into the test suite instance.
  */
 export const configureSuite: Config['configureSuite'] = (suite) => {
-  if (['browser', 'functional', 'e2e'].includes(suite.name)) {
+  if (suite.name === 'functional') {
     return suite.setup(() => testUtils.httpServer().start())
   }
 }

@@ -74,7 +74,7 @@ export default class ProductsController {
       message: i18n.t('messages.product_created', { name: product.displayName }),
     })
 
-    return response.redirect('/supplier/stock')
+    return response.redirect(`/supplier/stock?preselect=${product.id}`)
   }
 
   async edit({ params, inertia }: HttpContext) {

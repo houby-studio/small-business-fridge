@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-<html lang="cs" data-theme="dark">
+<html lang="cs" data-theme="dark" class="sbf-app-booting">
 
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="sbf-app-name" content="{{ page.props.appName || 'Small Business Fridge' }}" />
 
     <title inertia>
-      Lednice IT
+      {{ page.props.appName || 'Small Business Fridge' }}
     </title>
 
     <link rel="preconnect" href="https://fonts.bunny.net" />
@@ -16,8 +17,28 @@
     @inertiaHead()
   </head>
 
-  <body class="min-h-screen font-sans antialiased">
-    @inertia()
+  <body class="min-h-screen font-sans antialiased" style="background: #09090b; color: #fff;">
+    <div
+      id="sbf-boot-loader"
+      role="status"
+      aria-live="polite"
+      style="position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center;"
+    >
+
+      <div class="fridge-wrap" aria-hidden="true">
+        <div class="fridge-body">
+          <div class="fridge-bottle">
+          </div>
+        </div>
+        <div class="fridge-door">
+        </div>
+        <div class="fridge-seam">
+        </div>
+      </div>
+    </div>
+    <div id="sbf-app-shell" style="visibility: hidden;">
+      @inertia()
+    </div>
   </body>
 
 </html>

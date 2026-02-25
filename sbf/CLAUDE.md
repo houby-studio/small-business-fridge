@@ -6,7 +6,7 @@
 
 ```bash
 cd sbf
-npm run lint && npx prettier --check . && npm run typecheck && node ace test --no-color
+npm run lint && npx prettier --check . && npm run typecheck && node ace migration:run --force && node ace test --no-color && npm run test:e2e
 ```
 
 **AFTER every change, all of these must pass before finishing:**
@@ -22,7 +22,9 @@ Or individually:
 npm run lint             # ESLint (AdonisJS config)
 npx prettier --check .   # Format check (do NOT run npm run format — that auto-writes)
 npm run typecheck        # tsc --noEmit
-node ace test --no-color # 91 tests: unit + functional (Japa)
+node ace migration:run --force # test DB schema parity
+node ace test --no-color # unit + functional (Japa)
+npm run test:e2e         # Playwright end-to-end suite
 ```
 
 > If Docker isn't running: `docker compose -f compose.dev.yaml up -d postgres`
@@ -36,7 +38,7 @@ node ace test --no-color # 91 tests: unit + functional (Japa)
 
 - **Runtime**: AdonisJS 6 (Node.js 22+), ESM modules
 - **Database**: PostgreSQL 17 via Lucid ORM
-- **Frontend**: Vue 3 + Inertia.js + PrimeVue (SSR-capable)
+- **Frontend**: Vue 3 + Inertia.js + PrimeVue
 - **Auth**: Session-based web + token-based API
 - **Lang**: TypeScript throughout (strict mode)
 - **Locale**: Czech (cs) primary, English (en) secondary
@@ -79,14 +81,15 @@ sbf/
 
 ### When to Write Tests
 
-| Change type                       | Required tests                               |
-| --------------------------------- | -------------------------------------------- |
-| New service method                | Unit test in `tests/unit/services/`          |
-| New API endpoint                  | Functional test in `tests/functional/api/`   |
-| New web route / controller action | Functional test in `tests/functional/web/`   |
-| Bug fix                           | Add regression test proving the bug is fixed |
-| Changed business logic            | Update existing tests to match new behavior  |
-| New migration / model             | Functional test covering the new data        |
+| Change type                                     | Required tests                                        |
+| ----------------------------------------------- | ----------------------------------------------------- |
+| New service method                              | Unit test in `tests/unit/services/`                   |
+| New API endpoint                                | Functional test in `tests/functional/api/`            |
+| New web route / controller action               | Functional test in `tests/functional/web/`            |
+| Bug fix                                         | Add regression test proving the bug is fixed          |
+| Changed business logic                          | Update existing tests to match new behavior           |
+| New migration / model                           | Functional test covering the new data                 |
+| UI/UX change (layout/nav/responsive/visibility) | Playwright e2e coverage for the user-visible behavior |
 
 ### Test Anatomy
 
@@ -139,7 +142,7 @@ node ace test --suite=functional
 - Test DB: `sbf_test` on PostgreSQL port **5433** (shifted from 5432)
 - Migrations auto-run before tests, tables truncated after (see `tests/bootstrap.ts`)
 - SMTP errors in test output are **normal** — MailDev isn't required for tests to pass
-- E2E tests: `npm run test:e2e` (requires server to start separately, uses Playwright)
+- E2E tests: `npm run test:e2e` (Playwright starts its managed web server via `playwright.config.ts`)
 - Rate limiter store must be cleared between tests if testing rate-limited routes
 
 ### Test Users (seeded via E2E global setup, NOT available in unit/functional)
@@ -175,7 +178,7 @@ await user.load((loader) => loader.load('orders'))
 ### Vue / Inertia Patterns
 
 ```typescript
-// NEVER use v-tooltip (causes SSR errors) — use aria-label instead
+// NEVER use v-tooltip (causes runtime errors) — use aria-label instead
 // Images served from /uploads/* route
 // useI18n() for translations — simple {param} substitution
 // useFlash() for flash messages from controllers
@@ -279,8 +282,16 @@ When adding user-facing text:
 ## CI/CD
 
 - **Docker image**: `.github/workflows/sbf-docker-image.yaml` — triggers on push to `v3/*` or `master` when `sbf/**` changes
-- **Quality CI**: `.github/workflows/sbf-quality.yaml` — runs lint + format + typecheck + tests on every PR and push to `v3/*`
+- **Quality CI**: `.github/workflows/sbf-quality.yml` — runs lint + format + typecheck + tests on every PR and push to `v3/*`
 - Dockerfile does NOT run quality checks — they happen in the quality CI job
+
+### Quality CI Reporting (Mandatory)
+
+- Japa tests must generate `sbf/test-results/junit-japa.xml` and publish it via `mikepenz/action-junit-report`.
+- Playwright tests must generate `sbf/test-results/junit-e2e.xml` and publish it via `mikepenz/action-junit-report`.
+- CI must verify both XML files exist and are non-empty before publishing.
+- CI must upload test artifacts (`sbf/test-results/**`, `sbf/playwright-report/**`) so failures can be debugged from the run page.
+- Do not accept CI changes that can silently report `0 ran` for a suite that actually executed.
 
 ---
 
@@ -292,4 +303,4 @@ When adding user-facing text:
 - Uploads: served via `/uploads/*` route, stored in `storage/uploads/`
 - CSRF: API routes are exempted via function in `config/shield.ts`
 - Scheduler provider: only registered in console environment (`adonisrc.ts`)
-- `v-tooltip` → SSR crash → use `aria-label` or PrimeVue Tooltip component with mount
+- `v-tooltip` → runtime crash → use `aria-label` or PrimeVue Tooltip component with mount

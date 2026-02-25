@@ -24,7 +24,7 @@ const SCRYPT_CONFIG = {
 const TEST_ENV = {
   ...process.env,
   NODE_ENV: 'test',
-  PORT: '3334',
+  PORT: '3345',
   HOST: 'localhost',
   SESSION_DRIVER: 'memory',
   LOG_LEVEL: 'silent',
@@ -36,7 +36,7 @@ const TEST_ENV = {
   DB_DATABASE: 'sbf_test',
   OIDC_ENABLED: 'false',
   API_SECRET: 'test-api-secret',
-  APP_URL: 'http://localhost:3334',
+  APP_URL: 'http://localhost:3345',
 }
 
 /**
@@ -74,6 +74,24 @@ export default async function globalSetup() {
       iban: 'CZ6508000000192000145399',
     },
     {
+      username: 'supplier2',
+      email: 'supplier2@localhost',
+      display_name: 'Supplier User 2',
+      password: await scrypt.make('supplier123'),
+      role: 'supplier',
+      keypad_id: 89995,
+      iban: 'CZ6508000000192000145399',
+    },
+    {
+      username: 'supplier3',
+      email: 'supplier3@localhost',
+      display_name: 'Supplier User 3',
+      password: await scrypt.make('supplier123'),
+      role: 'supplier',
+      keypad_id: 89996,
+      iban: 'CZ6508000000192000145399',
+    },
+    {
       username: 'customer',
       email: 'customer@localhost',
       display_name: 'Customer User',
@@ -92,6 +110,42 @@ export default async function globalSetup() {
       iban: null,
     },
     {
+      username: 'customer3',
+      email: 'customer3@localhost',
+      display_name: 'Third Customer',
+      password: await scrypt.make('customer123'),
+      role: 'customer',
+      keypad_id: 89997,
+      iban: null,
+    },
+    {
+      username: 'customer4',
+      email: 'customer4@localhost',
+      display_name: 'Fourth Customer',
+      password: await scrypt.make('customer123'),
+      role: 'customer',
+      keypad_id: 89998,
+      iban: null,
+    },
+    {
+      username: 'customer5',
+      email: 'customer5@localhost',
+      display_name: 'Fifth Customer',
+      password: await scrypt.make('customer123'),
+      role: 'customer',
+      keypad_id: 89999,
+      iban: null,
+    },
+    {
+      username: 'admin2',
+      email: 'admin2@localhost',
+      display_name: 'Admin User 2',
+      password: await scrypt.make('admin123'),
+      role: 'admin',
+      keypad_id: 89989,
+      iban: 'CZ6508000000192000145399',
+    },
+    {
       username: 'kiosk',
       email: 'kiosk@localhost',
       display_name: 'Kiosk Device',
@@ -102,9 +156,11 @@ export default async function globalSetup() {
     },
   ]
 
-  // 3. Insert/upsert users into the test DB
+  // 3. Insert/upsert all seed data inside a single transaction so a partial
+  //    failure rolls back cleanly instead of leaving corrupt state.
   const client = new Client(DB_CONFIG)
   await client.connect()
+  await client.query('BEGIN')
 
   for (const user of users) {
     await client.query(
@@ -463,5 +519,6 @@ export default async function globalSetup() {
     await client.query(`UPDATE orders SET invoice_id = $1 WHERE id = $2`, [inv3Id, orderIds[i]])
   }
 
+  await client.query('COMMIT')
   await client.end()
 }

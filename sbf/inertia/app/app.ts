@@ -2,7 +2,7 @@
 /// <reference path="../../config/inertia.ts" />
 
 import 'primeicons/primeicons.css'
-import { createSSRApp, h } from 'vue'
+import { createApp, h } from 'vue'
 import type { DefineComponent } from 'vue'
 import { createInertiaApp } from '@inertiajs/vue3'
 import { resolvePageComponent } from '@adonisjs/inertia/helpers'
@@ -13,7 +13,10 @@ import ToastService from 'primevue/toastservice'
 import ConfirmationService from 'primevue/confirmationservice'
 import Tooltip from 'primevue/tooltip'
 
-const appName = import.meta.env.VITE_APP_NAME || 'Lednice IT'
+const DEFAULT_APP_NAME = 'Small Business Fridge'
+const BOOT_MIN_VISIBLE_MS = 1000
+const BOOT_SETTLE_MS = 140
+const BOOT_FADE_OUT_MS = 420
 
 // ─── Custom SBF theme preset ─────────────────────────────────────────────────
 // Extends Aura with the Czech red (#cf112a) brand palette and refined tokens
@@ -82,7 +85,12 @@ const SBFPreset = definePreset(Aura, {
 createInertiaApp({
   progress: { color: '#cf112a' },
 
-  title: (title) => (title ? `${title} | ${appName}` : appName),
+  title: (title) => {
+    const pageAppName =
+      (document.querySelector('meta[name="sbf-app-name"]')?.getAttribute('content') ?? '').trim() ||
+      DEFAULT_APP_NAME
+    return title ? `${title} | ${pageAppName}` : pageAppName
+  },
 
   resolve: (name) => {
     return resolvePageComponent(
@@ -92,7 +100,9 @@ createInertiaApp({
   },
 
   setup({ el, App, props, plugin }) {
-    createSSRApp({ render: () => h(App, props) })
+    const bootStart = typeof performance !== 'undefined' ? performance.now() : Date.now()
+
+    createApp({ render: () => h(App, props) })
       .use(plugin)
       .use(PrimeVue, {
         theme: {
@@ -108,5 +118,28 @@ createInertiaApp({
       .use(ConfirmationService)
       .directive('tooltip', Tooltip)
       .mount(el)
+
+    const bootLoader = document.getElementById('sbf-boot-loader')
+    const appShell = document.getElementById('sbf-app-shell')
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now()
+    const elapsed = now - bootStart
+    const holdFor = Math.max(0, BOOT_MIN_VISIBLE_MS - elapsed) + BOOT_SETTLE_MS
+
+    window.setTimeout(() => {
+      if (appShell) {
+        appShell.style.visibility = 'visible'
+      }
+
+      // Wait two frames to let mounted layout settle before we fade from loader to app.
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          document.documentElement.classList.remove('sbf-app-booting')
+        })
+      })
+
+      if (bootLoader) {
+        window.setTimeout(() => bootLoader.remove(), BOOT_FADE_OUT_MS)
+      }
+    }, holdFor)
   },
 })

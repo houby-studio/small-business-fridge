@@ -14,7 +14,7 @@ const mailConfig = defineConfig({
    */
   from: {
     address: env.get('SMTP_FROM_ADDRESS', 'noreply@lednice.it'),
-    name: env.get('SMTP_FROM_NAME', 'Lednice IT'),
+    name: env.get('SMTP_FROM_NAME', env.get('APP_NAME', 'Small Business Fridge')),
   },
 
   /**

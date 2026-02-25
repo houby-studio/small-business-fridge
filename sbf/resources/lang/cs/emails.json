@@ -55,8 +55,8 @@
   "order_cancelled_intro": "Ahoj {buyerName}, tvá objednávka #{id} produktu {productName} od dodavatele {supplierName} za {price} Kč byla zrušena správcem.",
   "order_cancelled_note": "Pokud máš produkt u sebe, prosím ho vrať na původní místo.",
 
-  "welcome_subject": "Vítej v Lednici IT!",
-  "welcome_heading": "Vítej v Lednici IT!",
+  "welcome_subject": "Vítej v {app_name}!",
+  "welcome_heading": "Vítej v {app_name}!",
   "welcome_intro": "Ahoj {name}, tvůj účet byl automaticky vytvořen. Nyní si můžeš objednávat produkty z lednice.",
   "welcome_keypad_label": "Tvůj kód do klávesnice: {keypadId}",
   "welcome_note": "Pokud máš otázky nebo problémy, kontaktuj správce systému.",

@@ -493,55 +493,126 @@ async function verify(mongo: Db, pgClient: pg.Client) {
     { collection: 'invoices', table: 'invoices' },
     { collection: 'orders', table: 'orders' },
   ]
-
-  // Exclude placeholder rows from counts (placeholder user has keypad_id=89999)
-  const placeholderUserCond = `id != ${placeholder.userId}`
-  const placeholderProductCond = `id != ${placeholder.productId}`
-  const placeholderDeliveryCond = `supplier_id != ${placeholder.userId} AND product_id != ${placeholder.productId}`
-
-  const tableConditions: Record<string, string> = {
-    users: placeholderUserCond,
-    products: placeholderProductCond,
-    deliveries: placeholderDeliveryCond,
-    invoices: `buyer_id != ${placeholder.userId} AND supplier_id != ${placeholder.userId}`,
-    orders: `buyer_id != ${placeholder.userId} AND delivery_id != ${placeholder.deliveryId}`,
+  const placeholderRowsByTable: Record<string, number> = {
+    users: 1,
+    products: 1,
+    deliveries: 1,
   }
 
   let allMatch = true
   for (const { collection, table } of checks) {
     const mongoCount = await mongo.collection(collection).countDocuments()
-    const cond = tableConditions[table] ? `WHERE ${tableConditions[table]}` : ''
-    const pgResult = await pgClient.query(`SELECT count(*)::int AS count FROM ${table} ${cond}`)
+    const pgResult = await pgClient.query(`SELECT count(*)::int AS count FROM ${table}`)
     const pgCount = pgResult.rows[0].count
-    const match = mongoCount === pgCount ? '✅' : '❌'
-    if (mongoCount !== pgCount) allMatch = false
-    console.log(`   ${match} ${collection}: MongoDB=${mongoCount} → PostgreSQL=${pgCount}`)
+    const placeholderRows = placeholderRowsByTable[table] ?? 0
+    const normalizedPgCount = pgCount - placeholderRows
+    const match = mongoCount === normalizedPgCount ? '✅' : '❌'
+    if (mongoCount !== normalizedPgCount) allMatch = false
+    const normalizedNote =
+      placeholderRows > 0 ? ` (normalized, -${placeholderRows} placeholder)` : ''
+    console.log(
+      `   ${match} ${collection}: MongoDB=${mongoCount} → PostgreSQL=${normalizedPgCount}${normalizedNote}`
+    )
   }
+
+  // Report how many rows needed placeholder references due to dangling Mongo refs.
+  const [pgPlaceholderDeliveries, pgPlaceholderInvoices, pgPlaceholderOrders] = await Promise.all([
+    pgClient.query(
+      `SELECT count(*)::int AS count FROM deliveries
+       WHERE supplier_id = $1 OR product_id = $2`,
+      [placeholder.userId, placeholder.productId]
+    ),
+    pgClient.query(
+      `SELECT count(*)::int AS count FROM invoices
+       WHERE buyer_id = $1 OR supplier_id = $1`,
+      [placeholder.userId]
+    ),
+    pgClient.query(
+      `SELECT count(*)::int AS count FROM orders
+       WHERE buyer_id = $1 OR delivery_id = $2`,
+      [placeholder.userId, placeholder.deliveryId]
+    ),
+  ])
+  console.log(
+    `   ℹ️ placeholder refs: deliveries=${pgPlaceholderDeliveries.rows[0].count}, invoices=${pgPlaceholderInvoices.rows[0].count}, orders=${pgPlaceholderOrders.rows[0].count}`
+  )
 
   // Check favorites
   const usersWithFavs = await mongo
     .collection('users')
     .find({ favorites: { $exists: true, $ne: [] } })
     .toArray()
-  const totalFavs = usersWithFavs.reduce(
-    (sum, u) => sum + ((u.favorites as unknown[])?.length ?? 0),
-    0
-  )
-  const pgFavs = await pgClient.query(`SELECT count(*)::int AS count FROM user_favorites`)
-  const favMatch = totalFavs === pgFavs.rows[0].count ? '✅' : '⚠️'
-  console.log(`   ${favMatch} favorites: MongoDB=${totalFavs} → PostgreSQL=${pgFavs.rows[0].count}`)
+  let rawFavs = 0
+  const distinctResolvableFavs = new Set<string>()
+  for (const userDoc of usersWithFavs) {
+    const userId = idMap.users.get(oid(userDoc._id)!)
+    if (!userId) continue
 
-  // Check invoice-order links
+    const favorites: unknown[] = userDoc.favorites ?? []
+    for (const fav of favorites) {
+      rawFavs++
+      const productId = idMap.products.get(oid(fav)!)
+      if (!productId) continue
+      distinctResolvableFavs.add(`${userId}:${productId}`)
+    }
+  }
+  const pgFavs = await pgClient.query(`SELECT count(*)::int AS count FROM user_favorites`)
+  const favMatch = distinctResolvableFavs.size === pgFavs.rows[0].count ? '✅' : '❌'
+  if (distinctResolvableFavs.size !== pgFavs.rows[0].count) allMatch = false
+  console.log(
+    `   ${favMatch} favorites (distinct resolvable pairs): MongoDB=${distinctResolvableFavs.size} (raw=${rawFavs}) → PostgreSQL=${pgFavs.rows[0].count}`
+  )
+
+  // Check invoice-order links (canonical):
+  // - explicit order.invoiceId
+  // - implicit via invoice.ordersId[]
+  const mongoOrdersWithInvoiceId = await mongo
+    .collection('orders')
+    .find({ invoiceId: { $ne: null } }, { projection: { _id: 1 } })
+    .toArray()
+  const mongoInvoicesWithOrderRefs = await mongo
+    .collection('invoices')
+    .find({ ordersId: { $exists: true, $ne: [] } }, { projection: { ordersId: 1 } })
+    .toArray()
+  const canonicalLinkedOrderMongoIds = new Set<string>()
+  for (const orderDoc of mongoOrdersWithInvoiceId) {
+    canonicalLinkedOrderMongoIds.add(oid(orderDoc._id)!)
+  }
+  const invoiceOrderRefMongoIds = new Set<string>()
+  for (const invoiceDoc of mongoInvoicesWithOrderRefs) {
+    const orderIds: unknown[] = invoiceDoc.ordersId ?? []
+    for (const orderId of orderIds) {
+      const orderMongoId = oid(orderId)
+      if (!orderMongoId) continue
+      canonicalLinkedOrderMongoIds.add(orderMongoId)
+      invoiceOrderRefMongoIds.add(orderMongoId)
+    }
+  }
+
+  const mongoLegacyInvoiced = await mongo
+    .collection('orders')
+    .find(
+      { invoice: true, $or: [{ invoiceId: null }, { invoiceId: { $exists: false } }] },
+      { projection: { _id: 1 } }
+    )
+    .toArray()
+  const legacyFlagOnlyCount = mongoLegacyInvoiced.filter(
+    (orderDoc) => !invoiceOrderRefMongoIds.has(oid(orderDoc._id)!)
+  ).length
+
   const pgLinked = await pgClient.query(
     `SELECT count(*)::int AS count FROM orders WHERE invoice_id IS NOT NULL`
   )
-  const mongoLinked = await mongo
-    .collection('orders')
-    .countDocuments({ $or: [{ invoice: true }, { invoiceId: { $ne: null } }] })
-  const linkMatch = mongoLinked === pgLinked.rows[0].count ? '✅' : '⚠️'
+  const linkMatch = canonicalLinkedOrderMongoIds.size === pgLinked.rows[0].count ? '✅' : '❌'
+  if (canonicalLinkedOrderMongoIds.size !== pgLinked.rows[0].count) allMatch = false
   console.log(
-    `   ${linkMatch} invoiced orders: MongoDB=${mongoLinked} → PostgreSQL=${pgLinked.rows[0].count}`
+    `   ${linkMatch} invoiced orders (canonical): MongoDB=${canonicalLinkedOrderMongoIds.size} → PostgreSQL=${pgLinked.rows[0].count}`
   )
+  if (legacyFlagOnlyCount > 0) {
+    console.log(
+      `   ℹ️ legacy anomaly: ${legacyFlagOnlyCount} order(s) have invoice=true but no invoiceId and no invoice.ordersId reference`
+    )
+  }
 
   return allMatch
 }

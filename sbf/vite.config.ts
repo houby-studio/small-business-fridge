@@ -7,7 +7,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [
-    inertia({ ssr: { enabled: true, entrypoint: 'inertia/app/ssr.ts' } }),
+    inertia(),
     vue(),
     adonisjs({
       entrypoints: ['inertia/css/app.css', 'inertia/app/app.ts'],

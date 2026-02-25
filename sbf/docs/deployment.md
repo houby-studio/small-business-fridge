@@ -138,6 +138,7 @@ result with the `image:` name (`houbystudio/sbf:latest`).
 | `HOST`                         | Yes      | No     | `0.0.0.0`               | Bind address                                |
 | `LOG_LEVEL`                    | No       | No     | `info`                  | trace/debug/info/warn/error/fatal           |
 | `TZ`                           | No       | No     | `UTC`                   | Timezone (e.g. `Europe/Prague`)             |
+| `APP_NAME`                     | No       | No     | `Small Business Fridge` | App brand name used in UI/emails/API docs   |
 | `APP_URL`                      | No       | No     | `http://localhost:3000` | Public URL (used in email links)            |
 | `FEEDBACK_URL`                 | No       | No     | —                       | URL shown in feedback link                  |
 | `SWAGGER_ENABLED`              | No       | No     | `false`                 | Enable Swagger UI at `/docs`                |
@@ -152,7 +153,7 @@ result with the `image:` name (`houbystudio/sbf:latest`).
 | `SMTP_USERNAME`                | No       | No     | —                       | SMTP username (leave empty if no auth)      |
 | `SMTP_PASSWORD`                | No       | Yes    | —                       | SMTP password                               |
 | `SMTP_FROM_ADDRESS`            | Yes      | No     | `noreply@example.com`   | Sender address for outgoing mail            |
-| `SMTP_FROM_NAME`               | Yes      | No     | `Lednice IT`            | Sender display name                         |
+| `SMTP_FROM_NAME`               | Yes      | No     | `Small Business Fridge` | Sender display name                         |
 | `SMTP_IGNORE_TLS`              | No       | No     | `false`                 | Set true for plain SMTP without TLS         |
 | `OIDC_ENABLED`                 | No       | No     | `false`                 | Enable OIDC (Microsoft Entra ID) login      |
 | `OIDC_AUTO_REGISTER`           | No       | No     | `false`                 | Auto-create account on first OIDC login     |

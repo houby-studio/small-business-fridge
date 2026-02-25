@@ -3,7 +3,7 @@
   "my_orders": "My orders",
   "total_orders": "Total orders",
   "total_spent": "Total spent",
-  "total_unpaid": "Unpaid",
+  "total_uninvoiced": "Not invoiced",
   "no_orders": "You don't have any orders yet.",
   "filter_channel": "Channel",
   "filter_invoiced": "Invoiced",

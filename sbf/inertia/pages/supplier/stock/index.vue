@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick, onBeforeUnmount, onMounted } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
@@ -8,9 +8,10 @@ import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Select from 'primevue/select'
-import Checkbox from 'primevue/checkbox'
+import InputNumber from 'primevue/inputnumber'
 import { useI18n } from '~/composables/use_i18n'
 import { areFilterParamsEqual } from '~/composables/use_filter_params'
+import { formatDate } from '~/composables/use_format_date'
 
 interface StockRow {
   productId: number
@@ -21,14 +22,31 @@ interface StockRow {
   totalSupplied: number
   totalRemaining: number
   totalSold: number
+  soldInPeriod: number
+  deliveredInPeriod: number
   deliveryCount: number
-  totalRevenue: number
+  totalStockValue: number
+}
+
+interface CategoryBreakdownRow {
+  categoryName: string | null
+  categoryColor: string | null
+  totalRemaining: number
+  productCount: number
 }
 
 interface StockResult {
   data: StockRow[]
   meta: { total: number; perPage: number; currentPage: number; lastPage: number }
-  totals: { totalProducts: number; totalRemaining: number; totalRevenue: number }
+  totals: { totalProducts: number; totalRemaining: number; totalStockValue: number }
+  insights: {
+    lowStockCount: number
+    activeProducts: number
+    period: '30d'
+    categoryBreakdown: CategoryBreakdownRow[]
+    lowStockItems: StockRow[]
+    topMovers: StockRow[]
+  }
 }
 
 interface CategoryOption {
@@ -42,46 +60,235 @@ interface ProductOption {
   displayName: string
 }
 
+interface RecentDeliveryRow {
+  id: number
+  createdAt: string
+  amountSupplied: number
+  amountLeft: number
+  price: number
+  productName: string
+  supplierName: string
+}
+
 const props = defineProps<{
   stock: StockResult
+  recentDeliveries: RecentDeliveryRow[]
   categories: CategoryOption[]
   products: ProductOption[]
+  preselect: number | null
   filters: {
-    productId: string
     categoryId: string
-    inStock: string
     sortBy: string
     sortOrder: string
+    scope: string
   }
 }>()
 
 const { t } = useI18n()
 const ALL = '__all__'
 
-const filterProductId = ref(props.filters.productId || ALL)
 const filterCategoryId = ref(props.filters.categoryId || ALL)
-const filterInStock = ref(props.filters.inStock === '1')
 const filterSortBy = ref(props.filters.sortBy || 'productName')
 const filterSortOrder = ref(props.filters.sortOrder || 'asc')
+const filterScope = ref(props.filters.scope === 'mine' ? 'mine' : 'store')
 const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
 
-const productOptions = computed(() => [
-  { label: t('common.all'), value: ALL },
-  ...props.products.map((p) => ({ label: p.displayName, value: String(p.id) })),
-])
+const selectedProduct = ref<number | null>(props.preselect ?? null)
+const amount = ref<number | null>(null)
+const price = ref<number | null>(null)
+const submitting = ref(false)
+const showFullTable = ref(false)
+const productSelect = ref<any>(null)
+const amountInput = ref<any>(null)
+const priceInput = ref<any>(null)
 
 const categoryOptions = computed(() => [
   { label: t('common.all'), value: ALL },
   ...props.categories.map((c) => ({ label: c.name, value: String(c.id) })),
 ])
 
+const quickProductOptions = computed(() =>
+  props.products.map((p) => ({ label: p.displayName, value: Number(p.id) }))
+)
+
+const scopeOptions = computed(() => [
+  { label: t('supplier.stock_scope_store'), value: 'store' },
+  { label: t('supplier.stock_scope_mine'), value: 'mine' },
+])
+
+const insightPeriodLabel = computed(() => t('supplier.stock_period_30d'))
+
+function focusAmountField() {
+  const el = amountInput.value?.$el as HTMLElement | undefined
+  const input = el?.querySelector('input') as HTMLInputElement | null
+  if (!input) return
+
+  input.focus()
+  window.setTimeout(() => {
+    input.focus()
+  }, 0)
+  window.setTimeout(() => {
+    input.focus()
+  }, 120)
+}
+
+function focusPriceField() {
+  const el = priceInput.value?.$el as HTMLElement | undefined
+  const input = el?.querySelector('input') as HTMLInputElement | null
+  input?.focus()
+}
+
+function focusProductSearchField() {
+  const filterInput = document.querySelector(
+    '.p-select-overlay .p-select-filter'
+  ) as HTMLInputElement | null
+  if (filterInput) {
+    filterInput.focus()
+    filterInput.select()
+  }
+}
+
+function openProductSelectAndFocusSearch() {
+  const instance = productSelect.value
+  const root = instance?.$el as HTMLElement | undefined
+  const trigger = root?.querySelector('[role="combobox"]') as HTMLElement | null
+  trigger?.focus()
+
+  if (typeof instance?.show === 'function') {
+    instance.show()
+  } else {
+    trigger?.click()
+  }
+
+  nextTick(() => {
+    focusProductSearchField()
+  })
+}
+
+function selectTopOrFocusedProductOption(filterInput: HTMLInputElement | null) {
+  const activeDescendantId = filterInput?.getAttribute('aria-activedescendant')
+  const activeDescendantOption = activeDescendantId
+    ? (document.getElementById(activeDescendantId) as HTMLElement | null)
+    : null
+  const focusedOption = document.querySelector(
+    '.p-select-overlay .p-select-option.p-focus, .p-select-overlay .p-select-option[data-p-focused="true"]'
+  ) as HTMLElement | null
+  const topOption = document.querySelector(
+    '.p-select-overlay .p-select-option'
+  ) as HTMLElement | null
+  const option = activeDescendantOption ?? focusedOption ?? topOption
+
+  const optionLabel = option?.textContent?.trim()
+  const query = filterInput?.value?.trim().toLocaleLowerCase() ?? ''
+
+  const matchedOptionByHighlight = optionLabel
+    ? quickProductOptions.value.find((item) => item.label === optionLabel)
+    : null
+  const matchedOptionByQuery = quickProductOptions.value.find((item) =>
+    item.label.toLocaleLowerCase().includes(query)
+  )
+  const matchedOption =
+    matchedOptionByHighlight ?? matchedOptionByQuery ?? quickProductOptions.value[0]
+
+  if (matchedOption) {
+    selectedProduct.value = matchedOption.value
+    if (typeof productSelect.value?.hide === 'function') {
+      productSelect.value.hide()
+    }
+    return true
+  }
+
+  if (!option) return false
+  option.click()
+  return true
+}
+
+function onProductEnter(event: KeyboardEvent) {
+  const overlayOpen = productSelect.value?.overlayVisible === true
+  if (overlayOpen) {
+    event.preventDefault()
+    const filterInput = document.querySelector(
+      '.p-select-overlay .p-select-filter'
+    ) as HTMLInputElement | null
+    const selected = selectTopOrFocusedProductOption(filterInput)
+    if (!selected) return
+
+    nextTick(() => {
+      focusAmountField()
+    })
+    window.setTimeout(() => {
+      focusAmountField()
+    }, 120)
+    return
+  }
+
+  event.preventDefault()
+  openProductSelectAndFocusSearch()
+}
+
+function onProductSelectShow() {
+  nextTick(() => {
+    focusProductSearchField()
+  })
+}
+
+function onProductSelectHide() {
+  if (selectedProduct.value && !amount.value) {
+    nextTick(() => {
+      focusAmountField()
+    })
+  }
+}
+
+function onProductChange() {
+  nextTick(() => {
+    focusAmountField()
+  })
+}
+
+function onQuickDeliveryKeydown(event: KeyboardEvent) {
+  if (event.key !== 'Enter') return
+  if (productSelect.value?.overlayVisible !== true) return
+
+  const filterInput = document.querySelector(
+    '.p-select-overlay .p-select-filter'
+  ) as HTMLInputElement | null
+  if (!filterInput) return
+
+  event.preventDefault()
+  event.stopPropagation()
+
+  const selected = selectTopOrFocusedProductOption(filterInput)
+  if (!selected) return
+
+  nextTick(() => {
+    focusAmountField()
+  })
+  window.setTimeout(() => {
+    focusAmountField()
+  }, 120)
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', onQuickDeliveryKeydown, true)
+
+  if (props.preselect) {
+    nextTick(() => {
+      focusAmountField()
+    })
+  }
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onQuickDeliveryKeydown, true)
+})
+
 function buildFilterParams() {
   return {
-    productId: filterProductId.value === ALL ? undefined : filterProductId.value,
     categoryId: filterCategoryId.value === ALL ? undefined : filterCategoryId.value,
-    inStock: filterInStock.value ? '1' : undefined,
     sortBy: filterSortBy.value || undefined,
     sortOrder: filterSortOrder.value || undefined,
+    scope: filterScope.value === 'store' ? undefined : filterScope.value,
   }
 }
 
@@ -95,21 +302,20 @@ function applyFilters() {
   router.get(
     '/supplier/stock',
     { ...nextParams, page },
-    { preserveState: true, only: ['stock', 'filters'] }
+    { preserveState: true, only: ['stock', 'filters', 'recentDeliveries'] }
   )
   lastAppliedFilterParams.value = nextParams
 }
 
 function clearFilters() {
-  filterProductId.value = ALL
   filterCategoryId.value = ALL
-  filterInStock.value = false
   filterSortBy.value = 'productName'
   filterSortOrder.value = 'asc'
+  filterScope.value = 'store'
   lastAppliedFilterParams.value = buildFilterParams()
   router.get('/supplier/stock', buildFilterParams(), {
     preserveState: true,
-    only: ['stock', 'filters'],
+    only: ['stock', 'filters', 'recentDeliveries'],
   })
 }
 
@@ -136,6 +342,43 @@ function onSort(event: any) {
   )
 }
 
+function submitQuickDelivery() {
+  if (!selectedProduct.value || !amount.value || !price.value) return
+
+  submitting.value = true
+  router.post(
+    '/supplier/deliveries',
+    {
+      productId: selectedProduct.value,
+      amount: amount.value,
+      price: price.value,
+    },
+    {
+      onSuccess: () => {
+        selectedProduct.value = null
+        amount.value = null
+        price.value = null
+        nextTick(() => {
+          openProductSelectAndFocusSearch()
+        })
+      },
+      onFinish: () => {
+        submitting.value = false
+      },
+    }
+  )
+}
+
+function onAmountEnter() {
+  focusPriceField()
+}
+
+function onPriceEnter() {
+  if (selectedProduct.value && amount.value && price.value) {
+    submitQuickDelivery()
+  }
+}
+
 function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
   if (remaining >= 5) return 'success'
   if (remaining > 0) return 'warn'
@@ -157,7 +400,7 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
         </Link>
         <Link href="/supplier/deliveries">
           <Button
-            :label="t('supplier.deliveries_submit')"
+            :label="t('supplier.stock_delivery_history')"
             icon="pi pi-box"
             size="small"
             severity="secondary"
@@ -165,28 +408,76 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
         </Link>
       </div>
     </div>
+    <p class="mb-4 text-sm text-gray-500 dark:text-zinc-400">
+      {{ t('supplier.stock_scope_hint') }}
+    </p>
+
+    <Card class="mb-6">
+      <template #content>
+        <form
+          @submit.prevent="submitQuickDelivery"
+          class="grid grid-cols-1 items-end gap-2 lg:grid-cols-12"
+        >
+          <div class="min-w-0 lg:col-span-6">
+            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
+              t('supplier.deliveries_product')
+            }}</label>
+            <Select
+              ref="productSelect"
+              v-model="selectedProduct"
+              fluid
+              :options="quickProductOptions"
+              optionLabel="label"
+              optionValue="value"
+              :placeholder="t('supplier.deliveries_product')"
+              filter
+              @show="onProductSelectShow"
+              @hide="onProductSelectHide"
+              @change="onProductChange"
+              @keydown.enter.capture.prevent="onProductEnter"
+            />
+          </div>
+          <div class="min-w-0 lg:col-span-2" @keydown.enter.prevent="onAmountEnter">
+            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
+              t('supplier.deliveries_amount')
+            }}</label>
+            <InputNumber
+              ref="amountInput"
+              v-model="amount"
+              fluid
+              :min="1"
+              :placeholder="t('common.pieces')"
+            />
+          </div>
+          <div class="lg:col-span-2" @keydown.enter.prevent="onPriceEnter">
+            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
+              t('supplier.deliveries_price')
+            }}</label>
+            <InputNumber
+              ref="priceInput"
+              v-model="price"
+              fluid
+              :min="1"
+              :suffix="' ' + t('common.currency')"
+              :placeholder="t('common.currency')"
+            />
+          </div>
+          <div class="lg:col-span-2 lg:flex lg:justify-end">
+            <Button
+              type="submit"
+              fluid
+              :label="t('supplier.deliveries_submit')"
+              icon="pi pi-plus"
+              :loading="submitting"
+              :disabled="!selectedProduct || !amount || !price"
+            />
+          </div>
+        </form>
+      </template>
+    </Card>
 
     <!-- Summary cards (totals across all filtered results) -->
-    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <Card class="sbf-stat sbf-stat-primary">
-        <template #content>
-          <div class="flex items-center gap-4">
-            <div
-              class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-red-100 dark:bg-red-950/40"
-            >
-              <span class="pi pi-tags text-xl text-primary" />
-            </div>
-            <div>
-              <div class="text-3xl font-bold text-gray-900 dark:text-zinc-100">
-                {{ stock.totals.totalProducts }}
-              </div>
-              <div class="text-sm text-gray-500 dark:text-zinc-400">
-                {{ t('supplier.stock_products') }}
-              </div>
-            </div>
-          </div>
-        </template>
-      </Card>
+    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <Card class="sbf-stat sbf-stat-green">
         <template #content>
           <div class="flex items-center gap-4">
@@ -217,10 +508,48 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
             </div>
             <div>
               <div class="text-2xl font-bold text-gray-900 dark:text-zinc-100">
-                {{ t('common.price_with_currency', { price: stock.totals.totalRevenue }) }}
+                {{ t('common.price_with_currency', { price: stock.totals.totalStockValue }) }}
               </div>
               <div class="text-sm text-gray-500 dark:text-zinc-400">
-                {{ t('supplier.stock_total_revenue') }}
+                {{ t('supplier.stock_total_value') }}
+              </div>
+            </div>
+          </div>
+        </template>
+      </Card>
+      <Card class="sbf-stat sbf-stat-amber">
+        <template #content>
+          <div class="flex items-center gap-4">
+            <div
+              class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-950/40"
+            >
+              <span class="pi pi-exclamation-triangle text-xl text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+              <div class="text-3xl font-bold text-amber-600 dark:text-amber-400">
+                {{ stock.insights.lowStockCount }}
+              </div>
+              <div class="text-sm text-gray-500 dark:text-zinc-400">
+                {{ t('supplier.stock_low_stock') }}
+              </div>
+            </div>
+          </div>
+        </template>
+      </Card>
+      <Card class="sbf-stat sbf-stat-blue">
+        <template #content>
+          <div class="flex items-center gap-4">
+            <div
+              class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-950/40"
+            >
+              <span class="pi pi-check-circle text-xl text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <div class="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                {{ stock.insights.activeProducts }}
+              </div>
+              <div class="text-sm text-gray-500 dark:text-zinc-400">
+                {{ t('supplier.stock_in_stock_types') }}
               </div>
             </div>
           </div>
@@ -232,16 +561,14 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
     <div class="mb-4 flex flex-wrap items-end gap-3">
       <div>
         <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
-          t('supplier.stock_filter_product')
+          t('supplier.stock_scope')
         }}</label>
         <Select
-          v-model="filterProductId"
-          :options="productOptions"
+          v-model="filterScope"
+          :options="scopeOptions"
           optionLabel="label"
           optionValue="value"
-          :placeholder="t('supplier.stock_filter_product')"
-          class="w-56"
-          filter
+          class="w-44"
         />
       </div>
       <div>
@@ -255,12 +582,6 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
           optionValue="value"
           class="w-44"
         />
-      </div>
-      <div class="flex items-center gap-2 pb-0.5">
-        <Checkbox v-model="filterInStock" inputId="inStockCheck" binary />
-        <label for="inStockCheck" class="cursor-pointer text-sm text-gray-600 dark:text-zinc-400">{{
-          t('supplier.stock_filter_in_stock')
-        }}</label>
       </div>
       <Button
         :label="t('common.filter_apply')"
@@ -277,8 +598,168 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
       />
     </div>
 
-    <!-- Stock table -->
+    <Card class="mb-6">
+      <template #title>{{ t('supplier.stock_category_breakdown') }}</template>
+      <template #content>
+        <DataTable
+          :value="stock.insights.categoryBreakdown"
+          :paginator="false"
+          size="small"
+          stripedRows
+          class="rounded-lg border"
+        >
+          <Column :header="t('common.category')">
+            <template #body="{ data }">
+              <Tag
+                :value="data.categoryName || t('supplier.stock_uncategorized')"
+                class="text-xs"
+                :style="{
+                  backgroundColor: data.categoryColor || '#6b7280',
+                  color: '#fff',
+                }"
+              />
+            </template>
+          </Column>
+          <Column :header="t('supplier.stock_in_stock')" style="width: 150px">
+            <template #body="{ data }">{{ data.totalRemaining }} {{ t('common.pieces') }}</template>
+          </Column>
+          <Column :header="t('supplier.stock_types_count')" style="width: 150px">
+            <template #body="{ data }">{{ data.productCount }}</template>
+          </Column>
+          <template #empty>
+            <div class="py-4 text-center text-gray-500 dark:text-zinc-400">
+              {{ t('common.no_data') }}
+            </div>
+          </template>
+        </DataTable>
+      </template>
+    </Card>
+
+    <div class="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <Card>
+        <template #title>{{ t('supplier.stock_attention') }}</template>
+        <template #subtitle>{{
+          t('supplier.stock_period_hint', { period: insightPeriodLabel })
+        }}</template>
+        <template #content>
+          <DataTable
+            :value="stock.insights.lowStockItems"
+            :paginator="false"
+            size="small"
+            stripedRows
+            class="rounded-lg border"
+          >
+            <Column :header="t('common.product')">
+              <template #body="{ data }">{{ data.productName }}</template>
+            </Column>
+            <Column :header="t('supplier.stock_in_stock')" style="width: 120px">
+              <template #body="{ data }">
+                <Tag
+                  :value="`${data.totalRemaining} ${t('common.pieces')}`"
+                  :severity="stockSeverity(data.totalRemaining)"
+                  class="text-xs"
+                />
+              </template>
+            </Column>
+            <Column :header="t('supplier.stock_sold_period')" style="width: 140px">
+              <template #body="{ data }">{{ data.soldInPeriod }} {{ t('common.pieces') }}</template>
+            </Column>
+            <template #empty>
+              <div class="py-4 text-center text-gray-500 dark:text-zinc-400">
+                {{ t('supplier.stock_no_attention_period', { period: insightPeriodLabel }) }}
+              </div>
+            </template>
+          </DataTable>
+        </template>
+      </Card>
+
+      <Card>
+        <template #title>{{ t('supplier.stock_top_movers') }}</template>
+        <template #subtitle>{{
+          t('supplier.stock_period_hint', { period: insightPeriodLabel })
+        }}</template>
+        <template #content>
+          <DataTable
+            :value="stock.insights.topMovers"
+            :paginator="false"
+            size="small"
+            stripedRows
+            class="rounded-lg border"
+          >
+            <Column :header="t('common.product')">
+              <template #body="{ data }">{{ data.productName }}</template>
+            </Column>
+            <Column :header="t('supplier.stock_sold_period')" style="width: 140px">
+              <template #body="{ data }">{{ data.soldInPeriod }} {{ t('common.pieces') }}</template>
+            </Column>
+            <template #empty>
+              <div class="py-4 text-center text-gray-500 dark:text-zinc-400">
+                {{ t('supplier.stock_no_movers_period', { period: insightPeriodLabel }) }}
+              </div>
+            </template>
+          </DataTable>
+        </template>
+      </Card>
+    </div>
+
+    <Card class="mb-6">
+      <template #title>{{ t('supplier.deliveries_recent') }}</template>
+      <template #content>
+        <DataTable
+          :value="recentDeliveries"
+          :paginator="false"
+          size="small"
+          stripedRows
+          class="rounded-lg border"
+        >
+          <Column :header="t('common.date')" style="width: 140px">
+            <template #body="{ data }">{{ formatDate(data.createdAt) }}</template>
+          </Column>
+          <Column :header="t('common.product')">
+            <template #body="{ data }">{{ data.productName }}</template>
+          </Column>
+          <Column
+            v-if="filterScope === 'store'"
+            :header="t('common.supplier')"
+            style="width: 180px"
+          >
+            <template #body="{ data }">{{ data.supplierName }}</template>
+          </Column>
+          <Column :header="t('supplier.deliveries_amount')" style="width: 120px">
+            <template #body="{ data }">{{ data.amountSupplied }} {{ t('common.pieces') }}</template>
+          </Column>
+          <Column :header="t('supplier.deliveries_remaining')" style="width: 120px">
+            <template #body="{ data }">{{ data.amountLeft }} {{ t('common.pieces') }}</template>
+          </Column>
+          <Column :header="t('common.price')" style="width: 120px">
+            <template #body="{ data }">{{
+              t('common.price_with_currency', { price: data.price })
+            }}</template>
+          </Column>
+          <template #empty>
+            <div class="py-4 text-center text-gray-500 dark:text-zinc-400">
+              {{ t('supplier.deliveries_none') }}
+            </div>
+          </template>
+        </DataTable>
+      </template>
+    </Card>
+
+    <div class="mb-3 flex items-center justify-between">
+      <h2 class="text-lg font-semibold text-gray-800 dark:text-zinc-200">
+        {{ t('supplier.stock_full_table') }}
+      </h2>
+      <Button
+        :label="showFullTable ? t('supplier.stock_hide_table') : t('supplier.stock_show_table')"
+        :icon="showFullTable ? 'pi pi-eye-slash' : 'pi pi-table'"
+        size="small"
+        severity="secondary"
+        @click="showFullTable = !showFullTable"
+      />
+    </div>
+
     <DataTable
+      v-if="showFullTable"
       :value="stock.data"
       :paginator="stock.meta.lastPage > 1"
       :rows="stock.meta.perPage"
@@ -295,12 +776,17 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
       <Column :header="t('common.product')" field="productName" sortable>
         <template #body="{ data }">
           <div class="flex items-center gap-3">
-            <img
-              v-if="data.imagePath"
-              :src="data.imagePath"
-              :alt="data.productName"
-              class="h-8 w-8 rounded object-cover"
-            />
+            <div
+              class="flex h-9 w-9 items-center justify-center rounded-md bg-gray-100 p-0.5 dark:bg-zinc-800"
+            >
+              <img
+                v-if="data.imagePath"
+                :src="data.imagePath"
+                :alt="data.productName"
+                class="h-full w-full rounded object-contain"
+              />
+              <span v-else class="pi pi-image text-sm text-gray-300 dark:text-zinc-600" />
+            </div>
             <div>
               <div class="font-medium">{{ data.productName }}</div>
               <Tag
@@ -333,17 +819,17 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
       <Column :header="t('supplier.stock_sold')" field="totalSold" sortable style="width: 120px">
         <template #body="{ data }">{{ data.totalSold }} {{ t('common.pieces') }}</template>
       </Column>
-      <Column :header="t('supplier.stock_total_revenue')" style="width: 120px">
+      <Column :header="t('supplier.stock_total_value')" style="width: 120px">
         <template #body="{ data }">
           <span class="font-semibold">{{
-            t('common.price_with_currency', { price: data.totalRevenue })
+            t('common.price_with_currency', { price: data.totalStockValue })
           }}</span>
         </template>
       </Column>
       <Column :header="t('common.actions')" style="width: 130px">
         <template #body="{ data }">
           <div class="flex gap-1">
-            <Link :href="`/supplier/deliveries?preselect=${data.productId}`">
+            <Link :href="`/supplier/stock?preselect=${data.productId}`">
               <Button
                 icon="pi pi-box"
                 :aria-label="t('supplier.deliveries_submit')"

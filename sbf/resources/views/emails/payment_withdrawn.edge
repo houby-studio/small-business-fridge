@@ -11,7 +11,7 @@
       {{ i18n.t('emails.payment_withdrawn_intro', { supplierName, buyerName, id: invoiceId, amount: totalCost }) }}
     </p>
     <p style="color: #666; font-size: 12px;">
-      — <a href="{{ appUrl }}" style="color: #cf112a; text-decoration: none;">{{ i18n.t('common.app_name') }}</a>
+      — <a href="{{ appUrl }}" style="color: #cf112a; text-decoration: none;">{{ i18n.t('common.app_name', { app_name: appName }) }}</a>
     </p>
   </body>
 </html>

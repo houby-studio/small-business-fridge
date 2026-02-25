@@ -14,6 +14,7 @@ const page = usePage<SharedProps>()
 const { t } = useI18n()
 const user = computed(() => page.props.user)
 const impersonation = computed(() => page.props.impersonation)
+const appName = computed(() => page.props.appName ?? 'Small Business Fridge')
 
 const isSupplier = computed(() => user.value?.role === 'supplier' || user.value?.role === 'admin')
 const isAdmin = computed(() => user.value?.role === 'admin')
@@ -38,7 +39,6 @@ watch(
 
 // ─── Scroll shadow ───────────────────────────────────────────────────────────
 const isScrolled = ref(false)
-
 function handleScroll() {
   isScrolled.value = window.scrollY > 8
 }
@@ -51,14 +51,25 @@ function isActive(url: string | undefined): boolean {
   return currentPath.value === url || currentPath.value.startsWith(url + '/')
 }
 
-onMounted(() => {
-  document.documentElement.setAttribute('data-theme', localIsDark.value ? 'dark' : 'light')
-  window.addEventListener('scroll', handleScroll, { passive: true })
-})
+type NavItem = {
+  label?: string | ((...args: any[]) => string)
+  icon?: string
+  url?: string
+  items?: NavItem[]
+  compactIconOnly?: boolean
+}
 
-onUnmounted(() => {
-  window.removeEventListener('scroll', handleScroll)
-})
+function isSubmenuActive(item: NavItem): boolean {
+  if (!item.items?.length) return false
+
+  return item.items.some((child) => {
+    if (isActive(child.url)) return true
+    if (child.items?.length) {
+      return isSubmenuActive(child)
+    }
+    return false
+  })
+}
 
 function toggleColorMode() {
   localIsDark.value = !localIsDark.value
@@ -71,19 +82,19 @@ function toggleColorMode() {
 
 // ─── Navigation ──────────────────────────────────────────────────────────────
 const menuItems = computed(() => {
-  const items: any[] = [
+  const items: NavItem[] = [
     { label: 'Obchod', icon: 'pi pi-shopping-cart', url: '/shop' },
     { label: 'Objednávky', icon: 'pi pi-list', url: '/orders' },
     { label: 'Faktury', icon: 'pi pi-file', url: '/invoices' },
-    { label: 'Aktivita', icon: 'pi pi-history', url: '/audit' },
+    { label: 'Aktivita', icon: 'pi pi-history', url: '/audit', compactIconOnly: true },
   ]
 
   if (isSupplier.value) {
     items.push({
       label: 'Dodavatel',
       icon: 'pi pi-box',
+      compactIconOnly: true,
       items: [
-        { label: 'Naskladnit', icon: 'pi pi-plus', url: '/supplier/deliveries' },
         { label: 'Sklad', icon: 'pi pi-warehouse', url: '/supplier/stock' },
         { label: 'Produkty', icon: 'pi pi-tags', url: '/supplier/products' },
         { label: 'Fakturace', icon: 'pi pi-file-export', url: '/supplier/invoice' },
@@ -96,6 +107,7 @@ const menuItems = computed(() => {
     items.push({
       label: 'Admin',
       icon: 'pi pi-cog',
+      compactIconOnly: true,
       items: [
         { label: 'Dashboard', icon: 'pi pi-chart-bar', url: '/admin/dashboard' },
         { label: 'Uživatelé', icon: 'pi pi-users', url: '/admin/users' },
@@ -118,6 +130,21 @@ function logout() {
 function stopImpersonation() {
   router.post('/impersonate/stop')
 }
+
+const menubarBreakpoint = '960px'
+
+function getItemLabel(item: NavItem): string | undefined {
+  return typeof item.label === 'string' ? item.label : undefined
+}
+
+onMounted(() => {
+  document.documentElement.setAttribute('data-theme', localIsDark.value ? 'dark' : 'light')
+  window.addEventListener('scroll', handleScroll, { passive: true })
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
+})
 </script>
 
 <template>
@@ -152,14 +179,15 @@ function stopImpersonation() {
     >
       <Menubar
         :model="menuItems"
+        :breakpoint="menubarBreakpoint"
         class="rounded-none border-0 bg-transparent shadow-none"
         :pt="{
           root: { class: 'bg-transparent border-0 shadow-none rounded-none py-0' },
         }"
       >
         <template #start>
-          <Link href="/shop" class="mr-6 flex items-center gap-2">
-            <span class="sbf-brand text-xl font-bold tracking-tight"> Lednice IT </span>
+          <Link href="/shop" class="sbf-brand-link mr-6 flex items-center gap-2">
+            <span class="sbf-brand text-xl font-bold tracking-tight"> {{ appName }} </span>
           </Link>
         </template>
         <template #item="{ item, props }">
@@ -167,15 +195,32 @@ function stopImpersonation() {
             v-if="item.url && !item.items"
             v-bind="props.action"
             :href="item.url"
-            :class="{ 'sbf-nav-active': isActive(item.url) }"
+            :title="item.compactIconOnly ? getItemLabel(item) : undefined"
+            :aria-label="item.compactIconOnly ? getItemLabel(item) : undefined"
+            :class="{
+              'sbf-nav-active': isActive(item.url),
+              'sbf-nav-compact-target': item.compactIconOnly,
+            }"
           >
-            <span :class="item.icon" class="mr-2" />
-            <span>{{ item.label }}</span>
+            <span :class="[item.icon, 'mr-2']" />
+            <span class="sbf-nav-item-label">{{ item.label }}</span>
           </Link>
-          <a v-else v-bind="props.action">
-            <span :class="item.icon" class="mr-2" />
-            <span>{{ item.label }}</span>
-            <span v-if="item.items" class="pi pi-angle-down ml-2" />
+          <a
+            v-else
+            v-bind="props.action"
+            :title="item.compactIconOnly ? getItemLabel(item) : undefined"
+            :aria-label="item.compactIconOnly ? getItemLabel(item) : undefined"
+            :class="{ 'sbf-nav-compact-target': item.compactIconOnly }"
+          >
+            <span :class="[item.icon, 'mr-2']" />
+            <span class="sbf-nav-item-label">{{ item.label }}</span>
+            <span
+              v-if="item.items"
+              class="pi pi-angle-down ml-2"
+              :class="{
+                'sbf-nav-active': isSubmenuActive(item),
+              }"
+            />
           </a>
         </template>
         <template #end>
@@ -194,7 +239,7 @@ function stopImpersonation() {
               class="flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
             >
               <span class="pi pi-user text-xs" />
-              {{ user?.displayName }}
+              <span class="sbf-nav-profile-name max-w-32 truncate">{{ user?.displayName }}</span>
             </Link>
             <Button
               icon="pi pi-sign-out"
