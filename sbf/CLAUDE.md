@@ -6,7 +6,7 @@
 
 ```bash
 cd sbf
-npm run lint && npx prettier --check . && npm run typecheck && node ace test --no-color
+npm run lint && npx prettier --check . && npm run typecheck && node ace migration:run --force && node ace test --no-color && npm run test:e2e
 ```
 
 **AFTER every change, all of these must pass before finishing:**
@@ -22,7 +22,9 @@ Or individually:
 npm run lint             # ESLint (AdonisJS config)
 npx prettier --check .   # Format check (do NOT run npm run format — that auto-writes)
 npm run typecheck        # tsc --noEmit
-node ace test --no-color # 91 tests: unit + functional (Japa)
+node ace migration:run --force # test DB schema parity
+node ace test --no-color # unit + functional (Japa)
+npm run test:e2e         # Playwright end-to-end suite
 ```
 
 > If Docker isn't running: `docker compose -f compose.dev.yaml up -d postgres`
@@ -79,14 +81,15 @@ sbf/
 
 ### When to Write Tests
 
-| Change type                       | Required tests                               |
-| --------------------------------- | -------------------------------------------- |
-| New service method                | Unit test in `tests/unit/services/`          |
-| New API endpoint                  | Functional test in `tests/functional/api/`   |
-| New web route / controller action | Functional test in `tests/functional/web/`   |
-| Bug fix                           | Add regression test proving the bug is fixed |
-| Changed business logic            | Update existing tests to match new behavior  |
-| New migration / model             | Functional test covering the new data        |
+| Change type                                     | Required tests                                        |
+| ----------------------------------------------- | ----------------------------------------------------- |
+| New service method                              | Unit test in `tests/unit/services/`                   |
+| New API endpoint                                | Functional test in `tests/functional/api/`            |
+| New web route / controller action               | Functional test in `tests/functional/web/`            |
+| Bug fix                                         | Add regression test proving the bug is fixed          |
+| Changed business logic                          | Update existing tests to match new behavior           |
+| New migration / model                           | Functional test covering the new data                 |
+| UI/UX change (layout/nav/responsive/visibility) | Playwright e2e coverage for the user-visible behavior |
 
 ### Test Anatomy
 
@@ -139,7 +142,7 @@ node ace test --suite=functional
 - Test DB: `sbf_test` on PostgreSQL port **5433** (shifted from 5432)
 - Migrations auto-run before tests, tables truncated after (see `tests/bootstrap.ts`)
 - SMTP errors in test output are **normal** — MailDev isn't required for tests to pass
-- E2E tests: `npm run test:e2e` (requires server to start separately, uses Playwright)
+- E2E tests: `npm run test:e2e` (Playwright starts its managed web server via `playwright.config.ts`)
 - Rate limiter store must be cleared between tests if testing rate-limited routes
 
 ### Test Users (seeded via E2E global setup, NOT available in unit/functional)
