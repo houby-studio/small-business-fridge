@@ -1,18 +1,11 @@
 import { test, expect } from '@playwright/test'
-
-async function loginAsSupplier(page: import('@playwright/test').Page) {
-  await page.goto('/login')
-  await page.locator('#username').fill('supplier')
-  await page.locator('#password').fill('supplier123')
-  await page.locator('button[type="submit"]').click()
-  await expect(page).not.toHaveURL(/\/login/)
-}
+import { loginAs } from './helpers/auth'
 
 test.describe('Supplier products flow', () => {
   test('create and edit pages expose keyboard-friendly name inputs', async ({ page }) => {
     const productName = `E2E Fokus ${Date.now()}`
 
-    await loginAsSupplier(page)
+    await loginAs(page, 'supplier')
     await page.goto('/supplier/products/new')
     await expect(page.locator('#product-name')).toBeVisible()
 
@@ -46,7 +39,7 @@ test.describe('Supplier products flow', () => {
   }) => {
     const productName = `E2E Produkt ${Date.now()}`
 
-    await loginAsSupplier(page)
+    await loginAs(page, 'supplier')
     await page.goto('/supplier/products/new')
 
     await page.getByPlaceholder('např. Coca-Cola 0.5l').fill(productName)
@@ -80,7 +73,7 @@ test.describe('Supplier products flow', () => {
   test('quick delivery supports enter-first keyboard flow', async ({ page }) => {
     const productName = `E2E Keyboard ${Date.now()}`
 
-    await loginAsSupplier(page)
+    await loginAs(page, 'supplier')
     await page.goto('/supplier/products/new')
 
     await page.locator('#product-name').click()

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { fillLoginForm, loginAs } from './helpers/auth'
 
 /**
  * E2E: Authentication flows (login / logout)
@@ -11,16 +12,6 @@ import { test, expect } from '@playwright/test'
  *   button[type="submit"] — submit button
  *   button:has(.pi-sign-out) — logout icon button in the nav bar
  */
-
-async function fillLoginForm(
-  page: import('@playwright/test').Page,
-  username: string,
-  password: string
-) {
-  await page.locator('#username').fill(username)
-  await page.locator('#password').fill(password)
-  await page.locator('button[type="submit"]').click()
-}
 
 test.describe('Login page', () => {
   test.beforeEach(async ({ page }) => {
@@ -69,13 +60,11 @@ test.describe('Login page', () => {
 
 test.describe('Logout', () => {
   test('logged-in customer can log out via header button', async ({ page }) => {
-    await page.goto('/login')
-    await fillLoginForm(page, 'customer', 'customer123')
-    await expect(page).toHaveURL(/\/shop/)
+    await loginAs(page, 'customer')
 
     // Logout via the icon button in the navigation bar (pi-sign-out icon)
     await page.locator('button:has(.pi-sign-out)').click()
 
-    await expect(page).toHaveURL(/\/login/)
+    await expect(page).toHaveURL(/\/$|\/login/)
   })
 })

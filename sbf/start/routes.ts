@@ -50,6 +50,7 @@ const ApiProductsController = () => import('#controllers/api/products_controller
 const ApiOrdersController = () => import('#controllers/api/orders_controller')
 const ApiCustomersController = () => import('#controllers/api/customers_controller')
 const ApiHealthController = () => import('#controllers/api/health_controller')
+const authThrottleLimit = process.env.NODE_ENV === 'test' ? 1000 : 10
 
 /*
 |--------------------------------------------------------------------------
@@ -93,7 +94,10 @@ router.group(() => {
   router.get('/login', [LoginController, 'show']).use(middleware.guest())
   router
     .post('/login', [LoginController, 'store'])
-    .use([middleware.guest(), middleware.throttle({ maxRequests: 10, windowMs: 60_000 })])
+    .use([
+      middleware.guest(),
+      middleware.throttle({ maxRequests: authThrottleLimit, windowMs: 60_000 }),
+    ])
 })
 
 router.get('/auth/oidc/redirect', [OidcController, 'redirect'])
@@ -246,10 +250,10 @@ router
     // Auth - token issuance (no auth required, stricter rate limit)
     router
       .post('/auth/login', [ApiAuthController, 'login'])
-      .use(middleware.throttle({ maxRequests: 10, windowMs: 60_000 }))
+      .use(middleware.throttle({ maxRequests: authThrottleLimit, windowMs: 60_000 }))
     router
       .post('/auth/token', [ApiAuthController, 'token'])
-      .use(middleware.throttle({ maxRequests: 10, windowMs: 60_000 }))
+      .use(middleware.throttle({ maxRequests: authThrottleLimit, windowMs: 60_000 }))
 
     // Health (no auth required)
     router.get('/health', [ApiHealthController, 'index'])
