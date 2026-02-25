@@ -6,3 +6,9 @@ public/assets
 # Generated test output
 test-results
 playwright-report
+
+# GitHub community health and template files (not project code)
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md
+SECURITY.md
+.github/ISSUE_TEMPLATE/

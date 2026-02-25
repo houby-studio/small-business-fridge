@@ -1,11 +1,10 @@
-# Small Business Fridge (sbf) — Claude Development Guide
+# Small Business Fridge — Claude Development Guide
 
 ## Mandatory Quality Gates
 
 **BEFORE starting any change, run once to confirm baseline:**
 
 ```bash
-cd sbf
 npm run lint && npx prettier --check . && npm run typecheck && node ace migration:run --force && node ace test --no-color && npm run test:e2e
 ```
 
@@ -48,7 +47,6 @@ npm run test:e2e         # Playwright end-to-end suite
 ## File Layout (quick reference)
 
 ```
-sbf/
 ├── app/
 │   ├── controllers/web/          # Inertia controllers (return inertia.render())
 │   ├── controllers/web/supplier/ # Supplier section
@@ -281,16 +279,16 @@ When adding user-facing text:
 
 ## CI/CD
 
-- **Docker image**: `.github/workflows/sbf-docker-image.yaml` — triggers on push to `v3/*` or `master` when `sbf/**` changes
-- **Quality CI**: `.github/workflows/sbf-quality.yml` — runs lint + format + typecheck + tests on every PR and push to `v3/*`
+- **Docker image**: `.github/workflows/docker-image.yml` — triggers on push to `v3/*` or `master`
+- **Quality CI**: `.github/workflows/quality.yml` — runs lint + format + typecheck + tests on every PR and push to `v3/*`
 - Dockerfile does NOT run quality checks — they happen in the quality CI job
 
 ### Quality CI Reporting (Mandatory)
 
-- Japa tests must generate `sbf/test-results/junit-japa.xml` and publish it via `mikepenz/action-junit-report`.
-- Playwright tests must generate `sbf/test-results/junit-e2e.xml` and publish it via `mikepenz/action-junit-report`.
+- Japa tests must generate `test-results/junit-japa.xml` and publish it via `mikepenz/action-junit-report`.
+- Playwright tests must generate `test-results/junit-e2e.xml` and publish it via `mikepenz/action-junit-report`.
 - CI must verify both XML files exist and are non-empty before publishing.
-- CI must upload test artifacts (`sbf/test-results/**`, `sbf/playwright-report/**`) so failures can be debugged from the run page.
+- CI must upload test artifacts (`test-results/**`, `playwright-report/**`) so failures can be debugged from the run page.
 - Do not accept CI changes that can silently report `0 ran` for a suite that actually executed.
 
 ---
@@ -304,3 +302,4 @@ When adding user-facing text:
 - CSRF: API routes are exempted via function in `config/shield.ts`
 - Scheduler provider: only registered in console environment (`adonisrc.ts`)
 - `v-tooltip` → runtime crash → use `aria-label` or PrimeVue Tooltip component with mount
+- `npx prettier --check .` also checks `CLAUDE.md` — always run format fix after editing it

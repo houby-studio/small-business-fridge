@@ -13,7 +13,7 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
-      checks: write        # required by mikepenz/action-junit-report to post check runs
+      checks: write # required by mikepenz/action-junit-report to post check runs
       pull-requests: write # required to post PR annotations
 
     services:

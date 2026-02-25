@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# check.sh — Run all quality gates for sbf/
+# check.sh — Run all quality gates
 # Usage: ./check.sh [--skip-tests]
 #
 # Requires: PostgreSQL running on localhost:5433

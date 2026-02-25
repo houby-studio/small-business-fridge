@@ -2,7 +2,7 @@
 
 ## Mandatory QA Before Marking Work Done
 
-Before declaring any task complete, run the full quality gate in `sbf/`:
+Before declaring any task complete, run the full quality gate from the repo root:
 
 1. `npm run lint`
 2. `npx prettier --check .`
@@ -23,14 +23,14 @@ If any step fails:
 
 ## CI Parity Note
 
-Mirror `.github/workflows/sbf-quality.yml` as the source of truth for required checks.
+Mirror `.github/workflows/quality.yml` as the source of truth for required checks.
 
 ## CI Test Reporting Requirements
 
 Every CI run must publish both test layers as JUnit checks and artifacts:
 
-1. Japa report from `sbf/test-results/junit-japa.xml`
-2. Playwright report from `sbf/test-results/junit-e2e.xml`
+1. Japa report from `test-results/junit-japa.xml`
+2. Playwright report from `test-results/junit-e2e.xml`
 3. Upload raw test artifacts (`test-results/**`, `playwright-report/**`) for inspection
 
 Treat missing or empty JUnit XML files as CI failures. Never leave publishing in a state that can show `0 ran` for passing suites.
