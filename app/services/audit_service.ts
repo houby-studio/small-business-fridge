@@ -1,4 +1,5 @@
 import AuditLog from '#models/audit_log'
+import db from '@adonisjs/lucid/services/db'
 
 export default class AuditService {
   /**
@@ -13,13 +14,15 @@ export default class AuditService {
     metadata: Record<string, any> | null = null
   ): Promise<void> {
     try {
-      await AuditLog.create({
-        userId,
+      // Use raw query builder for writes to avoid any model mapping issues
+      await db.table('audit_logs').insert({
+        user_id: userId,
         action,
-        entityType,
-        entityId,
-        targetUserId,
+        entity_type: entityType,
+        entity_id: entityId,
+        target_user_id: targetUserId,
         metadata,
+        created_at: new Date(),
       })
     } catch {
       // Never block the main operation
