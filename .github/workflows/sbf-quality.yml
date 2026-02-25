@@ -130,5 +130,6 @@ jobs:
             sbf/test-results/junit-e2e.xml
             sbf/playwright-report/**
             sbf/test-results/**
+            sbf/playwright-artifacts/**
           if-no-files-found: warn
           retention-days: 14
