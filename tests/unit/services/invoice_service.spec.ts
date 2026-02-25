@@ -5,7 +5,6 @@ import { DeliveryFactory } from '#database/factories/delivery_factory'
 import { InvoiceFactory } from '#database/factories/invoice_factory'
 import { OrderFactory } from '#database/factories/order_factory'
 import InvoiceService from '#services/invoice_service'
-import Order from '#models/order'
 import db from '@adonisjs/lucid/services/db'
 
 const invoiceService = new InvoiceService()

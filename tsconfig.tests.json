@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "Preserve",
+    "moduleResolution": "Bundler",
+    "lib": ["ESNext", "DOM"],
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "types": ["@types/node"]
+  },
+  "include": [
+    "bin/test.ts",
+    "config/**/*",
+    "start/env.ts",
+    "start/kernel.ts",
+    "start/scheduler.ts",
+    "tests/**/*",
+    "playwright.config.ts",
+    "scripts/**/*"
+  ],
+  "exclude": ["node_modules", "build"]
+}

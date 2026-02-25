@@ -27,7 +27,7 @@ npm run test:e2e         # Playwright end-to-end suite
 ```
 
 > If Docker isn't running: `docker compose -f compose.dev.yaml up -d postgres`
-> Tests need PostgreSQL on localhost:5433, database `sbf_test`
+> Tests need PostgreSQL on localhost:5432, database `sbf_test`
 
 **Never leave a task incomplete if any of these fail.** Fix the failure before moving on.
 
@@ -137,7 +137,7 @@ node ace test --suite=functional
 
 ### Test Infrastructure Notes
 
-- Test DB: `sbf_test` on PostgreSQL port **5433** (shifted from 5432)
+- Test DB: `sbf_test` on PostgreSQL port **5432**
 - Migrations auto-run before tests, tables truncated after (see `tests/bootstrap.ts`)
 - SMTP errors in test output are **normal** — MailDev isn't required for tests to pass
 - E2E tests: `npm run test:e2e` (Playwright starts its managed web server via `playwright.config.ts`)

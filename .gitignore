@@ -33,6 +33,7 @@ secrets/
 # Test output (generated, not committed)
 test-results/
 playwright-report/
+playwright-artifacts/
 
 # Generated API docs
 swagger.json

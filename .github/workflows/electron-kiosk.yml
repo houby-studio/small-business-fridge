@@ -1,0 +1,85 @@
+name: Build Electron Kiosk Snap
+
+on:
+  push:
+    branches: ['feat/*', 'master']
+    paths:
+      - 'electron-kiosk/**'
+  pull_request:
+    branches: ['master']
+    paths:
+      - 'electron-kiosk/**'
+  workflow_dispatch: # allow manual trigger
+
+jobs:
+  build-snap:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '25'
+          cache: 'npm'
+          cache-dependency-path: electron-kiosk/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: electron-kiosk
+
+      - name: Install Snapcraft
+        run: sudo snap install snapcraft --classic
+
+      - name: Install snapcraft build dependencies
+        # snapcraft --destructive-mode can't call apt-get as non-root,
+        # so we pre-install every build-package declared in snapcraft.yaml.
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q \
+            git \
+            libgdk-pixbuf2.0-0 \
+            libgtk-3-0t64 \
+            librsvg2-common \
+            shared-mime-info \
+            inotify-tools \
+            libglib2.0-bin \
+            liboss4-salsa2
+
+      - name: Build Electron app (unpacked)
+        run: npm run build:dir
+        working-directory: electron-kiosk
+
+      - name: Build snap
+        # sudo -E: snapcraft needs root for stage-packages (apt) and
+        # gpu-snap git clone; -E preserves SNAPCRAFT_BUILD_ENVIRONMENT.
+        run: sudo -E snapcraft --destructive-mode
+        working-directory: electron-kiosk
+        env:
+          SNAPCRAFT_BUILD_ENVIRONMENT: host
+
+      - name: Locate snap file
+        id: snap
+        run: |
+          SNAP_FILE=$(find electron-kiosk -maxdepth 1 -name "*.snap" | head -1)
+          echo "file=${SNAP_FILE}" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename ${SNAP_FILE})" >> "$GITHUB_OUTPUT"
+
+      - name: Upload snap artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.snap.outputs.name }}
+          path: ${{ steps.snap.outputs.file }}
+          retention-days: 30
+
+      # ── Optional: publish to Snap Store on master ─────────────────────────
+      # Requires SNAPCRAFT_STORE_CREDENTIALS secret (generate with `snapcraft export-login`).
+      # Uncomment when ready to publish to the Snap Store.
+      #
+      # - name: Publish to Snap Store (edge channel)
+      #   if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+      #   run: |
+      #     echo "${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}" | snapcraft login --with -
+      #     snapcraft upload ${{ steps.snap.outputs.file }} --release edge

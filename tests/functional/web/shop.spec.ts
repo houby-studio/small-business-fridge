@@ -214,7 +214,7 @@ test.group('Web Shop - category filter', (group) => {
     assert.include(response.text(), productB.displayName)
   })
 
-  test('no category filter returns all in-stock products', async ({ client, assert }) => {
+  test('no category filter returns all in-stock products', async ({ client }) => {
     const user = await UserFactory.create()
     const supplier = await UserFactory.apply('supplier').create()
     const catA = await CategoryFactory.create()

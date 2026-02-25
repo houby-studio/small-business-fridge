@@ -1,16 +1,15 @@
 import { execSync } from 'node:child_process'
 import { Scrypt } from '@adonisjs/hash/drivers/scrypt'
 import pg from 'pg'
+import {
+  ensureTestDatabaseExists,
+  getTestDbConfigFromEnv,
+  getTestRuntimeEnv,
+} from '../utils/test_db.js'
 
 const { Client } = pg
 
-const DB_CONFIG = {
-  host: '127.0.0.1',
-  port: 5433,
-  user: 'sbf',
-  password: 'sbf',
-  database: 'sbf_test',
-}
+const DB_CONFIG = getTestDbConfigFromEnv()
 
 const SCRYPT_CONFIG = {
   cost: 16384,
@@ -21,23 +20,12 @@ const SCRYPT_CONFIG = {
   maxMemory: 33554432,
 }
 
-const TEST_ENV = {
-  ...process.env,
-  NODE_ENV: 'test',
-  PORT: '3345',
+const TEST_ENV = getTestRuntimeEnv({
   HOST: 'localhost',
-  SESSION_DRIVER: 'memory',
+  PORT: '3345',
   LOG_LEVEL: 'silent',
-  APP_KEY: 'test-app-key-for-testing-only-123',
-  DB_HOST: '127.0.0.1',
-  DB_PORT: '5433',
-  DB_USER: 'sbf',
-  DB_PASSWORD: 'sbf',
-  DB_DATABASE: 'sbf_test',
-  OIDC_ENABLED: 'false',
-  API_SECRET: 'test-api-secret',
   APP_URL: 'http://localhost:3345',
-}
+})
 
 /**
  * Playwright global setup:
@@ -48,6 +36,8 @@ const TEST_ENV = {
  *    so the UI has enough data to render lists, pagination, and charts.
  */
 export default async function globalSetup() {
+  await ensureTestDatabaseExists()
+
   // 1. Run migrations
   execSync('node ace migration:run --force', { env: TEST_ENV, stdio: 'pipe' })
 

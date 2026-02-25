@@ -14,9 +14,10 @@
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
     "format": "prettier --write .",
-    "typecheck": "npm run typecheck:backend && npm run typecheck:frontend",
+    "typecheck": "npm run typecheck:backend && npm run typecheck:frontend && npm run typecheck:tests",
     "typecheck:backend": "tsc --noEmit",
-    "typecheck:frontend": "vue-tsc --noEmit -p tsconfig.frontend.json"
+    "typecheck:frontend": "vue-tsc --noEmit -p tsconfig.frontend.json",
+    "typecheck:tests": "tsc --noEmit -p tsconfig.tests.json"
   },
   "imports": {
     "#controllers/*": "./app/controllers/*.js",

@@ -1,8 +1,13 @@
 import { defineConfig, devices } from '@playwright/test'
+import { getTestRuntimeEnv } from './tests/utils/test_db.js'
 
 const E2E_PORT = '3345'
 const E2E_BASE_URL = `http://localhost:${E2E_PORT}`
 const isCI = !!process.env.CI
+const testEnv = getTestRuntimeEnv({
+  PORT: E2E_PORT,
+  APP_URL: E2E_BASE_URL,
+})
 
 /**
  * Playwright E2E test configuration.
@@ -39,28 +44,7 @@ export default defineConfig({
     url: E2E_BASE_URL,
     // Always use a Playwright-managed server to avoid attaching to a stale local process.
     reuseExistingServer: false,
-    env: {
-      NODE_ENV: 'test',
-      PORT: E2E_PORT,
-      HOST: 'localhost',
-      SESSION_DRIVER: 'memory',
-      LOG_LEVEL: 'error',
-      APP_KEY: 'test-app-key-for-testing-only-123',
-      DB_HOST: '127.0.0.1',
-      DB_PORT: '5433',
-      DB_USER: 'sbf',
-      DB_PASSWORD: 'sbf',
-      DB_DATABASE: 'sbf_test',
-      SMTP_HOST: '127.0.0.1',
-      SMTP_PORT: '1025',
-      SMTP_USERNAME: '',
-      SMTP_PASSWORD: '',
-      SMTP_FROM_ADDRESS: 'noreply@test.local',
-      SMTP_FROM_NAME: 'Test',
-      OIDC_ENABLED: 'false',
-      API_SECRET: 'test-api-secret',
-      APP_URL: E2E_BASE_URL,
-    },
+    env: testEnv,
   },
 
   projects: [

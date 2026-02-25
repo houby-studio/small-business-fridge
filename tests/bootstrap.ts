@@ -10,6 +10,7 @@ import testUtils from '@adonisjs/core/services/test_utils'
 import '@adonisjs/lucid/database_provider'
 import { spec } from '@japa/runner/reporters'
 import { junitReporter } from './reporters/junit.js'
+import { ensureTestDatabaseExists } from './utils/test_db.js'
 
 /**
  * This file is imported by the "bin/test.ts" entrypoint file
@@ -40,7 +41,12 @@ export const plugins: Config['plugins'] = [
  * Configure lifecycle function to run before and after all the tests.
  */
 export const runnerHooks: Required<Pick<Config, 'setup' | 'teardown'>> = {
-  setup: [() => testUtils.db().migrate()],
+  setup: [
+    async () => {
+      await ensureTestDatabaseExists()
+      await testUtils.db().migrate()
+    },
+  ],
   teardown: [() => testUtils.db().truncate()],
 }
 

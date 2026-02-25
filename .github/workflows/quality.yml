@@ -24,7 +24,7 @@ jobs:
           POSTGRES_PASSWORD: sbf
           POSTGRES_DB: sbf_test
         ports:
-          - 5433:5432
+          - 5432:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -60,7 +60,7 @@ jobs:
           NODE_ENV: test
           APP_KEY: test-app-key-for-ci-only-123456789
           DB_HOST: 127.0.0.1
-          DB_PORT: 5433
+          DB_PORT: 5432
           DB_USER: sbf
           DB_PASSWORD: sbf
           DB_DATABASE: sbf_test
