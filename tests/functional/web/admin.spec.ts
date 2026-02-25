@@ -138,11 +138,67 @@ test.group('Admin - orders filter', (group) => {
     response.assertStatus(200)
   })
 
-  test('search by buyer name returns 200', async ({ client }) => {
+  test('filter by buyerId returns only matching buyer orders', async ({ client, assert }) => {
     const admin = await UserFactory.apply('admin').create()
+    const buyerA = await UserFactory.merge({ displayName: 'Buyer A' }).create()
+    const buyerB = await UserFactory.merge({ displayName: 'Buyer B' }).create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    const delivery = await DeliveryFactory.merge({
+      supplierId: admin.id,
+      productId: product.id,
+      amountLeft: 5,
+      price: 20,
+    }).create()
+    await OrderFactory.merge({ buyerId: buyerA.id, deliveryId: delivery.id }).create()
+    await OrderFactory.merge({ buyerId: buyerB.id, deliveryId: delivery.id }).create()
 
-    const response = await client.get('/admin/orders?search=alice').loginAs(admin)
+    const response = await client
+      .get(`/admin/orders?buyerId=${buyerA.id}`)
+      .loginAs(admin)
+      .header('X-Inertia', 'true')
+      .header('X-Inertia-Version', '1')
+
     response.assertStatus(200)
+    const body = response.body()
+    const rows: any[] = body.props.orders.data
+    assert.isAtLeast(rows.length, 1)
+    assert.isTrue(rows.every((row: any) => row.buyer?.id === buyerA.id))
+  })
+
+  test('filter by supplierId returns only matching supplier orders', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const supplier = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+    const category = await CategoryFactory.create()
+    const productA = await ProductFactory.merge({ categoryId: category.id }).create()
+    const productB = await ProductFactory.merge({ categoryId: category.id }).create()
+    const deliveryA = await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: productA.id,
+      amountLeft: 5,
+      price: 20,
+    }).create()
+    const deliveryB = await DeliveryFactory.merge({
+      supplierId: admin.id,
+      productId: productB.id,
+      amountLeft: 5,
+      price: 20,
+    }).create()
+    await OrderFactory.merge({ buyerId: buyer.id, deliveryId: deliveryA.id }).create()
+    await OrderFactory.merge({ buyerId: buyer.id, deliveryId: deliveryB.id }).create()
+
+    const response = await client
+      .get(`/admin/orders?supplierId=${supplier.id}`)
+      .loginAs(admin)
+      .header('X-Inertia', 'true')
+      .header('X-Inertia-Version', '1')
+
+    response.assertStatus(200)
+    const body = response.body()
+    const rows: any[] = body.props.orders.data
+    assert.isAtLeast(rows.length, 1)
+    assert.isTrue(rows.every((row: any) => row.delivery?.supplier?.id === supplier.id))
   })
 })
 
@@ -180,6 +236,95 @@ test.group('Admin - invoices filter', (group) => {
 
     const response = await client.get('/admin/invoices?status=awaiting').loginAs(admin)
     response.assertStatus(200)
+  })
+
+  test('filter invoices by supplierId returns only supplier invoices', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const buyer = await UserFactory.create()
+    const supplierA = await UserFactory.apply('supplier').create()
+    const supplierB = await UserFactory.apply('supplier').create()
+    await InvoiceFactory.merge({ buyerId: buyer.id, supplierId: supplierA.id }).create()
+    await InvoiceFactory.merge({ buyerId: buyer.id, supplierId: supplierB.id }).create()
+
+    const response = await client
+      .get(`/admin/invoices?supplierId=${supplierA.id}`)
+      .loginAs(admin)
+      .header('X-Inertia', 'true')
+      .header('X-Inertia-Version', '1')
+
+    response.assertStatus(200)
+    const body = response.body()
+    const rows: any[] = body.props.invoices.data
+    assert.isAtLeast(rows.length, 1)
+    assert.isTrue(rows.every((row: any) => row.supplier?.id === supplierA.id))
+  })
+
+  test('filter invoices by buyerId returns only buyer invoices', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const buyerA = await UserFactory.create()
+    const buyerB = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').create()
+    await InvoiceFactory.merge({ buyerId: buyerA.id, supplierId: supplier.id }).create()
+    await InvoiceFactory.merge({ buyerId: buyerB.id, supplierId: supplier.id }).create()
+
+    const response = await client
+      .get(`/admin/invoices?buyerId=${buyerA.id}`)
+      .loginAs(admin)
+      .header('X-Inertia', 'true')
+      .header('X-Inertia-Version', '1')
+
+    response.assertStatus(200)
+    const body = response.body()
+    const rows: any[] = body.props.invoices.data
+    assert.isAtLeast(rows.length, 1)
+    assert.isTrue(rows.every((row: any) => row.buyer?.id === buyerA.id))
+  })
+
+  test('admin invoices list shows all payment statuses', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const buyer = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').create()
+
+    await InvoiceFactory.apply('paid')
+      .merge({ buyerId: buyer.id, supplierId: supplier.id })
+      .create()
+    await InvoiceFactory.merge({
+      buyerId: buyer.id,
+      supplierId: supplier.id,
+      isPaid: false,
+      isPaymentRequested: true,
+    }).create()
+    await InvoiceFactory.merge({
+      buyerId: buyer.id,
+      supplierId: supplier.id,
+      isPaid: false,
+      isPaymentRequested: false,
+    }).create()
+
+    const response = await client
+      .get('/admin/invoices')
+      .loginAs(admin)
+      .header('X-Inertia', 'true')
+      .header('X-Inertia-Version', '1')
+
+    response.assertStatus(200)
+    const body = response.body()
+    const rows: any[] = body.props.invoices.data
+
+    const hasPaid = rows.some((row: any) => row.isPaid === true)
+    const hasAwaiting = rows.some(
+      (row: any) => row.isPaid === false && row.isPaymentRequested === true
+    )
+    const hasUnpaid = rows.some(
+      (row: any) => row.isPaid === false && row.isPaymentRequested === false
+    )
+
+    assert.isTrue(hasPaid)
+    assert.isTrue(hasAwaiting)
+    assert.isTrue(hasUnpaid)
   })
 })
 

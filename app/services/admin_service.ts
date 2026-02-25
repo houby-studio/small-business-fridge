@@ -267,15 +267,16 @@ export default class AdminService {
   }
 
   /**
-   * Get all orders (admin view) with optional search, channel, invoiced and sort filters.
+   * Get all orders (admin view) with optional channel, invoiced, user and sort filters.
    */
   async getAllOrders(
     page: number = 1,
     perPage: number = 20,
     filters?: {
-      search?: string
       channel?: string
       invoiced?: string
+      buyerId?: number
+      supplierId?: number
       sortBy?: string
       sortOrder?: string
     }
@@ -292,13 +293,6 @@ export default class AdminService {
       })
       .orderBy(safeSort, sortDir)
 
-    if (filters?.search) {
-      const term = `%${filters.search}%`
-      query.whereHas('buyer', (q) => {
-        q.whereRaw('display_name ILIKE ?', [term])
-      })
-    }
-
     if (filters?.channel) {
       query.where('channel', filters.channel)
     }
@@ -307,6 +301,16 @@ export default class AdminService {
       query.whereNotNull('invoiceId')
     } else if (filters?.invoiced === 'no') {
       query.whereNull('invoiceId')
+    }
+
+    if (filters?.buyerId) {
+      query.where('buyerId', filters.buyerId)
+    }
+
+    if (filters?.supplierId) {
+      query.whereHas('delivery', (deliveryQ) => {
+        deliveryQ.where('supplierId', filters.supplierId!)
+      })
     }
 
     return query.paginate(page, perPage)
@@ -318,7 +322,13 @@ export default class AdminService {
   async getAllInvoices(
     page: number = 1,
     perPage: number = 20,
-    filters?: { status?: string; sortBy?: string; sortOrder?: string }
+    filters?: {
+      status?: string
+      buyerId?: number
+      supplierId?: number
+      sortBy?: string
+      sortOrder?: string
+    }
   ) {
     const SORT_WHITELIST = ['createdAt', 'totalCost']
     const safeSort = SORT_WHITELIST.includes(filters?.sortBy ?? '') ? filters!.sortBy! : 'createdAt'
@@ -332,6 +342,14 @@ export default class AdminService {
       query.where('isPaid', false).where('isPaymentRequested', false)
     } else if (filters?.status === 'awaiting') {
       query.where('isPaid', false).where('isPaymentRequested', true)
+    }
+
+    if (filters?.buyerId) {
+      query.where('buyerId', filters.buyerId)
+    }
+
+    if (filters?.supplierId) {
+      query.where('supplierId', filters.supplierId)
     }
 
     return query.paginate(page, perPage)

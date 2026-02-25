@@ -28,12 +28,26 @@ interface PaginatedInvoices {
 
 const props = defineProps<{
   invoices: PaginatedInvoices
-  filters: { status: string; sortBy: string; sortOrder: string }
+  filters: {
+    status: string
+    buyerId: string
+    supplierId: string
+    sortBy: string
+    sortOrder: string
+  }
+  buyers: { id: number; displayName: string }[]
+  suppliers: { id: number; displayName: string }[]
 }>()
 const { t } = useI18n()
 const ALL = '__all__'
 
 const filterStatus = ref(props.filters.status || ALL)
+const filterBuyerId = ref<number | string>(
+  props.filters.buyerId ? Number(props.filters.buyerId) : ALL
+)
+const filterSupplierId = ref<number | string>(
+  props.filters.supplierId ? Number(props.filters.supplierId) : ALL
+)
 const filterSortBy = ref(props.filters.sortBy || 'createdAt')
 const filterSortOrder = ref(props.filters.sortOrder || 'desc')
 const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
@@ -44,6 +58,11 @@ const statusOptions = [
   { label: t('invoices.filter_unpaid'), value: 'unpaid' },
   { label: t('invoices.filter_awaiting'), value: 'awaiting' },
 ]
+const buyerOptions = computed(() => [{ id: ALL, displayName: t('common.all') }, ...props.buyers])
+const supplierOptions = computed(() => [
+  { id: ALL, displayName: t('common.all') },
+  ...props.suppliers,
+])
 
 function statusSeverity(inv: InvoiceRow) {
   if (inv.isPaid) return 'success'
@@ -60,6 +79,8 @@ function statusLabel(inv: InvoiceRow) {
 function buildFilterParams() {
   return {
     status: filterStatus.value === ALL ? undefined : filterStatus.value,
+    buyerId: filterBuyerId.value === ALL ? undefined : filterBuyerId.value,
+    supplierId: filterSupplierId.value === ALL ? undefined : filterSupplierId.value,
     sortBy: filterSortBy.value || undefined,
     sortOrder: filterSortOrder.value || undefined,
   }
@@ -82,6 +103,8 @@ function applyFilters() {
 
 function clearFilters() {
   filterStatus.value = ALL
+  filterBuyerId.value = ALL
+  filterSupplierId.value = ALL
   filterSortBy.value = 'createdAt'
   filterSortOrder.value = 'desc'
   lastAppliedFilterParams.value = buildFilterParams()
@@ -135,6 +158,32 @@ function onSort(event: any) {
           optionLabel="label"
           optionValue="value"
           class="w-44"
+        />
+      </div>
+      <div>
+        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
+          t('admin.invoices_filter_customer')
+        }}</label>
+        <Select
+          v-model="filterBuyerId"
+          :options="buyerOptions"
+          optionLabel="displayName"
+          optionValue="id"
+          filter
+          class="w-56"
+        />
+      </div>
+      <div>
+        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
+          t('admin.invoices_filter_supplier')
+        }}</label>
+        <Select
+          v-model="filterSupplierId"
+          :options="supplierOptions"
+          optionLabel="displayName"
+          optionValue="id"
+          filter
+          class="w-56"
         />
       </div>
       <Button

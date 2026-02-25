@@ -7,7 +7,6 @@ import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import Select from 'primevue/select'
-import InputText from 'primevue/inputtext'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from '~/composables/use_i18n'
@@ -34,15 +33,29 @@ interface PaginatedOrders {
 
 const props = defineProps<{
   orders: PaginatedOrders
-  filters: { search: string; channel: string; invoiced: string; sortBy: string; sortOrder: string }
+  filters: {
+    channel: string
+    invoiced: string
+    buyerId: string
+    supplierId: string
+    sortBy: string
+    sortOrder: string
+  }
+  buyers: { id: number; displayName: string }[]
+  suppliers: { id: number; displayName: string }[]
 }>()
 const confirm = useConfirm()
 const { t } = useI18n()
 const ALL = '__all__'
 
-const filterSearch = ref(props.filters.search ?? '')
 const filterChannel = ref(props.filters.channel || ALL)
 const filterInvoiced = ref(props.filters.invoiced || ALL)
+const filterBuyerId = ref<number | string>(
+  props.filters.buyerId ? Number(props.filters.buyerId) : ALL
+)
+const filterSupplierId = ref<number | string>(
+  props.filters.supplierId ? Number(props.filters.supplierId) : ALL
+)
 const filterSortBy = ref(props.filters.sortBy || 'createdAt')
 const filterSortOrder = ref(props.filters.sortOrder || 'desc')
 const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
@@ -59,12 +72,18 @@ const invoicedOptions = [
   { label: t('orders.filter_invoiced_yes'), value: 'yes' },
   { label: t('orders.filter_invoiced_no'), value: 'no' },
 ]
+const buyerOptions = computed(() => [{ id: ALL, displayName: t('common.all') }, ...props.buyers])
+const supplierOptions = computed(() => [
+  { id: ALL, displayName: t('common.all') },
+  ...props.suppliers,
+])
 
 function buildFilterParams() {
   return {
-    search: filterSearch.value || undefined,
     channel: filterChannel.value === ALL ? undefined : filterChannel.value,
     invoiced: filterInvoiced.value === ALL ? undefined : filterInvoiced.value,
+    buyerId: filterBuyerId.value === ALL ? undefined : filterBuyerId.value,
+    supplierId: filterSupplierId.value === ALL ? undefined : filterSupplierId.value,
     sortBy: filterSortBy.value || undefined,
     sortOrder: filterSortOrder.value || undefined,
   }
@@ -86,9 +105,10 @@ function applyFilters() {
 }
 
 function clearFilters() {
-  filterSearch.value = ''
   filterChannel.value = ALL
   filterInvoiced.value = ALL
+  filterBuyerId.value = ALL
+  filterSupplierId.value = ALL
   filterSortBy.value = 'createdAt'
   filterSortOrder.value = 'desc'
   lastAppliedFilterParams.value = buildFilterParams()
@@ -149,12 +169,6 @@ function storno(orderId: number) {
     <div class="mb-4 flex flex-wrap items-end gap-3">
       <div>
         <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
-          t('admin.orders_filter_search')
-        }}</label>
-        <InputText v-model="filterSearch" class="w-48" @keydown.enter="applyFilters" />
-      </div>
-      <div>
-        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
           t('admin.orders_filter_channel')
         }}</label>
         <Select
@@ -175,6 +189,32 @@ function storno(orderId: number) {
           optionLabel="label"
           optionValue="value"
           class="w-36"
+        />
+      </div>
+      <div>
+        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
+          t('admin.orders_filter_customer')
+        }}</label>
+        <Select
+          v-model="filterBuyerId"
+          :options="buyerOptions"
+          optionLabel="displayName"
+          optionValue="id"
+          filter
+          class="w-56"
+        />
+      </div>
+      <div>
+        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
+          t('admin.orders_filter_supplier')
+        }}</label>
+        <Select
+          v-model="filterSupplierId"
+          :options="supplierOptions"
+          optionLabel="displayName"
+          optionValue="id"
+          filter
+          class="w-56"
         />
       </div>
       <Button

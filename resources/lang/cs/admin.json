@@ -45,9 +45,12 @@
   "users_filter_role": "Role",
   "users_filter_user": "Uživatel",
 
-  "orders_filter_search": "Hledat zákazníka",
   "orders_filter_channel": "Kanál",
   "orders_filter_invoiced": "Fakturováno",
+  "orders_filter_customer": "Zákazník",
+  "orders_filter_supplier": "Dodavatel",
+  "invoices_filter_customer": "Zákazník",
+  "invoices_filter_supplier": "Dodavatel",
 
   "users_col_id": "ID",
   "users_col_email": "E-mail",
