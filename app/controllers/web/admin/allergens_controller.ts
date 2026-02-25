@@ -3,7 +3,6 @@ import AdminService from '#services/admin_service'
 import { createAllergenValidator, updateAllergenValidator } from '#validators/allergen'
 import AuditService from '#services/audit_service'
 import Allergen from '#models/allergen'
-import db from '@adonisjs/lucid/services/db'
 
 export default class AllergensController {
   async index({ inertia }: HttpContext) {
@@ -74,17 +73,14 @@ export default class AllergensController {
     }
 
     if (Object.keys(changes).length > 0) {
-      // Application-level audit log (service) + direct DB insert to ensure persistence
-      AuditService.log(auth.user!.id, 'allergen.updated', 'allergen', allergen.id, null, changes)
-      await db.table('audit_logs').insert({
-        user_id: auth.user!.id,
-        action: 'allergen.updated',
-        entity_type: 'allergen',
-        entity_id: allergen.id,
-        target_user_id: null,
-        metadata: changes,
-        created_at: new Date(),
-      })
+      await AuditService.log(
+        auth.user!.id,
+        'allergen.updated',
+        'allergen',
+        allergen.id,
+        null,
+        changes
+      )
     }
 
     session.flash('alert', {

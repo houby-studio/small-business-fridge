@@ -120,7 +120,7 @@ export default class OidcController {
         logger.error({ err }, `Failed to send welcome email to ${email}`)
       })
 
-      AuditService.log(user.id, 'user.registered', 'user', user.id, null, {
+      await AuditService.log(user.id, 'user.registered', 'user', user.id, null, {
         via: 'oidc',
         ip: request.ip(),
         ua: request.header('user-agent') ?? null,
@@ -169,7 +169,7 @@ export default class OidcController {
     // Always remember for OIDC — user already authenticated with Microsoft, no reason to expire session
     await auth.use('web').login(user, true)
     logger.info({ userId: user.id, email }, 'OIDC login success')
-    AuditService.log(user.id, 'user.login', 'user', user.id, null, {
+    await AuditService.log(user.id, 'user.login', 'user', user.id, null, {
       via: 'oidc',
       ip: request.ip(),
       ua: request.header('user-agent') ?? null,

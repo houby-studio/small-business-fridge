@@ -22,7 +22,7 @@ export default class StornoController {
 
       await service.stornoOrder(params.id)
 
-      AuditService.log(
+      await AuditService.log(
         auth.user!.id,
         'order.storno',
         'order',

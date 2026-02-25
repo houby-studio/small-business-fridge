@@ -52,7 +52,7 @@ export default class OrderService {
       )
 
       // Audit log (fire-and-forget, outside transaction)
-      AuditService.log(buyerId, 'order.created', 'order', order.id, delivery.supplierId, {
+      await AuditService.log(buyerId, 'order.created', 'order', order.id, delivery.supplierId, {
         productId: delivery.productId,
         price: delivery.price,
         channel,
@@ -172,7 +172,7 @@ export default class OrderService {
         for (let q = 0; q < quantity; q++) {
           const order = await Order.create({ buyerId, deliveryId, channel }, { client: trx })
           orders.push(order)
-          AuditService.log(buyerId, 'order.created', 'order', order.id, delivery.supplierId, {
+          await AuditService.log(buyerId, 'order.created', 'order', order.id, delivery.supplierId, {
             productId: delivery.productId,
             price: delivery.price,
             channel,

@@ -62,7 +62,7 @@ export default class InvoiceService {
 
         invoices.push(invoice)
 
-        AuditService.log(supplierId, 'invoice.generated', 'invoice', invoice.id, buyerId, {
+        await AuditService.log(supplierId, 'invoice.generated', 'invoice', invoice.id, buyerId, {
           total: totalCost,
           orderCount: orders.length,
         })
@@ -186,7 +186,7 @@ export default class InvoiceService {
     invoice.isPaymentRequested = true
     await invoice.save()
 
-    AuditService.log(buyerId, 'payment.requested', 'invoice', invoiceId, invoice.supplierId, {
+    await AuditService.log(buyerId, 'payment.requested', 'invoice', invoiceId, invoice.supplierId, {
       isPaymentRequested: { from: wasPaymentRequested, to: invoice.isPaymentRequested },
     })
 
@@ -214,7 +214,7 @@ export default class InvoiceService {
       isPaymentRequested: { from: wasPaymentRequested, to: invoice.isPaymentRequested },
     }
 
-    AuditService.log(
+    await AuditService.log(
       buyerId,
       'payment.request_cancelled',
       'invoice',
@@ -222,15 +222,6 @@ export default class InvoiceService {
       invoice.supplierId,
       metadata
     )
-    await db.table('audit_logs').insert({
-      user_id: buyerId,
-      action: 'payment.request_cancelled',
-      entity_type: 'invoice',
-      entity_id: invoiceId,
-      target_user_id: invoice.supplierId,
-      metadata,
-      created_at: new Date(),
-    })
     return invoice
   }
 
@@ -254,7 +245,7 @@ export default class InvoiceService {
       wasRequestedByCustomer: wasPaymentRequested,
     }
 
-    AuditService.log(
+    await AuditService.log(
       supplierId,
       'payment.approved',
       'invoice',
@@ -262,15 +253,6 @@ export default class InvoiceService {
       invoice.buyerId,
       metadata
     )
-    await db.table('audit_logs').insert({
-      user_id: supplierId,
-      action: 'payment.approved',
-      entity_type: 'invoice',
-      entity_id: invoiceId,
-      target_user_id: invoice.buyerId,
-      metadata,
-      created_at: new Date(),
-    })
 
     return invoice
   }
@@ -291,7 +273,7 @@ export default class InvoiceService {
     invoice.isPaymentRequested = false
     await invoice.save()
 
-    AuditService.log(supplierId, 'payment.rejected', 'invoice', invoiceId, invoice.buyerId, {
+    await AuditService.log(supplierId, 'payment.rejected', 'invoice', invoiceId, invoice.buyerId, {
       isPaid: { from: wasPaid, to: invoice.isPaid },
       isPaymentRequested: { from: wasPaymentRequested, to: invoice.isPaymentRequested },
     })
@@ -340,7 +322,7 @@ export default class InvoiceService {
         )
         .update({ invoiceId: invoice.id })
 
-      AuditService.log(supplierId, 'invoice.generated', 'invoice', invoice.id, buyerId, {
+      await AuditService.log(supplierId, 'invoice.generated', 'invoice', invoice.id, buyerId, {
         total: totalCost,
         orderCount: orders.length,
       })
@@ -400,7 +382,7 @@ export default class InvoiceService {
 
         invoices.push(invoice)
 
-        AuditService.log(actorId, 'invoice.generated', 'invoice', invoice.id, buyerId, {
+        await AuditService.log(actorId, 'invoice.generated', 'invoice', invoice.id, buyerId, {
           total: totalCost,
           orderCount: orders.length,
           supplierId,

@@ -33,7 +33,7 @@ export default class LoginController {
 
       await auth.use('web').login(user, !!rememberMe)
       logger.info({ userId: user.id, username }, 'Password login success')
-      AuditService.log(user.id, 'user.login', 'user', user.id, null, {
+      await AuditService.log(user.id, 'user.login', 'user', user.id, null, {
         via: 'password',
         ip: request.ip(),
         ua: request.header('user-agent') ?? null,
@@ -50,7 +50,7 @@ export default class LoginController {
     const userId = auth.user?.id ?? null
     await auth.use('web').logout()
     if (userId) {
-      AuditService.log(userId, 'user.logout', 'user', userId, null, {
+      await AuditService.log(userId, 'user.logout', 'user', userId, null, {
         ip: request.ip(),
         ua: request.header('user-agent') ?? null,
       })

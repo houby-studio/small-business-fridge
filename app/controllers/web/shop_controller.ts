@@ -28,7 +28,7 @@ export default class ShopController {
             .first()
           if (!existing) {
             await user.related('favoriteProducts').attach([productId])
-            AuditService.log(user.id, 'favorite.added', 'product', productId, null, {
+            await AuditService.log(user.id, 'favorite.added', 'product', productId, null, {
               name: product.displayName,
             })
             session.flash('alert', { type: 'success', message: i18n.t('messages.favorite_added') })

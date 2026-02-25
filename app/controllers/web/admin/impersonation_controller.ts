@@ -2,7 +2,6 @@ import type { HttpContext } from '@adonisjs/core/http'
 import logger from '@adonisjs/core/services/logger'
 import User from '#models/user'
 import AuditService from '#services/audit_service'
-import db from '@adonisjs/lucid/services/db'
 import type { ImpersonationData } from '#middleware/impersonation_middleware'
 
 export default class ImpersonationController {
@@ -52,16 +51,14 @@ export default class ImpersonationController {
       targetName: target.displayName,
     }
 
-    AuditService.log(admin.id, 'admin.impersonate.start', 'user', target.id, target.id, metadata)
-    await db.table('audit_logs').insert({
-      user_id: admin.id,
-      action: 'admin.impersonate.start',
-      entity_type: 'user',
-      entity_id: target.id,
-      target_user_id: target.id,
-      metadata,
-      created_at: new Date(),
-    })
+    await AuditService.log(
+      admin.id,
+      'admin.impersonate.start',
+      'user',
+      target.id,
+      target.id,
+      metadata
+    )
 
     session.flash('alert', {
       type: 'info',
@@ -88,7 +85,7 @@ export default class ImpersonationController {
       adminId: impersonation.byId,
       targetName: impersonation.asName,
     }
-    AuditService.log(
+    await AuditService.log(
       impersonation.byId,
       'admin.impersonate.stop',
       'user',
@@ -96,15 +93,6 @@ export default class ImpersonationController {
       impersonation.asId,
       stopMetadata
     )
-    await db.table('audit_logs').insert({
-      user_id: impersonation.byId,
-      action: 'admin.impersonate.stop',
-      entity_type: 'user',
-      entity_id: impersonation.asId,
-      target_user_id: impersonation.asId,
-      metadata: stopMetadata,
-      created_at: new Date(),
-    })
 
     session.forget('__impersonation')
 

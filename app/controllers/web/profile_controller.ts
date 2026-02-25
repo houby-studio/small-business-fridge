@@ -106,16 +106,7 @@ export default class ProfileController {
 
     const metadata = Object.keys(changes).length ? changes : null
 
-    AuditService.log(user.id, 'profile.updated', 'user', user.id, null, metadata)
-    await db.table('audit_logs').insert({
-      user_id: user.id,
-      action: 'profile.updated',
-      entity_type: 'user',
-      entity_id: user.id,
-      target_user_id: null,
-      metadata,
-      created_at: new Date(),
-    })
+    await AuditService.log(user.id, 'profile.updated', 'user', user.id, null, metadata)
 
     session.flash('alert', { type: 'success', message: i18n.t('messages.profile_updated') })
     return response.redirect('/profile')
@@ -131,16 +122,7 @@ export default class ProfileController {
       const metadata = {
         colorMode: { from: before, to: user.colorMode },
       }
-      AuditService.log(user.id, 'profile.updated', 'user', user.id, null, metadata)
-      await db.table('audit_logs').insert({
-        user_id: user.id,
-        action: 'profile.updated',
-        entity_type: 'user',
-        entity_id: user.id,
-        target_user_id: null,
-        metadata,
-        created_at: new Date(),
-      })
+      await AuditService.log(user.id, 'profile.updated', 'user', user.id, null, metadata)
     }
     return response.redirect().back()
   }
@@ -156,7 +138,7 @@ export default class ProfileController {
       expiresIn,
     })
 
-    AuditService.log(user.id, 'profile.token.created', 'user', user.id, null, {
+    await AuditService.log(user.id, 'profile.token.created', 'user', user.id, null, {
       tokenName: data.name,
     })
 
@@ -188,7 +170,7 @@ export default class ProfileController {
 
     await User.accessTokens.delete(user, tokenId)
 
-    AuditService.log(user.id, 'profile.token.revoked', 'user', user.id, null, {
+    await AuditService.log(user.id, 'profile.token.revoked', 'user', user.id, null, {
       tokenName: owned.name,
     })
 
@@ -214,7 +196,7 @@ export default class ProfileController {
       const toLabel = (ids: number[]) =>
         ids.map((id) => namesById.get(id) ?? `#${id}`).join(', ') || '—'
 
-      AuditService.log(user.id, 'profile.updated', 'user', user.id, null, {
+      await AuditService.log(user.id, 'profile.updated', 'user', user.id, null, {
         excludedAllergens: { from: toLabel(before), to: toLabel(after) },
       })
     }
@@ -239,12 +221,12 @@ export default class ProfileController {
 
     if (existing) {
       await user.related('favoriteProducts').detach([productId])
-      AuditService.log(user.id, 'favorite.removed', 'product', productId, null, {
+      await AuditService.log(user.id, 'favorite.removed', 'product', productId, null, {
         name: product.displayName,
       })
     } else {
       await user.related('favoriteProducts').attach([productId])
-      AuditService.log(user.id, 'favorite.added', 'product', productId, null, {
+      await AuditService.log(user.id, 'favorite.added', 'product', productId, null, {
         name: product.displayName,
       })
     }
