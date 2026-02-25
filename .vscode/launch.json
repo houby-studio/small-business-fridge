@@ -1,18 +1,15 @@
 {
-  // Pro informace o možných atributech použijte technologii IntelliSense.
-  // Umístěním ukazatele myši zobrazíte popisy existujících atributů.
-  // Další informace najdete tady: https://go.microsoft.com/fwlink/?linkid=830387
   "version": "0.2.0",
   "configurations": [
     {
       "type": "node",
       "request": "launch",
-      "name": "Spustit program",
-      "skipFiles": [
-        "<node_internals>/**"
-      ],
-      "program": "${workspaceFolder}/bin/www",
-      "outputCapture": "std"
+      "name": "AdonisJS dev server",
+      "program": "${workspaceFolder}/ace.js",
+      "args": ["serve", "--hmr"],
+      "skipFiles": ["<node_internals>/**"],
+      "outputCapture": "std",
+      "console": "integratedTerminal"
     }
   ]
 }
