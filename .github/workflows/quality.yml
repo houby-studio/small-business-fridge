@@ -2,7 +2,7 @@ name: Quality Checks
 
 on:
   push:
-    branches: ['v3/*', 'master']
+    branches: ['feat/*', 'master']
   pull_request:
     branches: ['master']
 
