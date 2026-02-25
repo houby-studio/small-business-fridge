@@ -6,6 +6,7 @@ public/assets
 # Generated test output
 test-results
 playwright-report
+playwright-artifacts
 
 # GitHub community health and template files (not project code)
 CODE_OF_CONDUCT.md

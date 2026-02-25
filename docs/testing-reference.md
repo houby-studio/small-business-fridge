@@ -17,7 +17,7 @@ purposes. They must never be confused — especially regarding which database th
 | **E2E**        | Playwright             | `sbf_test` | `npm run test:e2e`                 | Once in global setup       |
 
 > **CRITICAL**: All test tiers use the **`sbf_test` database**, never `sbf` (dev). Both databases
-> live in the same PostgreSQL container on port **5433**. The safety boundary is the database
+> live in the same PostgreSQL container on port **5432**. The safety boundary is the database
 > **name**, not the port.
 
 ---
@@ -26,12 +26,12 @@ purposes. They must never be confused — especially regarding which database th
 
 ### Setup
 
-One PostgreSQL 18 container runs on host port **5433** (maps to container port 5432 internally).
+One PostgreSQL 18 container runs on host port **5432**.
 It contains two databases:
 
 ```
-postgresql://sbf:sbf@localhost:5433/sbf       ← dev database (your live data)
-postgresql://sbf:sbf@localhost:5433/sbf_test  ← test database (wiped by tests)
+postgresql://sbf:sbf@localhost:5432/sbf       ← dev database (your live data)
+postgresql://sbf:sbf@localhost:5432/sbf_test  ← test database (wiped by tests)
 ```
 
 Both the Japa tests (`.env.test`) and Playwright E2E (`playwright.config.ts` webServer env and
@@ -474,7 +474,7 @@ InvoiceFactory.merge({ buyerId: buyer.id, supplierId: supplier.id }).create()
 NODE_ENV=test
 PORT=3334
 DB_HOST=127.0.0.1
-DB_PORT=5433
+DB_PORT=5432
 DB_DATABASE=sbf_test
 SESSION_DRIVER=memory    # ← in-memory sessions, no Redis needed
 OIDC_ENABLED=false

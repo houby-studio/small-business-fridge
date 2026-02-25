@@ -17,7 +17,7 @@ Colleagues browse available products, buy with one click, then pay later via QR 
 
 ```bash
 cp .env.example .env          # set APP_KEY (see comment in file) and adjust as needed
-docker compose -f compose.dev.yaml up -d   # postgres :5433, mailpit :8025/:1025
+docker compose -f compose.dev.yaml up -d   # postgres :5432, mailpit :8025/:1025
 npm install
 node ace migration:run
 node ace db:seed              # creates admin / supplier / customer / kiosk seed users
