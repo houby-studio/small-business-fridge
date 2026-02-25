@@ -4,5 +4,13 @@
     "rootDir": "./",
     "outDir": "./build"
   },
-  "exclude": ["./inertia/**/*", "./bin/test.ts", "./tests/**/*", "node_modules", "build"]
+  "exclude": [
+    "./inertia/**/*",
+    "./bin/test.ts",
+    "./tests/**/*",
+    "./playwright.config.ts",
+    "./scripts/ensure_test_db.ts",
+    "node_modules",
+    "build"
+  ]
 }
