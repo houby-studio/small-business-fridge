@@ -110,7 +110,7 @@ export function junitReporter(options: { outputFile?: string } = {}) {
   return {
     name: 'junit' as const,
 
-    handler(runner: any, emitter: any) {
+    handler(_runner: any, emitter: any) {
       const suiteTests = new Map<string, TestRecord[]>()
       let currentSuite = 'unknown'
       let currentGroup: string | undefined
