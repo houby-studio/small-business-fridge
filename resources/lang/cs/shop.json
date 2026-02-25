@@ -1,0 +1,11 @@
+{
+  "title": "Obchod",
+  "confirm_title": "Potvrdit nákup",
+  "confirm_message": "Koupit {name} za {price} Kč?",
+  "confirm_accept": "Koupit",
+  "no_products": "Žádné produkty k zobrazení.",
+  "favorite": "Oblíbené",
+  "forYou": "Doporučeno pro vás",
+  "exclude_allergens": "Vyloučit alergeny",
+  "allergens_filter_placeholder": "Vyberte alergeny, které chcete vyloučit"
+}

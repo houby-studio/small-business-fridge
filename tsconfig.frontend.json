@@ -1,0 +1,11 @@
+{
+  "extends": "./inertia/tsconfig.json",
+  "include": [
+    "inertia/components/**/*.vue",
+    "inertia/composables/**/*.ts",
+    "inertia/layouts/**/*.vue",
+    "inertia/pages/**/*.vue",
+    "inertia/types/**/*.ts"
+  ],
+  "exclude": ["node_modules", "build"]
+}

@@ -1,0 +1,7 @@
+import '@japa/assert'
+import '@japa/api-client'
+import '@japa/plugin-adonisjs'
+import '@adonisjs/session/plugins/api_client'
+import '@adonisjs/auth/plugins/api_client'
+import '@adonisjs/shield/plugins/api_client'
+import '#config/auth'

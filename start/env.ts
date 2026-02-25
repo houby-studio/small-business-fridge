@@ -1,0 +1,139 @@
+/*
+|--------------------------------------------------------------------------
+| Environment variables service
+|--------------------------------------------------------------------------
+|
+| The `Env.create` method creates an instance of the Env service. The
+| service validates the environment variables and also cast values
+| to JavaScript data types.
+|
+*/
+
+import { readFile } from 'node:fs/promises'
+import { Env } from '@adonisjs/core/env'
+
+/*
+|--------------------------------------------------------------------------
+| Docker secrets support
+|--------------------------------------------------------------------------
+|
+| The `file:` identifier allows reading secret values from files mounted
+| by Docker secrets (e.g. APP_KEY=file:/run/secrets/app_key).
+| Returns an empty string if the file does not exist (ENOENT), so optional
+| secrets like OIDC_CLIENT_SECRET do not cause a startup crash.
+|
+*/
+Env.defineIdentifier('file', async (filePath) => {
+  try {
+    const content = await readFile(filePath.trim(), 'utf-8')
+    return content.trim()
+  } catch (error: any) {
+    if (error.code === 'ENOENT') return ''
+    throw error
+  }
+})
+
+export default await Env.create(new URL('../', import.meta.url), {
+  NODE_ENV: Env.schema.enum(['development', 'production', 'test'] as const),
+  PORT: Env.schema.number(),
+  APP_KEY: Env.schema.string(),
+  HOST: Env.schema.string({ format: 'host' }),
+  LOG_LEVEL: Env.schema.string(),
+  APP_NAME: Env.schema.string.optional(),
+
+  /*
+  |----------------------------------------------------------
+  | Variables for configuring session package
+  |----------------------------------------------------------
+  */
+  SESSION_DRIVER: Env.schema.enum(['cookie', 'memory'] as const),
+
+  /*
+  |----------------------------------------------------------
+  | Variables for configuring database connection
+  |----------------------------------------------------------
+  */
+  DB_HOST: Env.schema.string({ format: 'host' }),
+  DB_PORT: Env.schema.number(),
+  DB_USER: Env.schema.string(),
+  DB_PASSWORD: Env.schema.string.optional(),
+  DB_DATABASE: Env.schema.string(),
+
+  /*
+  |----------------------------------------------------------
+  | Variables for configuring the mail package
+  |----------------------------------------------------------
+  */
+  SMTP_HOST: Env.schema.string({ format: 'host' }),
+  SMTP_PORT: Env.schema.number(),
+  SMTP_USERNAME: Env.schema.string.optional(),
+  SMTP_PASSWORD: Env.schema.string.optional(),
+  SMTP_FROM_ADDRESS: Env.schema.string.optional(),
+  SMTP_FROM_NAME: Env.schema.string.optional(),
+  SMTP_IGNORE_TLS: Env.schema.boolean.optional(),
+
+  /*
+  |----------------------------------------------------------
+  | Variables for configuring OIDC (Microsoft Entra ID)
+  |----------------------------------------------------------
+  */
+  OIDC_ENABLED: Env.schema.boolean.optional(),
+  LOCAL_LOGIN_DISABLED: Env.schema.boolean.optional(),
+  OIDC_AUTO_REGISTER: Env.schema.boolean.optional(),
+  OIDC_CLIENT_ID: Env.schema.string.optional(),
+  OIDC_CLIENT_SECRET: Env.schema.string.optional(),
+  OIDC_TENANT_ID: Env.schema.string.optional(),
+  OIDC_REDIRECT_URI: Env.schema.string.optional(),
+
+  /*
+  |----------------------------------------------------------
+  | Variables for API authentication
+  |----------------------------------------------------------
+  */
+  API_SECRET: Env.schema.string.optional(),
+  KIOSK_LOGOUT_CODE: Env.schema.string.optional(),
+
+  /*
+  |----------------------------------------------------------
+  | Application settings
+  |----------------------------------------------------------
+  */
+  APP_URL: Env.schema.string.optional(),
+  FEEDBACK_URL: Env.schema.string.optional(),
+  SWAGGER_ENABLED: Env.schema.boolean.optional(),
+
+  /*
+  |----------------------------------------------------------
+  | Scheduler cron expressions (all default to Mon-Fri)
+  |----------------------------------------------------------
+  */
+  CRON_DAILY_REPORT: Env.schema.string.optional(),
+  CRON_UNPAID_REMINDER: Env.schema.string.optional(),
+  CRON_PENDING_APPROVAL: Env.schema.string.optional(),
+  UNPAID_REMINDER_MIN_AGE_DAYS: Env.schema.number.optional(),
+
+  /*
+  |----------------------------------------------------------
+  | OpenAI integration
+  |----------------------------------------------------------
+  */
+  OPENAI_API_KEY: Env.schema.string.optional(),
+
+  /*
+  |----------------------------------------------------------
+  | ESL integration
+  |----------------------------------------------------------
+  */
+  ESL_AIMS_ENABLED: Env.schema.boolean.optional(),
+  ESL_AIMS_BASE_URL: Env.schema.string.optional(),
+  ESL_AIMS_STORE: Env.schema.string.optional(),
+  ESL_AIMS_CRON: Env.schema.string.optional(),
+  ESL_AIMS_VERIFY_TLS: Env.schema.boolean.optional(),
+
+  ESL_JAMES_ENABLED: Env.schema.boolean.optional(),
+  ESL_JAMES_BASE_URL: Env.schema.string.optional(),
+  ESL_JAMES_STORE: Env.schema.string.optional(),
+  ESL_JAMES_API_KEY: Env.schema.string.optional(),
+  ESL_JAMES_CRON: Env.schema.string.optional(),
+  ESL_JAMES_VERIFY_TLS: Env.schema.boolean.optional(),
+})
