@@ -10,9 +10,9 @@
     "build:dir": "electron-builder --linux dir"
   },
   "build": {
-    "appId": "studio.houby.sbf-kiosk",
+    "appId": "eu.houbystudio.sbf-kiosk",
     "productName": "SBF Kiosk",
-    "copyright": "Copyright © 2025 Jakub Šindelář",
+    "copyright": "Copyright © 2025 Houby Studio",
     "linux": {
       "target": [
         "snap"
@@ -23,7 +23,7 @@
     "snap": {
       "confinement": "strict",
       "grade": "stable",
-      "base": "core22",
+      "base": "core24",
       "hooks": "snap/hooks",
       "plugs": [
         "default",
