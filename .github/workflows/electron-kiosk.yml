@@ -46,7 +46,7 @@ jobs:
             shared-mime-info \
             inotify-tools \
             libglib2.0-bin \
-            oss4-libs
+            liboss4-salsa2
 
       - name: Build Electron app (unpacked)
         run: npm run build:dir
