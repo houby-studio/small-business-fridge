@@ -11,9 +11,10 @@ Before declaring any task complete, run the full quality gate from the repo root
 5. `node ace test --no-color` with test env
 6. `npm run test:e2e`
 
-Equivalent shortcut:
+Equivalent shortcuts:
 
 - `./check.sh` (covers lint, prettier, typecheck, migrations, unit/functional tests, e2e)
+- `.\check.ps1` (PowerShell alternative with the same checks)
 
 If any step fails:
 
