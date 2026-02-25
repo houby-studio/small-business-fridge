@@ -121,8 +121,9 @@ jobs:
         if: always()
         with:
           report_paths: 'sbf/test-results/junit-japa.xml'
-          reporter: java-junit
           check_name: 'Japa Test Results'
+          require_tests: true
+          require_passed_tests: true
           include_passed: true
           detailed_summary: true
 
@@ -131,8 +132,9 @@ jobs:
         if: always()
         with:
           report_paths: 'sbf/test-results/junit-e2e.xml'
-          reporter: java-junit
           check_name: 'Playwright E2E Results'
+          require_tests: true
+          require_passed_tests: true
           include_passed: true
           detailed_summary: true
 
