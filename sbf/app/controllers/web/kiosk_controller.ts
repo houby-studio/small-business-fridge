@@ -8,6 +8,7 @@ import logger from '@adonisjs/core/services/logger'
 import KioskSession from '#models/kiosk_session'
 import db from '@adonisjs/lucid/services/db'
 import { purchaseBasketValidator } from '#validators/order'
+import env from '#start/env'
 
 export default class KioskController {
   /**
@@ -30,13 +31,26 @@ export default class KioskController {
    */
   async identify({ request, response, i18n }: HttpContext) {
     const keypadId = request.input('keypadId')
+    const normalizedKeypadId = String(keypadId ?? '').trim()
 
-    if (!keypadId) {
+    if (!normalizedKeypadId) {
       return response.status(400).json({ error: 'missing_keypad_id' })
     }
 
+    const kioskLogoutCode = env.get('KIOSK_LOGOUT_CODE', '000000')
+    if (normalizedKeypadId === kioskLogoutCode) {
+      return response.json({ action: 'logout' })
+    }
+
+    if (normalizedKeypadId === '666') {
+      return response.json({
+        action: 'easter_egg',
+        message: i18n.t('kiosk.easter_egg_666'),
+      })
+    }
+
     const customer = await User.query()
-      .where('keypadId', keypadId)
+      .where('keypadId', normalizedKeypadId)
       .where('isDisabled', false)
       .first()
 

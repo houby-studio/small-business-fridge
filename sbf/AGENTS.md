@@ -25,6 +25,16 @@ If any step fails:
 
 Mirror `.github/workflows/sbf-quality.yml` as the source of truth for required checks.
 
+## CI Test Reporting Requirements
+
+Every CI run must publish both test layers as JUnit checks and artifacts:
+
+1. Japa report from `sbf/test-results/junit-japa.xml`
+2. Playwright report from `sbf/test-results/junit-e2e.xml`
+3. Upload raw test artifacts (`test-results/**`, `playwright-report/**`) for inspection
+
+Treat missing or empty JUnit XML files as CI failures. Never leave publishing in a state that can show `0 ran` for passing suites.
+
 ## Test Creation Policy
 
 For every feature or bugfix, add/update tests at all relevant levels:

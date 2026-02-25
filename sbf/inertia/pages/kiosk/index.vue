@@ -361,6 +361,20 @@ async function onKeypadSubmit(keypadId: string) {
     })
     const data = await res.json()
 
+    if (data.action === 'logout') {
+      window.location.assign('/logout')
+      return
+    }
+
+    if (data.action === 'easter_egg') {
+      toast.add({
+        severity: 'info',
+        summary: data.message ?? t('kiosk.easter_egg_666'),
+        life: 3500,
+      })
+      return
+    }
+
     if (!res.ok) {
       toast.add({
         severity: 'error',

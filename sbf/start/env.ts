@@ -91,6 +91,7 @@ export default await Env.create(new URL('../', import.meta.url), {
   |----------------------------------------------------------
   */
   API_SECRET: Env.schema.string.optional(),
+  KIOSK_LOGOUT_CODE: Env.schema.string.optional(),
 
   /*
   |----------------------------------------------------------

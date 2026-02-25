@@ -24,7 +24,7 @@ const SCRYPT_CONFIG = {
 const TEST_ENV = {
   ...process.env,
   NODE_ENV: 'test',
-  PORT: '3334',
+  PORT: '3345',
   HOST: 'localhost',
   SESSION_DRIVER: 'memory',
   LOG_LEVEL: 'silent',
@@ -36,7 +36,7 @@ const TEST_ENV = {
   DB_DATABASE: 'sbf_test',
   OIDC_ENABLED: 'false',
   API_SECRET: 'test-api-secret',
-  APP_URL: 'http://localhost:3334',
+  APP_URL: 'http://localhost:3345',
 }
 
 /**

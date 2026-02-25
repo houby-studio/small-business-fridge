@@ -282,8 +282,16 @@ When adding user-facing text:
 ## CI/CD
 
 - **Docker image**: `.github/workflows/sbf-docker-image.yaml` — triggers on push to `v3/*` or `master` when `sbf/**` changes
-- **Quality CI**: `.github/workflows/sbf-quality.yaml` — runs lint + format + typecheck + tests on every PR and push to `v3/*`
+- **Quality CI**: `.github/workflows/sbf-quality.yml` — runs lint + format + typecheck + tests on every PR and push to `v3/*`
 - Dockerfile does NOT run quality checks — they happen in the quality CI job
+
+### Quality CI Reporting (Mandatory)
+
+- Japa tests must generate `sbf/test-results/junit-japa.xml` and publish it via `mikepenz/action-junit-report`.
+- Playwright tests must generate `sbf/test-results/junit-e2e.xml` and publish it via `mikepenz/action-junit-report`.
+- CI must verify both XML files exist and are non-empty before publishing.
+- CI must upload test artifacts (`sbf/test-results/**`, `sbf/playwright-report/**`) so failures can be debugged from the run page.
+- Do not accept CI changes that can silently report `0 ran` for a suite that actually executed.
 
 ---
 

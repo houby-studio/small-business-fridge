@@ -42,5 +42,6 @@
   "all_categories": "All",
   "max_stock_reached": "Maximum quantity in basket",
   "thank_you": "Thank you, {name}!",
-  "purchase_done": "Great choice! See you next time."
+  "purchase_done": "Great choice! See you next time.",
+  "easter_egg_666": "Code 666 unlocked: nice try, only an easter egg this time."
 }

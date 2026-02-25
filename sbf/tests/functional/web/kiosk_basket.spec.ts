@@ -197,6 +197,27 @@ test.group('GET /kiosk/customer', (group) => {
     assert.include(response.text(), 'error')
   })
 
+  test('returns logout action for configured kiosk logout code', async ({ client, assert }) => {
+    const kioskDevice = await UserFactory.apply('kiosk').create()
+
+    const response = await client.get('/kiosk/customer?keypadId=000000').loginAs(kioskDevice)
+
+    response.assertStatus(200)
+    const body = JSON.parse(response.text())
+    assert.equal(body.action, 'logout')
+  })
+
+  test('returns easter egg action for keypad code 666', async ({ client, assert }) => {
+    const kioskDevice = await UserFactory.apply('kiosk').create()
+
+    const response = await client.get('/kiosk/customer?keypadId=666').loginAs(kioskDevice)
+
+    response.assertStatus(200)
+    const body = JSON.parse(response.text())
+    assert.equal(body.action, 'easter_egg')
+    assert.isString(body.message)
+  })
+
   test('recommendedIds skip out-of-stock higher ranks and backfill with lower in-stock ranks', async ({
     client,
     assert,
