@@ -104,14 +104,18 @@ export default class ProfileController {
       }
     }
 
-    AuditService.log(
-      user.id,
-      'profile.updated',
-      'user',
-      user.id,
-      null,
-      Object.keys(changes).length ? changes : null
-    )
+    const metadata = Object.keys(changes).length ? changes : null
+
+    AuditService.log(user.id, 'profile.updated', 'user', user.id, null, metadata)
+    await db.table('audit_logs').insert({
+      user_id: user.id,
+      action: 'profile.updated',
+      entity_type: 'user',
+      entity_id: user.id,
+      target_user_id: null,
+      metadata,
+      created_at: new Date(),
+    })
 
     session.flash('alert', { type: 'success', message: i18n.t('messages.profile_updated') })
     return response.redirect('/profile')
@@ -124,8 +128,18 @@ export default class ProfileController {
     user.colorMode = data.colorMode
     await user.save()
     if (before !== user.colorMode) {
-      AuditService.log(user.id, 'profile.updated', 'user', user.id, null, {
+      const metadata = {
         colorMode: { from: before, to: user.colorMode },
+      }
+      AuditService.log(user.id, 'profile.updated', 'user', user.id, null, metadata)
+      await db.table('audit_logs').insert({
+        user_id: user.id,
+        action: 'profile.updated',
+        entity_type: 'user',
+        entity_id: user.id,
+        target_user_id: null,
+        metadata,
+        created_at: new Date(),
       })
     }
     return response.redirect().back()

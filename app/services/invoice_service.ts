@@ -210,16 +210,27 @@ export default class InvoiceService {
     invoice.isPaymentRequested = false
     await invoice.save()
 
+    const metadata = {
+      isPaymentRequested: { from: wasPaymentRequested, to: invoice.isPaymentRequested },
+    }
+
     AuditService.log(
       buyerId,
       'payment.request_cancelled',
       'invoice',
       invoiceId,
       invoice.supplierId,
-      {
-        isPaymentRequested: { from: wasPaymentRequested, to: invoice.isPaymentRequested },
-      }
+      metadata
     )
+    await db.table('audit_logs').insert({
+      user_id: buyerId,
+      action: 'payment.request_cancelled',
+      entity_type: 'invoice',
+      entity_id: invoiceId,
+      target_user_id: invoice.supplierId,
+      metadata,
+      created_at: new Date(),
+    })
     return invoice
   }
 
@@ -238,9 +249,27 @@ export default class InvoiceService {
     invoice.isPaid = true
     await invoice.save()
 
-    AuditService.log(supplierId, 'payment.approved', 'invoice', invoiceId, invoice.buyerId, {
+    const metadata = {
       isPaid: { from: wasPaid, to: invoice.isPaid },
       wasRequestedByCustomer: wasPaymentRequested,
+    }
+
+    AuditService.log(
+      supplierId,
+      'payment.approved',
+      'invoice',
+      invoiceId,
+      invoice.buyerId,
+      metadata
+    )
+    await db.table('audit_logs').insert({
+      user_id: supplierId,
+      action: 'payment.approved',
+      entity_type: 'invoice',
+      entity_id: invoiceId,
+      target_user_id: invoice.buyerId,
+      metadata,
+      created_at: new Date(),
     })
 
     return invoice

@@ -3,6 +3,7 @@ import AdminService from '#services/admin_service'
 import { createCategoryValidator, updateCategoryValidator } from '#validators/category'
 import AuditService from '#services/audit_service'
 import Category from '#models/category'
+import db from '@adonisjs/lucid/services/db'
 
 export default class CategoriesController {
   async index({ inertia }: HttpContext) {
@@ -29,10 +30,21 @@ export default class CategoriesController {
     const service = new AdminService()
     const category = await service.createCategory(data.name, data.color)
 
-    AuditService.log(auth.user!.id, 'category.created', 'category', category.id, null, {
+    const metadata = {
       name: category.name,
       color: category.color,
       isDisabled: category.isDisabled,
+    }
+
+    AuditService.log(auth.user!.id, 'category.created', 'category', category.id, null, metadata)
+    await db.table('audit_logs').insert({
+      user_id: auth.user!.id,
+      action: 'category.created',
+      entity_type: 'category',
+      entity_id: category.id,
+      target_user_id: null,
+      metadata,
+      created_at: new Date(),
     })
 
     session.flash('alert', {
@@ -77,6 +89,15 @@ export default class CategoriesController {
 
     if (Object.keys(changes).length > 0) {
       AuditService.log(auth.user!.id, 'category.updated', 'category', category.id, null, changes)
+      await db.table('audit_logs').insert({
+        user_id: auth.user!.id,
+        action: 'category.updated',
+        entity_type: 'category',
+        entity_id: category.id,
+        target_user_id: null,
+        metadata: changes,
+        created_at: new Date(),
+      })
     }
 
     session.flash('alert', {
