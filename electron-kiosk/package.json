@@ -6,7 +6,7 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "build:snap": "electron-builder --linux dir && snapcraft --destructive-mode",
+    "build:snap": "electron-builder --linux dir && sudo -E snapcraft --destructive-mode",
     "build:dir": "electron-builder --linux dir"
   },
   "build": {

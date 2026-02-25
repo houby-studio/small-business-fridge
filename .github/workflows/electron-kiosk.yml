@@ -33,11 +33,30 @@ jobs:
       - name: Install Snapcraft
         run: sudo snap install snapcraft --classic
 
+      - name: Install snapcraft build dependencies
+        # snapcraft --destructive-mode can't call apt-get as non-root,
+        # so we pre-install every build-package declared in snapcraft.yaml.
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q \
+            git \
+            libgdk-pixbuf2.0-0 \
+            libgtk-3-0t64 \
+            librsvg2-common \
+            shared-mime-info \
+            inotify-tools \
+            libglib2.0-bin
+
+      - name: Build Electron app (unpacked)
+        run: npm run build:dir
+        working-directory: electron-kiosk
+
       - name: Build snap
-        run: npm run build:snap
+        # sudo -E: snapcraft needs root for stage-packages (apt) and
+        # gpu-snap git clone; -E preserves SNAPCRAFT_BUILD_ENVIRONMENT.
+        run: sudo -E snapcraft --destructive-mode
         working-directory: electron-kiosk
         env:
-          # Build in the host environment (no VM/container needed in ephemeral CI runners)
           SNAPCRAFT_BUILD_ENVIRONMENT: host
 
       - name: Locate snap file
