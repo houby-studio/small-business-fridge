@@ -28,12 +28,16 @@ export default class UsersController {
     const search = request.input('search')
     const role = request.input('role')
     const userId = request.input('userId')
+    const sortBy = request.input('sortBy')
+    const sortOrder = request.input('sortOrder')
 
     const service = new AdminService()
     const paginator = await service.getUsers(page, 20, {
       search: search || undefined,
       role: role || undefined,
       userId: userId ? Number(userId) : undefined,
+      sortBy: sortBy || undefined,
+      sortOrder: sortOrder || undefined,
     })
 
     const users = paginator.all()
@@ -64,7 +68,13 @@ export default class UsersController {
         })),
         meta: paginator.getMeta(),
       },
-      filters: { search: search || '', role: role || '', userId: userId || '' },
+      filters: {
+        search: search || '',
+        role: role || '',
+        userId: userId || '',
+        sortBy: sortBy || '',
+        sortOrder: sortOrder || '',
+      },
       userOptions: userOptions.map((u) => ({ id: u.id, displayName: u.displayName })),
     })
   }

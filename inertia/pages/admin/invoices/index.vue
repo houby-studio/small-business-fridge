@@ -166,28 +166,44 @@ function onSort(event: any) {
       stripedRows
       class="rounded-lg border"
     >
-      <Column header="#" style="width: 60px">
+      <Column header="#" headerClass="sbf-col-id" bodyClass="sbf-col-id">
         <template #body="{ data }">{{ data.id }}</template>
       </Column>
-      <Column :header="t('common.date')" field="createdAt" sortable>
+      <Column
+        :header="t('common.date')"
+        field="createdAt"
+        sortable
+        headerClass="sbf-col-date"
+        bodyClass="sbf-col-date"
+      >
         <template #body="{ data }">{{ formatDate(data.createdAt) }}</template>
       </Column>
-      <Column :header="t('common.customer')">
+      <Column :header="t('common.customer')" style="min-width: 14rem">
         <template #body="{ data }">{{ data.buyer?.displayName ?? '—' }}</template>
       </Column>
-      <Column :header="t('common.supplier')">
+      <Column :header="t('common.supplier')" style="min-width: 14rem">
         <template #body="{ data }">{{ data.supplier?.displayName ?? '—' }}</template>
       </Column>
-      <Column :header="t('common.total')" field="totalCost" sortable style="width: 100px">
+      <Column
+        :header="t('common.total')"
+        field="totalCost"
+        sortable
+        headerClass="sbf-col-price"
+        bodyClass="sbf-col-price"
+      >
         <template #body="{ data }">
           <span class="font-semibold">{{
             t('common.price_with_currency', { price: data.totalCost })
           }}</span>
         </template>
       </Column>
-      <Column :header="t('common.status')">
+      <Column :header="t('common.status')" headerClass="sbf-col-tight" bodyClass="sbf-col-tight">
         <template #body="{ data }">
-          <Tag :value="statusLabel(data)" :severity="statusSeverity(data)" class="text-xs" />
+          <Tag
+            :value="statusLabel(data)"
+            :severity="statusSeverity(data)"
+            class="text-xs whitespace-nowrap"
+          />
         </template>
       </Column>
 

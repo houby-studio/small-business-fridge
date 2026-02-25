@@ -204,17 +204,27 @@ function onSort(event: any) {
       stripedRows
       class="rounded-lg border"
     >
-      <Column :header="t('audit.date')" field="createdAt" sortable>
+      <Column
+        :header="t('audit.date')"
+        field="createdAt"
+        sortable
+        headerClass="sbf-col-date"
+        bodyClass="sbf-col-date"
+      >
         <template #body="{ data }">{{ formatDateTime(data.createdAt) }}</template>
       </Column>
-      <Column :header="t('audit.action')">
+      <Column :header="t('audit.action')" headerClass="sbf-col-tight" bodyClass="sbf-col-tight">
         <template #body="{ data }">
-          <Tag :value="actionLabel(data.action)" severity="info" class="text-xs" />
+          <Tag
+            :value="actionLabel(data.action)"
+            severity="info"
+            class="text-xs whitespace-nowrap"
+          />
         </template>
       </Column>
-      <Column :header="t('audit.entity')">
+      <Column :header="t('audit.entity')" headerClass="sbf-col-tight" bodyClass="sbf-col-tight">
         <template #body="{ data }">
-          {{ data.entityType }}
+          <span class="sbf-nowrap">{{ data.entityType }}</span>
           <span v-if="data.entityId" class="text-gray-400 dark:text-zinc-500"
             >#{{ data.entityId }}</span
           >

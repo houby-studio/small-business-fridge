@@ -170,19 +170,39 @@ function onSort(event: any) {
       stripedRows
       class="rounded-lg border"
     >
-      <Column :header="t('common.date')" field="createdAt" sortable>
+      <Column
+        :header="t('common.date')"
+        field="createdAt"
+        sortable
+        headerClass="sbf-col-date"
+        bodyClass="sbf-col-date"
+      >
         <template #body="{ data }">{{ formatDate(data.createdAt) }}</template>
       </Column>
       <Column :header="t('common.product')">
         <template #body="{ data }">{{ data.product?.displayName ?? '—' }}</template>
       </Column>
-      <Column :header="t('supplier.deliveries_amount')" style="width: 100px">
+      <Column
+        :header="t('supplier.deliveries_amount')"
+        headerClass="sbf-col-number"
+        bodyClass="sbf-col-number"
+      >
         <template #body="{ data }">{{ data.amountSupplied }} {{ t('common.pieces') }}</template>
       </Column>
-      <Column :header="t('supplier.deliveries_remaining')" style="width: 100px">
+      <Column
+        :header="t('supplier.deliveries_remaining')"
+        headerClass="sbf-col-number"
+        bodyClass="sbf-col-number"
+      >
         <template #body="{ data }">{{ data.amountLeft }} {{ t('common.pieces') }}</template>
       </Column>
-      <Column :header="t('common.price')" field="price" sortable style="width: 100px">
+      <Column
+        :header="t('common.price')"
+        field="price"
+        sortable
+        headerClass="sbf-col-price"
+        bodyClass="sbf-col-price"
+      >
         <template #body="{ data }">{{
           t('common.price_with_currency', { price: data.price })
         }}</template>

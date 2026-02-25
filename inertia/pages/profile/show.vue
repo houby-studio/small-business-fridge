@@ -317,28 +317,46 @@ function copyToken() {
               <Column :header="t('profile.tokens_name')">
                 <template #body="{ data }">{{ data.name }}</template>
               </Column>
-              <Column :header="t('profile.tokens_created')" style="width: 160px">
-                <template #body="{ data }">{{ formatDate(data.created_at) }}</template>
-              </Column>
-              <Column :header="t('profile.tokens_last_used')" style="width: 160px">
+              <Column
+                :header="t('profile.tokens_created')"
+                headerClass="sbf-col-date"
+                bodyClass="sbf-col-date"
+              >
                 <template #body="{ data }">
-                  {{
+                  <span class="sbf-nowrap">{{ formatDate(data.created_at) }}</span>
+                </template>
+              </Column>
+              <Column
+                :header="t('profile.tokens_last_used')"
+                headerClass="sbf-col-date"
+                bodyClass="sbf-col-date"
+              >
+                <template #body="{ data }">
+                  <span class="sbf-nowrap">{{
                     data.last_used_at
                       ? formatDate(data.last_used_at)
                       : t('profile.tokens_never_used')
-                  }}
+                  }}</span>
                 </template>
               </Column>
-              <Column :header="t('profile.tokens_expires')" style="width: 160px">
+              <Column
+                :header="t('profile.tokens_expires')"
+                headerClass="sbf-col-date"
+                bodyClass="sbf-col-date"
+              >
                 <template #body="{ data }">
-                  {{
+                  <span class="sbf-nowrap">{{
                     data.expires_at
                       ? formatDate(data.expires_at)
                       : t('profile.tokens_never_expires')
-                  }}
+                  }}</span>
                 </template>
               </Column>
-              <Column style="width: 80px">
+              <Column
+                :header="t('common.actions')"
+                headerClass="sbf-col-action"
+                bodyClass="sbf-col-action"
+              >
                 <template #body="{ data }">
                   <Button
                     :label="t('profile.tokens_revoke')"

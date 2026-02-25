@@ -283,7 +283,13 @@ function channelLabel(channel: string) {
       stripedRows
       class="rounded-lg border"
     >
-      <Column :header="t('common.date')" field="createdAt" sortable>
+      <Column
+        :header="t('common.date')"
+        field="createdAt"
+        sortable
+        headerClass="sbf-col-date"
+        bodyClass="sbf-col-date"
+      >
         <template #body="{ data }">
           {{ formatDate(data.createdAt) }}
         </template>
@@ -293,7 +299,7 @@ function channelLabel(channel: string) {
           {{ data.delivery?.product?.displayName ?? '—' }}
         </template>
       </Column>
-      <Column :header="t('common.price')">
+      <Column :header="t('common.price')" headerClass="sbf-col-price" bodyClass="sbf-col-price">
         <template #body="{ data }">
           <span class="font-semibold">{{
             t('common.price_with_currency', { price: data.delivery?.price ?? '—' })
@@ -305,12 +311,12 @@ function channelLabel(channel: string) {
           {{ data.delivery?.supplier?.displayName ?? '—' }}
         </template>
       </Column>
-      <Column :header="t('common.channel')">
+      <Column :header="t('common.channel')" headerClass="sbf-col-tight" bodyClass="sbf-col-tight">
         <template #body="{ data }">
           <Tag :value="channelLabel(data.channel)" severity="info" class="text-xs" />
         </template>
       </Column>
-      <Column header="#">
+      <Column header="#" headerClass="sbf-col-tight" bodyClass="sbf-col-tight">
         <template #body="{ data }">
           <Tag
             v-if="data.invoiceId"

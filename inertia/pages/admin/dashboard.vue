@@ -154,10 +154,10 @@ function channelSeverity(ch: string): 'info' | 'success' | 'warn' {
       {{ t('admin.dashboard_recent_orders') }}
     </h2>
     <DataTable :value="stats.recentOrders" stripedRows class="rounded-lg border">
-      <Column header="#" style="width: 60px">
+      <Column header="#" headerClass="sbf-col-id" bodyClass="sbf-col-id">
         <template #body="{ data }">{{ data.id }}</template>
       </Column>
-      <Column :header="t('common.date')">
+      <Column :header="t('common.date')" headerClass="sbf-col-date" bodyClass="sbf-col-date">
         <template #body="{ data }">{{ formatDate(data.createdAt) }}</template>
       </Column>
       <Column :header="t('common.customer')">
@@ -166,12 +166,12 @@ function channelSeverity(ch: string): 'info' | 'success' | 'warn' {
       <Column :header="t('common.product')">
         <template #body="{ data }">{{ data.productName }}</template>
       </Column>
-      <Column :header="t('common.price')" style="width: 100px">
+      <Column :header="t('common.price')" headerClass="sbf-col-price" bodyClass="sbf-col-price">
         <template #body="{ data }">{{
           t('common.price_with_currency', { price: data.price })
         }}</template>
       </Column>
-      <Column :header="t('common.channel')" style="width: 100px">
+      <Column :header="t('common.channel')" headerClass="sbf-col-tight" bodyClass="sbf-col-tight">
         <template #body="{ data }">
           <Tag
             :value="t(`common.channel_${data.channel}`)"
