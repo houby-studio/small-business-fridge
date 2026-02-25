@@ -29,7 +29,7 @@ export default class AllergensController {
     const service = new AdminService()
     const allergen = await service.createAllergen(data.name)
 
-    AuditService.log(auth.user!.id, 'allergen.created', 'allergen', allergen.id, null, {
+    await AuditService.log(auth.user!.id, 'allergen.created', 'allergen', allergen.id, null, {
       name: allergen.name,
       isDisabled: allergen.isDisabled,
     })
