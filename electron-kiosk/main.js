@@ -4,6 +4,14 @@ const { app, BrowserWindow, session } = require('electron')
 const path = require('node:path')
 const { execFileSync } = require('node:child_process')
 
+const CONSOLE_LEVEL_TO_METHOD = {
+  0: 'info',
+  1: 'warn',
+  2: 'error',
+  3: 'log',
+  4: 'debug',
+}
+
 // ── Wayland/Ozone hint must be set before app is ready ────────────────────────
 if (process.platform === 'linux') {
   app.commandLine.appendSwitch('ozone-platform-hint', 'auto')
@@ -136,6 +144,21 @@ function createWindow(kioskUrl) {
   win.webContents.on('unresponsive', () => {
     console.warn('Renderer unresponsive — reloading')
     win.reload()
+  })
+
+  // Mirror renderer console output into main process logs (useful for snap logs).
+  win.webContents.on('console-message', (_event, level, message, line, sourceId) => {
+    const method = CONSOLE_LEVEL_TO_METHOD[level] ?? 'log'
+    const formatted = `[renderer:${method}] ${message} (${sourceId}:${line})`
+    if (method === 'error') {
+      console.error(formatted)
+      return
+    }
+    if (method === 'warn') {
+      console.warn(formatted)
+      return
+    }
+    console.log(formatted)
   })
 
   win.loadURL(kioskUrl)
