@@ -26,7 +26,7 @@ purposes. They must never be confused — especially regarding which database th
 
 ### Setup
 
-One PostgreSQL 17 container runs on host port **5433** (maps to container port 5432 internally).
+One PostgreSQL 18 container runs on host port **5433** (maps to container port 5432 internally).
 It contains two databases:
 
 ```
