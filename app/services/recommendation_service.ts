@@ -80,7 +80,11 @@ export default class RecommendationService {
       [userId, excludedAllergenIds]
     )
 
-    return rows.rows.map((r) => ({ productId: r.product_id, score: Number(r.score) }))
+    return rows.rows.map((r) => ({
+      productId: r.product_id,
+      // Numerical safety: clamp to [0, 1] to avoid tiny FP rounding issues
+      score: Math.min(1, Math.max(0, Number(r.score))),
+    }))
   }
 
   /**
