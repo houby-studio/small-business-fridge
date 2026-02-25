@@ -13,3 +13,8 @@ CODE_OF_CONDUCT.md
 CONTRIBUTING.md
 SECURITY.md
 .github/ISSUE_TEMPLATE/
+
+# Snap build files — snapcraft YAML has its own conventions (anchors, etc.)
+electron-kiosk/snap/snapcraft.yaml
+electron-kiosk/wrapper/
+electron-kiosk/wayland-launch/

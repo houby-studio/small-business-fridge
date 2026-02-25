@@ -89,6 +89,7 @@ parts:
       - libgtk-3-0
       - libasound2
       - xkb-data
+      - oss4-libs
 
   wrapper:
     plugin: dump
