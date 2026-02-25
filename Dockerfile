@@ -1,17 +1,35 @@
-FROM houbystudio/base-small-business-fridge:2026-02-16
+FROM node:25.6.1-alpine3.23 AS base
 
-# Copy default .env
-COPY build-deps/defaults.env .env
+# All deps stage
+FROM base AS deps
+WORKDIR /app
+ADD package.json package-lock.json ./
+RUN npm ci
 
-# Install app dependencies
-# A wildcard is used to ensure both package.json AND package-lock.json are copied
-COPY package*.json ./
+# Production only deps stage
+FROM base AS production-deps
+WORKDIR /app
+ADD package.json package-lock.json ./
+RUN npm ci --omit=dev
 
-# If you are building your code for production
-RUN npm ci --only=production
+# Build stage
+FROM base AS build
+WORKDIR /app
+COPY --from=deps /app/node_modules /app/node_modules
+ADD . .
+RUN export NODE_ENV=production PORT=3000 APP_KEY=build-only-app-key-123456 HOST=0.0.0.0 LOG_LEVEL=info SESSION_DRIVER=cookie DB_HOST=localhost DB_PORT=5432 DB_USER=sbf DB_DATABASE=sbf SMTP_HOST=localhost SMTP_PORT=25 \
+  && node ace docs:generate \
+  && node ace build \
+  && cp swagger.json build/swagger.json \
+  && cp swagger.yml build/swagger.yml
 
-# Copy source code
-COPY . .
-
-# Change ownership for writeable folders to node user
-RUN chown -R node:node /usr/src/app/public/images && chown -R node:node /usr/src/app/database-backup && chown -R node:node /usr/src/app/logs
+# Production stage
+FROM base
+RUN apk add --no-cache tzdata
+ENV NODE_ENV=production
+WORKDIR /app
+COPY --from=production-deps /app/node_modules /app/node_modules
+COPY --from=build /app/build /app
+COPY .env.production .env.production
+EXPOSE 3000
+CMD ["sh", "-c", "node ace migration:run --force && node ./bin/server.js"]
