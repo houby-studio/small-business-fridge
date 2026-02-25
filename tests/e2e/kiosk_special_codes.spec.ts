@@ -9,6 +9,11 @@ test.describe('Kiosk special codes', () => {
     await page.locator('button:has(.pi-arrow-right)').first().click()
   }
 
+  async function enterCodeByKeyboard(page: import('@playwright/test').Page, code: string) {
+    await page.keyboard.type(code)
+    await page.keyboard.press('Enter')
+  }
+
   test.beforeEach(async ({ page }) => {
     await loginAs(page, 'kiosk')
     await page.goto('/kiosk')
@@ -23,6 +28,16 @@ test.describe('Kiosk special codes', () => {
 
   test('code 666 shows easter egg and keeps kiosk active', async ({ page }) => {
     await enterCode(page, '666')
+
+    await expect(page).toHaveURL(/\/kiosk/)
+    await expect(page.getByText(/easter egg/i)).toBeVisible()
+  })
+
+  test('keyboard entry works on /kiosk without focused input', async ({ page }) => {
+    const activeTag = await page.evaluate(() => document.activeElement?.tagName ?? '')
+    expect(activeTag).not.toBe('INPUT')
+
+    await enterCodeByKeyboard(page, '666')
 
     await expect(page).toHaveURL(/\/kiosk/)
     await expect(page.getByText(/easter egg/i)).toBeVisible()

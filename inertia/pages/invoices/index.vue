@@ -231,31 +231,47 @@ function onSort(event: any) {
       stripedRows
       class="rounded-lg border"
     >
-      <Column header="#" style="width: 60px">
+      <Column header="#" headerClass="sbf-col-id" bodyClass="sbf-col-id">
         <template #body="{ data }">{{ data.id }}</template>
       </Column>
-      <Column :header="t('common.date')" field="createdAt" sortable>
+      <Column
+        :header="t('common.date')"
+        field="createdAt"
+        sortable
+        headerClass="sbf-col-date"
+        bodyClass="sbf-col-date"
+      >
         <template #body="{ data }">{{ formatDate(data.createdAt) }}</template>
       </Column>
       <Column :header="t('common.supplier')">
         <template #body="{ data }">{{ data.supplier?.displayName ?? '—' }}</template>
       </Column>
-      <Column :header="t('common.items')">
+      <Column :header="t('common.items')" headerClass="sbf-col-number" bodyClass="sbf-col-number">
         <template #body="{ data }">{{ data.orders?.length ?? 0 }}</template>
       </Column>
-      <Column :header="t('common.total')" field="totalCost" sortable>
+      <Column
+        :header="t('common.total')"
+        field="totalCost"
+        sortable
+        headerClass="sbf-col-price"
+        bodyClass="sbf-col-price"
+      >
         <template #body="{ data }">
           <span class="font-semibold">{{
             t('common.price_with_currency', { price: data.totalCost })
           }}</span>
         </template>
       </Column>
-      <Column :header="t('common.status')">
+      <Column :header="t('common.status')" headerClass="sbf-col-tight" bodyClass="sbf-col-tight">
         <template #body="{ data }">
-          <Tag :value="statusLabel(data)" :severity="statusSeverity(data)" class="text-xs" />
+          <Tag
+            :value="statusLabel(data)"
+            :severity="statusSeverity(data)"
+            class="text-xs whitespace-nowrap"
+          />
         </template>
       </Column>
-      <Column :header="t('common.actions')" style="width: 220px">
+      <Column :header="t('common.actions')" headerClass="sbf-col-action" bodyClass="sbf-col-action">
         <template #body="{ data }">
           <div class="flex gap-1">
             <Button

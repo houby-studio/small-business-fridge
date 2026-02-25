@@ -429,6 +429,32 @@
   transition: background-color 0.12s ease;
 }
 
+/* ─── DataTable column sizing helpers ────────────────────────────── */
+.p-datatable .sbf-col-tight,
+.p-datatable .sbf-col-id,
+.p-datatable .sbf-col-date,
+.p-datatable .sbf-col-number,
+.p-datatable .sbf-col-price,
+.p-datatable .sbf-col-action {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.p-datatable .sbf-col-id,
+.p-datatable .sbf-col-number,
+.p-datatable .sbf-col-price {
+  font-variant-numeric: tabular-nums;
+}
+
+.p-datatable .sbf-col-number,
+.p-datatable .sbf-col-price {
+  text-align: right;
+}
+
+.p-datatable .sbf-nowrap {
+  white-space: nowrap;
+}
+
 /* ─── Thin custom scrollbar ──────────────────────────────────────── */
 * {
   scrollbar-width: thin;

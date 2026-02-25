@@ -206,10 +206,16 @@ function storno(orderId: number) {
       stripedRows
       class="rounded-lg border"
     >
-      <Column header="#" style="width: 60px">
+      <Column header="#" headerClass="sbf-col-id" bodyClass="sbf-col-id">
         <template #body="{ data }">{{ data.id }}</template>
       </Column>
-      <Column :header="t('common.date')" field="createdAt" sortable>
+      <Column
+        :header="t('common.date')"
+        field="createdAt"
+        sortable
+        headerClass="sbf-col-date"
+        bodyClass="sbf-col-date"
+      >
         <template #body="{ data }">{{ formatDate(data.createdAt) }}</template>
       </Column>
       <Column :header="t('common.customer')">
@@ -218,7 +224,7 @@ function storno(orderId: number) {
       <Column :header="t('common.product')">
         <template #body="{ data }">{{ data.delivery?.product?.displayName ?? '—' }}</template>
       </Column>
-      <Column :header="t('common.price')" style="width: 80px">
+      <Column :header="t('common.price')" headerClass="sbf-col-price" bodyClass="sbf-col-price">
         <template #body="{ data }">{{
           t('common.price_with_currency', { price: data.delivery?.price ?? 0 })
         }}</template>
@@ -226,12 +232,16 @@ function storno(orderId: number) {
       <Column :header="t('common.supplier')">
         <template #body="{ data }">{{ data.delivery?.supplier?.displayName ?? '—' }}</template>
       </Column>
-      <Column :header="t('common.channel')" style="width: 90px">
+      <Column :header="t('common.channel')" headerClass="sbf-col-tight" bodyClass="sbf-col-tight">
         <template #body="{ data }">
           <Tag :value="t(`common.channel_${data.channel}`)" severity="info" class="text-xs" />
         </template>
       </Column>
-      <Column :header="t('admin.orders_invoice')" style="width: 90px">
+      <Column
+        :header="t('admin.orders_invoice')"
+        headerClass="sbf-col-tight"
+        bodyClass="sbf-col-tight"
+      >
         <template #body="{ data }">
           <Tag
             v-if="data.invoiceId"
@@ -242,7 +252,7 @@ function storno(orderId: number) {
           <span v-else class="text-xs text-gray-400 dark:text-zinc-500">—</span>
         </template>
       </Column>
-      <Column :header="t('common.actions')" style="width: 100px">
+      <Column :header="t('common.actions')" headerClass="sbf-col-action" bodyClass="sbf-col-action">
         <template #body="{ data }">
           <Button
             v-if="!data.invoiceId"

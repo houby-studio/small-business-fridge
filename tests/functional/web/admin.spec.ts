@@ -70,6 +70,24 @@ test.group('Admin - users search and filter', (group) => {
     const response = await client.get(`/admin/users?userId=${user.id}`).loginAs(admin)
     response.assertStatus(200)
   })
+
+  test('sort by keypadId returns 200', async ({ client }) => {
+    const admin = await UserFactory.apply('admin').create()
+    await UserFactory.createMany(2)
+
+    const response = await client.get('/admin/users?sortBy=keypadId&sortOrder=desc').loginAs(admin)
+    response.assertStatus(200)
+  })
+
+  test('sort by displayName returns 200', async ({ client }) => {
+    const admin = await UserFactory.apply('admin').create()
+    await UserFactory.createMany(2)
+
+    const response = await client
+      .get('/admin/users?sortBy=displayName&sortOrder=asc')
+      .loginAs(admin)
+    response.assertStatus(200)
+  })
 })
 
 test.group('Admin - orders filter', (group) => {

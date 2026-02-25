@@ -145,21 +145,30 @@ function generateInvoiceForBuyer(
       <!-- Per-customer breakdown -->
       <DataTable :value="uninvoiced" stripedRows class="rounded-lg border">
         <Column :header="t('common.customer')" field="buyerName" />
-        <Column :header="t('supplier.invoice_orders')" field="orderCount" style="width: 130px" />
-        <Column :header="t('common.total')" style="width: 130px">
+        <Column
+          :header="t('supplier.invoice_orders')"
+          field="orderCount"
+          headerClass="sbf-col-number"
+          bodyClass="sbf-col-number"
+        />
+        <Column :header="t('common.total')" headerClass="sbf-col-price" bodyClass="sbf-col-price">
           <template #body="{ data }">
             <span class="font-semibold">{{
               t('common.price_with_currency', { price: data.totalCost })
             }}</span>
           </template>
         </Column>
-        <Column :header="t('common.actions')" style="width: 160px">
+        <Column
+          :header="t('common.actions')"
+          headerClass="sbf-col-action"
+          bodyClass="sbf-col-action"
+        >
           <template #body="{ data }">
             <Button
               :label="t('supplier.invoice_generate_for_buyer')"
-              icon="pi pi-file-invoice"
               size="small"
               severity="secondary"
+              class="px-3 whitespace-nowrap"
               @click="
                 generateInvoiceForBuyer(
                   data.buyerId,

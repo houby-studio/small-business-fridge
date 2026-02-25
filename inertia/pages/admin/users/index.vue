@@ -36,7 +36,7 @@ interface PaginatedUsers {
 
 const props = defineProps<{
   users: PaginatedUsers
-  filters: { search: string; role: string; userId: string }
+  filters: { search: string; role: string; userId: string; sortBy: string; sortOrder: string }
   userOptions: { id: number; displayName: string }[]
 }>()
 const { t } = useI18n()
@@ -48,6 +48,9 @@ const ALL = '__all__'
 const filterSearch = ref(props.filters.search ?? '')
 const filterRole = ref(props.filters.role || ALL)
 const filterUserId = ref<number | string>(props.filters.userId ? Number(props.filters.userId) : ALL)
+const filterSortBy = ref(props.filters.sortBy || 'keypadId')
+const filterSortOrder = ref(props.filters.sortOrder || 'asc')
+const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
 
 const roleOptions = [
   { label: t('common.all'), value: ALL },
@@ -68,6 +71,8 @@ function buildFilterParams() {
     search: filterSearch.value || undefined,
     role: filterRole.value === ALL ? undefined : filterRole.value,
     userId: filterUserId.value === ALL ? undefined : filterUserId.value,
+    sortBy: filterSortBy.value || undefined,
+    sortOrder: filterSortOrder.value || undefined,
   }
 }
 
@@ -118,6 +123,8 @@ function clearFilters() {
   filterSearch.value = ''
   filterRole.value = ALL
   filterUserId.value = ALL
+  filterSortBy.value = 'keypadId'
+  filterSortOrder.value = 'asc'
   lastAppliedFilterParams.value = buildFilterParams()
   router.get('/admin/users', buildFilterParams(), {
     preserveState: true,
@@ -131,6 +138,21 @@ function onPageChange(event: any) {
     {
       page: event.page + 1,
       ...buildFilterParams(),
+    },
+    { preserveState: true, only: ['users', 'filters'] }
+  )
+}
+
+function onSort(event: any) {
+  filterSortBy.value = event.sortField
+  filterSortOrder.value = event.sortOrder === 1 ? 'asc' : 'desc'
+  router.get(
+    '/admin/users',
+    {
+      ...buildFilterParams(),
+      sortBy: event.sortField,
+      sortOrder: event.sortOrder === 1 ? 'asc' : 'desc',
+      page: 1,
     },
     { preserveState: true, only: ['users', 'filters'] }
   )
@@ -205,20 +227,33 @@ function impersonateUser(userId: number) {
       :totalRecords="users.meta.total"
       :lazy="true"
       :first="(users.meta.currentPage - 1) * users.meta.perPage"
+      :sortField="filterSortBy"
+      :sortOrder="sortOrderNum"
       @page="onPageChange"
+      @sort="onSort"
       stripedRows
       class="rounded-lg border"
     >
-      <Column :header="t('admin.users_col_id')" style="width: 60px">
+      <Column
+        :header="t('admin.users_col_id')"
+        field="keypadId"
+        sortable
+        headerClass="sbf-col-id"
+        bodyClass="sbf-col-id"
+      >
         <template #body="{ data }">{{ data.keypadId }}</template>
       </Column>
-      <Column :header="t('admin.users_name')">
+      <Column :header="t('admin.users_name')" field="displayName" sortable>
         <template #body="{ data }">{{ data.displayName }}</template>
       </Column>
       <Column :header="t('admin.users_col_email')">
         <template #body="{ data }">{{ data.email }}</template>
       </Column>
-      <Column :header="t('admin.users_col_role')" style="width: 170px">
+      <Column
+        :header="t('admin.users_col_role')"
+        headerClass="sbf-col-tight"
+        bodyClass="sbf-col-tight"
+      >
         <template #body="{ data }">
           <Select
             :modelValue="data.role"
@@ -230,7 +265,11 @@ function impersonateUser(userId: number) {
           />
         </template>
       </Column>
-      <Column :header="t('admin.users_kiosk')" style="width: 80px">
+      <Column
+        :header="t('admin.users_kiosk')"
+        headerClass="sbf-col-tight"
+        bodyClass="sbf-col-tight"
+      >
         <template #body="{ data }">
           <ToggleSwitch
             :modelValue="data.isKiosk"
@@ -238,7 +277,11 @@ function impersonateUser(userId: number) {
           />
         </template>
       </Column>
-      <Column :header="t('admin.users_disabled')" style="width: 110px">
+      <Column
+        :header="t('admin.users_disabled')"
+        headerClass="sbf-col-tight"
+        bodyClass="sbf-col-tight"
+      >
         <template #body="{ data }">
           <!-- If user has pending issues and is currently active, show warning instead of toggle -->
           <span
@@ -256,7 +299,11 @@ function impersonateUser(userId: number) {
         </template>
       </Column>
 
-      <Column :header="t('admin.users_actions')" style="width: 100px">
+      <Column
+        :header="t('admin.users_actions')"
+        headerClass="sbf-col-action"
+        bodyClass="sbf-col-action"
+      >
         <template #body="{ data }">
           <div class="flex items-center gap-1">
             <Button

@@ -102,9 +102,19 @@ export default class AdminService {
   async getUsers(
     page: number = 1,
     perPage: number = 20,
-    filters?: { search?: string; role?: string; userId?: number }
+    filters?: {
+      search?: string
+      role?: string
+      userId?: number
+      sortBy?: string
+      sortOrder?: string
+    }
   ) {
-    const query = User.query().orderBy('displayName', 'asc')
+    const SORT_WHITELIST = ['keypadId', 'displayName']
+    const safeSort = SORT_WHITELIST.includes(filters?.sortBy ?? '') ? filters!.sortBy! : 'keypadId'
+    const sortDir: 'asc' | 'desc' = filters?.sortOrder === 'desc' ? 'desc' : 'asc'
+
+    const query = User.query().orderBy(safeSort, sortDir)
 
     if (filters?.search) {
       const term = `%${filters.search}%`

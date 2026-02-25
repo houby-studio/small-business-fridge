@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
@@ -36,6 +36,7 @@ const ALL = '__all__'
 
 const filterAction = ref(props.filters.action || ALL)
 const filterSortOrder = ref(props.filters.sortOrder || 'desc')
+const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
 
 const actionOptions = [
   { label: t('common.all'), value: ALL },
@@ -145,6 +146,11 @@ function onPageChange(event: any) {
     { preserveState: true, only: ['logs', 'filters'] }
   )
 }
+
+function onSort(event: any) {
+  filterSortOrder.value = event.sortOrder === 1 ? 'asc' : 'desc'
+  applyFilters()
+}
 </script>
 
 <template>
@@ -191,40 +197,34 @@ function onPageChange(event: any) {
       :totalRecords="logs.meta.total"
       :lazy="true"
       :first="(logs.meta.currentPage - 1) * logs.meta.perPage"
+      sortField="createdAt"
+      :sortOrder="sortOrderNum"
+      @sort="onSort"
       @page="onPageChange"
       stripedRows
       class="rounded-lg border"
     >
-      <Column :header="t('audit.date')" style="width: 160px">
+      <Column
+        :header="t('audit.date')"
+        field="createdAt"
+        sortable
+        headerClass="sbf-col-date"
+        bodyClass="sbf-col-date"
+      >
         <template #body="{ data }">{{ formatDateTime(data.createdAt) }}</template>
-        <template #header>
-          <span
-            class="cursor-pointer select-none"
-            @click="
-              () => {
-                filterSortOrder = filterSortOrder === 'asc' ? 'desc' : 'asc'
-                applyFilters()
-              }
-            "
-          >
-            {{ t('audit.date') }}
-            <i
-              :class="
-                filterSortOrder === 'asc' ? 'pi pi-sort-amount-up-alt' : 'pi pi-sort-amount-down'
-              "
-              class="ml-1 text-xs"
-            />
-          </span>
+      </Column>
+      <Column :header="t('audit.action')" headerClass="sbf-col-tight" bodyClass="sbf-col-tight">
+        <template #body="{ data }">
+          <Tag
+            :value="actionLabel(data.action)"
+            severity="info"
+            class="text-xs whitespace-nowrap"
+          />
         </template>
       </Column>
-      <Column :header="t('audit.action')">
+      <Column :header="t('audit.entity')" headerClass="sbf-col-tight" bodyClass="sbf-col-tight">
         <template #body="{ data }">
-          <Tag :value="actionLabel(data.action)" severity="info" class="text-xs" />
-        </template>
-      </Column>
-      <Column :header="t('audit.entity')">
-        <template #body="{ data }">
-          {{ data.entityType }}
+          <span class="sbf-nowrap">{{ data.entityType }}</span>
           <span v-if="data.entityId" class="text-gray-400 dark:text-zinc-500"
             >#{{ data.entityId }}</span
           >
