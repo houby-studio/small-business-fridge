@@ -90,13 +90,13 @@ parts:
       - libasound2
       - xkb-data
       - liboss4-salsa2
-    #override-prime: |
-    #  craftctl default
-    #  # liboss4-salsa2 installs libOSSlib.so into oss4-libsalsa/ subdirectory,
-    #  # which is not in the dynamic linker's default search path.
-    #  # Create a symlink in the standard lib dir so it can be found at runtime.
-    #  ln -sf oss4-libsalsa/libOSSlib.so \
-    #    "$CRAFT_PRIME/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/libOSSlib.so" || true
+    override-prime: |
+      craftctl default
+      # liboss4-salsa2 installs libOSSlib.so into oss4-libsalsa/ subdirectory,
+      # which is not in the dynamic linker's default search path.
+      # Create a symlink in the standard lib dir so it can be found at runtime.
+      ln -sf oss4-libsalsa/libOSSlib.so \
+        "$CRAFT_PRIME/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/libOSSlib.so" || true
 
   wrapper:
     plugin: dump
