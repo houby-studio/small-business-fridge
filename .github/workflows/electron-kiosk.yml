@@ -1,0 +1,65 @@
+name: Build Electron Kiosk Snap
+
+on:
+  push:
+    branches: ['v3/*', 'master']
+    paths:
+      - 'electron-kiosk/**'
+  pull_request:
+    branches: ['master']
+    paths:
+      - 'electron-kiosk/**'
+  workflow_dispatch: # allow manual trigger
+
+jobs:
+  build-snap:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: electron-kiosk/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: electron-kiosk
+
+      - name: Install Snapcraft
+        run: sudo snap install snapcraft --classic
+
+      - name: Build snap
+        run: npm run build:snap
+        working-directory: electron-kiosk
+        env:
+          # Build in the host environment (no VM/container needed in ephemeral CI runners)
+          SNAPCRAFT_BUILD_ENVIRONMENT: host
+
+      - name: Locate snap file
+        id: snap
+        run: |
+          SNAP_FILE=$(ls electron-kiosk/dist/*.snap | head -1)
+          echo "file=${SNAP_FILE}" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename ${SNAP_FILE})" >> "$GITHUB_OUTPUT"
+
+      - name: Upload snap artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.snap.outputs.name }}
+          path: ${{ steps.snap.outputs.file }}
+          retention-days: 30
+
+      # ── Optional: publish to Snap Store on master ─────────────────────────
+      # Requires SNAPCRAFT_STORE_CREDENTIALS secret (generate with `snapcraft export-login`).
+      # Uncomment when ready to publish to the Snap Store.
+      #
+      # - name: Publish to Snap Store (edge channel)
+      #   if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+      #   run: |
+      #     echo "${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}" | snapcraft login --with -
+      #     snapcraft upload ${{ steps.snap.outputs.file }} --release edge

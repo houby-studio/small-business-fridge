@@ -1,0 +1,46 @@
+{
+  "name": "sbf-kiosk",
+  "version": "1.0.0",
+  "description": "Small Business Fridge — kiosk client",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "build:snap": "electron-builder --linux snap",
+    "build:dir": "electron-builder --linux dir"
+  },
+  "build": {
+    "appId": "studio.houby.sbf-kiosk",
+    "productName": "SBF Kiosk",
+    "copyright": "Copyright © 2025 Jakub Šindelář",
+    "linux": {
+      "target": [
+        "snap"
+      ],
+      "category": "Utility",
+      "executableName": "sbf-kiosk"
+    },
+    "snap": {
+      "confinement": "strict",
+      "grade": "stable",
+      "base": "core22",
+      "hooks": "snap/hooks",
+      "plugs": [
+        "default",
+        "browser-support",
+        "network-observe",
+        "wayland",
+        "opengl",
+        "audio-playback"
+      ],
+      "environment": {
+        "ELECTRON_OZONE_PLATFORM_HINT": "auto",
+        "TMPDIR": "$XDG_RUNTIME_DIR"
+      }
+    }
+  },
+  "devDependencies": {
+    "electron": "^40.0.0",
+    "electron-builder": "^25.0.0"
+  }
+}
