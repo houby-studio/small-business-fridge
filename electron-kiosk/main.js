@@ -12,6 +12,43 @@ const CONSOLE_LEVEL_TO_METHOD = {
   4: 'debug',
 }
 
+function parseAllowedOrigins(rawList) {
+  if (!rawList) return []
+  const candidates = String(rawList)
+    .split(/[,\s]+/)
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+
+  const origins = new Set()
+  for (const candidate of candidates) {
+    try {
+      const parsed = new URL(candidate)
+      if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+        console.warn(`Ignoring non-http(s) allowed origin: ${candidate}`)
+        continue
+      }
+      origins.add(parsed.origin)
+    } catch {
+      console.warn(`Ignoring invalid allowed origin: ${candidate}`)
+    }
+  }
+  return [...origins]
+}
+
+function getAdditionalAllowedOrigins() {
+  let fromSnap = ''
+  if (process.env.SNAP) {
+    try {
+      fromSnap = execFileSync('snapctl', ['get', 'allowed-origins'], { encoding: 'utf8' }).trim()
+    } catch {
+      // snapctl unavailable or key not set
+    }
+  }
+
+  const fromEnv = process.env.KIOSK_ALLOWED_ORIGINS || ''
+  return parseAllowedOrigins([fromSnap, fromEnv].filter(Boolean).join(','))
+}
+
 // ── Wayland/Ozone hint must be set before app is ready ────────────────────────
 if (process.platform === 'linux') {
   app.commandLine.appendSwitch('ozone-platform-hint', 'auto')
@@ -95,7 +132,8 @@ function createWindow(kioskUrl) {
     },
   })
 
-  const allowedOrigin = parsedUrl.origin
+  const allowedOrigins = new Set([parsedUrl.origin, ...getAdditionalAllowedOrigins()])
+  console.log(`Allowed navigation origins: ${[...allowedOrigins].join(', ')}`)
 
   // Block all new windows / popups
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
@@ -103,7 +141,7 @@ function createWindow(kioskUrl) {
   // Restrict in-page navigation to the configured origin only
   win.webContents.on('will-navigate', (event, targetUrl) => {
     try {
-      if (new URL(targetUrl).origin !== allowedOrigin) {
+      if (!allowedOrigins.has(new URL(targetUrl).origin)) {
         event.preventDefault()
         console.warn(`Blocked navigation to: ${targetUrl}`)
       }
