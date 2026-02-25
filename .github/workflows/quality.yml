@@ -91,7 +91,7 @@ jobs:
           test -s test-results/junit-e2e.xml
 
       - name: Publish Japa test results
-        uses: mikepenz/action-junit-report@v4
+        uses: mikepenz/action-junit-report@v6
         if: always()
         with:
           report_paths: 'test-results/junit-japa.xml'
@@ -102,7 +102,7 @@ jobs:
           detailed_summary: true
 
       - name: Publish Playwright E2E results
-        uses: mikepenz/action-junit-report@v4
+        uses: mikepenz/action-junit-report@v6
         if: always()
         with:
           report_paths: 'test-results/junit-e2e.xml'
