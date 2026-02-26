@@ -48,7 +48,7 @@
     "@japa/plugin-adonisjs": "^4.0.0",
     "@japa/runner": "^4.2.0",
     "@playwright/test": "^1.58.2",
-    "@swc/core": "1.11.24",
+    "@swc/core": "1.15.13",
     "@tailwindcss/vite": "^4.1.18",
     "@types/luxon": "^3.7.1",
     "@types/node": "^22.15.18",
