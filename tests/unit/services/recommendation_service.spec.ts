@@ -8,8 +8,6 @@ import Allergen from '#models/allergen'
 import RecommendationService from '#services/recommendation_service'
 import db from '@adonisjs/lucid/services/db'
 
-const service = new RecommendationService()
-
 const cleanAll = async () => {
   await db.from('recommendations').delete()
   await db.from('orders').delete()
@@ -34,6 +32,11 @@ function orderRow(buyerId: number, deliveryId: number) {
 }
 
 test.group('RecommendationService.computeForUser', (group) => {
+  group.each.setup(() => {
+    return {
+      service: new RecommendationService(),
+    }
+  })
   group.each.setup(cleanAll)
   group.each.teardown(cleanAll)
 
