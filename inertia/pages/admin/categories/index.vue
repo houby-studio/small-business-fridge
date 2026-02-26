@@ -10,6 +10,8 @@ import ColorPicker from 'primevue/colorpicker'
 import ToggleSwitch from 'primevue/toggleswitch'
 import Tag from 'primevue/tag'
 import Dialog from 'primevue/dialog'
+import ConfirmDialog from 'primevue/confirmdialog'
+import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from '~/composables/use_i18n'
 
 interface CategoryRow {
@@ -22,6 +24,7 @@ interface CategoryRow {
 
 const props = defineProps<{ categories: CategoryRow[] }>()
 const { t } = useI18n()
+const confirm = useConfirm()
 
 const showCreateDialog = ref(false)
 const newName = ref('')
@@ -89,11 +92,26 @@ function focusCreateNameInput() {
 function getEditNameInputId(categoryId: number) {
   return `admin-category-edit-name-${categoryId}`
 }
+
+function deleteCategory(category: CategoryRow) {
+  confirm.require({
+    message: t('admin.categories_delete_confirm', { name: category.name }),
+    header: t('admin.categories_delete_header'),
+    icon: 'pi pi-exclamation-triangle',
+    acceptLabel: t('admin.categories_delete_accept'),
+    rejectLabel: t('common.cancel'),
+    acceptClass: 'p-button-danger',
+    accept: () => {
+      router.delete(`/admin/categories/${category.id}`)
+    },
+  })
+}
 </script>
 
 <template>
   <AppLayout>
     <Head :title="t('admin.categories_title')" />
+    <ConfirmDialog />
 
     <div class="mb-6 flex items-center justify-between">
       <h1 class="text-2xl font-bold text-gray-900 dark:text-zinc-100">
@@ -151,7 +169,7 @@ function getEditNameInputId(categoryId: number) {
           />
         </template>
       </Column>
-      <Column :header="t('common.actions')" style="width: 180px">
+      <Column :header="t('common.actions')" style="width: 220px">
         <template #body="{ data }">
           <div class="flex gap-1">
             <template v-if="editingId === data.id">
@@ -171,6 +189,18 @@ function getEditNameInputId(categoryId: number) {
                 severity="secondary"
                 text
                 @click="startEdit(data)"
+              />
+              <Button
+                icon="pi pi-trash"
+                size="small"
+                severity="danger"
+                text
+                :disabled="data.hasProducts"
+                :title="data.hasProducts ? t('messages.category_has_products_delete') : undefined"
+                :aria-label="
+                  data.hasProducts ? t('messages.category_has_products_delete') : t('common.delete')
+                "
+                @click="deleteCategory(data)"
               />
             </template>
           </div>

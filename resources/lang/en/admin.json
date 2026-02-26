@@ -20,12 +20,18 @@
   "categories_new_heading": "New category",
   "categories_color": "Color",
   "categories_name_placeholder": "Category name",
+  "categories_delete_header": "Confirm category deletion",
+  "categories_delete_confirm": "Delete category \"{name}\"?",
+  "categories_delete_accept": "Delete category",
 
   "allergens_title": "Allergen Management",
   "allergens_heading": "Allergen Management",
   "allergens_new": "New allergen",
   "allergens_new_heading": "New allergen",
   "allergens_name_placeholder": "Allergen name",
+  "allergens_delete_header": "Confirm allergen deletion",
+  "allergens_delete_confirm": "Delete allergen \"{name}\"?",
+  "allergens_delete_accept": "Delete allergen",
 
   "music_title": "Music Management",
   "music_heading": "Music Management",
@@ -36,6 +42,9 @@
   "music_access": "Access",
   "music_access_public": "Public",
   "music_access_premium": "Premium",
+  "music_delete_header": "Confirm track deletion",
+  "music_delete_confirm": "Delete track \"{name}\"?",
+  "music_delete_accept": "Delete track",
 
   "orders_title": "All Orders",
   "orders_heading": "All Orders",

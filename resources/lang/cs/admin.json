@@ -20,12 +20,18 @@
   "categories_new_heading": "Nová kategorie",
   "categories_color": "Barva",
   "categories_name_placeholder": "Název kategorie",
+  "categories_delete_header": "Potvrdit smazání kategorie",
+  "categories_delete_confirm": "Smazat kategorii „{name}“?",
+  "categories_delete_accept": "Smazat kategorii",
 
   "allergens_title": "Správa alergenů",
   "allergens_heading": "Správa alergenů",
   "allergens_new": "Nový alergen",
   "allergens_new_heading": "Nový alergen",
   "allergens_name_placeholder": "Název alergenu",
+  "allergens_delete_header": "Potvrdit smazání alergenu",
+  "allergens_delete_confirm": "Smazat alergen „{name}“?",
+  "allergens_delete_accept": "Smazat alergen",
 
   "music_title": "Správa hudby",
   "music_heading": "Správa hudby",
@@ -36,6 +42,9 @@
   "music_access": "Přístup",
   "music_access_public": "Veřejná",
   "music_access_premium": "Premium",
+  "music_delete_header": "Potvrdit smazání skladby",
+  "music_delete_confirm": "Smazat skladbu „{name}“?",
+  "music_delete_accept": "Smazat skladbu",
 
   "orders_title": "Všechny objednávky",
   "orders_heading": "Všechny objednávky",

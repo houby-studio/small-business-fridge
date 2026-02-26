@@ -205,6 +205,22 @@ export default class AdminService {
   }
 
   /**
+   * Delete a category.
+   * Throws 'CATEGORY_HAS_PRODUCTS' if any product still references this category.
+   */
+  async deleteCategory(categoryId: number) {
+    const category = await Category.findOrFail(categoryId)
+
+    const hasProducts = await db.from('products').where('category_id', category.id).first()
+    if (hasProducts) {
+      throw new Error('CATEGORY_HAS_PRODUCTS')
+    }
+
+    await category.delete()
+    return category
+  }
+
+  /**
    * Get all allergens.
    */
   async getAllergens() {
@@ -238,6 +254,32 @@ export default class AdminService {
     if (data.isDisabled !== undefined) allergen.isDisabled = data.isDisabled
 
     await allergen.save()
+    return allergen
+  }
+
+  /**
+   * Delete an allergen.
+   * Throws 'ALLERGEN_HAS_PRODUCTS' if it is still assigned to any product.
+   * Also removes this allergen from users' excludedAllergenIds.
+   */
+  async deleteAllergen(allergenId: number) {
+    const allergen = await Allergen.findOrFail(allergenId)
+
+    const hasProducts = await db.from('product_allergen').where('allergen_id', allergen.id).first()
+    if (hasProducts) {
+      throw new Error('ALLERGEN_HAS_PRODUCTS')
+    }
+
+    const usersWithAllergen = await User.query().whereRaw('excluded_allergen_ids @> ?', [
+      JSON.stringify([allergen.id]),
+    ])
+
+    for (const user of usersWithAllergen) {
+      user.excludedAllergenIds = (user.excludedAllergenIds ?? []).filter((id) => id !== allergen.id)
+      await user.save()
+    }
+
+    await allergen.delete()
     return allergen
   }
 

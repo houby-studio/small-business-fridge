@@ -7,6 +7,7 @@ import { ProductFactory } from '#database/factories/product_factory'
 import { DeliveryFactory } from '#database/factories/delivery_factory'
 import { OrderFactory } from '#database/factories/order_factory'
 import Invoice from '#models/invoice'
+import Category from '#models/category'
 import Allergen from '#models/allergen'
 import MusicTrack from '#models/music_track'
 import db from '@adonisjs/lucid/services/db'
@@ -649,6 +650,67 @@ test.group('Admin - allergens CRUD', (group) => {
     assert.isFalse(allergen.isDisabled)
   })
 
+  test('deleting allergen with tied products is blocked', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const allergen = await Allergen.create({ name: 'Milk', isDisabled: false })
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    await product.related('allergens').attach([allergen.id])
+
+    const response = await client
+      .delete(`/admin/allergens/${allergen.id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    assert.equal(response.header('location'), '/admin/allergens')
+    const existing = await Allergen.find(allergen.id)
+    assert.isNotNull(existing)
+  })
+
+  test('admin can delete allergen and remove it from users excluded allergens', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const allergen = await Allergen.create({ name: 'Soy', isDisabled: false })
+    const otherAllergen = await Allergen.create({ name: 'Mustard', isDisabled: false })
+    const userWithAllergen = await UserFactory.merge({
+      excludedAllergenIds: [allergen.id, otherAllergen.id],
+    }).create()
+    const userWithoutAllergen = await UserFactory.merge({
+      excludedAllergenIds: [otherAllergen.id],
+    }).create()
+
+    const response = await client
+      .delete(`/admin/allergens/${allergen.id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    assert.equal(response.header('location'), '/admin/allergens')
+
+    const deleted = await Allergen.find(allergen.id)
+    assert.isNull(deleted)
+
+    await userWithAllergen.refresh()
+    await userWithoutAllergen.refresh()
+    assert.deepEqual(userWithAllergen.excludedAllergenIds, [otherAllergen.id])
+    assert.deepEqual(userWithoutAllergen.excludedAllergenIds, [otherAllergen.id])
+
+    const log = await db
+      .from('audit_logs')
+      .where('action', 'allergen.deleted')
+      .where('entity_type', 'allergen')
+      .where('entity_id', allergen.id)
+      .first()
+
+    assert.isDefined(log, 'allergen.deleted audit log should exist')
+    assert.equal(log.user_id, admin.id)
+  })
+
   test('allergen with tied products has hasProducts=true in response', async ({
     client,
     assert,
@@ -812,6 +874,50 @@ test.group('Admin - category audit logging', (group) => {
     assert.isFalse(category.isDisabled)
   })
 
+  test('deleting category with tied products is blocked', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const category = await CategoryFactory.create()
+    await ProductFactory.merge({ categoryId: category.id }).create()
+
+    const response = await client
+      .delete(`/admin/categories/${category.id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    assert.equal(response.header('location'), '/admin/categories')
+    const existing = await Category.find(category.id)
+    assert.isNotNull(existing)
+  })
+
+  test('deleting a category writes category.deleted audit entry', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const category = await CategoryFactory.merge({ name: 'To Delete', color: '#cccccc' }).create()
+
+    const response = await client
+      .delete(`/admin/categories/${category.id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    assert.equal(response.header('location'), '/admin/categories')
+
+    const deleted = await Category.find(category.id)
+    assert.isNull(deleted)
+
+    const log = await db
+      .from('audit_logs')
+      .where('action', 'category.deleted')
+      .where('entity_type', 'category')
+      .where('entity_id', category.id)
+      .first()
+
+    assert.isDefined(log, 'category.deleted audit log should exist')
+    assert.equal(log.user_id, admin.id)
+  })
+
   test('category with tied products has hasProducts=true in response', async ({
     client,
     assert,
@@ -938,5 +1044,39 @@ test.group('Admin - music tracks', (group) => {
     assert.deepEqual(metadata!.name, { from: 'Starter Track', to: 'Premium Track' })
     assert.deepEqual(metadata!.accessLevel, { from: 'public', to: 'premium' })
     assert.deepEqual(metadata!.isDisabled, { from: false, to: true })
+  })
+
+  test('deleting a track writes music.deleted audit entry', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const track = await MusicTrack.create({
+      name: 'Delete Me',
+      filePath: '/uploads/music/delete-me.mp3',
+      mimeType: 'audio/mpeg',
+      accessLevel: 'public',
+      isDisabled: false,
+      uploadedByUserId: admin.id,
+    })
+
+    const response = await client
+      .delete(`/admin/music/${track.id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    assert.equal(response.header('location'), '/admin/music')
+
+    const deleted = await MusicTrack.find(track.id)
+    assert.isNull(deleted)
+
+    const log = await db
+      .from('audit_logs')
+      .where('action', 'music.deleted')
+      .where('entity_type', 'music')
+      .where('entity_id', track.id)
+      .first()
+
+    assert.isDefined(log, 'music.deleted audit log should exist')
+    assert.equal(log.user_id, admin.id)
   })
 })

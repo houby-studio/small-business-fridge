@@ -152,6 +152,15 @@ test.describe('Admin pages and filters', () => {
     await categoryNameInput.press('Enter')
     await expect(categoryDialog).toBeHidden()
     await expect(page.locator('table')).toContainText(newCategoryName)
+    const categoryRow = page.locator('tbody tr', { hasText: newCategoryName })
+    await categoryRow.locator('button:has(.pi-trash):not([disabled])').click()
+    const categoryDeleteButton = page.getByRole('button', {
+      name: 'Smazat kategorii',
+      exact: true,
+    })
+    await expect(categoryDeleteButton).toBeVisible()
+    await categoryDeleteButton.click()
+    await expect(categoryRow).toHaveCount(0)
 
     await page.goto('/admin/allergens')
     await expect(page.getByRole('columnheader', { name: '#' })).toBeVisible()
@@ -167,6 +176,12 @@ test.describe('Admin pages and filters', () => {
     await allergenNameInput.press('Enter')
     await expect(allergenDialog).toBeHidden()
     await expect(page.locator('table')).toContainText(newAllergenName)
+    const allergenRow = page.locator('tbody tr', { hasText: newAllergenName })
+    await allergenRow.locator('button:has(.pi-trash):not([disabled])').click()
+    const allergenDeleteButton = page.getByRole('button', { name: 'Smazat alergen', exact: true })
+    await expect(allergenDeleteButton).toBeVisible()
+    await allergenDeleteButton.click()
+    await expect(allergenRow).toHaveCount(0)
 
     await page.goto('/admin/music')
     await expect(page.getByRole('columnheader', { name: '#' })).toBeVisible()
@@ -187,6 +202,12 @@ test.describe('Admin pages and filters', () => {
     await musicNameInput.press('Enter')
     await expect(musicDialog).toBeHidden()
     await expect(page.locator('table')).toContainText(newMusicName)
+    const musicRow = page.locator('tbody tr', { hasText: newMusicName })
+    await musicRow.locator('button:has(.pi-trash):not([disabled])').click()
+    const musicDeleteButton = page.getByRole('button', { name: 'Smazat skladbu', exact: true })
+    await expect(musicDeleteButton).toBeVisible()
+    await musicDeleteButton.click()
+    await expect(musicRow).toHaveCount(0)
 
     expect(runtimeErrors).toHaveLength(0)
     expect(criticalConsoleMessages).toHaveLength(0)
@@ -196,14 +217,41 @@ test.describe('Admin pages and filters', () => {
     page,
   }) => {
     await page.goto('/admin/categories')
+    if ((await page.locator('button:has(.pi-pencil)').count()) === 0) {
+      await page.getByRole('button', { name: 'Nová kategorie' }).click()
+      const createDialog = page.getByRole('dialog', { name: 'Nová kategorie' })
+      await createDialog.getByRole('textbox').first().fill(`E2E Autofocus Cat ${Date.now()}`)
+      await createDialog.getByRole('textbox').first().press('Enter')
+      await expect(createDialog).toBeHidden()
+    }
     await page.locator('button:has(.pi-pencil)').first().click()
     await expect(page.locator('input[id^=\"admin-category-edit-name-\"]')).toBeFocused()
 
     await page.goto('/admin/allergens')
+    if ((await page.locator('button:has(.pi-pencil)').count()) === 0) {
+      await page.getByRole('button', { name: 'Nový alergen' }).click()
+      const createDialog = page.getByRole('dialog', { name: 'Nový alergen' })
+      await createDialog.getByRole('textbox').first().fill(`E2E Autofocus Allergen ${Date.now()}`)
+      await createDialog.getByRole('textbox').first().press('Enter')
+      await expect(createDialog).toBeHidden()
+    }
     await page.locator('button:has(.pi-pencil)').first().click()
     await expect(page.locator('input[id^=\"admin-allergen-edit-name-\"]')).toBeFocused()
 
     await page.goto('/admin/music')
+    if ((await page.locator('button:has(.pi-pencil)').count()) === 0) {
+      await page.getByRole('button', { name: 'Nová skladba' }).click()
+      const createDialog = page.getByRole('dialog', { name: 'Nová skladba' })
+      const nameInput = createDialog.getByRole('textbox').first()
+      await nameInput.fill(`E2E Autofocus Music ${Date.now()}`)
+      await createDialog.locator('input[type="file"]').setInputFiles({
+        name: 'e2e-autofocus-track.mp3',
+        mimeType: 'audio/mpeg',
+        buffer: Buffer.from('ID3-e2e-autofocus-track'),
+      })
+      await nameInput.press('Enter')
+      await expect(createDialog).toBeHidden()
+    }
     await page.locator('button:has(.pi-pencil)').first().click()
     await expect(page.locator('input[id^=\"admin-music-edit-name-\"]')).toBeFocused()
   })

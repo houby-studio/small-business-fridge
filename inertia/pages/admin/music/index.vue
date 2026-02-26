@@ -9,6 +9,8 @@ import InputText from 'primevue/inputtext'
 import ToggleSwitch from 'primevue/toggleswitch'
 import Select from 'primevue/select'
 import Dialog from 'primevue/dialog'
+import ConfirmDialog from 'primevue/confirmdialog'
+import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from '~/composables/use_i18n'
 
 interface TrackRow {
@@ -22,6 +24,7 @@ interface TrackRow {
 
 const props = defineProps<{ tracks: TrackRow[] }>()
 const { t } = useI18n()
+const confirm = useConfirm()
 
 const accessLevelOptions = [
   { label: t('admin.music_access_public'), value: 'public' },
@@ -100,11 +103,26 @@ function focusCreateNameInput() {
 function getEditNameInputId(trackId: number) {
   return `admin-music-edit-name-${trackId}`
 }
+
+function deleteTrack(track: TrackRow) {
+  confirm.require({
+    message: t('admin.music_delete_confirm', { name: track.name }),
+    header: t('admin.music_delete_header'),
+    icon: 'pi pi-exclamation-triangle',
+    acceptLabel: t('admin.music_delete_accept'),
+    rejectLabel: t('common.cancel'),
+    acceptClass: 'p-button-danger',
+    accept: () => {
+      router.delete(`/admin/music/${track.id}`)
+    },
+  })
+}
 </script>
 
 <template>
   <AppLayout>
     <Head :title="t('admin.music_title')" />
+    <ConfirmDialog />
 
     <div class="mb-6 flex items-center justify-between">
       <h1 class="text-2xl font-bold text-gray-900 dark:text-zinc-100">
@@ -152,7 +170,7 @@ function getEditNameInputId(trackId: number) {
           />
         </template>
       </Column>
-      <Column :header="t('common.actions')" style="width: 180px">
+      <Column :header="t('common.actions')" style="width: 220px">
         <template #body="{ data }">
           <div class="flex gap-1">
             <template v-if="editingId === data.id">
@@ -172,6 +190,14 @@ function getEditNameInputId(trackId: number) {
                 severity="secondary"
                 text
                 @click="startEdit(data)"
+              />
+              <Button
+                icon="pi pi-trash"
+                size="small"
+                severity="danger"
+                text
+                :aria-label="t('common.delete')"
+                @click="deleteTrack(data)"
               />
             </template>
           </div>

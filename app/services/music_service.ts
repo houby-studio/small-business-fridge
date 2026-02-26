@@ -3,7 +3,7 @@ import { cuid } from '@adonisjs/core/helpers'
 import app from '@adonisjs/core/services/app'
 import MusicTrack from '#models/music_track'
 import User from '#models/user'
-import { mkdir } from 'node:fs/promises'
+import { mkdir, rm } from 'node:fs/promises'
 
 export default class MusicService {
   async getTracks() {
@@ -39,6 +39,22 @@ export default class MusicService {
     if (data.isDisabled !== undefined) track.isDisabled = data.isDisabled
 
     await track.save()
+    return track
+  }
+
+  async deleteTrack(trackId: number) {
+    const track = await MusicTrack.findOrFail(trackId)
+
+    // Best-effort cleanup: keep deletion working even if the file is already missing.
+    try {
+      const relativePath = track.filePath.replace(/^\/+/, '')
+      const absolutePath = app.makePath('storage', relativePath)
+      await rm(absolutePath, { force: true })
+    } catch {
+      // Ignore file removal errors.
+    }
+
+    await track.delete()
     return track
   }
 

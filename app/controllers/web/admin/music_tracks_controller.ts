@@ -77,4 +77,20 @@ export default class MusicTracksController {
 
     return response.redirect('/admin/music')
   }
+
+  async destroy({ params, response, session, i18n, auth }: HttpContext) {
+    const service = new MusicService()
+    const track = await service.deleteTrack(Number(params.id))
+
+    await AuditService.log(auth.user!.id, 'music.deleted', 'music', track.id, null, {
+      name: track.name,
+    })
+
+    session.flash('alert', {
+      type: 'success',
+      message: i18n.t('messages.music_deleted', { name: track.name }),
+    })
+
+    return response.redirect('/admin/music')
+  }
 }

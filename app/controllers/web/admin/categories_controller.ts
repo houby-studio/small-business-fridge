@@ -102,4 +102,33 @@ export default class CategoriesController {
 
     return response.redirect('/admin/categories')
   }
+
+  async destroy({ params, response, session, i18n, auth }: HttpContext) {
+    const service = new AdminService()
+    let category: Category
+
+    try {
+      category = await service.deleteCategory(Number(params.id))
+    } catch (err) {
+      if (err instanceof Error && err.message === 'CATEGORY_HAS_PRODUCTS') {
+        session.flash('alert', {
+          type: 'warn',
+          message: i18n.t('messages.category_has_products_delete'),
+        })
+        return response.redirect('/admin/categories')
+      }
+      throw err
+    }
+
+    await AuditService.log(auth.user!.id, 'category.deleted', 'category', category.id, null, {
+      name: category.name,
+    })
+
+    session.flash('alert', {
+      type: 'success',
+      message: i18n.t('messages.category_deleted', { name: category.name }),
+    })
+
+    return response.redirect('/admin/categories')
+  }
 }

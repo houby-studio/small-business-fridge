@@ -203,16 +203,19 @@ router
     router.get('/categories', [AdminCategoriesController, 'index'])
     router.post('/categories', [AdminCategoriesController, 'store'])
     router.put('/categories/:id', [AdminCategoriesController, 'update'])
+    router.delete('/categories/:id', [AdminCategoriesController, 'destroy'])
 
     // Allergen management
     router.get('/allergens', [AdminAllergensController, 'index'])
     router.post('/allergens', [AdminAllergensController, 'store'])
     router.put('/allergens/:id', [AdminAllergensController, 'update'])
+    router.delete('/allergens/:id', [AdminAllergensController, 'destroy'])
 
     // Music tracks management
     router.get('/music', [AdminMusicTracksController, 'index'])
     router.post('/music', [AdminMusicTracksController, 'store'])
     router.put('/music/:id', [AdminMusicTracksController, 'update'])
+    router.delete('/music/:id', [AdminMusicTracksController, 'destroy'])
 
     // Orders & invoices oversight
     router.get('/orders', [AdminOrdersController, 'index'])
