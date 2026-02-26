@@ -114,7 +114,7 @@ test.describe('Admin pages and filters', () => {
     await expect(page.locator('table')).toContainText('Supplier User')
   })
 
-  test('admin can open and submit new category/allergen dialogs from keyboard without runtime errors', async ({
+  test('admin can open and submit new category/allergen/music dialogs from keyboard without runtime errors', async ({
     page,
   }) => {
     const runtimeErrors: string[] = []
@@ -168,11 +168,33 @@ test.describe('Admin pages and filters', () => {
     await expect(allergenDialog).toBeHidden()
     await expect(page.locator('table')).toContainText(newAllergenName)
 
+    await page.goto('/admin/music')
+    await expect(page.getByRole('columnheader', { name: '#' })).toBeVisible()
+    await page.getByRole('button', { name: 'Nová skladba' }).click()
+    const musicDialog = page.getByRole('dialog', { name: 'Nová skladba' })
+    await expect(musicDialog).toBeVisible()
+    const musicNameInput = musicDialog.getByRole('textbox').first()
+    await expect(musicNameInput).toBeFocused()
+    await page.waitForTimeout(700)
+    await expect(musicNameInput).toBeFocused()
+    const newMusicName = `E2E Music ${Date.now()}`
+    await musicNameInput.fill(newMusicName)
+    await musicDialog.locator('input[type="file"]').setInputFiles({
+      name: 'e2e-track.mp3',
+      mimeType: 'audio/mpeg',
+      buffer: Buffer.from('ID3-e2e-admin-track'),
+    })
+    await musicNameInput.press('Enter')
+    await expect(musicDialog).toBeHidden()
+    await expect(page.locator('table')).toContainText(newMusicName)
+
     expect(runtimeErrors).toHaveLength(0)
     expect(criticalConsoleMessages).toHaveLength(0)
   })
 
-  test('admin edit mode autofocuses category and allergen name inputs', async ({ page }) => {
+  test('admin edit mode autofocuses category, allergen, and music name inputs', async ({
+    page,
+  }) => {
     await page.goto('/admin/categories')
     await page.locator('button:has(.pi-pencil)').first().click()
     await expect(page.locator('input[id^=\"admin-category-edit-name-\"]')).toBeFocused()
@@ -180,5 +202,9 @@ test.describe('Admin pages and filters', () => {
     await page.goto('/admin/allergens')
     await page.locator('button:has(.pi-pencil)').first().click()
     await expect(page.locator('input[id^=\"admin-allergen-edit-name-\"]')).toBeFocused()
+
+    await page.goto('/admin/music')
+    await page.locator('button:has(.pi-pencil)').first().click()
+    await expect(page.locator('input[id^=\"admin-music-edit-name-\"]')).toBeFocused()
   })
 })

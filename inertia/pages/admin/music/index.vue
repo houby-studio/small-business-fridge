@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { nextTick, ref } from 'vue'
 import { Head, router, useForm } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
@@ -29,6 +29,7 @@ const accessLevelOptions = [
 ]
 
 const showCreateDialog = ref(false)
+const createNameInputId = 'admin-music-create-name'
 const createForm = useForm({
   name: '',
   accessLevel: 'public' as 'public' | 'premium',
@@ -44,6 +45,7 @@ function onFileChange(event: Event) {
 }
 
 function createTrack() {
+  if (createForm.processing || !createForm.name.trim() || !createForm.file) return
   createForm.post('/admin/music', {
     forceFormData: true,
     onSuccess: () => {
@@ -68,6 +70,9 @@ const editName = ref('')
 function startEdit(row: TrackRow) {
   editingId.value = row.id
   editName.value = row.name
+  nextTick(() => {
+    document.getElementById(getEditNameInputId(row.id))?.focus()
+  })
 }
 
 function saveEdit() {
@@ -85,6 +90,16 @@ function saveEdit() {
 function cancelEdit() {
   editingId.value = null
 }
+
+function focusCreateNameInput() {
+  nextTick(() => {
+    document.getElementById(createNameInputId)?.focus()
+  })
+}
+
+function getEditNameInputId(trackId: number) {
+  return `admin-music-edit-name-${trackId}`
+}
 </script>
 
 <template>
@@ -99,10 +114,18 @@ function cancelEdit() {
     </div>
 
     <DataTable :value="tracks" stripedRows class="rounded-lg border">
+      <Column header="#" headerClass="sbf-col-id" bodyClass="sbf-col-id">
+        <template #body="{ data }">{{ data.id }}</template>
+      </Column>
       <Column :header="t('common.name')">
         <template #body="{ data }">
           <template v-if="editingId === data.id">
-            <InputText v-model="editName" class="w-full" @keyup.enter="saveEdit" />
+            <InputText
+              :id="getEditNameInputId(data.id)"
+              v-model="editName"
+              class="w-full"
+              @keyup.enter="saveEdit"
+            />
           </template>
           <template v-else>
             {{ data.name }}
@@ -160,7 +183,9 @@ function cancelEdit() {
       v-model:visible="showCreateDialog"
       :header="t('admin.music_new_heading')"
       :modal="true"
+      :closeButtonProps="{ severity: 'secondary', text: true, rounded: true, autofocus: false }"
       style="width: 460px"
+      @show="focusCreateNameInput"
     >
       <div class="flex flex-col gap-4">
         <div>
@@ -168,10 +193,13 @@ function cancelEdit() {
             t('common.name')
           }}</label>
           <InputText
+            :id="createNameInputId"
             v-model="createForm.name"
             class="w-full"
             :placeholder="t('admin.music_name_placeholder')"
             :invalid="!!createForm.errors.name"
+            autofocus
+            @keyup.enter="createTrack"
           />
           <small v-if="createForm.errors.name" class="text-red-600 dark:text-red-400">{{
             createForm.errors.name
