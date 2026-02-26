@@ -1,6 +1,6 @@
 import { defineConfig } from '@adonisjs/ally'
 import type { InferSocialProviders } from '@adonisjs/ally/types'
-import { microsoft } from '@tpointurier/ally-microsoft'
+import { microsoft } from '#services/ally_microsoft_driver'
 import env from '#start/env'
 
 const allyConfig = defineConfig({
