@@ -8,6 +8,7 @@ import Column from 'primevue/column'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDate } from '~/composables/use_format_date'
 import { useListFilters } from '~/composables/use_list_filters'
+import { useSelectEnterKey } from '~/composables/use_select_enter_key'
 import FilterBar from '~/components/FilterBar.vue'
 import PaginatedDataTable from '~/components/PaginatedDataTable.vue'
 
@@ -50,6 +51,20 @@ const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
 const productFilterOptions = computed(() => [
   { label: t('common.all'), value: ALL },
   ...props.products.map((p) => ({ label: p.displayName, value: String(p.id) })),
+])
+
+const productFilterSelect = ref<any>(null)
+
+const { onSelectShow } = useSelectEnterKey([
+  {
+    selectRef: productFilterSelect,
+    getOptions: () => productFilterOptions.value,
+    getLabel: (o) => o.label,
+    getValue: (o) => o.value,
+    onSelect: (v) => {
+      filterProductId.value = v as string
+    },
+  },
 ])
 
 function buildFilterParams() {
@@ -105,12 +120,14 @@ function onSort(event: any) {
           t('supplier.deliveries_filter_product')
         }}</label>
         <Select
+          ref="productFilterSelect"
           v-model="filterProductId"
           :options="productFilterOptions"
           optionLabel="label"
           optionValue="value"
           :placeholder="t('supplier.deliveries_filter_product')"
           filter
+          @show="onSelectShow"
         />
       </div>
     </FilterBar>

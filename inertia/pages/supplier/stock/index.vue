@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, onBeforeUnmount, onMounted } from 'vue'
+import { ref, computed, nextTick, onMounted } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
@@ -11,6 +11,7 @@ import Select from 'primevue/select'
 import InputNumber from 'primevue/inputnumber'
 import { useI18n } from '~/composables/use_i18n'
 import { useListFilters } from '~/composables/use_list_filters'
+import { useSelectEnterKey } from '~/composables/use_select_enter_key'
 import { formatDate } from '~/composables/use_format_date'
 import FilterBar from '~/components/FilterBar.vue'
 import PaginatedDataTable from '~/components/PaginatedDataTable.vue'
@@ -140,15 +141,19 @@ function focusPriceField() {
   input?.focus()
 }
 
-function focusProductSearchField() {
-  const filterInput = document.querySelector(
-    '.p-select-overlay .p-select-filter'
-  ) as HTMLInputElement | null
-  if (filterInput) {
-    filterInput.focus()
-    filterInput.select()
-  }
-}
+const { onSelectShow } = useSelectEnterKey([
+  {
+    selectRef: productSelect,
+    getOptions: () => quickProductOptions.value,
+    getLabel: (o) => o.label,
+    getValue: (o) => o.value,
+    onSelect: (v) => {
+      selectedProduct.value = v as number
+      nextTick(() => focusAmountField())
+      window.setTimeout(() => focusAmountField(), 120)
+    },
+  },
+])
 
 function openProductSelectAndFocusSearch() {
   const instance = productSelect.value
@@ -162,76 +167,13 @@ function openProductSelectAndFocusSearch() {
     trigger?.click()
   }
 
-  nextTick(() => {
-    focusProductSearchField()
-  })
-}
-
-function selectTopOrFocusedProductOption(filterInput: HTMLInputElement | null) {
-  const activeDescendantId = filterInput?.getAttribute('aria-activedescendant')
-  const activeDescendantOption = activeDescendantId
-    ? (document.getElementById(activeDescendantId) as HTMLElement | null)
-    : null
-  const focusedOption = document.querySelector(
-    '.p-select-overlay .p-select-option.p-focus, .p-select-overlay .p-select-option[data-p-focused="true"]'
-  ) as HTMLElement | null
-  const topOption = document.querySelector(
-    '.p-select-overlay .p-select-option'
-  ) as HTMLElement | null
-  const option = activeDescendantOption ?? focusedOption ?? topOption
-
-  const optionLabel = option?.textContent?.trim()
-  const query = filterInput?.value?.trim().toLocaleLowerCase() ?? ''
-
-  const matchedOptionByHighlight = optionLabel
-    ? quickProductOptions.value.find((item) => item.label === optionLabel)
-    : null
-  const matchedOptionByQuery = quickProductOptions.value.find((item) =>
-    item.label.toLocaleLowerCase().includes(query)
-  )
-  const matchedOption =
-    matchedOptionByHighlight ?? matchedOptionByQuery ?? quickProductOptions.value[0]
-
-  if (matchedOption) {
-    selectedProduct.value = matchedOption.value
-    if (typeof productSelect.value?.hide === 'function') {
-      productSelect.value.hide()
-    }
-    return true
-  }
-
-  if (!option) return false
-  option.click()
-  return true
+  nextTick(() => onSelectShow())
 }
 
 function onProductEnter(event: KeyboardEvent) {
-  const overlayOpen = productSelect.value?.overlayVisible === true
-  if (overlayOpen) {
-    event.preventDefault()
-    const filterInput = document.querySelector(
-      '.p-select-overlay .p-select-filter'
-    ) as HTMLInputElement | null
-    const selected = selectTopOrFocusedProductOption(filterInput)
-    if (!selected) return
-
-    nextTick(() => {
-      focusAmountField()
-    })
-    window.setTimeout(() => {
-      focusAmountField()
-    }, 120)
-    return
-  }
-
+  if (productSelect.value?.overlayVisible === true) return // handled by useSelectEnterKey
   event.preventDefault()
   openProductSelectAndFocusSearch()
-}
-
-function onProductSelectShow() {
-  nextTick(() => {
-    focusProductSearchField()
-  })
 }
 
 function onProductSelectHide() {
@@ -248,41 +190,12 @@ function onProductChange() {
   })
 }
 
-function onQuickDeliveryKeydown(event: KeyboardEvent) {
-  if (event.key !== 'Enter') return
-  if (productSelect.value?.overlayVisible !== true) return
-
-  const filterInput = document.querySelector(
-    '.p-select-overlay .p-select-filter'
-  ) as HTMLInputElement | null
-  if (!filterInput) return
-
-  event.preventDefault()
-  event.stopPropagation()
-
-  const selected = selectTopOrFocusedProductOption(filterInput)
-  if (!selected) return
-
-  nextTick(() => {
-    focusAmountField()
-  })
-  window.setTimeout(() => {
-    focusAmountField()
-  }, 120)
-}
-
 onMounted(() => {
-  document.addEventListener('keydown', onQuickDeliveryKeydown, true)
-
   if (props.preselect) {
     nextTick(() => {
       focusAmountField()
     })
   }
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('keydown', onQuickDeliveryKeydown, true)
 })
 
 function buildFilterParams() {
@@ -422,7 +335,7 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
               optionValue="value"
               :placeholder="t('supplier.deliveries_product')"
               filter
-              @show="onProductSelectShow"
+              @show="onSelectShow"
               @hide="onProductSelectHide"
               @change="onProductChange"
               @keydown.enter.capture.prevent="onProductEnter"

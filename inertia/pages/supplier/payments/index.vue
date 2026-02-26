@@ -11,6 +11,7 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDate } from '~/composables/use_format_date'
 import { useListFilters } from '~/composables/use_list_filters'
+import { useSelectEnterKey } from '~/composables/use_select_enter_key'
 import FilterBar from '~/components/FilterBar.vue'
 import PaginatedDataTable from '~/components/PaginatedDataTable.vue'
 
@@ -47,6 +48,20 @@ const filterBuyerId = ref<number | string>(
 const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
 
 const buyerOptions = [{ id: ALL, displayName: t('common.all') }, ...props.buyers]
+
+const buyerFilterSelect = ref<any>(null)
+
+const { onSelectShow } = useSelectEnterKey([
+  {
+    selectRef: buyerFilterSelect,
+    getOptions: () => buyerOptions,
+    getLabel: (o) => o.displayName,
+    getValue: (o) => o.id,
+    onSelect: (v) => {
+      filterBuyerId.value = v
+    },
+  },
+])
 
 const statusOptions = [
   { label: t('common.all'), value: ALL },
@@ -152,12 +167,14 @@ function onSort(event: any) {
           t('supplier.payments_filter_customer')
         }}</label>
         <Select
+          ref="buyerFilterSelect"
           v-model="filterBuyerId"
           :options="buyerOptions"
           optionLabel="displayName"
           optionValue="id"
           filter
           class="w-48"
+          @show="onSelectShow"
         />
       </div>
     </FilterBar>
