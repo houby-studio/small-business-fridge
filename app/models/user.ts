@@ -71,6 +71,9 @@ export default class User extends compose(BaseModel, AuthFinder) {
   @column()
   declare keypadDisabled: boolean
 
+  @column()
+  declare isPremium: boolean
+
   @column({
     prepare: (value: number[]) => JSON.stringify(value ?? []),
     consume: (value: string | number[]) =>

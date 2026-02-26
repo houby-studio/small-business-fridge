@@ -8,6 +8,7 @@ import { DeliveryFactory } from '#database/factories/delivery_factory'
 import { OrderFactory } from '#database/factories/order_factory'
 import Invoice from '#models/invoice'
 import Allergen from '#models/allergen'
+import MusicTrack from '#models/music_track'
 import db from '@adonisjs/lucid/services/db'
 
 const cleanAll = async () => {
@@ -18,6 +19,7 @@ const cleanAll = async () => {
   await db.from('deliveries').delete()
   await db.from('product_allergen').delete()
   await db.from('products').delete()
+  await db.from('music_tracks').delete()
   await db.from('allergens').delete()
   await db.from('categories').delete()
   await db.from('auth_access_tokens').delete()
@@ -857,5 +859,84 @@ test.group('Admin - category audit logging', (group) => {
       .first()
 
     assert.isNull(log)
+  })
+})
+
+test.group('Admin - music tracks', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('admin can view music page', async ({ client }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const response = await client.get('/admin/music').loginAs(admin)
+    response.assertStatus(200)
+  })
+
+  test('admin can create music track with upload', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const mp3File = Buffer.from('ID3-test-track')
+
+    const response = await client
+      .post('/admin/music')
+      .loginAs(admin)
+      .withCsrfToken()
+      .field('name', 'Office Track')
+      .field('accessLevel', 'public')
+      .file('file', mp3File, { filename: 'office.mp3', contentType: 'audio/mpeg' })
+      .redirects(0)
+
+    response.assertStatus(302)
+    assert.equal(response.header('location'), '/admin/music')
+
+    const track = await MusicTrack.query().where('name', 'Office Track').first()
+    assert.isNotNull(track)
+    assert.equal(track!.accessLevel, 'public')
+    assert.isFalse(track!.isDisabled)
+    assert.match(track!.filePath, /^\/uploads\/music\//)
+  })
+
+  test('admin update music track writes audit change metadata', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const track = await MusicTrack.create({
+      name: 'Starter Track',
+      filePath: '/uploads/music/starter.mp3',
+      mimeType: 'audio/mpeg',
+      accessLevel: 'public',
+      isDisabled: false,
+      uploadedByUserId: admin.id,
+    })
+
+    const response = await client
+      .put(`/admin/music/${track.id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .form({
+        name: 'Premium Track',
+        accessLevel: 'premium',
+        isDisabled: 'true',
+      })
+      .redirects(0)
+
+    response.assertStatus(302)
+    assert.equal(response.header('location'), '/admin/music')
+
+    await track.refresh()
+    assert.equal(track.name, 'Premium Track')
+    assert.equal(track.accessLevel, 'premium')
+    assert.isTrue(track.isDisabled)
+
+    const log = await db
+      .from('audit_logs')
+      .where('action', 'music.updated')
+      .where('entity_type', 'music')
+      .where('entity_id', track.id)
+      .first()
+
+    assert.isDefined(log, 'music.updated audit log should exist')
+    const metadata = log.metadata as Record<string, { from: unknown; to: unknown }> | null
+    assert.isNotNull(metadata)
+    assert.deepEqual(metadata!.name, { from: 'Starter Track', to: 'Premium Track' })
+    assert.deepEqual(metadata!.accessLevel, { from: 'public', to: 'premium' })
+    assert.deepEqual(metadata!.isDisabled, { from: false, to: true })
   })
 })

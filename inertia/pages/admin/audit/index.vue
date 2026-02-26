@@ -58,6 +58,8 @@ const actionOptions = [
   { label: t('audit.action_allergen_updated'), value: 'allergen.updated' },
   { label: t('audit.action_category_created'), value: 'category.created' },
   { label: t('audit.action_category_updated'), value: 'category.updated' },
+  { label: t('audit.action_music_created'), value: 'music.created' },
+  { label: t('audit.action_music_updated'), value: 'music.updated' },
   { label: t('audit.action_profile_updated'), value: 'profile.updated' },
   { label: t('audit.action_favorite_added'), value: 'favorite.added' },
   { label: t('audit.action_favorite_removed'), value: 'favorite.removed' },
@@ -80,6 +82,7 @@ const entityOptions = [
   { label: 'product', value: 'product' },
   { label: 'allergen', value: 'allergen' },
   { label: 'category', value: 'category' },
+  { label: 'music', value: 'music' },
   { label: 'user', value: 'user' },
 ]
 
@@ -97,6 +100,8 @@ const actionLabels: Record<string, string> = {
   'allergen.updated': 'audit.action_allergen_updated',
   'category.created': 'audit.action_category_created',
   'category.updated': 'audit.action_category_updated',
+  'music.created': 'audit.action_music_created',
+  'music.updated': 'audit.action_music_updated',
   'profile.updated': 'audit.action_profile_updated',
   'favorite.added': 'audit.action_favorite_added',
   'favorite.removed': 'audit.action_favorite_removed',

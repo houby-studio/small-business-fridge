@@ -27,6 +27,16 @@
   "allergens_new_heading": "New allergen",
   "allergens_name_placeholder": "Allergen name",
 
+  "music_title": "Music Management",
+  "music_heading": "Music Management",
+  "music_new": "New track",
+  "music_new_heading": "New track",
+  "music_name_placeholder": "Track name",
+  "music_file": "Audio file",
+  "music_access": "Access",
+  "music_access_public": "Public",
+  "music_access_premium": "Premium",
+
   "orders_title": "All Orders",
   "orders_heading": "All Orders",
   "orders_no_orders": "No orders.",

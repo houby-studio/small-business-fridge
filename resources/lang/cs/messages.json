@@ -25,6 +25,8 @@
   "category_updated": "Kategorie „{name}“ byla upravena.",
   "allergen_created": "Alergen „{name}“ byl vytvořen.",
   "allergen_updated": "Alergen „{name}“ byl upraven.",
+  "music_created": "Skladba „{name}“ byla vytvořena.",
+  "music_updated": "Skladba „{name}“ byla upravena.",
   "user_updated": "Uživatel „{name}“ byl upraven.",
   "storno_success": "Objednávka #{id} byla stornována.",
   "storno_already_invoiced": "Objednávku nelze stornovat — je již fakturována.",

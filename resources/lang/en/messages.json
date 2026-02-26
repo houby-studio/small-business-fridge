@@ -25,6 +25,8 @@
   "category_updated": "Category \"{name}\" has been updated.",
   "allergen_created": "Allergen \"{name}\" has been created.",
   "allergen_updated": "Allergen \"{name}\" has been updated.",
+  "music_created": "Track \"{name}\" has been created.",
+  "music_updated": "Track \"{name}\" has been updated.",
   "user_updated": "User \"{name}\" has been updated.",
   "storno_success": "Order #{id} has been cancelled.",
   "storno_already_invoiced": "Order cannot be cancelled — it is already invoiced.",

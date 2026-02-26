@@ -12,6 +12,7 @@ test.describe('Admin pages and filters', () => {
       '/admin/users',
       '/admin/categories',
       '/admin/allergens',
+      '/admin/music',
       '/admin/orders',
       '/admin/invoices',
       '/admin/audit',

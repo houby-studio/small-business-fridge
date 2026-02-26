@@ -6,6 +6,7 @@ import { DeliveryFactory } from '#database/factories/delivery_factory'
 import { CategoryFactory } from '#database/factories/category_factory'
 import Allergen from '#models/allergen'
 import Order from '#models/order'
+import MusicTrack from '#models/music_track'
 import db from '@adonisjs/lucid/services/db'
 
 const cleanAll = async () => {
@@ -15,6 +16,7 @@ const cleanAll = async () => {
   await db.from('deliveries').delete()
   await db.from('product_allergen').delete()
   await db.from('products').delete()
+  await db.from('music_tracks').delete()
   await db.from('allergens').delete()
   await db.from('categories').delete()
   await db.from('auth_access_tokens').delete()
@@ -186,6 +188,72 @@ test.group('GET /kiosk/customer', (group) => {
     assert.isArray(body.favoriteIds)
     assert.isArray(body.recommendedIds)
     assert.isArray(body.excludedAllergenIds)
+    assert.isArray(body.musicTracks)
+  })
+
+  test('musicTracks include only public tracks for non-premium users', async ({
+    client,
+    assert,
+  }) => {
+    const kioskDevice = await UserFactory.apply('kiosk').create()
+    const customer = await UserFactory.create()
+
+    await MusicTrack.create({
+      name: 'Public Track',
+      filePath: '/uploads/music/public.mp3',
+      mimeType: 'audio/mpeg',
+      accessLevel: 'public',
+      isDisabled: false,
+    })
+    await MusicTrack.create({
+      name: 'Premium Track',
+      filePath: '/uploads/music/premium.mp3',
+      mimeType: 'audio/mpeg',
+      accessLevel: 'premium',
+      isDisabled: false,
+    })
+
+    const response = await client
+      .get(`/kiosk/customer?keypadId=${customer.keypadId}`)
+      .loginAs(kioskDevice)
+
+    response.assertStatus(200)
+    const body = JSON.parse(response.text())
+    const names = body.musicTracks.map((track: any) => track.name)
+    assert.include(names, 'Public Track')
+    assert.notInclude(names, 'Premium Track')
+  })
+
+  test('musicTracks include premium tracks for premium users', async ({ client, assert }) => {
+    const kioskDevice = await UserFactory.apply('kiosk').create()
+    const customer = await UserFactory.create()
+    customer.isPremium = true
+    await customer.save()
+
+    await MusicTrack.create({
+      name: 'Public Track',
+      filePath: '/uploads/music/public.mp3',
+      mimeType: 'audio/mpeg',
+      accessLevel: 'public',
+      isDisabled: false,
+    })
+    await MusicTrack.create({
+      name: 'Premium Track',
+      filePath: '/uploads/music/premium.mp3',
+      mimeType: 'audio/mpeg',
+      accessLevel: 'premium',
+      isDisabled: false,
+    })
+
+    const response = await client
+      .get(`/kiosk/customer?keypadId=${customer.keypadId}`)
+      .loginAs(kioskDevice)
+
+    response.assertStatus(200)
+    const body = JSON.parse(response.text())
+    const names = body.musicTracks.map((track: any) => track.name)
+    assert.include(names, 'Public Track')
+    assert.include(names, 'Premium Track')
   })
 
   test('returns 404 for unknown keypadId', async ({ client, assert }) => {

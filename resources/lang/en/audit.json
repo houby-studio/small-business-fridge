@@ -29,6 +29,8 @@
   "action_allergen_updated": "Allergen updated",
   "action_category_created": "Category created",
   "action_category_updated": "Category updated",
+  "action_music_created": "Track created",
+  "action_music_updated": "Track updated",
   "action_profile_updated": "Profile updated",
   "action_favorite_added": "Added to favorites",
   "action_favorite_removed": "Removed from favorites",

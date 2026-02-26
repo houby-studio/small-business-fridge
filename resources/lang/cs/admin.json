@@ -27,6 +27,16 @@
   "allergens_new_heading": "Nový alergen",
   "allergens_name_placeholder": "Název alergenu",
 
+  "music_title": "Správa hudby",
+  "music_heading": "Správa hudby",
+  "music_new": "Nová skladba",
+  "music_new_heading": "Nová skladba",
+  "music_name_placeholder": "Název skladby",
+  "music_file": "Audio soubor",
+  "music_access": "Přístup",
+  "music_access_public": "Veřejná",
+  "music_access_premium": "Premium",
+
   "orders_title": "Všechny objednávky",
   "orders_heading": "Všechny objednávky",
   "orders_no_orders": "Žádné objednávky.",
