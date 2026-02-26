@@ -362,6 +362,8 @@ export default async function globalSetup() {
     'customer2',
   ])
   const customer2Id = customer2Result.rows[0].id
+  const adminResult = await client.query('SELECT id FROM users WHERE username = $1', ['admin'])
+  const adminId = adminResult.rows[0].id
 
   // 6b. Seed kiosk music tracks
   const musicDir = join(process.cwd(), 'storage/uploads/music')
@@ -538,6 +540,13 @@ export default async function globalSetup() {
   for (let i = 25; i < 33; i++) {
     await client.query(`UPDATE orders SET invoice_id = $1 WHERE id = $2`, [inv3Id, orderIds[i]])
   }
+
+  // 11. Seed one deterministic audit row to assert translation on both /audit pages.
+  await client.query(
+    `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, target_user_id, metadata, created_at)
+     VALUES ($1, 'music.created', 'music', 1, NULL, '{"name":"E2E Public Track"}'::jsonb, NOW())`,
+    [adminId]
+  )
 
   await client.query('COMMIT')
   await client.end()
