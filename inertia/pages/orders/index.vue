@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Head, router } from '@inertiajs/vue3'
+import { Head } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
-import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Card from 'primevue/card'
 import Select from 'primevue/select'
-import Button from 'primevue/button'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDate } from '~/composables/use_format_date'
-import { areFilterParamsEqual } from '~/composables/use_filter_params'
+import { useListFilters } from '~/composables/use_list_filters'
+import FilterBar from '~/components/FilterBar.vue'
+import PaginatedDataTable from '~/components/PaginatedDataTable.vue'
 
 interface OrderRow {
   id: number
@@ -79,54 +79,25 @@ function buildFilterParams() {
   }
 }
 
-const lastAppliedFilterParams = ref(buildFilterParams())
-
-function applyFilters() {
-  const nextParams = buildFilterParams()
-  const page = areFilterParamsEqual(nextParams, lastAppliedFilterParams.value)
-    ? props.orders.meta.currentPage
-    : 1
-  router.get(
-    '/orders',
-    { ...nextParams, page },
-    { preserveState: true, only: ['orders', 'filters', 'stats'] }
-  )
-  lastAppliedFilterParams.value = nextParams
-}
+const { applyFilters, navigateClear, onPageChange, navigateSort } = useListFilters({
+  route: '/orders',
+  onlyProps: ['orders', 'filters', 'stats'],
+  buildParams: buildFilterParams,
+  getCurrentPage: () => props.orders.meta.currentPage,
+})
 
 function clearFilters() {
   filterChannel.value = ALL
   filterInvoiced.value = ALL
   filterSortBy.value = 'createdAt'
   filterSortOrder.value = 'desc'
-  lastAppliedFilterParams.value = buildFilterParams()
-  router.get('/orders', buildFilterParams(), {
-    preserveState: true,
-    only: ['orders', 'filters', 'stats'],
-  })
-}
-
-function onPageChange(event: any) {
-  router.get(
-    '/orders',
-    { ...buildFilterParams(), page: event.page + 1 },
-    { preserveState: true, only: ['orders', 'filters', 'stats'] }
-  )
+  navigateClear()
 }
 
 function onSort(event: any) {
   filterSortBy.value = event.sortField
   filterSortOrder.value = event.sortOrder === 1 ? 'asc' : 'desc'
-  router.get(
-    '/orders',
-    {
-      ...buildFilterParams(),
-      sortBy: event.sortField,
-      sortOrder: event.sortOrder === 1 ? 'asc' : 'desc',
-      page: 1,
-    },
-    { preserveState: true, only: ['orders', 'filters', 'stats'] }
-  )
+  navigateSort()
 }
 
 function channelLabel(channel: string) {
@@ -228,7 +199,7 @@ function channelLabel(channel: string) {
     </div>
 
     <!-- Filter bar -->
-    <div class="mb-4 flex flex-wrap items-end gap-3">
+    <FilterBar @apply="applyFilters" @clear="clearFilters">
       <div>
         <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
           t('orders.filter_channel')
@@ -253,35 +224,16 @@ function channelLabel(channel: string) {
           class="w-36"
         />
       </div>
-      <Button
-        :label="t('common.filter_apply')"
-        icon="pi pi-filter"
-        size="small"
-        @click="applyFilters"
-      />
-      <Button
-        :label="t('common.filter_clear')"
-        size="small"
-        severity="secondary"
-        text
-        @click="clearFilters"
-      />
-    </div>
+    </FilterBar>
 
     <!-- Orders table -->
-    <DataTable
+    <PaginatedDataTable
       :value="orders.data"
-      :paginator="orders.meta.lastPage > 1"
-      :rows="orders.meta.perPage"
-      :totalRecords="orders.meta.total"
-      :lazy="true"
-      :first="(orders.meta.currentPage - 1) * orders.meta.perPage"
+      :meta="orders.meta"
       :sortField="filterSortBy"
       :sortOrder="sortOrderNum"
       @page="onPageChange"
       @sort="onSort"
-      stripedRows
-      class="rounded-lg border"
     >
       <Column
         :header="t('common.date')"
@@ -333,6 +285,6 @@ function channelLabel(channel: string) {
           {{ t('orders.no_orders') }}
         </div>
       </template>
-    </DataTable>
+    </PaginatedDataTable>
   </AppLayout>
 </template>

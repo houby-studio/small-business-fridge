@@ -1,16 +1,17 @@
 <script setup lang="ts">
-import { computed, ref, nextTick, onBeforeUnmount, onMounted } from 'vue'
-import { Head, router } from '@inertiajs/vue3'
+import { computed, ref } from 'vue'
+import { Head } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
-import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Select from 'primevue/select'
-import Button from 'primevue/button'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDateTime } from '~/composables/use_format_date'
-import { areFilterParamsEqual } from '~/composables/use_filter_params'
+import { useListFilters } from '~/composables/use_list_filters'
+import { useSelectEnterKey } from '~/composables/use_select_enter_key'
 import { getAuditActionLabel, getAuditActionOptions } from '~/composables/use_audit_actions'
+import FilterBar from '~/components/FilterBar.vue'
+import PaginatedDataTable from '~/components/PaginatedDataTable.vue'
 
 interface AuditRow {
   id: number
@@ -59,83 +60,17 @@ const entityOptions = [
   { label: 'user', value: 'user' },
 ]
 
-function focusSelectSearchField() {
-  const filterInput = document.querySelector(
-    '.p-select-overlay .p-select-filter'
-  ) as HTMLInputElement | null
-  if (!filterInput) return
-  filterInput.focus()
-  filterInput.select()
-}
-
-function selectTopOrFocusedOption<T>(
-  filterInput: HTMLInputElement,
-  options: T[],
-  getLabel: (option: T) => string,
-  getValue: (option: T) => number | string
-) {
-  const activeDescendantId = filterInput.getAttribute('aria-activedescendant')
-  const activeDescendantOption = activeDescendantId
-    ? (document.getElementById(activeDescendantId) as HTMLElement | null)
-    : null
-  const focusedOption = document.querySelector(
-    '.p-select-overlay .p-select-option.p-focus, .p-select-overlay .p-select-option[data-p-focused="true"]'
-  ) as HTMLElement | null
-  const topOption = document.querySelector(
-    '.p-select-overlay .p-select-option'
-  ) as HTMLElement | null
-  const option = activeDescendantOption ?? focusedOption ?? topOption
-
-  const optionLabel = option?.textContent?.trim()
-  const query = filterInput.value.trim().toLocaleLowerCase()
-
-  const matchedOptionByHighlight = optionLabel
-    ? options.find((item) => getLabel(item) === optionLabel)
-    : null
-  const matchedOptionByQuery = options.find((item) =>
-    getLabel(item).toLocaleLowerCase().includes(query)
-  )
-  const matchedOption = matchedOptionByHighlight ?? matchedOptionByQuery ?? options[0]
-
-  return matchedOption ? getValue(matchedOption) : null
-}
-
-function onUserFilterShow() {
-  nextTick(() => {
-    focusSelectSearchField()
-  })
-}
-
-function onFilterSearchEnter(event: KeyboardEvent) {
-  if (event.key !== 'Enter') return
-  if (userFilterSelect.value?.overlayVisible !== true) return
-  if (!(event.target instanceof HTMLInputElement)) return
-  if (!event.target.classList.contains('p-select-filter')) return
-
-  event.preventDefault()
-  event.stopPropagation()
-
-  const selectedValue = selectTopOrFocusedOption(
-    event.target,
-    userOptions,
-    (option) => option.displayName,
-    (option) => option.id
-  )
-  if (selectedValue === null) return
-
-  filterUserId.value = selectedValue
-  if (typeof userFilterSelect.value?.hide === 'function') {
-    userFilterSelect.value.hide()
-  }
-}
-
-onMounted(() => {
-  document.addEventListener('keydown', onFilterSearchEnter, true)
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('keydown', onFilterSearchEnter, true)
-})
+const { onSelectShow } = useSelectEnterKey([
+  {
+    selectRef: userFilterSelect,
+    getOptions: () => userOptions,
+    getLabel: (o) => o.displayName,
+    getValue: (o) => o.id,
+    onSelect: (v) => {
+      filterUserId.value = v
+    },
+  },
+])
 
 function actionLabel(action: string | undefined) {
   return getAuditActionLabel(action, t)
@@ -164,36 +99,19 @@ function buildParams() {
   }
 }
 
-const lastAppliedFilterParams = ref(buildParams())
-
-function applyFilters() {
-  const nextParams = buildParams()
-  const page = areFilterParamsEqual(nextParams, lastAppliedFilterParams.value)
-    ? props.logs.meta.currentPage
-    : 1
-  router.get(
-    '/admin/audit',
-    { ...nextParams, page },
-    { preserveState: true, only: ['logs', 'filters'] }
-  )
-  lastAppliedFilterParams.value = nextParams
-}
+const { applyFilters, navigateClear, onPageChange } = useListFilters({
+  route: '/admin/audit',
+  onlyProps: ['logs', 'filters'],
+  buildParams: buildParams,
+  getCurrentPage: () => props.logs.meta.currentPage,
+})
 
 function clearFilters() {
   filterAction.value = ALL
   filterEntity.value = ALL
   filterUserId.value = ALL
   filterSortOrder.value = 'desc'
-  lastAppliedFilterParams.value = buildParams()
-  router.get('/admin/audit', buildParams(), { preserveState: true, only: ['logs', 'filters'] })
-}
-
-function onPageChange(event: any) {
-  router.get(
-    '/admin/audit',
-    { ...buildParams(), page: event.page + 1 },
-    { preserveState: true, only: ['logs', 'filters'] }
-  )
+  navigateClear()
 }
 
 function onSort(event: any) {
@@ -211,7 +129,7 @@ function onSort(event: any) {
     </h1>
 
     <!-- Filters -->
-    <div class="mb-4 flex flex-wrap items-end gap-3">
+    <FilterBar @apply="applyFilters" @clear="clearFilters">
       <div>
         <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
           t('audit.filter_action')
@@ -248,37 +166,18 @@ function onSort(event: any) {
           optionValue="id"
           filter
           class="w-48"
-          @show="onUserFilterShow"
+          @show="onSelectShow"
         />
       </div>
-      <Button
-        :label="t('audit.filter_apply')"
-        icon="pi pi-filter"
-        size="small"
-        @click="applyFilters"
-      />
-      <Button
-        :label="t('audit.filter_clear')"
-        size="small"
-        severity="secondary"
-        text
-        @click="clearFilters"
-      />
-    </div>
+    </FilterBar>
 
-    <DataTable
+    <PaginatedDataTable
       :value="logs.data"
-      :paginator="logs.meta.lastPage > 1"
-      :rows="logs.meta.perPage"
-      :totalRecords="logs.meta.total"
-      :lazy="true"
-      :first="(logs.meta.currentPage - 1) * logs.meta.perPage"
+      :meta="logs.meta"
       sortField="createdAt"
       :sortOrder="sortOrderNum"
       @sort="onSort"
       @page="onPageChange"
-      stripedRows
-      class="rounded-lg border"
     >
       <Column
         :header="t('audit.date')"
@@ -327,6 +226,6 @@ function onSort(event: any) {
           {{ t('audit.no_logs') }}
         </div>
       </template>
-    </DataTable>
+    </PaginatedDataTable>
   </AppLayout>
 </template>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, ref } from 'vue'
+import { ref } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
@@ -12,6 +12,7 @@ import Dialog from 'primevue/dialog'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from '~/composables/use_i18n'
+import { useInlineEdit } from '~/composables/use_inline_edit'
 
 interface AllergenRow {
   id: number
@@ -49,41 +50,19 @@ function toggleDisabled(allergenId: number, isDisabled: boolean) {
   router.put(`/admin/allergens/${allergenId}`, { isDisabled }, { preserveState: true })
 }
 
-const editingId = ref<number | null>(null)
 const editName = ref('')
 
-function startEdit(row: AllergenRow) {
-  editingId.value = row.id
-  editName.value = row.name
-  nextTick(() => {
-    document.getElementById(getEditNameInputId(row.id))?.focus()
+const { editingId, getEditInputId, startEdit, saveEdit, cancelEdit, focusCreateInput } =
+  useInlineEdit({
+    entityPrefix: 'admin-allergen',
+    updatePath: (id) => `/admin/allergens/${id}`,
+    getEditValues: () => ({ name: editName.value }),
   })
-}
 
-function saveEdit() {
-  if (!editingId.value) return
-  router.put(
-    `/admin/allergens/${editingId.value}`,
-    { name: editName.value },
-    {
-      preserveState: true,
-      onFinish: () => (editingId.value = null),
-    }
-  )
-}
-
-function cancelEdit() {
-  editingId.value = null
-}
-
-function focusCreateNameInput() {
-  nextTick(() => {
-    document.getElementById(createNameInputId)?.focus()
+function handleStartEdit(row: AllergenRow) {
+  startEdit(row.id, () => {
+    editName.value = row.name
   })
-}
-
-function getEditNameInputId(allergenId: number) {
-  return `admin-allergen-edit-name-${allergenId}`
 }
 
 function deleteAllergen(allergen: AllergenRow) {
@@ -125,7 +104,7 @@ function deleteAllergen(allergen: AllergenRow) {
         <template #body="{ data }">
           <template v-if="editingId === data.id">
             <InputText
-              :id="getEditNameInputId(data.id)"
+              :id="getEditInputId(data.id)"
               v-model="editName"
               class="w-full"
               @keyup.enter="saveEdit"
@@ -171,7 +150,7 @@ function deleteAllergen(allergen: AllergenRow) {
                 size="small"
                 severity="secondary"
                 text
-                @click="startEdit(data)"
+                @click="handleStartEdit(data)"
               />
               <Button
                 icon="pi pi-trash"
@@ -197,7 +176,7 @@ function deleteAllergen(allergen: AllergenRow) {
       :modal="true"
       :closeButtonProps="{ severity: 'secondary', text: true, rounded: true, autofocus: false }"
       style="width: 400px"
-      @show="focusCreateNameInput"
+      @show="focusCreateInput(createNameInputId)"
     >
       <div class="flex flex-col gap-4">
         <div>

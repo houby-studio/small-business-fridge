@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, ref } from 'vue'
+import { ref } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
@@ -13,6 +13,7 @@ import Dialog from 'primevue/dialog'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from '~/composables/use_i18n'
+import { useInlineEdit } from '~/composables/use_inline_edit'
 
 interface CategoryRow {
   id: number
@@ -53,44 +54,21 @@ function toggleDisabled(categoryId: number, isDisabled: boolean) {
   router.put(`/admin/categories/${categoryId}`, { isDisabled }, { preserveState: true })
 }
 
-// Inline editing
-const editingId = ref<number | null>(null)
 const editName = ref('')
 const editColor = ref('')
 
-function startEdit(cat: CategoryRow) {
-  editingId.value = cat.id
-  editName.value = cat.name
-  editColor.value = cat.color.replace('#', '')
-  nextTick(() => {
-    document.getElementById(getEditNameInputId(cat.id))?.focus()
+const { editingId, getEditInputId, startEdit, saveEdit, cancelEdit, focusCreateInput } =
+  useInlineEdit({
+    entityPrefix: 'admin-category',
+    updatePath: (id) => `/admin/categories/${id}`,
+    getEditValues: () => ({ name: editName.value, color: `#${editColor.value}` }),
   })
-}
 
-function saveEdit() {
-  if (!editingId.value) return
-  router.put(
-    `/admin/categories/${editingId.value}`,
-    { name: editName.value, color: `#${editColor.value}` },
-    {
-      preserveState: true,
-      onFinish: () => (editingId.value = null),
-    }
-  )
-}
-
-function cancelEdit() {
-  editingId.value = null
-}
-
-function focusCreateNameInput() {
-  nextTick(() => {
-    document.getElementById(createNameInputId)?.focus()
+function handleStartEdit(cat: CategoryRow) {
+  startEdit(cat.id, () => {
+    editName.value = cat.name
+    editColor.value = cat.color.replace('#', '')
   })
-}
-
-function getEditNameInputId(categoryId: number) {
-  return `admin-category-edit-name-${categoryId}`
 }
 
 function deleteCategory(category: CategoryRow) {
@@ -142,7 +120,7 @@ function deleteCategory(category: CategoryRow) {
         <template #body="{ data }">
           <template v-if="editingId === data.id">
             <InputText
-              :id="getEditNameInputId(data.id)"
+              :id="getEditInputId(data.id)"
               v-model="editName"
               class="w-full"
               @keyup.enter="saveEdit"
@@ -188,7 +166,7 @@ function deleteCategory(category: CategoryRow) {
                 size="small"
                 severity="secondary"
                 text
-                @click="startEdit(data)"
+                @click="handleStartEdit(data)"
               />
               <Button
                 icon="pi pi-trash"
@@ -215,7 +193,7 @@ function deleteCategory(category: CategoryRow) {
       :modal="true"
       :closeButtonProps="{ severity: 'secondary', text: true, rounded: true, autofocus: false }"
       style="width: 400px"
-      @show="focusCreateNameInput"
+      @show="focusCreateInput(createNameInputId)"
     >
       <div class="flex flex-col gap-4">
         <div>

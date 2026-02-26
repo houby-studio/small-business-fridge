@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, onBeforeUnmount, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { Head, router, usePage } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
-import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Select from 'primevue/select'
@@ -11,7 +10,10 @@ import Button from 'primevue/button'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from '~/composables/use_i18n'
-import { areFilterParamsEqual } from '~/composables/use_filter_params'
+import { useListFilters } from '~/composables/use_list_filters'
+import { useSelectEnterKey } from '~/composables/use_select_enter_key'
+import FilterBar from '~/components/FilterBar.vue'
+import PaginatedDataTable from '~/components/PaginatedDataTable.vue'
 import type { SharedProps } from '~/types'
 
 interface UserRow {
@@ -72,83 +74,17 @@ const roleEditOptions = [
 
 const userFilterSelect = ref<any>(null)
 
-function focusSelectSearchField() {
-  const filterInput = document.querySelector(
-    '.p-select-overlay .p-select-filter'
-  ) as HTMLInputElement | null
-  if (!filterInput) return
-  filterInput.focus()
-  filterInput.select()
-}
-
-function selectTopOrFocusedOption<T>(
-  filterInput: HTMLInputElement,
-  options: T[],
-  getLabel: (option: T) => string,
-  getValue: (option: T) => number | string
-) {
-  const activeDescendantId = filterInput.getAttribute('aria-activedescendant')
-  const activeDescendantOption = activeDescendantId
-    ? (document.getElementById(activeDescendantId) as HTMLElement | null)
-    : null
-  const focusedOption = document.querySelector(
-    '.p-select-overlay .p-select-option.p-focus, .p-select-overlay .p-select-option[data-p-focused="true"]'
-  ) as HTMLElement | null
-  const topOption = document.querySelector(
-    '.p-select-overlay .p-select-option'
-  ) as HTMLElement | null
-  const option = activeDescendantOption ?? focusedOption ?? topOption
-
-  const optionLabel = option?.textContent?.trim()
-  const query = filterInput.value.trim().toLocaleLowerCase()
-
-  const matchedOptionByHighlight = optionLabel
-    ? options.find((item) => getLabel(item) === optionLabel)
-    : null
-  const matchedOptionByQuery = options.find((item) =>
-    getLabel(item).toLocaleLowerCase().includes(query)
-  )
-  const matchedOption = matchedOptionByHighlight ?? matchedOptionByQuery ?? options[0]
-
-  return matchedOption ? getValue(matchedOption) : null
-}
-
-function onUserFilterShow() {
-  nextTick(() => {
-    focusSelectSearchField()
-  })
-}
-
-function onFilterSearchEnter(event: KeyboardEvent) {
-  if (event.key !== 'Enter') return
-  if (userFilterSelect.value?.overlayVisible !== true) return
-  if (!(event.target instanceof HTMLInputElement)) return
-  if (!event.target.classList.contains('p-select-filter')) return
-
-  event.preventDefault()
-  event.stopPropagation()
-
-  const selectedValue = selectTopOrFocusedOption(
-    event.target,
-    userFilterOptions,
-    (option) => option.displayName,
-    (option) => option.id
-  )
-  if (selectedValue === null) return
-
-  filterUserId.value = selectedValue
-  if (typeof userFilterSelect.value?.hide === 'function') {
-    userFilterSelect.value.hide()
-  }
-}
-
-onMounted(() => {
-  document.addEventListener('keydown', onFilterSearchEnter, true)
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('keydown', onFilterSearchEnter, true)
-})
+const { onSelectShow } = useSelectEnterKey([
+  {
+    selectRef: userFilterSelect,
+    getOptions: () => userFilterOptions,
+    getLabel: (o) => o.displayName,
+    getValue: (o) => o.id,
+    onSelect: (v) => {
+      filterUserId.value = v
+    },
+  },
+])
 
 function buildFilterParams() {
   return {
@@ -160,7 +96,12 @@ function buildFilterParams() {
   }
 }
 
-const lastAppliedFilterParams = ref(buildFilterParams())
+const { applyFilters, navigateClear, onPageChange, navigateSort } = useListFilters({
+  route: '/admin/users',
+  onlyProps: ['users', 'filters'],
+  buildParams: buildFilterParams,
+  getCurrentPage: () => props.users.meta.currentPage,
+})
 
 function updateRole(userId: number, role: string) {
   router.put(`/admin/users/${userId}`, { role }, { preserveState: true })
@@ -187,59 +128,19 @@ function toggleKiosk(userId: number, isKiosk: boolean) {
   router.put(`/admin/users/${userId}`, { isKiosk }, { preserveState: true })
 }
 
-function applyFilters() {
-  const nextParams = buildFilterParams()
-  const page = areFilterParamsEqual(nextParams, lastAppliedFilterParams.value)
-    ? props.users.meta.currentPage
-    : 1
-  router.get(
-    '/admin/users',
-    {
-      ...nextParams,
-      page,
-    },
-    { preserveState: true, only: ['users', 'filters'] }
-  )
-  lastAppliedFilterParams.value = nextParams
-}
-
 function clearFilters() {
   filterUserId.value = ALL
   filterRole.value = ALL
   filterDisabled.value = ALL
   filterSortBy.value = 'keypadId'
   filterSortOrder.value = 'asc'
-  lastAppliedFilterParams.value = buildFilterParams()
-  router.get('/admin/users', buildFilterParams(), {
-    preserveState: true,
-    only: ['users', 'filters'],
-  })
-}
-
-function onPageChange(event: any) {
-  router.get(
-    '/admin/users',
-    {
-      page: event.page + 1,
-      ...buildFilterParams(),
-    },
-    { preserveState: true, only: ['users', 'filters'] }
-  )
+  navigateClear()
 }
 
 function onSort(event: any) {
   filterSortBy.value = event.sortField
   filterSortOrder.value = event.sortOrder === 1 ? 'asc' : 'desc'
-  router.get(
-    '/admin/users',
-    {
-      ...buildFilterParams(),
-      sortBy: event.sortField,
-      sortOrder: event.sortOrder === 1 ? 'asc' : 'desc',
-      page: 1,
-    },
-    { preserveState: true, only: ['users', 'filters'] }
-  )
+  navigateSort()
 }
 
 function impersonateUser(userId: number) {
@@ -257,7 +158,7 @@ function impersonateUser(userId: number) {
     </h1>
 
     <!-- Filter bar -->
-    <div class="mb-4 flex flex-wrap items-end gap-3">
+    <FilterBar @apply="applyFilters" @clear="clearFilters">
       <div>
         <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
           t('admin.users_filter_user')
@@ -270,7 +171,7 @@ function impersonateUser(userId: number) {
           optionValue="id"
           filter
           class="w-56"
-          @show="onUserFilterShow"
+          @show="onSelectShow"
         />
       </div>
       <div>
@@ -297,34 +198,15 @@ function impersonateUser(userId: number) {
           class="w-40"
         />
       </div>
-      <Button
-        :label="t('common.filter_apply')"
-        icon="pi pi-filter"
-        size="small"
-        @click="applyFilters"
-      />
-      <Button
-        :label="t('common.filter_clear')"
-        size="small"
-        severity="secondary"
-        text
-        @click="clearFilters"
-      />
-    </div>
+    </FilterBar>
 
-    <DataTable
+    <PaginatedDataTable
       :value="users.data"
-      :paginator="users.meta.lastPage > 1"
-      :rows="users.meta.perPage"
-      :totalRecords="users.meta.total"
-      :lazy="true"
-      :first="(users.meta.currentPage - 1) * users.meta.perPage"
+      :meta="users.meta"
       :sortField="filterSortBy"
       :sortOrder="sortOrderNum"
       @page="onPageChange"
       @sort="onSort"
-      stripedRows
-      class="rounded-lg border"
     >
       <Column
         :header="t('admin.users_col_id')"
@@ -430,6 +312,6 @@ function impersonateUser(userId: number) {
           {{ t('common.no_data') }}
         </div>
       </template>
-    </DataTable>
+    </PaginatedDataTable>
   </AppLayout>
 </template>
