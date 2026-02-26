@@ -4,6 +4,7 @@ import ShopService from '#services/shop_service'
 import OrderService, { FifoViolationError, OutOfStockError } from '#services/order_service'
 import NotificationService from '#services/notification_service'
 import RecommendationService from '#services/recommendation_service'
+import MusicService from '#services/music_service'
 import logger from '@adonisjs/core/services/logger'
 import KioskSession from '#models/kiosk_session'
 import db from '@adonisjs/lucid/services/db'
@@ -64,9 +65,16 @@ export default class KioskController {
     })
 
     const recommendationService = new RecommendationService()
-    const [favoriteRows, recommendedIds] = await Promise.all([
+    const musicService = new MusicService()
+    const [favoriteRows, excludedAllergenRows, recommendedIds, musicTracks] = await Promise.all([
       db.from('user_favorites').where('user_id', customer.id).select('product_id'),
+      db
+        .from('user_excluded_allergen')
+        .where('user_id', customer.id)
+        .orderBy('allergen_id', 'asc')
+        .select('allergen_id'),
       recommendationService.getRecommendedIds(customer.id, 8),
+      musicService.getEligibleTracks(customer.id),
     ])
 
     return response.json({
@@ -77,7 +85,10 @@ export default class KioskController {
       },
       favoriteIds: favoriteRows.map((r: { product_id: number }) => r.product_id),
       recommendedIds,
-      excludedAllergenIds: customer.excludedAllergenIds ?? [],
+      excludedAllergenIds: excludedAllergenRows.map((row: { allergen_id: number }) =>
+        Number(row.allergen_id)
+      ),
+      musicTracks,
     })
   }
 

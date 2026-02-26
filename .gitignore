@@ -24,7 +24,8 @@ yarn-error.log
 # Platform specific
 .DS_Store
 
-*.png
+storage/uploads/music/*.*
+storage/uploads/products/*.*
 
 # Docker secrets (local files — never commit actual secret values)
 secrets/

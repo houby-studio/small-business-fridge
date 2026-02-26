@@ -213,9 +213,8 @@ test.group('Kiosk tracking - sessions', (group) => {
       price: 10,
     }).create()
 
-    const customer = await UserFactory.merge({
-      excludedAllergenIds: [blockedAllergen.id],
-    }).create()
+    const customer = await UserFactory.create()
+    await customer.related('excludedAllergens').sync([blockedAllergen.id])
 
     const response = await client
       .get(`/kiosk/shop?keypadId=${customer.keypadId}`)

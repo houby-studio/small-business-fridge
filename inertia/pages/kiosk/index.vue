@@ -67,6 +67,12 @@ interface CustomerInfo {
   keypadId: number
 }
 
+interface MusicTrack {
+  id: number
+  name: string
+  filePath: string
+}
+
 interface BasketLine {
   productId: number
   deliveryId: number
@@ -85,6 +91,54 @@ const keypadLoading = ref(false)
 const favoriteIds = ref<number[]>([])
 const recommendedIds = ref<number[]>([])
 const excludedAllergenIds = ref<number[]>([])
+const musicTracks = ref<MusicTrack[]>([])
+const backgroundAudio = ref<HTMLAudioElement | null>(null)
+let remainingTrackIds: number[] = []
+
+function refillTrackQueue() {
+  remainingTrackIds = musicTracks.value.map((track) => track.id)
+}
+
+function stopBackgroundMusic() {
+  const audio = backgroundAudio.value
+  if (!audio) return
+  audio.pause()
+  audio.removeAttribute('src')
+  audio.load()
+}
+
+function playNextTrack() {
+  const audio = backgroundAudio.value
+  if (!audio || musicTracks.value.length === 0) return
+
+  if (remainingTrackIds.length === 0) {
+    refillTrackQueue()
+  }
+
+  const nextIndex = Math.floor(Math.random() * remainingTrackIds.length)
+  const nextTrackId = remainingTrackIds.splice(nextIndex, 1)[0]
+  const nextTrack =
+    musicTracks.value.find((track) => track.id === nextTrackId) ?? musicTracks.value[0]
+
+  audio.volume = 0.35
+  audio.src = nextTrack.filePath
+  audio.currentTime = 0
+  void audio.play().catch(() => {
+    // Browser can still reject autoplay in constrained environments.
+  })
+}
+
+function startBackgroundMusic(tracks: MusicTrack[]) {
+  musicTracks.value = tracks
+  refillTrackQueue()
+
+  if (tracks.length === 0) {
+    stopBackgroundMusic()
+    return
+  }
+
+  playNextTrack()
+}
 
 // ── Basket ────────────────────────────────────────────────────────────────────
 
@@ -391,6 +445,7 @@ async function onKeypadSubmit(keypadId: string) {
     favoriteIds.value = data.favoriteIds
     recommendedIds.value = data.recommendedIds
     excludedAllergenIds.value = data.excludedAllergenIds ?? []
+    startBackgroundMusic(data.musicTracks ?? [])
     appState.value = 'identified'
     startIdleTimer()
     refreshProducts() // fetch fresh stock data for this customer's session
@@ -481,6 +536,9 @@ function resetToIdle() {
   basket.value = []
   favoriteIds.value = []
   recommendedIds.value = []
+  musicTracks.value = []
+  remainingTrackIds = []
+  stopBackgroundMusic()
   outOfStockDeliveryId.value = null
   showThankYou.value = false
   lastPurchaseItems.value = []
@@ -517,6 +575,7 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('keydown', onGlobalKeydown)
   stopIdleTimer()
+  stopBackgroundMusic()
   if (barcodeTimeout) clearTimeout(barcodeTimeout)
 })
 </script>
@@ -524,6 +583,7 @@ onUnmounted(() => {
 <template>
   <KioskLayout>
     <Head :title="t('kiosk.title')" />
+    <audio ref="backgroundAudio" class="hidden" @ended="playNextTrack" />
 
     <!-- Headless ConfirmDialog — full control over size and touch targets -->
     <ConfirmDialog group="kiosk">

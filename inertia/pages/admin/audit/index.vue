@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, nextTick, onBeforeUnmount, onMounted } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
@@ -10,6 +10,7 @@ import Button from 'primevue/button'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDateTime } from '~/composables/use_format_date'
 import { areFilterParamsEqual } from '~/composables/use_filter_params'
+import { getAuditActionLabel, getAuditActionOptions } from '~/composables/use_audit_actions'
 
 interface AuditRow {
   id: number
@@ -40,37 +41,11 @@ const filterEntity = ref(props.filters.entityType || ALL)
 const filterUserId = ref<number | string>(props.filters.userId ? Number(props.filters.userId) : ALL)
 const filterSortOrder = ref(props.filters.sortOrder || 'desc')
 const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
+const userFilterSelect = ref<any>(null)
 
 const userOptions = [{ id: ALL, displayName: t('common.all') }, ...props.users]
 
-const actionOptions = [
-  { label: t('common.all'), value: ALL },
-  { label: t('audit.action_order_created'), value: 'order.created' },
-  { label: t('audit.action_invoice_generated'), value: 'invoice.generated' },
-  { label: t('audit.action_payment_requested'), value: 'payment.requested' },
-  { label: t('audit.action_payment_request_cancelled'), value: 'payment.request_cancelled' },
-  { label: t('audit.action_payment_approved'), value: 'payment.approved' },
-  { label: t('audit.action_payment_rejected'), value: 'payment.rejected' },
-  { label: t('audit.action_delivery_created'), value: 'delivery.created' },
-  { label: t('audit.action_product_created'), value: 'product.created' },
-  { label: t('audit.action_product_updated'), value: 'product.updated' },
-  { label: t('audit.action_allergen_created'), value: 'allergen.created' },
-  { label: t('audit.action_allergen_updated'), value: 'allergen.updated' },
-  { label: t('audit.action_category_created'), value: 'category.created' },
-  { label: t('audit.action_category_updated'), value: 'category.updated' },
-  { label: t('audit.action_profile_updated'), value: 'profile.updated' },
-  { label: t('audit.action_favorite_added'), value: 'favorite.added' },
-  { label: t('audit.action_favorite_removed'), value: 'favorite.removed' },
-  { label: t('audit.action_user_updated'), value: 'user.updated' },
-  { label: t('audit.action_order_storno'), value: 'order.storno' },
-  { label: t('audit.action_user_login'), value: 'user.login' },
-  { label: t('audit.action_user_registered'), value: 'user.registered' },
-  { label: t('audit.action_user_logout'), value: 'user.logout' },
-  { label: t('audit.action_profile_token_created'), value: 'profile.token.created' },
-  { label: t('audit.action_profile_token_revoked'), value: 'profile.token.revoked' },
-  { label: t('audit.action_admin_impersonate_start'), value: 'admin.impersonate.start' },
-  { label: t('audit.action_admin_impersonate_stop'), value: 'admin.impersonate.stop' },
-]
+const actionOptions = getAuditActionOptions(t, t('common.all'), ALL)
 
 const entityOptions = [
   { label: t('common.all'), value: ALL },
@@ -80,40 +55,90 @@ const entityOptions = [
   { label: 'product', value: 'product' },
   { label: 'allergen', value: 'allergen' },
   { label: 'category', value: 'category' },
+  { label: 'music', value: 'music' },
   { label: 'user', value: 'user' },
 ]
 
-const actionLabels: Record<string, string> = {
-  'order.created': 'audit.action_order_created',
-  'invoice.generated': 'audit.action_invoice_generated',
-  'payment.requested': 'audit.action_payment_requested',
-  'payment.request_cancelled': 'audit.action_payment_request_cancelled',
-  'payment.approved': 'audit.action_payment_approved',
-  'payment.rejected': 'audit.action_payment_rejected',
-  'delivery.created': 'audit.action_delivery_created',
-  'product.created': 'audit.action_product_created',
-  'product.updated': 'audit.action_product_updated',
-  'allergen.created': 'audit.action_allergen_created',
-  'allergen.updated': 'audit.action_allergen_updated',
-  'category.created': 'audit.action_category_created',
-  'category.updated': 'audit.action_category_updated',
-  'profile.updated': 'audit.action_profile_updated',
-  'favorite.added': 'audit.action_favorite_added',
-  'favorite.removed': 'audit.action_favorite_removed',
-  'user.updated': 'audit.action_user_updated',
-  'order.storno': 'audit.action_order_storno',
-  'user.login': 'audit.action_user_login',
-  'user.registered': 'audit.action_user_registered',
-  'user.logout': 'audit.action_user_logout',
-  'profile.token.created': 'audit.action_profile_token_created',
-  'profile.token.revoked': 'audit.action_profile_token_revoked',
-  'admin.impersonate.start': 'audit.action_admin_impersonate_start',
-  'admin.impersonate.stop': 'audit.action_admin_impersonate_stop',
+function focusSelectSearchField() {
+  const filterInput = document.querySelector(
+    '.p-select-overlay .p-select-filter'
+  ) as HTMLInputElement | null
+  if (!filterInput) return
+  filterInput.focus()
+  filterInput.select()
 }
 
+function selectTopOrFocusedOption<T>(
+  filterInput: HTMLInputElement,
+  options: T[],
+  getLabel: (option: T) => string,
+  getValue: (option: T) => number | string
+) {
+  const activeDescendantId = filterInput.getAttribute('aria-activedescendant')
+  const activeDescendantOption = activeDescendantId
+    ? (document.getElementById(activeDescendantId) as HTMLElement | null)
+    : null
+  const focusedOption = document.querySelector(
+    '.p-select-overlay .p-select-option.p-focus, .p-select-overlay .p-select-option[data-p-focused="true"]'
+  ) as HTMLElement | null
+  const topOption = document.querySelector(
+    '.p-select-overlay .p-select-option'
+  ) as HTMLElement | null
+  const option = activeDescendantOption ?? focusedOption ?? topOption
+
+  const optionLabel = option?.textContent?.trim()
+  const query = filterInput.value.trim().toLocaleLowerCase()
+
+  const matchedOptionByHighlight = optionLabel
+    ? options.find((item) => getLabel(item) === optionLabel)
+    : null
+  const matchedOptionByQuery = options.find((item) =>
+    getLabel(item).toLocaleLowerCase().includes(query)
+  )
+  const matchedOption = matchedOptionByHighlight ?? matchedOptionByQuery ?? options[0]
+
+  return matchedOption ? getValue(matchedOption) : null
+}
+
+function onUserFilterShow() {
+  nextTick(() => {
+    focusSelectSearchField()
+  })
+}
+
+function onFilterSearchEnter(event: KeyboardEvent) {
+  if (event.key !== 'Enter') return
+  if (userFilterSelect.value?.overlayVisible !== true) return
+  if (!(event.target instanceof HTMLInputElement)) return
+  if (!event.target.classList.contains('p-select-filter')) return
+
+  event.preventDefault()
+  event.stopPropagation()
+
+  const selectedValue = selectTopOrFocusedOption(
+    event.target,
+    userOptions,
+    (option) => option.displayName,
+    (option) => option.id
+  )
+  if (selectedValue === null) return
+
+  filterUserId.value = selectedValue
+  if (typeof userFilterSelect.value?.hide === 'function') {
+    userFilterSelect.value.hide()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', onFilterSearchEnter, true)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onFilterSearchEnter, true)
+})
+
 function actionLabel(action: string | undefined) {
-  if (!action) return ''
-  return t(actionLabels[action] ?? action)
+  return getAuditActionLabel(action, t)
 }
 
 function formatMetadata(meta: Record<string, any> | null): string {
@@ -216,12 +241,14 @@ function onSort(event: any) {
           t('audit.filter_user')
         }}</label>
         <Select
+          ref="userFilterSelect"
           v-model="filterUserId"
           :options="userOptions"
           optionLabel="displayName"
           optionValue="id"
           filter
           class="w-48"
+          @show="onUserFilterShow"
         />
       </div>
       <Button

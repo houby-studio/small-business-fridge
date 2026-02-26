@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick, onBeforeUnmount, onMounted } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
@@ -28,12 +28,26 @@ interface PaginatedInvoices {
 
 const props = defineProps<{
   invoices: PaginatedInvoices
-  filters: { status: string; sortBy: string; sortOrder: string }
+  filters: {
+    status: string
+    buyerId: string
+    supplierId: string
+    sortBy: string
+    sortOrder: string
+  }
+  buyers: { id: number; displayName: string }[]
+  suppliers: { id: number; displayName: string }[]
 }>()
 const { t } = useI18n()
 const ALL = '__all__'
 
 const filterStatus = ref(props.filters.status || ALL)
+const filterBuyerId = ref<number | string>(
+  props.filters.buyerId ? Number(props.filters.buyerId) : ALL
+)
+const filterSupplierId = ref<number | string>(
+  props.filters.supplierId ? Number(props.filters.supplierId) : ALL
+)
 const filterSortBy = ref(props.filters.sortBy || 'createdAt')
 const filterSortOrder = ref(props.filters.sortOrder || 'desc')
 const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
@@ -44,6 +58,115 @@ const statusOptions = [
   { label: t('invoices.filter_unpaid'), value: 'unpaid' },
   { label: t('invoices.filter_awaiting'), value: 'awaiting' },
 ]
+const buyerOptions = computed(() => [{ id: ALL, displayName: t('common.all') }, ...props.buyers])
+const supplierOptions = computed(() => [
+  { id: ALL, displayName: t('common.all') },
+  ...props.suppliers,
+])
+const buyerFilterSelect = ref<any>(null)
+const supplierFilterSelect = ref<any>(null)
+
+function focusSelectSearchField() {
+  const filterInput = document.querySelector(
+    '.p-select-overlay .p-select-filter'
+  ) as HTMLInputElement | null
+  if (!filterInput) return
+  filterInput.focus()
+  filterInput.select()
+}
+
+function selectTopOrFocusedOption<T>(
+  filterInput: HTMLInputElement,
+  options: T[],
+  getLabel: (option: T) => string,
+  getValue: (option: T) => number | string
+) {
+  const activeDescendantId = filterInput.getAttribute('aria-activedescendant')
+  const activeDescendantOption = activeDescendantId
+    ? (document.getElementById(activeDescendantId) as HTMLElement | null)
+    : null
+  const focusedOption = document.querySelector(
+    '.p-select-overlay .p-select-option.p-focus, .p-select-overlay .p-select-option[data-p-focused="true"]'
+  ) as HTMLElement | null
+  const topOption = document.querySelector(
+    '.p-select-overlay .p-select-option'
+  ) as HTMLElement | null
+  const option = activeDescendantOption ?? focusedOption ?? topOption
+
+  const optionLabel = option?.textContent?.trim()
+  const query = filterInput.value.trim().toLocaleLowerCase()
+
+  const matchedOptionByHighlight = optionLabel
+    ? options.find((item) => getLabel(item) === optionLabel)
+    : null
+  const matchedOptionByQuery = options.find((item) =>
+    getLabel(item).toLocaleLowerCase().includes(query)
+  )
+  const matchedOption = matchedOptionByHighlight ?? matchedOptionByQuery ?? options[0]
+
+  return matchedOption ? getValue(matchedOption) : null
+}
+
+function onBuyerFilterShow() {
+  nextTick(() => {
+    focusSelectSearchField()
+  })
+}
+
+function onSupplierFilterShow() {
+  nextTick(() => {
+    focusSelectSearchField()
+  })
+}
+
+function onFilterSearchEnter(event: KeyboardEvent) {
+  if (event.key !== 'Enter') return
+  if (!(event.target instanceof HTMLInputElement)) return
+  if (!event.target.classList.contains('p-select-filter')) return
+
+  if (buyerFilterSelect.value?.overlayVisible === true) {
+    event.preventDefault()
+    event.stopPropagation()
+
+    const selectedValue = selectTopOrFocusedOption(
+      event.target,
+      buyerOptions.value,
+      (option) => option.displayName,
+      (option) => option.id
+    )
+    if (selectedValue === null) return
+    filterBuyerId.value = selectedValue
+    if (typeof buyerFilterSelect.value?.hide === 'function') {
+      buyerFilterSelect.value.hide()
+    }
+    return
+  }
+
+  if (supplierFilterSelect.value?.overlayVisible === true) {
+    event.preventDefault()
+    event.stopPropagation()
+
+    const selectedValue = selectTopOrFocusedOption(
+      event.target,
+      supplierOptions.value,
+      (option) => option.displayName,
+      (option) => option.id
+    )
+    if (selectedValue === null) return
+    filterSupplierId.value = selectedValue
+    if (typeof supplierFilterSelect.value?.hide === 'function') {
+      supplierFilterSelect.value.hide()
+    }
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', onFilterSearchEnter, true)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onFilterSearchEnter, true)
+})
 
 function statusSeverity(inv: InvoiceRow) {
   if (inv.isPaid) return 'success'
@@ -60,6 +183,8 @@ function statusLabel(inv: InvoiceRow) {
 function buildFilterParams() {
   return {
     status: filterStatus.value === ALL ? undefined : filterStatus.value,
+    buyerId: filterBuyerId.value === ALL ? undefined : filterBuyerId.value,
+    supplierId: filterSupplierId.value === ALL ? undefined : filterSupplierId.value,
     sortBy: filterSortBy.value || undefined,
     sortOrder: filterSortOrder.value || undefined,
   }
@@ -82,6 +207,8 @@ function applyFilters() {
 
 function clearFilters() {
   filterStatus.value = ALL
+  filterBuyerId.value = ALL
+  filterSupplierId.value = ALL
   filterSortBy.value = 'createdAt'
   filterSortOrder.value = 'desc'
   lastAppliedFilterParams.value = buildFilterParams()
@@ -135,6 +262,36 @@ function onSort(event: any) {
           optionLabel="label"
           optionValue="value"
           class="w-44"
+        />
+      </div>
+      <div>
+        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
+          t('admin.invoices_filter_customer')
+        }}</label>
+        <Select
+          ref="buyerFilterSelect"
+          v-model="filterBuyerId"
+          :options="buyerOptions"
+          optionLabel="displayName"
+          optionValue="id"
+          filter
+          class="w-56"
+          @show="onBuyerFilterShow"
+        />
+      </div>
+      <div>
+        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
+          t('admin.invoices_filter_supplier')
+        }}</label>
+        <Select
+          ref="supplierFilterSelect"
+          v-model="filterSupplierId"
+          :options="supplierOptions"
+          optionLabel="displayName"
+          optionValue="id"
+          filter
+          class="w-56"
+          @show="onSupplierFilterShow"
         />
       </div>
       <Button

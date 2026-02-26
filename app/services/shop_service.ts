@@ -34,37 +34,17 @@ interface DeliveryLot {
 }
 
 export default class ShopService {
-  private parseExcludedAllergenIds(raw: string | number[] | null | undefined): number[] {
-    if (Array.isArray(raw)) {
-      return raw.map(Number).filter((id) => Number.isInteger(id) && id > 0)
-    }
-
-    if (typeof raw === 'string') {
-      try {
-        const parsed = JSON.parse(raw)
-        if (Array.isArray(parsed)) {
-          return parsed.map(Number).filter((id) => Number.isInteger(id) && id > 0)
-        }
-      } catch {
-        return []
-      }
-    }
-
-    return []
-  }
-
   private async getExcludedAllergenIds(userId?: number): Promise<number[]> {
     if (!userId) {
       return []
     }
 
-    const userRow = await db
-      .from('users')
-      .where('id', userId)
-      .select('excluded_allergen_ids')
-      .first()
-
-    return this.parseExcludedAllergenIds(userRow?.excluded_allergen_ids)
+    const rows = await db
+      .from('user_excluded_allergen')
+      .where('user_id', userId)
+      .orderBy('allergen_id', 'asc')
+      .select('allergen_id')
+    return rows.map((row) => Number(row.allergen_id))
   }
 
   private async getFavoriteIds(userId?: number): Promise<number[]> {

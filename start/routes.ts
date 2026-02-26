@@ -36,6 +36,7 @@ const AdminDashboardController = () => import('#controllers/web/admin/dashboard_
 const AdminUsersController = () => import('#controllers/web/admin/users_controller')
 const AdminCategoriesController = () => import('#controllers/web/admin/categories_controller')
 const AdminAllergensController = () => import('#controllers/web/admin/allergens_controller')
+const AdminMusicTracksController = () => import('#controllers/web/admin/music_tracks_controller')
 const AdminOrdersController = () => import('#controllers/web/admin/orders_controller')
 const AdminInvoicesController = () => import('#controllers/web/admin/invoices_controller')
 const AdminStornoController = () => import('#controllers/web/admin/storno_controller')
@@ -62,22 +63,26 @@ router.get('/', [HomeController, 'index'])
 
 // Serve uploaded files from storage
 router.get('/uploads/*', async ({ request, response }) => {
-  const imageExtensions = new Set([
+  const immutableExtensions = new Set([
     '.avif',
     '.gif',
     '.ico',
     '.jpg',
     '.jpeg',
+    '.m4a',
+    '.mp3',
+    '.ogg',
     '.png',
     '.svg',
+    '.wav',
     '.webp',
   ])
   const extension = extname(request.url().split('?')[0] ?? '').toLowerCase()
-  const isImage = imageExtensions.has(extension)
+  const useImmutableCache = immutableExtensions.has(extension)
 
   response.header(
     'Cache-Control',
-    isImage ? 'public, max-age=31536000, immutable' : 'public, max-age=3600'
+    useImmutableCache ? 'public, max-age=31536000, immutable' : 'public, max-age=3600'
   )
 
   const filePath = app.makePath('storage', request.url())
@@ -198,11 +203,19 @@ router
     router.get('/categories', [AdminCategoriesController, 'index'])
     router.post('/categories', [AdminCategoriesController, 'store'])
     router.put('/categories/:id', [AdminCategoriesController, 'update'])
+    router.delete('/categories/:id', [AdminCategoriesController, 'destroy'])
 
     // Allergen management
     router.get('/allergens', [AdminAllergensController, 'index'])
     router.post('/allergens', [AdminAllergensController, 'store'])
     router.put('/allergens/:id', [AdminAllergensController, 'update'])
+    router.delete('/allergens/:id', [AdminAllergensController, 'destroy'])
+
+    // Music tracks management
+    router.get('/music', [AdminMusicTracksController, 'index'])
+    router.post('/music', [AdminMusicTracksController, 'store'])
+    router.put('/music/:id', [AdminMusicTracksController, 'update'])
+    router.delete('/music/:id', [AdminMusicTracksController, 'destroy'])
 
     // Orders & invoices oversight
     router.get('/orders', [AdminOrdersController, 'index'])

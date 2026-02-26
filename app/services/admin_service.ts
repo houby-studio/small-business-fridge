@@ -97,15 +97,15 @@ export default class AdminService {
   }
 
   /**
-   * Get paginated users for admin management with optional search and role filter.
+   * Get paginated users for admin management with optional role/user/disabled filters.
    */
   async getUsers(
     page: number = 1,
     perPage: number = 20,
     filters?: {
-      search?: string
       role?: string
       userId?: number
+      disabled?: string
       sortBy?: string
       sortOrder?: string
     }
@@ -116,21 +116,18 @@ export default class AdminService {
 
     const query = User.query().orderBy(safeSort, sortDir)
 
-    if (filters?.search) {
-      const term = `%${filters.search}%`
-      query.where((q) => {
-        q.whereRaw('display_name ILIKE ?', [term])
-          .orWhereRaw('email ILIKE ?', [term])
-          .orWhereRaw('username ILIKE ?', [term])
-      })
-    }
-
     if (filters?.role) {
       query.where('role', filters.role)
     }
 
     if (filters?.userId) {
       query.where('id', filters.userId)
+    }
+
+    if (filters?.disabled === 'enabled') {
+      query.where('isDisabled', false)
+    } else if (filters?.disabled === 'disabled') {
+      query.where('isDisabled', true)
     }
 
     return query.paginate(page, perPage)
@@ -208,6 +205,22 @@ export default class AdminService {
   }
 
   /**
+   * Delete a category.
+   * Throws 'CATEGORY_HAS_PRODUCTS' if any product still references this category.
+   */
+  async deleteCategory(categoryId: number) {
+    const category = await Category.findOrFail(categoryId)
+
+    const hasProducts = await db.from('products').where('category_id', category.id).first()
+    if (hasProducts) {
+      throw new Error('CATEGORY_HAS_PRODUCTS')
+    }
+
+    await category.delete()
+    return category
+  }
+
+  /**
    * Get all allergens.
    */
   async getAllergens() {
@@ -244,6 +257,23 @@ export default class AdminService {
     return allergen
   }
 
+  /**
+   * Delete an allergen.
+   * Throws 'ALLERGEN_HAS_PRODUCTS' if it is still assigned to any product.
+   * User exclusions are cleaned automatically via FK cascade on user_excluded_allergen.
+   */
+  async deleteAllergen(allergenId: number) {
+    const allergen = await Allergen.findOrFail(allergenId)
+
+    const hasProducts = await db.from('product_allergen').where('allergen_id', allergen.id).first()
+    if (hasProducts) {
+      throw new Error('ALLERGEN_HAS_PRODUCTS')
+    }
+
+    await allergen.delete()
+    return allergen
+  }
+
   async getCategoryIdsWithProducts(categoryIds: number[]) {
     if (categoryIds.length === 0) return new Set<number>()
 
@@ -267,15 +297,16 @@ export default class AdminService {
   }
 
   /**
-   * Get all orders (admin view) with optional search, channel, invoiced and sort filters.
+   * Get all orders (admin view) with optional channel, invoiced, user and sort filters.
    */
   async getAllOrders(
     page: number = 1,
     perPage: number = 20,
     filters?: {
-      search?: string
       channel?: string
       invoiced?: string
+      buyerId?: number
+      supplierId?: number
       sortBy?: string
       sortOrder?: string
     }
@@ -292,13 +323,6 @@ export default class AdminService {
       })
       .orderBy(safeSort, sortDir)
 
-    if (filters?.search) {
-      const term = `%${filters.search}%`
-      query.whereHas('buyer', (q) => {
-        q.whereRaw('display_name ILIKE ?', [term])
-      })
-    }
-
     if (filters?.channel) {
       query.where('channel', filters.channel)
     }
@@ -307,6 +331,16 @@ export default class AdminService {
       query.whereNotNull('invoiceId')
     } else if (filters?.invoiced === 'no') {
       query.whereNull('invoiceId')
+    }
+
+    if (filters?.buyerId) {
+      query.where('buyerId', filters.buyerId)
+    }
+
+    if (filters?.supplierId) {
+      query.whereHas('delivery', (deliveryQ) => {
+        deliveryQ.where('supplierId', filters.supplierId!)
+      })
     }
 
     return query.paginate(page, perPage)
@@ -318,7 +352,13 @@ export default class AdminService {
   async getAllInvoices(
     page: number = 1,
     perPage: number = 20,
-    filters?: { status?: string; sortBy?: string; sortOrder?: string }
+    filters?: {
+      status?: string
+      buyerId?: number
+      supplierId?: number
+      sortBy?: string
+      sortOrder?: string
+    }
   ) {
     const SORT_WHITELIST = ['createdAt', 'totalCost']
     const safeSort = SORT_WHITELIST.includes(filters?.sortBy ?? '') ? filters!.sortBy! : 'createdAt'
@@ -332,6 +372,14 @@ export default class AdminService {
       query.where('isPaid', false).where('isPaymentRequested', false)
     } else if (filters?.status === 'awaiting') {
       query.where('isPaid', false).where('isPaymentRequested', true)
+    }
+
+    if (filters?.buyerId) {
+      query.where('buyerId', filters.buyerId)
+    }
+
+    if (filters?.supplierId) {
+      query.where('supplierId', filters.supplierId)
     }
 
     return query.paginate(page, perPage)

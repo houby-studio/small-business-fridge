@@ -90,4 +90,33 @@ export default class AllergensController {
 
     return response.redirect('/admin/allergens')
   }
+
+  async destroy({ params, response, session, i18n, auth }: HttpContext) {
+    const service = new AdminService()
+    let allergen: Allergen
+
+    try {
+      allergen = await service.deleteAllergen(Number(params.id))
+    } catch (err) {
+      if (err instanceof Error && err.message === 'ALLERGEN_HAS_PRODUCTS') {
+        session.flash('alert', {
+          type: 'warn',
+          message: i18n.t('messages.allergen_has_products_delete'),
+        })
+        return response.redirect('/admin/allergens')
+      }
+      throw err
+    }
+
+    await AuditService.log(auth.user!.id, 'allergen.deleted', 'allergen', allergen.id, null, {
+      name: allergen.name,
+    })
+
+    session.flash('alert', {
+      type: 'success',
+      message: i18n.t('messages.allergen_deleted', { name: allergen.name }),
+    })
+
+    return response.redirect('/admin/allergens')
+  }
 }

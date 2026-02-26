@@ -19,6 +19,7 @@ export const UserFactory = factory
       sendDailyReport: true,
       colorMode: 'dark' as const,
       keypadDisabled: false,
+      isPremium: false,
     }
   })
   .state('supplier', (user) => {

@@ -5,25 +5,6 @@ import User from '#models/user'
 import Recommendation from '#models/recommendation'
 
 export default class RecommendationService {
-  private parseExcludedAllergenIds(raw: string | number[] | null | undefined): number[] {
-    if (Array.isArray(raw)) {
-      return raw.map(Number).filter((id) => Number.isInteger(id) && id > 0)
-    }
-
-    if (typeof raw === 'string') {
-      try {
-        const parsed = JSON.parse(raw)
-        if (Array.isArray(parsed)) {
-          return parsed.map(Number).filter((id) => Number.isInteger(id) && id > 0)
-        }
-      } catch {
-        return []
-      }
-    }
-
-    return []
-  }
-
   /**
    * Compute statistical scores for a single user.
    * Returns product IDs sorted by score descending, filtered to in-stock only.
@@ -91,11 +72,28 @@ export default class RecommendationService {
    * Refresh statistical recommendations for all active, non-disabled users.
    */
   async refreshAll(): Promise<void> {
-    const users = await User.query().where('isDisabled', false).select('id', 'excludedAllergenIds')
+    const users = await User.query().where('isDisabled', false).select('id')
+    const userIds = users.map((user) => user.id)
+    const excludedRows =
+      userIds.length > 0
+        ? await db
+            .from('user_excluded_allergen')
+            .select('user_id', 'allergen_id')
+            .whereIn('user_id', userIds)
+        : []
+
+    const excludedByUserId = new Map<number, number[]>()
+    for (const row of excludedRows) {
+      const userId = Number(row.user_id)
+      const allergenId = Number(row.allergen_id)
+      const existing = excludedByUserId.get(userId) ?? []
+      existing.push(allergenId)
+      excludedByUserId.set(userId, existing)
+    }
 
     let refreshed = 0
     for (const user of users) {
-      const scored = await this.computeForUser(user.id, user.excludedAllergenIds ?? [])
+      const scored = await this.computeForUser(user.id, excludedByUserId.get(user.id) ?? [])
 
       await Recommendation.query().where('userId', user.id).where('model', 'statistical').delete()
 
@@ -124,12 +122,11 @@ export default class RecommendationService {
    * Keeps only products that are currently in stock before applying the limit.
    */
   async getRecommendedIds(userId: number, limit: number = 4): Promise<number[]> {
-    const userRow = await db
-      .from('users')
-      .where('id', userId)
-      .select('excluded_allergen_ids')
-      .first()
-    const excludedAllergenIds = this.parseExcludedAllergenIds(userRow?.excluded_allergen_ids)
+    const excludedRows = await db
+      .from('user_excluded_allergen')
+      .where('user_id', userId)
+      .select('allergen_id')
+    const excludedAllergenIds = excludedRows.map((row) => Number(row.allergen_id))
 
     const precomputed = await Recommendation.query()
       .where('userId', userId)

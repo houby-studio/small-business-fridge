@@ -1,77 +1,88 @@
 <script setup lang="ts">
 import { nextTick, ref } from 'vue'
-import { Head, router } from '@inertiajs/vue3'
+import { Head, router, useForm } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
-import ColorPicker from 'primevue/colorpicker'
 import ToggleSwitch from 'primevue/toggleswitch'
-import Tag from 'primevue/tag'
+import Select from 'primevue/select'
 import Dialog from 'primevue/dialog'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from '~/composables/use_i18n'
 
-interface CategoryRow {
+interface TrackRow {
   id: number
   name: string
-  color: string
+  filePath: string
+  mimeType: string
+  accessLevel: 'public' | 'premium'
   isDisabled: boolean
-  hasProducts: boolean
 }
 
-const props = defineProps<{ categories: CategoryRow[] }>()
+const props = defineProps<{ tracks: TrackRow[] }>()
 const { t } = useI18n()
 const confirm = useConfirm()
 
+const accessLevelOptions = [
+  { label: t('admin.music_access_public'), value: 'public' },
+  { label: t('admin.music_access_premium'), value: 'premium' },
+]
+
 const showCreateDialog = ref(false)
-const newName = ref('')
-const newColor = ref('2196F3')
-const submitting = ref(false)
-const createNameInputId = 'admin-category-create-name'
+const createNameInputId = 'admin-music-create-name'
+const createForm = useForm({
+  name: '',
+  accessLevel: 'public' as 'public' | 'premium',
+  file: null as File | null,
+})
 
-function createCategory() {
-  if (submitting.value || !newName.value.trim()) return
-  submitting.value = true
-  router.post(
-    '/admin/categories',
-    { name: newName.value.trim(), color: `#${newColor.value}` },
-    {
-      onFinish: () => {
-        submitting.value = false
-        showCreateDialog.value = false
-        newName.value = ''
-        newColor.value = '2196F3'
-      },
-    }
-  )
+function onFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  createForm.file = input.files?.[0] ?? null
+  if (createForm.file) {
+    createForm.clearErrors('file')
+  }
 }
 
-function toggleDisabled(categoryId: number, isDisabled: boolean) {
-  router.put(`/admin/categories/${categoryId}`, { isDisabled }, { preserveState: true })
+function createTrack() {
+  if (createForm.processing || !createForm.name.trim() || !createForm.file) return
+  createForm.post('/admin/music', {
+    forceFormData: true,
+    onSuccess: () => {
+      showCreateDialog.value = false
+      createForm.reset()
+      createForm.accessLevel = 'public'
+    },
+  })
 }
 
-// Inline editing
+function toggleDisabled(trackId: number, isDisabled: boolean) {
+  router.put(`/admin/music/${trackId}`, { isDisabled }, { preserveState: true })
+}
+
+function updateAccessLevel(trackId: number, accessLevel: 'public' | 'premium') {
+  router.put(`/admin/music/${trackId}`, { accessLevel }, { preserveState: true })
+}
+
 const editingId = ref<number | null>(null)
 const editName = ref('')
-const editColor = ref('')
 
-function startEdit(cat: CategoryRow) {
-  editingId.value = cat.id
-  editName.value = cat.name
-  editColor.value = cat.color.replace('#', '')
+function startEdit(row: TrackRow) {
+  editingId.value = row.id
+  editName.value = row.name
   nextTick(() => {
-    document.getElementById(getEditNameInputId(cat.id))?.focus()
+    document.getElementById(getEditNameInputId(row.id))?.focus()
   })
 }
 
 function saveEdit() {
   if (!editingId.value) return
   router.put(
-    `/admin/categories/${editingId.value}`,
-    { name: editName.value, color: `#${editColor.value}` },
+    `/admin/music/${editingId.value}`,
+    { name: editName.value },
     {
       preserveState: true,
       onFinish: () => (editingId.value = null),
@@ -89,20 +100,20 @@ function focusCreateNameInput() {
   })
 }
 
-function getEditNameInputId(categoryId: number) {
-  return `admin-category-edit-name-${categoryId}`
+function getEditNameInputId(trackId: number) {
+  return `admin-music-edit-name-${trackId}`
 }
 
-function deleteCategory(category: CategoryRow) {
+function deleteTrack(track: TrackRow) {
   confirm.require({
-    message: t('admin.categories_delete_confirm', { name: category.name }),
-    header: t('admin.categories_delete_header'),
+    message: t('admin.music_delete_confirm', { name: track.name }),
+    header: t('admin.music_delete_header'),
     icon: 'pi pi-exclamation-triangle',
-    acceptLabel: t('admin.categories_delete_accept'),
+    acceptLabel: t('admin.music_delete_accept'),
     rejectLabel: t('common.cancel'),
     acceptClass: 'p-button-danger',
     accept: () => {
-      router.delete(`/admin/categories/${category.id}`)
+      router.delete(`/admin/music/${track.id}`)
     },
   })
 }
@@ -110,33 +121,19 @@ function deleteCategory(category: CategoryRow) {
 
 <template>
   <AppLayout>
-    <Head :title="t('admin.categories_title')" />
+    <Head :title="t('admin.music_title')" />
     <ConfirmDialog />
 
     <div class="mb-6 flex items-center justify-between">
       <h1 class="text-2xl font-bold text-gray-900 dark:text-zinc-100">
-        {{ t('admin.categories_heading') }}
+        {{ t('admin.music_heading') }}
       </h1>
-      <Button
-        :label="t('admin.categories_new')"
-        icon="pi pi-plus"
-        @click="showCreateDialog = true"
-      />
+      <Button :label="t('admin.music_new')" icon="pi pi-plus" @click="showCreateDialog = true" />
     </div>
 
-    <DataTable :value="categories" stripedRows class="rounded-lg border">
+    <DataTable :value="tracks" stripedRows class="rounded-lg border">
       <Column header="#" headerClass="sbf-col-id" bodyClass="sbf-col-id">
         <template #body="{ data }">{{ data.id }}</template>
-      </Column>
-      <Column :header="t('admin.categories_color')" style="width: 80px">
-        <template #body="{ data }">
-          <template v-if="editingId === data.id">
-            <ColorPicker v-model="editColor" />
-          </template>
-          <template v-else>
-            <div class="h-6 w-6 rounded-full border" :style="{ backgroundColor: data.color }" />
-          </template>
-        </template>
       </Column>
       <Column :header="t('common.name')">
         <template #body="{ data }">
@@ -153,17 +150,21 @@ function deleteCategory(category: CategoryRow) {
           </template>
         </template>
       </Column>
+      <Column :header="t('admin.music_access')" style="width: 180px">
+        <template #body="{ data }">
+          <Select
+            :modelValue="data.accessLevel"
+            :options="accessLevelOptions"
+            optionLabel="label"
+            optionValue="value"
+            class="w-full"
+            @update:modelValue="(val: 'public' | 'premium') => updateAccessLevel(data.id, val)"
+          />
+        </template>
+      </Column>
       <Column :header="t('common.active')" style="width: 100px">
         <template #body="{ data }">
-          <span
-            v-if="!data.isDisabled && data.hasProducts"
-            :title="t('messages.category_has_products')"
-            :aria-label="t('messages.category_has_products')"
-          >
-            <Tag severity="warn" icon="pi pi-exclamation-circle" />
-          </span>
           <ToggleSwitch
-            v-else
             :modelValue="!data.isDisabled"
             @update:modelValue="(val: boolean) => toggleDisabled(data.id, !val)"
           />
@@ -195,12 +196,8 @@ function deleteCategory(category: CategoryRow) {
                 size="small"
                 severity="danger"
                 text
-                :disabled="data.hasProducts"
-                :title="data.hasProducts ? t('messages.category_has_products_delete') : undefined"
-                :aria-label="
-                  data.hasProducts ? t('messages.category_has_products_delete') : t('common.delete')
-                "
-                @click="deleteCategory(data)"
+                :aria-label="t('common.delete')"
+                @click="deleteTrack(data)"
               />
             </template>
           </div>
@@ -208,13 +205,12 @@ function deleteCategory(category: CategoryRow) {
       </Column>
     </DataTable>
 
-    <!-- Create dialog -->
     <Dialog
       v-model:visible="showCreateDialog"
-      :header="t('admin.categories_new_heading')"
+      :header="t('admin.music_new_heading')"
       :modal="true"
       :closeButtonProps="{ severity: 'secondary', text: true, rounded: true, autofocus: false }"
-      style="width: 400px"
+      style="width: 460px"
       @show="focusCreateNameInput"
     >
       <div class="flex flex-col gap-4">
@@ -224,18 +220,44 @@ function deleteCategory(category: CategoryRow) {
           }}</label>
           <InputText
             :id="createNameInputId"
-            v-model="newName"
+            v-model="createForm.name"
             class="w-full"
-            :placeholder="t('admin.categories_name_placeholder')"
+            :placeholder="t('admin.music_name_placeholder')"
+            :invalid="!!createForm.errors.name"
             autofocus
-            @keyup.enter="createCategory"
+            @keyup.enter="createTrack"
           />
+          <small v-if="createForm.errors.name" class="text-red-600 dark:text-red-400">{{
+            createForm.errors.name
+          }}</small>
         </div>
+
         <div>
           <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
-            t('admin.categories_color')
+            t('admin.music_access')
           }}</label>
-          <ColorPicker v-model="newColor" />
+          <Select
+            v-model="createForm.accessLevel"
+            :options="accessLevelOptions"
+            optionLabel="label"
+            optionValue="value"
+            class="w-full"
+          />
+        </div>
+
+        <div>
+          <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
+            t('admin.music_file')
+          }}</label>
+          <input
+            type="file"
+            accept=".mp3,.ogg,.wav,.m4a,audio/*"
+            class="block w-full text-sm text-gray-900 file:mr-4 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-2 file:text-sm file:font-medium dark:text-zinc-100 dark:file:bg-zinc-700"
+            @change="onFileChange"
+          />
+          <small v-if="createForm.errors.file" class="text-red-600 dark:text-red-400">{{
+            createForm.errors.file
+          }}</small>
         </div>
       </div>
       <template #footer>
@@ -248,9 +270,9 @@ function deleteCategory(category: CategoryRow) {
         <Button
           :label="t('common.create')"
           icon="pi pi-check"
-          :loading="submitting"
-          :disabled="!newName"
-          @click="createCategory"
+          :loading="createForm.processing"
+          :disabled="!createForm.name || !createForm.file"
+          @click="createTrack"
         />
       </template>
     </Dialog>
