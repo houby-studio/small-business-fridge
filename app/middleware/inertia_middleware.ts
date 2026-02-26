@@ -52,20 +52,24 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
     const impersonation = ctx.session?.get('__impersonation') as ImpersonationSession | undefined
 
     return {
-      user: user
-        ? {
-            id: user.id,
-            displayName: user.displayName,
-            email: user.email,
-            role: user.role,
-            isKiosk: user.isKiosk,
-            colorMode: user.colorMode,
-            keypadId: user.keypadId,
-            excludedAllergenIds: excludedAllergenRows.map((row) => Number(row.allergen_id)),
-          }
-        : null,
-      flash: ctx.session?.flashMessages.all() ?? {},
-      impersonation: impersonation ? { asName: impersonation.asName } : null,
+      user: ctx.inertia.always(
+        user
+          ? {
+              id: user.id,
+              displayName: user.displayName,
+              email: user.email,
+              role: user.role,
+              isKiosk: user.isKiosk,
+              colorMode: user.colorMode,
+              keypadId: user.keypadId,
+              excludedAllergenIds: excludedAllergenRows.map((row) => Number(row.allergen_id)),
+            }
+          : undefined
+      ),
+      flash: ctx.inertia.always(ctx.session?.flashMessages.all() ?? {}),
+      impersonation: ctx.inertia.always(
+        impersonation ? { asName: impersonation.asName } : undefined
+      ),
       locale: ctx.i18n?.locale ?? 'cs',
       appName: env.get('APP_NAME', 'Small Business Fridge'),
       translations: loadTranslations(ctx.i18n?.locale ?? 'cs'),
