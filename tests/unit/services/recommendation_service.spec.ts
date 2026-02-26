@@ -145,6 +145,14 @@ test.group('RecommendationService.computeForUser', (group) => {
     const category = await CategoryFactory.create()
     const excludedAllergen = await Allergen.create({ name: 'Gluten', isDisabled: false })
 
+    // Associate the excluded allergen with the buyer so that computeForUser
+    // reads the user's stored exclusions instead of relying on a direct argument.
+    // Assuming the User model has a field to store excluded allergen IDs.
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    buyer.excludedAllergenIds = [excludedAllergen.id]
+    await buyer.save()
+
     const allowedProduct = await ProductFactory.merge({ categoryId: category.id }).create()
     const excludedProduct = await ProductFactory.merge({ categoryId: category.id }).create()
 
@@ -170,7 +178,7 @@ test.group('RecommendationService.computeForUser', (group) => {
       .table('orders')
       .insert([orderRow(buyer.id, allowedDelivery.id), orderRow(buyer.id, excludedDelivery.id)])
 
-    const result = await service.computeForUser(buyer.id, [excludedAllergen.id])
+    const result = await service.computeForUser(buyer.id)
     const productIds = result.map((r) => r.productId)
 
     assert.include(productIds, allowedProduct.id)
