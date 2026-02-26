@@ -12,9 +12,26 @@ import Allergen from '#models/allergen'
 import Product from '#models/product'
 
 export default class ProfileController {
+  private async getExcludedAllergenIds(userId: number): Promise<number[]> {
+    const rows = await db
+      .from('user_excluded_allergen')
+      .where('user_id', userId)
+      .orderBy('allergen_id', 'asc')
+      .select('allergen_id')
+    return rows.map((row) => Number(row.allergen_id))
+  }
+
+  private async syncExcludedAllergenIds(user: User, excludedAllergenIds: number[]): Promise<void> {
+    const sanitized = [...new Set(excludedAllergenIds.map(Number))]
+      .filter((id) => Number.isInteger(id) && id > 0)
+      .sort((a, b) => a - b)
+    await user.related('excludedAllergens').sync(sanitized)
+  }
+
   async show({ inertia, auth }: HttpContext) {
     const user = auth.user!
     await user.load((loader) => loader.load('favoriteProducts'))
+    const excludedAllergenIds = await this.getExcludedAllergenIds(user.id)
 
     // List personal API tokens — exclude short-lived kiosk tokens
     const tokens = await db
@@ -30,7 +47,7 @@ export default class ProfileController {
       .select('id', 'name')
 
     return inertia.render('profile/show', {
-      user: user.serialize(),
+      user: { ...user.serialize(), excludedAllergenIds },
       tokens,
       allergens: allergens.map((a) => ({ id: a.id, name: a.name })),
     })
@@ -49,7 +66,7 @@ export default class ProfileController {
       sendDailyReport: user.sendDailyReport,
       colorMode: user.colorMode,
       keypadDisabled: user.keypadDisabled,
-      excludedAllergenIds: [...(user.excludedAllergenIds ?? [])].sort((a, b) => a - b),
+      excludedAllergenIds: await this.getExcludedAllergenIds(user.id),
     }
 
     user.displayName = data.displayName
@@ -61,11 +78,10 @@ export default class ProfileController {
     user.sendDailyReport = data.sendDailyReport
     user.colorMode = data.colorMode
     user.keypadDisabled = data.keypadDisabled
-    if (data.excludedAllergenIds !== undefined) {
-      user.excludedAllergenIds = data.excludedAllergenIds
-    }
-
     await user.save()
+    if (data.excludedAllergenIds !== undefined) {
+      await this.syncExcludedAllergenIds(user, data.excludedAllergenIds)
+    }
 
     const changes: Record<string, { from: unknown; to: unknown }> = {}
     for (const key of [
@@ -84,7 +100,7 @@ export default class ProfileController {
       }
     }
 
-    const afterExcluded = [...(user.excludedAllergenIds ?? [])].sort((a, b) => a - b)
+    const afterExcluded = await this.getExcludedAllergenIds(user.id)
     if (
       before.excludedAllergenIds.length !== afterExcluded.length ||
       before.excludedAllergenIds.some((id, index) => id !== afterExcluded[index])
@@ -180,12 +196,11 @@ export default class ProfileController {
 
   async updateExcludedAllergens({ request, auth, response }: HttpContext) {
     const user = auth.user!
-    const before = [...(user.excludedAllergenIds ?? [])].sort((a, b) => a - b)
+    const before = await this.getExcludedAllergenIds(user.id)
     const data = await request.validateUsing(updateExcludedAllergensValidator)
-    user.excludedAllergenIds = data.excludedAllergenIds
-    await user.save()
+    await this.syncExcludedAllergenIds(user, data.excludedAllergenIds)
 
-    const after = [...(user.excludedAllergenIds ?? [])].sort((a, b) => a - b)
+    const after = await this.getExcludedAllergenIds(user.id)
     if (before.length !== after.length || before.some((id, index) => id !== after[index])) {
       const allergenIds = [...new Set([...before, ...after])]
       const allergenRows =

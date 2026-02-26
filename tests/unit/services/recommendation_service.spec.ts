@@ -305,7 +305,7 @@ test.group('RecommendationService.getRecommendedIds', (group) => {
       price: 20,
     }).create()
 
-    await buyer.merge({ excludedAllergenIds: [excludedAllergen.id] }).save()
+    await buyer.related('excludedAllergens').sync([excludedAllergen.id])
 
     const now = new Date()
     await db.table('recommendations').insert([

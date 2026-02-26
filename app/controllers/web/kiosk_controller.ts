@@ -66,8 +66,13 @@ export default class KioskController {
 
     const recommendationService = new RecommendationService()
     const musicService = new MusicService()
-    const [favoriteRows, recommendedIds, musicTracks] = await Promise.all([
+    const [favoriteRows, excludedAllergenRows, recommendedIds, musicTracks] = await Promise.all([
       db.from('user_favorites').where('user_id', customer.id).select('product_id'),
+      db
+        .from('user_excluded_allergen')
+        .where('user_id', customer.id)
+        .orderBy('allergen_id', 'asc')
+        .select('allergen_id'),
       recommendationService.getRecommendedIds(customer.id, 8),
       musicService.getEligibleTracks(customer.id),
     ])
@@ -80,7 +85,9 @@ export default class KioskController {
       },
       favoriteIds: favoriteRows.map((r: { product_id: number }) => r.product_id),
       recommendedIds,
-      excludedAllergenIds: customer.excludedAllergenIds ?? [],
+      excludedAllergenIds: excludedAllergenRows.map((row: { allergen_id: number }) =>
+        Number(row.allergen_id)
+      ),
       musicTracks,
     })
   }

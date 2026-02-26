@@ -676,12 +676,10 @@ test.group('Admin - allergens CRUD', (group) => {
     const admin = await UserFactory.apply('admin').create()
     const allergen = await Allergen.create({ name: 'Soy', isDisabled: false })
     const otherAllergen = await Allergen.create({ name: 'Mustard', isDisabled: false })
-    const userWithAllergen = await UserFactory.merge({
-      excludedAllergenIds: [allergen.id, otherAllergen.id],
-    }).create()
-    const userWithoutAllergen = await UserFactory.merge({
-      excludedAllergenIds: [otherAllergen.id],
-    }).create()
+    const userWithAllergen = await UserFactory.create()
+    await userWithAllergen.related('excludedAllergens').sync([allergen.id, otherAllergen.id])
+    const userWithoutAllergen = await UserFactory.create()
+    await userWithoutAllergen.related('excludedAllergens').sync([otherAllergen.id])
 
     const response = await client
       .delete(`/admin/allergens/${allergen.id}`)
@@ -695,10 +693,24 @@ test.group('Admin - allergens CRUD', (group) => {
     const deleted = await Allergen.find(allergen.id)
     assert.isNull(deleted)
 
-    await userWithAllergen.refresh()
-    await userWithoutAllergen.refresh()
-    assert.deepEqual(userWithAllergen.excludedAllergenIds, [otherAllergen.id])
-    assert.deepEqual(userWithoutAllergen.excludedAllergenIds, [otherAllergen.id])
+    const userWithAllergenRows = await db
+      .from('user_excluded_allergen')
+      .where('user_id', userWithAllergen.id)
+      .orderBy('allergen_id', 'asc')
+      .select('allergen_id')
+    const userWithoutAllergenRows = await db
+      .from('user_excluded_allergen')
+      .where('user_id', userWithoutAllergen.id)
+      .orderBy('allergen_id', 'asc')
+      .select('allergen_id')
+    assert.deepEqual(
+      userWithAllergenRows.map((row) => Number(row.allergen_id)),
+      [otherAllergen.id]
+    )
+    assert.deepEqual(
+      userWithoutAllergenRows.map((row) => Number(row.allergen_id)),
+      [otherAllergen.id]
+    )
 
     const log = await db
       .from('audit_logs')

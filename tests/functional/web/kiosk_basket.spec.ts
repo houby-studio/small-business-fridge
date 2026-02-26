@@ -390,9 +390,8 @@ test.group('GET /kiosk/customer', (group) => {
       price: 10,
     }).create()
 
-    const customer = await UserFactory.merge({
-      excludedAllergenIds: [blockedAllergen.id],
-    }).create()
+    const customer = await UserFactory.create()
+    await customer.related('excludedAllergens').sync([blockedAllergen.id])
 
     const now = new Date()
     await db.table('recommendations').insert([

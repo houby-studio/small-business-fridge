@@ -260,7 +260,7 @@ export default class AdminService {
   /**
    * Delete an allergen.
    * Throws 'ALLERGEN_HAS_PRODUCTS' if it is still assigned to any product.
-   * Also removes this allergen from users' excludedAllergenIds.
+   * User exclusions are cleaned automatically via FK cascade on user_excluded_allergen.
    */
   async deleteAllergen(allergenId: number) {
     const allergen = await Allergen.findOrFail(allergenId)
@@ -268,15 +268,6 @@ export default class AdminService {
     const hasProducts = await db.from('product_allergen').where('allergen_id', allergen.id).first()
     if (hasProducts) {
       throw new Error('ALLERGEN_HAS_PRODUCTS')
-    }
-
-    const usersWithAllergen = await User.query().whereRaw('excluded_allergen_ids @> ?', [
-      JSON.stringify([allergen.id]),
-    ])
-
-    for (const user of usersWithAllergen) {
-      user.excludedAllergenIds = (user.excludedAllergenIds ?? []).filter((id) => id !== allergen.id)
-      await user.save()
     }
 
     await allergen.delete()

@@ -10,6 +10,7 @@ import Delivery from '#models/delivery'
 import Order from '#models/order'
 import Invoice from '#models/invoice'
 import Product from '#models/product'
+import Allergen from '#models/allergen'
 
 const AuthFinder = withAuthFinder(() => hash.use('scrypt'), {
   uids: ['email', 'username'],
@@ -74,13 +75,6 @@ export default class User extends compose(BaseModel, AuthFinder) {
   @column()
   declare isPremium: boolean
 
-  @column({
-    prepare: (value: number[]) => JSON.stringify(value ?? []),
-    consume: (value: string | number[]) =>
-      Array.isArray(value) ? value : JSON.parse(value ?? '[]'),
-  })
-  declare excludedAllergenIds: number[]
-
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
 
@@ -106,6 +100,13 @@ export default class User extends compose(BaseModel, AuthFinder) {
     pivotTimestamps: { createdAt: 'created_at', updatedAt: false },
   })
   declare favoriteProducts: ManyToMany<typeof Product>
+
+  @manyToMany(() => Allergen, {
+    pivotTable: 'user_excluded_allergen',
+    pivotForeignKey: 'user_id',
+    pivotRelatedForeignKey: 'allergen_id',
+  })
+  declare excludedAllergens: ManyToMany<typeof Allergen>
 
   // Computed helpers
 

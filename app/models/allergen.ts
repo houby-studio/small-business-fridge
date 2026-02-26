@@ -2,6 +2,7 @@ import { DateTime } from 'luxon'
 import { BaseModel, column, manyToMany } from '@adonisjs/lucid/orm'
 import type { ManyToMany } from '@adonisjs/lucid/types/relations'
 import Product from '#models/product'
+import User from '#models/user'
 
 export default class Allergen extends BaseModel {
   @column({ isPrimary: true })
@@ -25,4 +26,11 @@ export default class Allergen extends BaseModel {
     pivotTable: 'product_allergen',
   })
   declare products: ManyToMany<typeof Product>
+
+  @manyToMany(() => User, {
+    pivotTable: 'user_excluded_allergen',
+    pivotForeignKey: 'allergen_id',
+    pivotRelatedForeignKey: 'user_id',
+  })
+  declare excludedByUsers: ManyToMany<typeof User>
 }

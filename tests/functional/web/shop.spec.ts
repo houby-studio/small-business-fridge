@@ -123,9 +123,8 @@ test.group('Web Shop - index', (group) => {
     assert,
   }) => {
     const excludedAllergen = await Allergen.create({ name: 'Mustard', isDisabled: false })
-    const user = await UserFactory.merge({
-      excludedAllergenIds: [excludedAllergen.id],
-    }).create()
+    const user = await UserFactory.create()
+    await user.related('excludedAllergens').sync([excludedAllergen.id])
     const supplier = await UserFactory.apply('supplier').create()
     const category = await CategoryFactory.create()
     const blockedProduct = await ProductFactory.merge({ categoryId: category.id }).create()

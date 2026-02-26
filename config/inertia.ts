@@ -3,6 +3,7 @@ import type { InferSharedProps } from '@adonisjs/inertia/types'
 import { readFileSync, readdirSync } from 'node:fs'
 import app from '@adonisjs/core/services/app'
 import env from '#start/env'
+import db from '@adonisjs/lucid/services/db'
 
 /**
  * Load all translation JSON files for a given locale.
@@ -40,8 +41,13 @@ const inertiaConfig = defineConfig({
    */
   sharedData: {
     user: (ctx) =>
-      ctx.inertia.always(() => {
+      ctx.inertia.always(async () => {
         if (!ctx.auth?.user) return null
+        const excludedAllergenRows = await db
+          .from('user_excluded_allergen')
+          .where('user_id', ctx.auth.user.id)
+          .orderBy('allergen_id', 'asc')
+          .select('allergen_id')
         return {
           id: ctx.auth.user.id,
           displayName: ctx.auth.user.displayName,
@@ -50,7 +56,7 @@ const inertiaConfig = defineConfig({
           isKiosk: ctx.auth.user.isKiosk,
           colorMode: ctx.auth.user.colorMode,
           keypadId: ctx.auth.user.keypadId,
-          excludedAllergenIds: ctx.auth.user.excludedAllergenIds ?? [],
+          excludedAllergenIds: excludedAllergenRows.map((row) => Number(row.allergen_id)),
         }
       }),
     flash: (ctx) =>
