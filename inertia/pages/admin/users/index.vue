@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick, onBeforeUnmount, onMounted } from 'vue'
 import { Head, router, usePage } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
@@ -69,6 +69,86 @@ const roleEditOptions = [
   { label: t('common.role_supplier'), value: 'supplier' },
   { label: t('common.role_admin'), value: 'admin' },
 ]
+
+const userFilterSelect = ref<any>(null)
+
+function focusSelectSearchField() {
+  const filterInput = document.querySelector(
+    '.p-select-overlay .p-select-filter'
+  ) as HTMLInputElement | null
+  if (!filterInput) return
+  filterInput.focus()
+  filterInput.select()
+}
+
+function selectTopOrFocusedOption<T>(
+  filterInput: HTMLInputElement,
+  options: T[],
+  getLabel: (option: T) => string,
+  getValue: (option: T) => number | string
+) {
+  const activeDescendantId = filterInput.getAttribute('aria-activedescendant')
+  const activeDescendantOption = activeDescendantId
+    ? (document.getElementById(activeDescendantId) as HTMLElement | null)
+    : null
+  const focusedOption = document.querySelector(
+    '.p-select-overlay .p-select-option.p-focus, .p-select-overlay .p-select-option[data-p-focused="true"]'
+  ) as HTMLElement | null
+  const topOption = document.querySelector(
+    '.p-select-overlay .p-select-option'
+  ) as HTMLElement | null
+  const option = activeDescendantOption ?? focusedOption ?? topOption
+
+  const optionLabel = option?.textContent?.trim()
+  const query = filterInput.value.trim().toLocaleLowerCase()
+
+  const matchedOptionByHighlight = optionLabel
+    ? options.find((item) => getLabel(item) === optionLabel)
+    : null
+  const matchedOptionByQuery = options.find((item) =>
+    getLabel(item).toLocaleLowerCase().includes(query)
+  )
+  const matchedOption = matchedOptionByHighlight ?? matchedOptionByQuery ?? options[0]
+
+  return matchedOption ? getValue(matchedOption) : null
+}
+
+function onUserFilterShow() {
+  nextTick(() => {
+    focusSelectSearchField()
+  })
+}
+
+function onFilterSearchEnter(event: KeyboardEvent) {
+  if (event.key !== 'Enter') return
+  if (userFilterSelect.value?.overlayVisible !== true) return
+  if (!(event.target instanceof HTMLInputElement)) return
+  if (!event.target.classList.contains('p-select-filter')) return
+
+  event.preventDefault()
+  event.stopPropagation()
+
+  const selectedValue = selectTopOrFocusedOption(
+    event.target,
+    userFilterOptions,
+    (option) => option.displayName,
+    (option) => option.id
+  )
+  if (selectedValue === null) return
+
+  filterUserId.value = selectedValue
+  if (typeof userFilterSelect.value?.hide === 'function') {
+    userFilterSelect.value.hide()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', onFilterSearchEnter, true)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onFilterSearchEnter, true)
+})
 
 function buildFilterParams() {
   return {
@@ -183,12 +263,14 @@ function impersonateUser(userId: number) {
           t('admin.users_filter_user')
         }}</label>
         <Select
+          ref="userFilterSelect"
           v-model="filterUserId"
           :options="userFilterOptions"
           optionLabel="displayName"
           optionValue="id"
           filter
           class="w-56"
+          @show="onUserFilterShow"
         />
       </div>
       <div>

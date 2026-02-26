@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, nextTick, onBeforeUnmount, onMounted } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
@@ -41,6 +41,7 @@ const filterEntity = ref(props.filters.entityType || ALL)
 const filterUserId = ref<number | string>(props.filters.userId ? Number(props.filters.userId) : ALL)
 const filterSortOrder = ref(props.filters.sortOrder || 'desc')
 const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
+const userFilterSelect = ref<any>(null)
 
 const userOptions = [{ id: ALL, displayName: t('common.all') }, ...props.users]
 
@@ -57,6 +58,84 @@ const entityOptions = [
   { label: 'music', value: 'music' },
   { label: 'user', value: 'user' },
 ]
+
+function focusSelectSearchField() {
+  const filterInput = document.querySelector(
+    '.p-select-overlay .p-select-filter'
+  ) as HTMLInputElement | null
+  if (!filterInput) return
+  filterInput.focus()
+  filterInput.select()
+}
+
+function selectTopOrFocusedOption<T>(
+  filterInput: HTMLInputElement,
+  options: T[],
+  getLabel: (option: T) => string,
+  getValue: (option: T) => number | string
+) {
+  const activeDescendantId = filterInput.getAttribute('aria-activedescendant')
+  const activeDescendantOption = activeDescendantId
+    ? (document.getElementById(activeDescendantId) as HTMLElement | null)
+    : null
+  const focusedOption = document.querySelector(
+    '.p-select-overlay .p-select-option.p-focus, .p-select-overlay .p-select-option[data-p-focused="true"]'
+  ) as HTMLElement | null
+  const topOption = document.querySelector(
+    '.p-select-overlay .p-select-option'
+  ) as HTMLElement | null
+  const option = activeDescendantOption ?? focusedOption ?? topOption
+
+  const optionLabel = option?.textContent?.trim()
+  const query = filterInput.value.trim().toLocaleLowerCase()
+
+  const matchedOptionByHighlight = optionLabel
+    ? options.find((item) => getLabel(item) === optionLabel)
+    : null
+  const matchedOptionByQuery = options.find((item) =>
+    getLabel(item).toLocaleLowerCase().includes(query)
+  )
+  const matchedOption = matchedOptionByHighlight ?? matchedOptionByQuery ?? options[0]
+
+  return matchedOption ? getValue(matchedOption) : null
+}
+
+function onUserFilterShow() {
+  nextTick(() => {
+    focusSelectSearchField()
+  })
+}
+
+function onFilterSearchEnter(event: KeyboardEvent) {
+  if (event.key !== 'Enter') return
+  if (userFilterSelect.value?.overlayVisible !== true) return
+  if (!(event.target instanceof HTMLInputElement)) return
+  if (!event.target.classList.contains('p-select-filter')) return
+
+  event.preventDefault()
+  event.stopPropagation()
+
+  const selectedValue = selectTopOrFocusedOption(
+    event.target,
+    userOptions,
+    (option) => option.displayName,
+    (option) => option.id
+  )
+  if (selectedValue === null) return
+
+  filterUserId.value = selectedValue
+  if (typeof userFilterSelect.value?.hide === 'function') {
+    userFilterSelect.value.hide()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', onFilterSearchEnter, true)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onFilterSearchEnter, true)
+})
 
 function actionLabel(action: string | undefined) {
   return getAuditActionLabel(action, t)
@@ -162,12 +241,14 @@ function onSort(event: any) {
           t('audit.filter_user')
         }}</label>
         <Select
+          ref="userFilterSelect"
           v-model="filterUserId"
           :options="userOptions"
           optionLabel="displayName"
           optionValue="id"
           filter
           class="w-48"
+          @show="onUserFilterShow"
         />
       </div>
       <Button

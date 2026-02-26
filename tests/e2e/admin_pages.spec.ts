@@ -46,6 +46,20 @@ test.describe('Admin pages and filters', () => {
     await expect(page).toHaveURL(/\/admin\/users\?.*disabled=enabled/)
   })
 
+  test('admin users filter search autofocuses and Enter selects first match', async ({ page }) => {
+    await page.goto('/admin/users')
+
+    await page.getByRole('combobox').first().click()
+    const searchInput = page.locator('.p-select-overlay:visible .p-select-filter').last()
+    await expect(searchInput).toBeFocused()
+    await searchInput.fill('Supplier User')
+    await searchInput.press('Enter')
+    await page.getByRole('button', { name: 'Použít filtry' }).click()
+
+    await expect(page).toHaveURL(/\/admin\/users\?.*userId=/)
+    await expect(page.locator('table')).toContainText('Supplier User')
+  })
+
   test('admin orders supports supplier filter', async ({ page }) => {
     await page.goto('/admin/orders')
 
@@ -65,6 +79,27 @@ test.describe('Admin pages and filters', () => {
     await page.getByRole('button', { name: 'Použít filtry' }).click()
 
     await expect(page).toHaveURL(/\/admin\/orders\?.*invoiced=yes/)
+  })
+
+  test('admin orders customer/supplier search autofocuses and Enter selects first match', async ({
+    page,
+  }) => {
+    await page.goto('/admin/orders')
+
+    await page.getByRole('combobox').nth(2).click()
+    const buyerSearchInput = page.locator('.p-select-overlay:visible .p-select-filter').last()
+    await expect(buyerSearchInput).toBeFocused()
+    await buyerSearchInput.fill('Customer User')
+    await buyerSearchInput.press('Enter')
+
+    await page.getByRole('combobox').nth(3).click()
+    const supplierSearchInput = page.locator('.p-select-overlay:visible .p-select-filter').last()
+    await expect(supplierSearchInput).toBeFocused()
+    await supplierSearchInput.fill('Supplier User')
+    await supplierSearchInput.press('Enter')
+
+    await page.getByRole('button', { name: 'Použít filtry' }).click()
+    await expect(page).toHaveURL(/\/admin\/orders\?.*buyerId=.*supplierId=/)
   })
 
   test('admin invoices can filter paid status', async ({ page }) => {
@@ -112,6 +147,40 @@ test.describe('Admin pages and filters', () => {
     await expect(page).toHaveURL(/\/admin\/invoices\?.*buyerId=.*supplierId=/)
     await expect(page.locator('table')).toContainText('Customer User')
     await expect(page.locator('table')).toContainText('Supplier User')
+  })
+
+  test('admin invoices customer/supplier search autofocuses and Enter selects first match', async ({
+    page,
+  }) => {
+    await page.goto('/admin/invoices')
+
+    await page.getByRole('combobox').nth(1).click()
+    const buyerSearchInput = page.locator('.p-select-overlay:visible .p-select-filter').last()
+    await expect(buyerSearchInput).toBeFocused()
+    await buyerSearchInput.fill('Customer User')
+    await buyerSearchInput.press('Enter')
+
+    await page.getByRole('combobox').nth(2).click()
+    const supplierSearchInput = page.locator('.p-select-overlay:visible .p-select-filter').last()
+    await expect(supplierSearchInput).toBeFocused()
+    await supplierSearchInput.fill('Supplier User')
+    await supplierSearchInput.press('Enter')
+
+    await page.getByRole('button', { name: 'Použít filtry' }).click()
+    await expect(page).toHaveURL(/\/admin\/invoices\?.*buyerId=.*supplierId=/)
+  })
+
+  test('admin audit user search autofocuses and Enter selects first match', async ({ page }) => {
+    await page.goto('/admin/audit')
+
+    await page.getByRole('combobox').nth(2).click()
+    const searchInput = page.locator('.p-select-overlay:visible .p-select-filter').last()
+    await expect(searchInput).toBeFocused()
+    await searchInput.fill('Supplier User')
+    await searchInput.press('Enter')
+    await page.getByRole('button', { name: 'Filtrovat' }).click()
+
+    await expect(page).toHaveURL(/\/admin\/audit\?.*userId=/)
   })
 
   test('admin can open and submit new category/allergen/music dialogs from keyboard without runtime errors', async ({
