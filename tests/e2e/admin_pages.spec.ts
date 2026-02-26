@@ -112,4 +112,72 @@ test.describe('Admin pages and filters', () => {
     await expect(page.locator('table')).toContainText('Customer User')
     await expect(page.locator('table')).toContainText('Supplier User')
   })
+
+  test('admin can open and submit new category/allergen dialogs from keyboard without runtime errors', async ({
+    page,
+  }) => {
+    const runtimeErrors: string[] = []
+    const criticalConsoleMessages: string[] = []
+    const forbiddenPatterns = [
+      'resolveComponent can only be used in render() or setup()',
+      'resolveDirective can only be used in render() or setup()',
+      'Unhandled error during execution of render function',
+      "Cannot read properties of null (reading 'ce')",
+    ]
+
+    page.on('pageerror', (err) => {
+      if (err.message.includes('WebSocket')) return
+      runtimeErrors.push(err.message)
+    })
+    page.on('console', (msg) => {
+      if (msg.type() !== 'warning' && msg.type() !== 'error') return
+      const text = msg.text()
+      if (forbiddenPatterns.some((pattern) => text.includes(pattern))) {
+        criticalConsoleMessages.push(text)
+      }
+    })
+
+    await page.goto('/admin/categories')
+    await expect(page.getByRole('columnheader', { name: '#' })).toBeVisible()
+    await page.getByRole('button', { name: 'Nová kategorie' }).click()
+    const categoryDialog = page.getByRole('dialog', { name: 'Nová kategorie' })
+    await expect(categoryDialog).toBeVisible()
+    const categoryNameInput = categoryDialog.getByRole('textbox').first()
+    await expect(categoryNameInput).toBeFocused()
+    await page.waitForTimeout(700)
+    await expect(categoryNameInput).toBeFocused()
+    const newCategoryName = `E2E Category ${Date.now()}`
+    await categoryNameInput.fill(newCategoryName)
+    await categoryNameInput.press('Enter')
+    await expect(categoryDialog).toBeHidden()
+    await expect(page.locator('table')).toContainText(newCategoryName)
+
+    await page.goto('/admin/allergens')
+    await expect(page.getByRole('columnheader', { name: '#' })).toBeVisible()
+    await page.getByRole('button', { name: 'Nový alergen' }).click()
+    const allergenDialog = page.getByRole('dialog', { name: 'Nový alergen' })
+    await expect(allergenDialog).toBeVisible()
+    const allergenNameInput = allergenDialog.getByRole('textbox').first()
+    await expect(allergenNameInput).toBeFocused()
+    await page.waitForTimeout(700)
+    await expect(allergenNameInput).toBeFocused()
+    const newAllergenName = `E2E Allergen ${Date.now()}`
+    await allergenNameInput.fill(newAllergenName)
+    await allergenNameInput.press('Enter')
+    await expect(allergenDialog).toBeHidden()
+    await expect(page.locator('table')).toContainText(newAllergenName)
+
+    expect(runtimeErrors).toHaveLength(0)
+    expect(criticalConsoleMessages).toHaveLength(0)
+  })
+
+  test('admin edit mode autofocuses category and allergen name inputs', async ({ page }) => {
+    await page.goto('/admin/categories')
+    await page.locator('button:has(.pi-pencil)').first().click()
+    await expect(page.locator('input[id^=\"admin-category-edit-name-\"]')).toBeFocused()
+
+    await page.goto('/admin/allergens')
+    await page.locator('button:has(.pi-pencil)').first().click()
+    await expect(page.locator('input[id^=\"admin-allergen-edit-name-\"]')).toBeFocused()
+  })
 })

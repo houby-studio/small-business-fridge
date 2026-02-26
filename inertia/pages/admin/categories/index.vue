@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { nextTick, ref } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
@@ -27,12 +27,14 @@ const showCreateDialog = ref(false)
 const newName = ref('')
 const newColor = ref('2196F3')
 const submitting = ref(false)
+const createNameInputId = 'admin-category-create-name'
 
 function createCategory() {
+  if (submitting.value || !newName.value.trim()) return
   submitting.value = true
   router.post(
     '/admin/categories',
-    { name: newName.value, color: `#${newColor.value}` },
+    { name: newName.value.trim(), color: `#${newColor.value}` },
     {
       onFinish: () => {
         submitting.value = false
@@ -57,6 +59,9 @@ function startEdit(cat: CategoryRow) {
   editingId.value = cat.id
   editName.value = cat.name
   editColor.value = cat.color.replace('#', '')
+  nextTick(() => {
+    document.getElementById(getEditNameInputId(cat.id))?.focus()
+  })
 }
 
 function saveEdit() {
@@ -73,6 +78,16 @@ function saveEdit() {
 
 function cancelEdit() {
   editingId.value = null
+}
+
+function focusCreateNameInput() {
+  nextTick(() => {
+    document.getElementById(createNameInputId)?.focus()
+  })
+}
+
+function getEditNameInputId(categoryId: number) {
+  return `admin-category-edit-name-${categoryId}`
 }
 </script>
 
@@ -92,6 +107,9 @@ function cancelEdit() {
     </div>
 
     <DataTable :value="categories" stripedRows class="rounded-lg border">
+      <Column header="#" headerClass="sbf-col-id" bodyClass="sbf-col-id">
+        <template #body="{ data }">{{ data.id }}</template>
+      </Column>
       <Column :header="t('admin.categories_color')" style="width: 80px">
         <template #body="{ data }">
           <template v-if="editingId === data.id">
@@ -105,7 +123,12 @@ function cancelEdit() {
       <Column :header="t('common.name')">
         <template #body="{ data }">
           <template v-if="editingId === data.id">
-            <InputText v-model="editName" class="w-full" @keyup.enter="saveEdit" />
+            <InputText
+              :id="getEditNameInputId(data.id)"
+              v-model="editName"
+              class="w-full"
+              @keyup.enter="saveEdit"
+            />
           </template>
           <template v-else>
             {{ data.name }}
@@ -116,7 +139,7 @@ function cancelEdit() {
         <template #body="{ data }">
           <span
             v-if="!data.isDisabled && data.hasProducts"
-            v-tooltip.top="t('messages.category_has_products')"
+            :title="t('messages.category_has_products')"
             :aria-label="t('messages.category_has_products')"
           >
             <Tag severity="warn" icon="pi pi-exclamation-circle" />
@@ -160,7 +183,9 @@ function cancelEdit() {
       v-model:visible="showCreateDialog"
       :header="t('admin.categories_new_heading')"
       :modal="true"
+      :closeButtonProps="{ severity: 'secondary', text: true, rounded: true, autofocus: false }"
       style="width: 400px"
+      @show="focusCreateNameInput"
     >
       <div class="flex flex-col gap-4">
         <div>
@@ -168,9 +193,12 @@ function cancelEdit() {
             t('common.name')
           }}</label>
           <InputText
+            :id="createNameInputId"
             v-model="newName"
             class="w-full"
             :placeholder="t('admin.categories_name_placeholder')"
+            autofocus
+            @keyup.enter="createCategory"
           />
         </div>
         <div>

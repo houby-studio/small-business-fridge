@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { nextTick, ref } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
@@ -24,12 +24,14 @@ const { t } = useI18n()
 const showCreateDialog = ref(false)
 const newName = ref('')
 const submitting = ref(false)
+const createNameInputId = 'admin-allergen-create-name'
 
 function createAllergen() {
+  if (submitting.value || !newName.value.trim()) return
   submitting.value = true
   router.post(
     '/admin/allergens',
-    { name: newName.value },
+    { name: newName.value.trim() },
     {
       onFinish: () => {
         submitting.value = false
@@ -50,6 +52,9 @@ const editName = ref('')
 function startEdit(row: AllergenRow) {
   editingId.value = row.id
   editName.value = row.name
+  nextTick(() => {
+    document.getElementById(getEditNameInputId(row.id))?.focus()
+  })
 }
 
 function saveEdit() {
@@ -66,6 +71,16 @@ function saveEdit() {
 
 function cancelEdit() {
   editingId.value = null
+}
+
+function focusCreateNameInput() {
+  nextTick(() => {
+    document.getElementById(createNameInputId)?.focus()
+  })
+}
+
+function getEditNameInputId(allergenId: number) {
+  return `admin-allergen-edit-name-${allergenId}`
 }
 </script>
 
@@ -85,10 +100,18 @@ function cancelEdit() {
     </div>
 
     <DataTable :value="allergens" stripedRows class="rounded-lg border">
+      <Column header="#" headerClass="sbf-col-id" bodyClass="sbf-col-id">
+        <template #body="{ data }">{{ data.id }}</template>
+      </Column>
       <Column :header="t('common.name')">
         <template #body="{ data }">
           <template v-if="editingId === data.id">
-            <InputText v-model="editName" class="w-full" @keyup.enter="saveEdit" />
+            <InputText
+              :id="getEditNameInputId(data.id)"
+              v-model="editName"
+              class="w-full"
+              @keyup.enter="saveEdit"
+            />
           </template>
           <template v-else>
             {{ data.name }}
@@ -99,7 +122,7 @@ function cancelEdit() {
         <template #body="{ data }">
           <span
             v-if="!data.isDisabled && data.hasProducts"
-            v-tooltip.top="t('messages.allergen_has_products')"
+            :title="t('messages.allergen_has_products')"
             :aria-label="t('messages.allergen_has_products')"
           >
             <Tag severity="warn" icon="pi pi-exclamation-circle" />
@@ -142,7 +165,9 @@ function cancelEdit() {
       v-model:visible="showCreateDialog"
       :header="t('admin.allergens_new_heading')"
       :modal="true"
+      :closeButtonProps="{ severity: 'secondary', text: true, rounded: true, autofocus: false }"
       style="width: 400px"
+      @show="focusCreateNameInput"
     >
       <div class="flex flex-col gap-4">
         <div>
@@ -150,9 +175,12 @@ function cancelEdit() {
             t('common.name')
           }}</label>
           <InputText
+            :id="createNameInputId"
             v-model="newName"
             class="w-full"
             :placeholder="t('admin.allergens_name_placeholder')"
+            autofocus
+            @keyup.enter="createAllergen"
           />
         </div>
       </div>
