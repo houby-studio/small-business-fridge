@@ -3,7 +3,7 @@ import Category from '#models/category'
 import Allergen from '#models/allergen'
 import type { MultipartFile } from '@adonisjs/core/bodyparser'
 import app from '@adonisjs/core/services/app'
-import { cuid } from '@adonisjs/core/helpers'
+import { randomUUID } from 'node:crypto'
 
 export default class ProductService {
   /**
@@ -137,7 +137,7 @@ export default class ProductService {
    * Save uploaded image to storage and return its path.
    */
   private async saveImage(file: MultipartFile): Promise<string> {
-    const fileName = `${cuid()}.${file.extname}`
+    const fileName = `${randomUUID()}.${file.extname}`
     await file.move(app.makePath('storage/uploads/products'), {
       name: fileName,
     })

@@ -1,9 +1,9 @@
 import type { MultipartFile } from '@adonisjs/core/bodyparser'
-import { cuid } from '@adonisjs/core/helpers'
 import app from '@adonisjs/core/services/app'
 import MusicTrack from '#models/music_track'
 import User from '#models/user'
 import { mkdir, rm } from 'node:fs/promises'
+import { randomUUID } from 'node:crypto'
 
 export default class MusicService {
   async getTracks() {
@@ -95,7 +95,7 @@ export default class MusicService {
   }
 
   private async saveAudio(file: MultipartFile): Promise<string> {
-    const fileName = `${cuid()}.${file.extname}`
+    const fileName = `${randomUUID()}.${file.extname}`
     const targetDir = app.makePath('storage/uploads/music')
     await mkdir(targetDir, { recursive: true })
     await file.move(targetDir, { name: fileName })

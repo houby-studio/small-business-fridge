@@ -108,8 +108,8 @@ router.group(() => {
 router.get('/auth/oidc/redirect', [OidcController, 'redirect'])
 router.get('/auth/oidc/callback', [OidcController, 'callback'])
 
-router.get('/logout', [LoginController, 'destroy']).use(middleware.auth())
-router.post('/logout', [LoginController, 'destroy']).use(middleware.auth())
+router.get('/logout', [LoginController, 'destroy']).use(middleware.auth()).as('logout.get')
+router.post('/logout', [LoginController, 'destroy']).use(middleware.auth()).as('logout.post')
 
 // Stop impersonation — requires auth only (impersonation middleware has already run)
 router.post('/impersonate/stop', [AdminImpersonationController, 'destroy']).use(middleware.auth())

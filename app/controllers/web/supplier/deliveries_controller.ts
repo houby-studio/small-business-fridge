@@ -4,9 +4,8 @@ import NotificationService from '#services/notification_service'
 import { createDeliveryValidator } from '#validators/delivery'
 import { normalizeImagePath } from '#helpers/image_url'
 import logger from '@adonisjs/core/services/logger'
-import type { Request } from '@adonisjs/core/http'
 
-function deliveryReturnUrl(request: Request): string {
+function deliveryReturnUrl(request: HttpContext['request']): string {
   const referer = request.header('referer') ?? ''
   try {
     const { pathname, search } = new URL(referer)

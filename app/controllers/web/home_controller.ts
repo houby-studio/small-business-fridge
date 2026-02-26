@@ -6,6 +6,6 @@ export default class HomeController {
     if (auth.isAuthenticated) {
       return response.redirect('/shop')
     }
-    return inertia.render('home')
+    return inertia.render('home', {})
   }
 }
