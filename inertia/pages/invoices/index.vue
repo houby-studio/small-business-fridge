@@ -2,7 +2,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
-import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
@@ -12,7 +11,9 @@ import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDate } from '~/composables/use_format_date'
-import { areFilterParamsEqual } from '~/composables/use_filter_params'
+import { useListFilters } from '~/composables/use_list_filters'
+import FilterBar from '~/components/FilterBar.vue'
+import PaginatedDataTable from '~/components/PaginatedDataTable.vue'
 
 interface InvoiceOrder {
   id: number
@@ -129,53 +130,24 @@ function buildFilterParams() {
   }
 }
 
-const lastAppliedFilterParams = ref(buildFilterParams())
-
-function applyFilters() {
-  const nextParams = buildFilterParams()
-  const page = areFilterParamsEqual(nextParams, lastAppliedFilterParams.value)
-    ? props.invoices.meta.currentPage
-    : 1
-  router.get(
-    '/invoices',
-    { ...nextParams, page },
-    { preserveState: true, only: ['invoices', 'filters'] }
-  )
-  lastAppliedFilterParams.value = nextParams
-}
+const { applyFilters, navigateClear, onPageChange, navigateSort } = useListFilters({
+  route: '/invoices',
+  onlyProps: ['invoices', 'filters'],
+  buildParams: buildFilterParams,
+  getCurrentPage: () => props.invoices.meta.currentPage,
+})
 
 function clearFilters() {
   filterStatus.value = ALL
   filterSortBy.value = 'createdAt'
   filterSortOrder.value = 'desc'
-  lastAppliedFilterParams.value = buildFilterParams()
-  router.get('/invoices', buildFilterParams(), {
-    preserveState: true,
-    only: ['invoices', 'filters'],
-  })
-}
-
-function onPageChange(event: any) {
-  router.get(
-    '/invoices',
-    { ...buildFilterParams(), page: event.page + 1 },
-    { preserveState: true, only: ['invoices', 'filters'] }
-  )
+  navigateClear()
 }
 
 function onSort(event: any) {
   filterSortBy.value = event.sortField
   filterSortOrder.value = event.sortOrder === 1 ? 'asc' : 'desc'
-  router.get(
-    '/invoices',
-    {
-      ...buildFilterParams(),
-      sortBy: event.sortField,
-      sortOrder: event.sortOrder === 1 ? 'asc' : 'desc',
-      page: 1,
-    },
-    { preserveState: true, only: ['invoices', 'filters'] }
-  )
+  navigateSort()
 }
 </script>
 
@@ -189,7 +161,7 @@ function onSort(event: any) {
     </h1>
 
     <!-- Filter bar -->
-    <div class="mb-4 flex flex-wrap items-end gap-3">
+    <FilterBar @apply="applyFilters" @clear="clearFilters">
       <div>
         <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
           t('invoices.filter_status')
@@ -202,34 +174,15 @@ function onSort(event: any) {
           class="w-44"
         />
       </div>
-      <Button
-        :label="t('common.filter_apply')"
-        icon="pi pi-filter"
-        size="small"
-        @click="applyFilters"
-      />
-      <Button
-        :label="t('common.filter_clear')"
-        size="small"
-        severity="secondary"
-        text
-        @click="clearFilters"
-      />
-    </div>
+    </FilterBar>
 
-    <DataTable
+    <PaginatedDataTable
       :value="invoices.data"
-      :paginator="invoices.meta.lastPage > 1"
-      :rows="invoices.meta.perPage"
-      :totalRecords="invoices.meta.total"
-      :lazy="true"
-      :first="(invoices.meta.currentPage - 1) * invoices.meta.perPage"
+      :meta="invoices.meta"
       :sortField="filterSortBy"
       :sortOrder="sortOrderNum"
       @page="onPageChange"
       @sort="onSort"
-      stripedRows
-      class="rounded-lg border"
     >
       <Column header="#" headerClass="sbf-col-id" bodyClass="sbf-col-id">
         <template #body="{ data }">{{ data.id }}</template>
@@ -309,7 +262,7 @@ function onSort(event: any) {
           {{ t('invoices.no_invoices') }}
         </div>
       </template>
-    </DataTable>
+    </PaginatedDataTable>
 
     <!-- QR Code Dialog -->
     <Dialog

@@ -10,8 +10,10 @@ import Card from 'primevue/card'
 import Select from 'primevue/select'
 import InputNumber from 'primevue/inputnumber'
 import { useI18n } from '~/composables/use_i18n'
-import { areFilterParamsEqual } from '~/composables/use_filter_params'
+import { useListFilters } from '~/composables/use_list_filters'
 import { formatDate } from '~/composables/use_format_date'
+import FilterBar from '~/components/FilterBar.vue'
+import PaginatedDataTable from '~/components/PaginatedDataTable.vue'
 
 interface StockRow {
   productId: number
@@ -292,31 +294,20 @@ function buildFilterParams() {
   }
 }
 
-const lastAppliedFilterParams = ref(buildFilterParams())
-
-function applyFilters() {
-  const nextParams = buildFilterParams()
-  const page = areFilterParamsEqual(nextParams, lastAppliedFilterParams.value)
-    ? props.stock.meta.currentPage
-    : 1
-  router.get(
-    '/supplier/stock',
-    { ...nextParams, page },
-    { preserveState: true, only: ['stock', 'filters', 'recentDeliveries'] }
-  )
-  lastAppliedFilterParams.value = nextParams
-}
+// applyFilters/navigateClear reload recentDeliveries too; sort/page reload only stock+filters
+const { applyFilters, navigateClear } = useListFilters({
+  route: '/supplier/stock',
+  onlyProps: ['stock', 'filters', 'recentDeliveries'],
+  buildParams: buildFilterParams,
+  getCurrentPage: () => props.stock.meta.currentPage,
+})
 
 function clearFilters() {
   filterCategoryId.value = ALL
   filterSortBy.value = 'productName'
   filterSortOrder.value = 'asc'
   filterScope.value = 'store'
-  lastAppliedFilterParams.value = buildFilterParams()
-  router.get('/supplier/stock', buildFilterParams(), {
-    preserveState: true,
-    only: ['stock', 'filters', 'recentDeliveries'],
-  })
+  navigateClear()
 }
 
 function onPageChange(event: any) {
@@ -558,7 +549,7 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
     </div>
 
     <!-- Filter bar -->
-    <div class="mb-4 flex flex-wrap items-end gap-3">
+    <FilterBar @apply="applyFilters" @clear="clearFilters">
       <div>
         <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
           t('supplier.stock_scope')
@@ -583,20 +574,7 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
           class="w-44"
         />
       </div>
-      <Button
-        :label="t('common.filter_apply')"
-        icon="pi pi-filter"
-        size="small"
-        @click="applyFilters"
-      />
-      <Button
-        :label="t('common.filter_clear')"
-        size="small"
-        severity="secondary"
-        text
-        @click="clearFilters"
-      />
-    </div>
+    </FilterBar>
 
     <Card class="mb-6">
       <template #title>{{ t('supplier.stock_category_breakdown') }}</template>
@@ -758,20 +736,14 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
       />
     </div>
 
-    <DataTable
+    <PaginatedDataTable
       v-if="showFullTable"
       :value="stock.data"
-      :paginator="stock.meta.lastPage > 1"
-      :rows="stock.meta.perPage"
-      :totalRecords="stock.meta.total"
-      :lazy="true"
-      :first="(stock.meta.currentPage - 1) * stock.meta.perPage"
+      :meta="stock.meta"
       :sortField="filterSortBy"
       :sortOrder="sortOrderNum"
       @page="onPageChange"
       @sort="onSort"
-      stripedRows
-      class="rounded-lg border"
     >
       <Column :header="t('common.product')" field="productName" sortable>
         <template #body="{ data }">
@@ -856,6 +828,6 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
           {{ t('supplier.stock_none') }}
         </div>
       </template>
-    </DataTable>
+    </PaginatedDataTable>
   </AppLayout>
 </template>

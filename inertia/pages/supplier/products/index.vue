@@ -2,14 +2,15 @@
 import { ref } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
-import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
 import { useI18n } from '~/composables/use_i18n'
-import { areFilterParamsEqual } from '~/composables/use_filter_params'
+import { useListFilters } from '~/composables/use_list_filters'
+import FilterBar from '~/components/FilterBar.vue'
+import PaginatedDataTable from '~/components/PaginatedDataTable.vue'
 
 interface ProductRow {
   id: number
@@ -55,43 +56,17 @@ function buildFilterParams() {
   }
 }
 
-const lastAppliedFilterParams = ref(buildFilterParams())
-
-function applyFilters() {
-  const nextParams = buildFilterParams()
-  const page = areFilterParamsEqual(nextParams, lastAppliedFilterParams.value)
-    ? props.products.meta.currentPage
-    : 1
-  router.get(
-    '/supplier/products',
-    {
-      ...nextParams,
-      page,
-    },
-    { preserveState: true, only: ['products', 'filters'] }
-  )
-  lastAppliedFilterParams.value = nextParams
-}
+const { applyFilters, navigateClear, onPageChange } = useListFilters({
+  route: '/supplier/products',
+  onlyProps: ['products', 'filters'],
+  buildParams: buildFilterParams,
+  getCurrentPage: () => props.products.meta.currentPage,
+})
 
 function clearFilters() {
   filterSearch.value = ''
   filterCategoryId.value = ALL
-  lastAppliedFilterParams.value = buildFilterParams()
-  router.get('/supplier/products', buildFilterParams(), {
-    preserveState: true,
-    only: ['products', 'filters'],
-  })
-}
-
-function onPageChange(event: any) {
-  router.get(
-    '/supplier/products',
-    {
-      ...buildFilterParams(),
-      page: event.page + 1,
-    },
-    { preserveState: true, only: ['products', 'filters'] }
-  )
+  navigateClear()
 }
 
 function formatAllergenList(allergens: ProductRow['allergens']) {
@@ -116,7 +91,7 @@ function formatAllergenList(allergens: ProductRow['allergens']) {
     </div>
 
     <!-- Filter bar -->
-    <div class="mb-4 flex flex-wrap items-end gap-3">
+    <FilterBar @apply="applyFilters" @clear="clearFilters">
       <div>
         <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
           t('supplier.products_search')
@@ -135,32 +110,9 @@ function formatAllergenList(allergens: ProductRow['allergens']) {
           class="w-44"
         />
       </div>
-      <Button
-        :label="t('common.filter_apply')"
-        icon="pi pi-filter"
-        size="small"
-        @click="applyFilters"
-      />
-      <Button
-        :label="t('common.filter_clear')"
-        size="small"
-        severity="secondary"
-        text
-        @click="clearFilters"
-      />
-    </div>
+    </FilterBar>
 
-    <DataTable
-      :value="products.data"
-      :paginator="products.meta.lastPage > 1"
-      :rows="products.meta.perPage"
-      :totalRecords="products.meta.total"
-      :lazy="true"
-      :first="(products.meta.currentPage - 1) * products.meta.perPage"
-      @page="onPageChange"
-      stripedRows
-      class="rounded-lg border"
-    >
+    <PaginatedDataTable :value="products.data" :meta="products.meta" @page="onPageChange">
       <Column header="#" style="width: 60px">
         <template #body="{ data }">{{ data.keypadId }}</template>
       </Column>
@@ -221,6 +173,6 @@ function formatAllergenList(allergens: ProductRow['allergens']) {
           {{ t('supplier.products_list_empty') }}
         </div>
       </template>
-    </DataTable>
+    </PaginatedDataTable>
   </AppLayout>
 </template>

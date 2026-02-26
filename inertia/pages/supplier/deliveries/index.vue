@@ -4,11 +4,12 @@ import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import Select from 'primevue/select'
 import Button from 'primevue/button'
-import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDate } from '~/composables/use_format_date'
-import { areFilterParamsEqual } from '~/composables/use_filter_params'
+import { useListFilters } from '~/composables/use_list_filters'
+import FilterBar from '~/components/FilterBar.vue'
+import PaginatedDataTable from '~/components/PaginatedDataTable.vue'
 
 interface ProductOption {
   id: number
@@ -59,53 +60,24 @@ function buildFilterParams() {
   }
 }
 
-const lastAppliedFilterParams = ref(buildFilterParams())
-
-function applyFilters() {
-  const nextParams = buildFilterParams()
-  const page = areFilterParamsEqual(nextParams, lastAppliedFilterParams.value)
-    ? props.recentDeliveries.meta.currentPage
-    : 1
-  router.get(
-    '/supplier/deliveries',
-    { ...nextParams, page },
-    { preserveState: true, only: ['recentDeliveries', 'filters'] }
-  )
-  lastAppliedFilterParams.value = nextParams
-}
+const { applyFilters, navigateClear, onPageChange, navigateSort } = useListFilters({
+  route: '/supplier/deliveries',
+  onlyProps: ['recentDeliveries', 'filters'],
+  buildParams: buildFilterParams,
+  getCurrentPage: () => props.recentDeliveries.meta.currentPage,
+})
 
 function clearFilters() {
   filterProductId.value = ALL
   filterSortBy.value = 'createdAt'
   filterSortOrder.value = 'desc'
-  lastAppliedFilterParams.value = buildFilterParams()
-  router.get('/supplier/deliveries', buildFilterParams(), {
-    preserveState: true,
-    only: ['recentDeliveries', 'filters'],
-  })
-}
-
-function onPageChange(event: any) {
-  router.get(
-    '/supplier/deliveries',
-    { ...buildFilterParams(), page: event.page + 1 },
-    { preserveState: true, only: ['recentDeliveries', 'filters'] }
-  )
+  navigateClear()
 }
 
 function onSort(event: any) {
   filterSortBy.value = event.sortField
   filterSortOrder.value = event.sortOrder === 1 ? 'asc' : 'desc'
-  router.get(
-    '/supplier/deliveries',
-    {
-      ...buildFilterParams(),
-      sortBy: event.sortField,
-      sortOrder: event.sortOrder === 1 ? 'asc' : 'desc',
-      page: 1,
-    },
-    { preserveState: true, only: ['recentDeliveries', 'filters'] }
-  )
+  navigateSort()
 }
 </script>
 
@@ -127,7 +99,7 @@ function onSort(event: any) {
     </div>
 
     <!-- Filter bar -->
-    <div class="mb-4 flex flex-wrap items-end gap-3">
+    <FilterBar @apply="applyFilters" @clear="clearFilters">
       <div>
         <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
           t('supplier.deliveries_filter_product')
@@ -141,34 +113,15 @@ function onSort(event: any) {
           filter
         />
       </div>
-      <Button
-        :label="t('common.filter_apply')"
-        icon="pi pi-filter"
-        size="small"
-        @click="applyFilters"
-      />
-      <Button
-        :label="t('common.filter_clear')"
-        size="small"
-        severity="secondary"
-        text
-        @click="clearFilters"
-      />
-    </div>
+    </FilterBar>
 
-    <DataTable
+    <PaginatedDataTable
       :value="recentDeliveries.data"
-      :paginator="recentDeliveries.meta.lastPage > 1"
-      :rows="recentDeliveries.meta.perPage"
-      :totalRecords="recentDeliveries.meta.total"
-      :lazy="true"
-      :first="(recentDeliveries.meta.currentPage - 1) * recentDeliveries.meta.perPage"
+      :meta="recentDeliveries.meta"
       :sortField="filterSortBy"
       :sortOrder="sortOrderNum"
       @page="onPageChange"
       @sort="onSort"
-      stripedRows
-      class="rounded-lg border"
     >
       <Column
         :header="t('common.date')"
@@ -213,6 +166,6 @@ function onSort(event: any) {
           {{ t('supplier.deliveries_none') }}
         </div>
       </template>
-    </DataTable>
+    </PaginatedDataTable>
   </AppLayout>
 </template>

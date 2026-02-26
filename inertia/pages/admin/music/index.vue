@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, ref } from 'vue'
+import { ref } from 'vue'
 import { Head, router, useForm } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
@@ -12,6 +12,7 @@ import Dialog from 'primevue/dialog'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from '~/composables/use_i18n'
+import { useInlineEdit } from '~/composables/use_inline_edit'
 
 interface TrackRow {
   id: number
@@ -67,41 +68,19 @@ function updateAccessLevel(trackId: number, accessLevel: 'public' | 'premium') {
   router.put(`/admin/music/${trackId}`, { accessLevel }, { preserveState: true })
 }
 
-const editingId = ref<number | null>(null)
 const editName = ref('')
 
-function startEdit(row: TrackRow) {
-  editingId.value = row.id
-  editName.value = row.name
-  nextTick(() => {
-    document.getElementById(getEditNameInputId(row.id))?.focus()
+const { editingId, getEditInputId, startEdit, saveEdit, cancelEdit, focusCreateInput } =
+  useInlineEdit({
+    entityPrefix: 'admin-music',
+    updatePath: (id) => `/admin/music/${id}`,
+    getEditValues: () => ({ name: editName.value }),
   })
-}
 
-function saveEdit() {
-  if (!editingId.value) return
-  router.put(
-    `/admin/music/${editingId.value}`,
-    { name: editName.value },
-    {
-      preserveState: true,
-      onFinish: () => (editingId.value = null),
-    }
-  )
-}
-
-function cancelEdit() {
-  editingId.value = null
-}
-
-function focusCreateNameInput() {
-  nextTick(() => {
-    document.getElementById(createNameInputId)?.focus()
+function handleStartEdit(row: TrackRow) {
+  startEdit(row.id, () => {
+    editName.value = row.name
   })
-}
-
-function getEditNameInputId(trackId: number) {
-  return `admin-music-edit-name-${trackId}`
 }
 
 function deleteTrack(track: TrackRow) {
@@ -139,7 +118,7 @@ function deleteTrack(track: TrackRow) {
         <template #body="{ data }">
           <template v-if="editingId === data.id">
             <InputText
-              :id="getEditNameInputId(data.id)"
+              :id="getEditInputId(data.id)"
               v-model="editName"
               class="w-full"
               @keyup.enter="saveEdit"
@@ -189,7 +168,7 @@ function deleteTrack(track: TrackRow) {
                 size="small"
                 severity="secondary"
                 text
-                @click="startEdit(data)"
+                @click="handleStartEdit(data)"
               />
               <Button
                 icon="pi pi-trash"
@@ -211,7 +190,7 @@ function deleteTrack(track: TrackRow) {
       :modal="true"
       :closeButtonProps="{ severity: 'secondary', text: true, rounded: true, autofocus: false }"
       style="width: 460px"
-      @show="focusCreateNameInput"
+      @show="focusCreateInput(createNameInputId)"
     >
       <div class="flex flex-col gap-4">
         <div>

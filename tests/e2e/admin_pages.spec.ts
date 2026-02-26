@@ -178,7 +178,7 @@ test.describe('Admin pages and filters', () => {
     await expect(searchInput).toBeFocused()
     await searchInput.fill('Supplier User')
     await searchInput.press('Enter')
-    await page.getByRole('button', { name: 'Filtrovat' }).click()
+    await page.getByRole('button', { name: 'Použít filtry' }).click()
 
     await expect(page).toHaveURL(/\/admin\/audit\?.*userId=/)
   })
