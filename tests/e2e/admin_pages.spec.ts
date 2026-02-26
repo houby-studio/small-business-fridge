@@ -27,12 +27,22 @@ test.describe('Admin pages and filters', () => {
   test('admin users supports role filter', async ({ page }) => {
     await page.goto('/admin/users')
 
-    await page.getByRole('combobox').first().click()
+    await page.getByRole('combobox').nth(1).click()
     await page.getByRole('option', { name: 'Dodavatel' }).click()
     await page.getByRole('button', { name: 'Použít filtry' }).click()
 
     await expect(page).toHaveURL(/\/admin\/users\?.*role=supplier/)
     await expect(page.locator('table')).toContainText('Dodavatel')
+  })
+
+  test('admin users supports disabled filter', async ({ page }) => {
+    await page.goto('/admin/users')
+
+    await page.getByRole('combobox').nth(2).click()
+    await page.getByRole('option', { name: 'Povolen' }).click()
+    await page.getByRole('button', { name: 'Použít filtry' }).click()
+
+    await expect(page).toHaveURL(/\/admin\/users\?.*disabled=enabled/)
   })
 
   test('admin orders supports supplier filter', async ({ page }) => {

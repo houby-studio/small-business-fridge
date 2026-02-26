@@ -8,7 +8,7 @@ import NotificationService from '#services/notification_service'
 import logger from '@adonisjs/core/services/logger'
 
 /**
- * Return the referer URL if it points to /admin/users (preserving search/role filters),
+ * Return the referer URL if it points to /admin/users (preserving active filters),
  * otherwise fall back to /admin/users without filters.
  */
 function usersUrl(request: Request): string {
@@ -25,17 +25,17 @@ function usersUrl(request: Request): string {
 export default class UsersController {
   async index({ inertia, request }: HttpContext) {
     const page = request.input('page', 1)
-    const search = request.input('search')
     const role = request.input('role')
     const userId = request.input('userId')
+    const disabled = request.input('disabled')
     const sortBy = request.input('sortBy')
     const sortOrder = request.input('sortOrder')
 
     const service = new AdminService()
     const paginator = await service.getUsers(page, 20, {
-      search: search || undefined,
       role: role || undefined,
       userId: userId ? Number(userId) : undefined,
+      disabled: disabled || undefined,
       sortBy: sortBy || undefined,
       sortOrder: sortOrder || undefined,
     })
@@ -69,9 +69,9 @@ export default class UsersController {
         meta: paginator.getMeta(),
       },
       filters: {
-        search: search || '',
         role: role || '',
         userId: userId || '',
+        disabled: disabled || '',
         sortBy: sortBy || '',
         sortOrder: sortOrder || '',
       },

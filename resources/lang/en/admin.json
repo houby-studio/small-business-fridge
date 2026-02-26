@@ -44,6 +44,8 @@
   "users_search": "Search users",
   "users_filter_role": "Role",
   "users_filter_user": "User",
+  "users_filter_disabled": "Disabled",
+  "users_filter_enabled": "Enabled",
 
   "orders_filter_channel": "Channel",
   "orders_filter_invoiced": "Invoiced",

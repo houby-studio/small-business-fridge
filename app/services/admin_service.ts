@@ -97,15 +97,15 @@ export default class AdminService {
   }
 
   /**
-   * Get paginated users for admin management with optional search and role filter.
+   * Get paginated users for admin management with optional role/user/disabled filters.
    */
   async getUsers(
     page: number = 1,
     perPage: number = 20,
     filters?: {
-      search?: string
       role?: string
       userId?: number
+      disabled?: string
       sortBy?: string
       sortOrder?: string
     }
@@ -116,21 +116,18 @@ export default class AdminService {
 
     const query = User.query().orderBy(safeSort, sortDir)
 
-    if (filters?.search) {
-      const term = `%${filters.search}%`
-      query.where((q) => {
-        q.whereRaw('display_name ILIKE ?', [term])
-          .orWhereRaw('email ILIKE ?', [term])
-          .orWhereRaw('username ILIKE ?', [term])
-      })
-    }
-
     if (filters?.role) {
       query.where('role', filters.role)
     }
 
     if (filters?.userId) {
       query.where('id', filters.userId)
+    }
+
+    if (filters?.disabled === 'enabled') {
+      query.where('isDisabled', false)
+    } else if (filters?.disabled === 'disabled') {
+      query.where('isDisabled', true)
     }
 
     return query.paginate(page, perPage)

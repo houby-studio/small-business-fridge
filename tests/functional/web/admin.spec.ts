@@ -24,7 +24,7 @@ const cleanAll = async () => {
   await db.from('users').delete()
 }
 
-test.group('Admin - users search and filter', (group) => {
+test.group('Admin - users filter', (group) => {
   group.each.setup(cleanAll)
   group.each.teardown(cleanAll)
 
@@ -40,11 +40,11 @@ test.group('Admin - users search and filter', (group) => {
     response.assertStatus(302)
   })
 
-  test('search by name returns 200', async ({ client }) => {
+  test('filter by disabled=enabled returns 200', async ({ client }) => {
     const admin = await UserFactory.apply('admin').create()
     await UserFactory.create()
 
-    const response = await client.get('/admin/users?search=test').loginAs(admin)
+    const response = await client.get('/admin/users?disabled=enabled').loginAs(admin)
     response.assertStatus(200)
   })
 
@@ -56,10 +56,10 @@ test.group('Admin - users search and filter', (group) => {
     response.assertStatus(200)
   })
 
-  test('search and role filter combined returns 200', async ({ client }) => {
+  test('filter by disabled=disabled and role returns 200', async ({ client }) => {
     const admin = await UserFactory.apply('admin').create()
 
-    const response = await client.get('/admin/users?search=john&role=customer').loginAs(admin)
+    const response = await client.get('/admin/users?disabled=disabled&role=customer').loginAs(admin)
     response.assertStatus(200)
   })
 

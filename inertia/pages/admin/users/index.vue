@@ -7,7 +7,6 @@ import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Select from 'primevue/select'
 import ToggleSwitch from 'primevue/toggleswitch'
-import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
@@ -36,7 +35,7 @@ interface PaginatedUsers {
 
 const props = defineProps<{
   users: PaginatedUsers
-  filters: { search: string; role: string; userId: string; sortBy: string; sortOrder: string }
+  filters: { role: string; userId: string; disabled: string; sortBy: string; sortOrder: string }
   userOptions: { id: number; displayName: string }[]
 }>()
 const { t } = useI18n()
@@ -45,9 +44,9 @@ const currentUserId = computed(() => page.props.user?.id)
 const confirm = useConfirm()
 const ALL = '__all__'
 
-const filterSearch = ref(props.filters.search ?? '')
 const filterRole = ref(props.filters.role || ALL)
 const filterUserId = ref<number | string>(props.filters.userId ? Number(props.filters.userId) : ALL)
+const filterDisabled = ref(props.filters.disabled || ALL)
 const filterSortBy = ref(props.filters.sortBy || 'keypadId')
 const filterSortOrder = ref(props.filters.sortOrder || 'asc')
 const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
@@ -59,6 +58,11 @@ const roleOptions = [
   { label: t('common.role_admin'), value: 'admin' },
 ]
 const userFilterOptions = [{ id: ALL, displayName: t('common.all') }, ...props.userOptions]
+const disabledOptions = [
+  { label: t('common.all'), value: ALL },
+  { label: t('admin.users_filter_enabled'), value: 'enabled' },
+  { label: t('admin.users_disabled'), value: 'disabled' },
+]
 
 const roleEditOptions = [
   { label: t('common.role_customer'), value: 'customer' },
@@ -68,9 +72,9 @@ const roleEditOptions = [
 
 function buildFilterParams() {
   return {
-    search: filterSearch.value || undefined,
-    role: filterRole.value === ALL ? undefined : filterRole.value,
     userId: filterUserId.value === ALL ? undefined : filterUserId.value,
+    role: filterRole.value === ALL ? undefined : filterRole.value,
+    disabled: filterDisabled.value === ALL ? undefined : filterDisabled.value,
     sortBy: filterSortBy.value || undefined,
     sortOrder: filterSortOrder.value || undefined,
   }
@@ -120,9 +124,9 @@ function applyFilters() {
 }
 
 function clearFilters() {
-  filterSearch.value = ''
-  filterRole.value = ALL
   filterUserId.value = ALL
+  filterRole.value = ALL
+  filterDisabled.value = ALL
   filterSortBy.value = 'keypadId'
   filterSortOrder.value = 'asc'
   lastAppliedFilterParams.value = buildFilterParams()
@@ -176,9 +180,16 @@ function impersonateUser(userId: number) {
     <div class="mb-4 flex flex-wrap items-end gap-3">
       <div>
         <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
-          t('admin.users_search')
+          t('admin.users_filter_user')
         }}</label>
-        <InputText v-model="filterSearch" class="w-56" @keydown.enter="applyFilters" />
+        <Select
+          v-model="filterUserId"
+          :options="userFilterOptions"
+          optionLabel="displayName"
+          optionValue="id"
+          filter
+          class="w-56"
+        />
       </div>
       <div>
         <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
@@ -194,15 +205,14 @@ function impersonateUser(userId: number) {
       </div>
       <div>
         <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
-          t('admin.users_filter_user')
+          t('admin.users_filter_disabled')
         }}</label>
         <Select
-          v-model="filterUserId"
-          :options="userFilterOptions"
-          optionLabel="displayName"
-          optionValue="id"
-          filter
-          class="w-56"
+          v-model="filterDisabled"
+          :options="disabledOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="w-40"
         />
       </div>
       <Button
