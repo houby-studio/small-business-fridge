@@ -17,7 +17,7 @@ x-app-env: &app-env
   # Core — networking & identity
   # ---------------------------------------------------------------------------
   HOST: 0.0.0.0 # bind to all interfaces inside the container (don't change)
-  PORT: 3000 # internal port (maps to host via ports: below)
+  PORT: 3000 # listen port inside the container (don't change)
   LOG_LEVEL: ${LOG_LEVEL:-info} # trace | debug | info | warn | error | fatal
   TZ: ${TZ:-UTC} # e.g. Europe/Prague
   APP_NAME: ${APP_NAME:-Small Business Fridge}
@@ -26,9 +26,9 @@ x-app-env: &app-env
 
   # ---------------------------------------------------------------------------
   # Security — [REQUIRED] generate once and keep secret
-  # docker run houbystudio/sbf /usr/local/bin/node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+  # docker run houbystudio/sbf /usr/local/bin/node ace generate:key --show
   # ---------------------------------------------------------------------------
-  APP_KEY: ${APP_KEY} # no default — app refuses to start if missing
+  APP_KEY: ${APP_KEY:?Missing APP_KEY value in .env file!} # no default — app refuses to start if missing
 
   # ---------------------------------------------------------------------------
   # Database — postgres service below uses the same DB_PASSWORD
@@ -37,13 +37,13 @@ x-app-env: &app-env
   DB_PORT: 5432
   DB_USER: ${DB_USER:-sbf}
   DB_DATABASE: ${DB_DATABASE:-sbf}
-  DB_PASSWORD: ${DB_PASSWORD:-} # [REQUIRED] set a strong password
+  DB_PASSWORD: ${DB_PASSWORD:?Missing DB_PASSWORD value in .env file!} # [REQUIRED] set a strong password
 
   # ---------------------------------------------------------------------------
   # Mail (SMTP)
   # ---------------------------------------------------------------------------
   SMTP_HOST: ${SMTP_HOST:-localhost}
-  SMTP_PORT: ${SMTP_PORT:-587} # 587 (STARTTLS) or 465 (SSL)
+  SMTP_PORT: ${SMTP_PORT:-587} # 587 (STARTTLS) or 465 (SSL) or 25 (plain)
   SMTP_USERNAME: ${SMTP_USERNAME:-} # leave empty if no auth
   SMTP_PASSWORD: ${SMTP_PASSWORD:-} # leave empty if no auth
   SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS:-noreply@localhost.localdomain}
@@ -102,9 +102,9 @@ x-app-env: &app-env
 
 services:
   app:
-    image: houbystudio/sbf:latest
+    image: houbystudio/sbf:${DOCKER_IMAGE_TAG:-latest}
     ports:
-      - '${PORT:-3000}:3000'
+      - '${HOST_PORT:-3000}:3000'
     environment:
       <<: *app-env
     volumes:
@@ -115,7 +115,7 @@ services:
     restart: unless-stopped
 
   scheduler:
-    image: houbystudio/sbf:latest
+    image: houbystudio/sbf:${DOCKER_IMAGE_TAG:-latest}
     command: node ace scheduler:run
     environment:
       <<: *app-env
@@ -134,9 +134,9 @@ services:
   postgres:
     image: postgres:18-alpine
     environment:
+      POSTGRES_DB: ${DB_DATABASE:-sbf}
       POSTGRES_USER: ${DB_USER:-sbf}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-}
-      POSTGRES_DB: ${DB_DATABASE:-sbf}
     volumes:
       - pgdata:/var/lib/postgresql
     healthcheck:
