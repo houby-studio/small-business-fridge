@@ -3,7 +3,6 @@ import { getTestRuntimeEnv } from './tests/utils/test_db.js'
 
 const E2E_PORT = '3345'
 const E2E_BASE_URL = `http://localhost:${E2E_PORT}`
-const isCI = !!process.env.CI
 const testEnv = getTestRuntimeEnv({
   PORT: E2E_PORT,
   APP_URL: E2E_BASE_URL,
@@ -47,9 +46,5 @@ export default defineConfig({
     env: testEnv,
   },
 
-  projects: [
-    isCI
-      ? { name: 'chromium', use: { ...devices['Desktop Chrome'] } }
-      : { name: 'msedge', use: { ...devices['Desktop Edge'], channel: 'msedge' } },
-  ],
+  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 })

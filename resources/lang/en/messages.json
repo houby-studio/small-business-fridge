@@ -58,6 +58,7 @@
   "allergen_has_products": "Cannot disable allergen — it is assigned to products.",
   "allergen_has_products_delete": "Cannot delete allergen — it is assigned to products.",
   "user_has_uninvoiced_orders": "Cannot disable user — they have uninvoiced orders or unpaid invoices. Generate invoices first.",
+  "last_active_admin_required": "Cannot disable or demote the last active administrator.",
   "invoice_generated_for_user": "{count, plural, one {{count} invoice generated} other {{count} invoices generated}} for user {name}.",
   "invoice_no_orders_for_buyer": "Customer has no uninvoiced orders."
 }

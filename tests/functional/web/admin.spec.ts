@@ -433,6 +433,58 @@ test.group('Admin - generate invoice for user', (group) => {
     assert.isTrue(buyer.isDisabled)
   })
 
+  test('cannot disable the last active admin', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+
+    const response = await client
+      .put(`/admin/users/${admin.id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .form({ isDisabled: 'true' })
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    await admin.refresh()
+    assert.isFalse(admin.isDisabled)
+    assert.equal(admin.role, 'admin')
+  })
+
+  test('cannot demote the last active admin', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+
+    const response = await client
+      .put(`/admin/users/${admin.id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .form({ role: 'customer' })
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    await admin.refresh()
+    assert.equal(admin.role, 'admin')
+    assert.isFalse(admin.isDisabled)
+  })
+
+  test('can disable an admin when another active admin exists', async ({ client, assert }) => {
+    const actingAdmin = await UserFactory.apply('admin').create()
+    const targetAdmin = await UserFactory.apply('admin').create()
+
+    const response = await client
+      .put(`/admin/users/${targetAdmin.id}`)
+      .loginAs(actingAdmin)
+      .withCsrfToken()
+      .form({ isDisabled: 'true' })
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    await targetAdmin.refresh()
+    assert.isTrue(targetAdmin.isDisabled)
+    assert.equal(targetAdmin.role, 'admin')
+  })
+
   test('customer cannot call generate invoice for user endpoint', async ({ client }) => {
     const customer = await UserFactory.create()
     const buyer = await UserFactory.create()

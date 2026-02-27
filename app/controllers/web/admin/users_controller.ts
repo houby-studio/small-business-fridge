@@ -95,6 +95,13 @@ export default class UsersController {
     try {
       user = await service.updateUser(params.id, data)
     } catch (err) {
+      if (err instanceof Error && err.message === 'LAST_ACTIVE_ADMIN_REQUIRED') {
+        session.flash('alert', {
+          type: 'danger',
+          message: i18n.t('messages.last_active_admin_required'),
+        })
+        return response.redirect(usersUrl(request))
+      }
       if (err instanceof Error && err.message === 'USER_HAS_UNINVOICED_ORDERS') {
         return response.redirect(usersUrl(request))
       }

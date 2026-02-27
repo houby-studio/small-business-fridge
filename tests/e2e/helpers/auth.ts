@@ -10,12 +10,6 @@ const PASSWORDS: Record<TestUser, string> = {
   kiosk: 'kiosk123',
 }
 
-const cachedSessionCookies = new Map<string, any[]>()
-
-function resolveSessionKey(user: TestUser) {
-  return user
-}
-
 async function completeBootstrapIfNeeded(page: Page) {
   if (!/\/setup\/bootstrap(?:\?|$)/.test(page.url())) return
 
@@ -65,65 +59,25 @@ export async function ensureLoginPage(page: Page) {
 export async function fillLoginForm(page: Page, username: string, password: string) {
   const usernameInput = page.locator('#username')
   const passwordInput = page.locator('#password')
+  const submitButton = page.locator('button[type="submit"]')
 
   await expect(usernameInput).toBeVisible()
   await expect(passwordInput).toBeVisible()
+  await expect(submitButton).toBeVisible()
 
   await usernameInput.fill(username)
-  await expect(usernameInput).toHaveValue(username)
-
   await passwordInput.fill(password)
-  await expect(passwordInput).toHaveValue(password)
-
-  await passwordInput.press('Enter')
+  await expect(submitButton).toBeEnabled({ timeout: 10_000 })
+  await submitButton.click()
 }
 
-async function hasLoginForm(page: Page) {
-  const usernameInput = page.locator('#username')
-  const passwordInput = page.locator('#password')
-  const isUsernameVisible = await usernameInput.isVisible().catch(() => false)
-  const isPasswordVisible = await passwordInput.isVisible().catch(() => false)
-  return isUsernameVisible && isPasswordVisible
-}
+async function waitForLoginAttemptToSettle(page: Page) {
+  await Promise.race([
+    page.waitForURL((url) => !/\/login(?:\?|$)/.test(url.pathname + url.search), { timeout: 5000 }),
+    page.locator('button[type="submit"]').first().waitFor({ state: 'visible', timeout: 5000 }),
+  ]).catch(() => {})
 
-async function tryLogin(page: Page, username: string, password: string) {
-  for (let attempt = 0; attempt < 3; attempt++) {
-    await ensureLoginPage(page)
-    if (!/\/login(?:\?|$)/.test(page.url())) {
-      return true
-    }
-    if (!(await hasLoginForm(page))) {
-      if (!/\/login(?:\?|$)/.test(page.url())) {
-        return true
-      }
-      continue
-    }
-
-    await fillLoginForm(page, username, password)
-    await page.waitForLoadState('domcontentloaded')
-
-    if (!/\/login(?:\?|$)/.test(page.url())) {
-      return true
-    }
-  }
-
-  return false
-}
-
-async function tryWithCachedSession(page: Page, sessionKey: string) {
-  const cookies = cachedSessionCookies.get(sessionKey)
-  if (!cookies?.length) return false
-
-  await page.context().clearCookies()
-  await page.context().addCookies(cookies)
-  await page.goto('/shop')
-  await page.waitForLoadState('domcontentloaded')
-  return !/\/login(?:\?|$)/.test(page.url())
-}
-
-async function rememberSession(page: Page, sessionKey: string) {
-  const cookies = await page.context().cookies()
-  cachedSessionCookies.set(sessionKey, cookies)
+  await page.waitForLoadState('networkidle', { timeout: 3000 }).catch(() => {})
 }
 
 /**
@@ -136,30 +90,11 @@ async function rememberSession(page: Page, sessionKey: string) {
  * After loginAs the page is on /shop (or the post-login redirect target).
  */
 export async function loginAs(page: Page, user: TestUser) {
-  const sessionKey = resolveSessionKey(user)
-
-  // Fast path: check if this browser context is already authenticated.
-  // domcontentloaded is enough — only the server-side redirect matters here.
-  await page.goto('/shop')
-  await page.waitForLoadState('domcontentloaded')
-  if (!/\/login(?:\?|$)/.test(page.url())) {
-    await rememberSession(page, sessionKey)
-    return
-  }
-
-  // Try restoring a session saved in this test run (avoids repeating the login form)
-  if (await tryWithCachedSession(page, sessionKey)) {
-    await expect(page).not.toHaveURL(/\/login/)
-    return
-  }
-
-  // Full login flow
-  const succeeded = await tryLogin(page, user, PASSWORDS[user])
-  if (succeeded) {
-    await rememberSession(page, sessionKey)
-    await expect(page).not.toHaveURL(/\/login/)
-    return
-  }
+  // Keep login deterministic across tests/users in the same browser context.
+  await page.context().clearCookies()
+  await ensureLoginPage(page)
+  await fillLoginForm(page, user, PASSWORDS[user])
+  await waitForLoginAttemptToSettle(page)
 
   await expect(page).not.toHaveURL(/\/login/)
 }
