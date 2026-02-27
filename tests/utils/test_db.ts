@@ -13,6 +13,13 @@ type TestDbConfig = {
   database: string
 }
 
+export type ActiveDbConnection = {
+  pid: number
+  applicationName: string | null
+  clientAddress: string | null
+  state: string | null
+}
+
 let envLoaded = false
 
 export function loadTestEnvFile() {
@@ -109,6 +116,47 @@ export async function ensureTestDatabaseExists() {
         throw error
       }
     }
+  } finally {
+    await adminClient.end()
+  }
+}
+
+export async function listOtherDatabaseConnections(
+  databaseName = getTestDbConfigFromEnv().database
+): Promise<ActiveDbConnection[]> {
+  const config = getTestDbConfigFromEnv()
+  const adminClient = new Client({
+    host: config.host,
+    port: config.port,
+    user: config.user,
+    password: config.password,
+    database: 'postgres',
+  })
+
+  await adminClient.connect()
+
+  try {
+    const result = await adminClient.query<{
+      pid: number
+      application_name: string | null
+      client_addr: string | null
+      state: string | null
+    }>(
+      `SELECT pid, application_name, client_addr::text, state
+       FROM pg_stat_activity
+       WHERE datname = $1
+         AND backend_type = 'client backend'
+         AND pid <> pg_backend_pid()
+       ORDER BY pid ASC`,
+      [databaseName]
+    )
+
+    return result.rows.map((row) => ({
+      pid: row.pid,
+      applicationName: row.application_name,
+      clientAddress: row.client_addr,
+      state: row.state,
+    }))
   } finally {
     await adminClient.end()
   }

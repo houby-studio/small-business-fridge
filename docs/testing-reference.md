@@ -14,7 +14,7 @@ purposes. They must never be confused — especially regarding which database th
 | -------------- | ---------------------- | ---------- | ---------------------------------- | -------------------------- |
 | **Unit**       | Japa (`node ace test`) | `sbf_test` | `node ace test --suite=unit`       | Per test (manual `DELETE`) |
 | **Functional** | Japa (`node ace test`) | `sbf_test` | `node ace test --suite=functional` | Per test (manual `DELETE`) |
-| **E2E**        | Playwright             | `sbf_test` | `npm run test:e2e`                 | Once in global setup       |
+| **E2E**        | Playwright             | `sbf_test` | `npm run test:e2e`                 | Full rebuild in setup      |
 
 > **CRITICAL**: All test tiers use the **`sbf_test` database**, never `sbf` (dev). Both databases
 > live in the same PostgreSQL container on port **5432**. The safety boundary is the database
@@ -305,16 +305,16 @@ real user would experience it.
 ```bash
 # All E2E tests
 npm run test:e2e
-# (equivalent to: npx playwright test)
+# (uses guarded launcher: lock + port + DB preflight)
 
 # With UI (interactive)
-npx playwright test --ui
+npm run test:e2e -- --ui
 
 # Single file
-npx playwright test tests/e2e/auth.spec.ts
+npm run test:e2e -- tests/e2e/auth.spec.ts
 
 # With headed browser (visible)
-npx playwright test --headed
+npm run test:e2e -- --headed
 ```
 
 ### Server startup
@@ -322,18 +322,18 @@ npx playwright test --headed
 `playwright.config.ts` uses `webServer` to auto-start the app:
 
 ```
-command: node ace serve --no-hmr
-url:     http://localhost:3334
+command: node ace serve
+url:     http://localhost:3345
 ```
 
-In CI (`process.env.CI` set), a fresh server is always started. Locally (`reuseExistingServer: true`),
-Playwright reuses an already-running server on port 3334 if one exists.
+Playwright always starts a fresh test server (`reuseExistingServer: false`) and never reuses an
+already-running process.
 
 ### Global setup (`tests/e2e/global_setup.ts`)
 
 This runs **once** before any E2E test, directly via a raw `pg` client connected to `sbf_test`:
 
-1. **Runs migrations** via `execSync('node ace migration:run --force', { env: TEST_ENV })`
+1. **Rebuilds schema from scratch** via `execSync('node ace migration:fresh --force', { env: TEST_ENV })`
 2. **Hashes passwords** using AdonisJS's own Scrypt driver (same config as production)
 3. **Upserts 5 users**:
    - `admin / admin123` — role `admin`
@@ -351,7 +351,7 @@ This runs **once** before any E2E test, directly via a raw `pg` client connected
    - Invoice 3 (orders 26–33, customer2) — **unpaid** (no request yet)
    - Orders 21–25 (customer) remain uninvoiced
 
-All upserts use `ON CONFLICT ... DO UPDATE` so repeated runs are idempotent.
+The seed transaction is wrapped in `BEGIN/COMMIT` with rollback-on-error to avoid partial state.
 
 ### Locale
 

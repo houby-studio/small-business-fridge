@@ -10,7 +10,7 @@
     "dev": "node ace serve --hmr",
     "scheduler": "node ace scheduler:run",
     "test": "node ace test",
-    "test:e2e": "playwright test",
+    "test:e2e": "node --import=tsx scripts/run_e2e.ts",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
     "format": "prettier --write .",
