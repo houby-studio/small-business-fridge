@@ -13,8 +13,10 @@ RUN npm ci
 # ----------------------------
 FROM deps AS build
 WORKDIR /app
+ENV NODE_ENV=development
 COPY . .
 RUN cp .env.example .env \
+  && node ace generate:key \
   && node ace docs:generate \
   && node ace build
 
