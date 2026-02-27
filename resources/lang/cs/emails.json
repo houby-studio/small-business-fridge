@@ -88,5 +88,11 @@
   "registration_invite_role": "Přiřazená role: {role}",
   "registration_invite_expiry": "Pozvánka vyprší: {expiresAt}",
   "registration_invite_accept": "Přijmout pozvánku a vytvořit účet",
-  "registration_invite_note": "Pokud jste tuto pozvánku neočekávali, e-mail ignorujte."
+  "registration_invite_note": "Pokud jste tuto pozvánku neočekávali, e-mail ignorujte.",
+
+  "password_reset_subject": "Reset hesla v {app_name}",
+  "password_reset_heading": "Obnovení hesla",
+  "password_reset_intro": "Obdrželi jsme požadavek na reset hesla pro {app_name}.",
+  "password_reset_action": "Resetovat heslo",
+  "password_reset_note": "Pokud jste o reset nežádali, e-mail ignorujte."
 }

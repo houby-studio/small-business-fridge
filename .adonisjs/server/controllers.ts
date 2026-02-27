@@ -34,7 +34,9 @@ export const controllers = {
     Login: () => import('#controllers/web/login_controller'),
     Oidc: () => import('#controllers/web/oidc_controller'),
     Orders: () => import('#controllers/web/orders_controller'),
+    PasswordReset: () => import('#controllers/web/password_reset_controller'),
     Profile: () => import('#controllers/web/profile_controller'),
+    Register: () => import('#controllers/web/register_controller'),
     Shop: () => import('#controllers/web/shop_controller'),
     supplier: {
       Deliveries: () => import('#controllers/web/supplier/deliveries_controller'),

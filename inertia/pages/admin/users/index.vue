@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Head, router, usePage } from '@inertiajs/vue3'
+import { Head, router, useForm, usePage } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Select from 'primevue/select'
 import ToggleSwitch from 'primevue/toggleswitch'
 import Button from 'primevue/button'
+import InputText from 'primevue/inputtext'
+import InputNumber from 'primevue/inputnumber'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from '~/composables/use_i18n'
@@ -35,10 +37,25 @@ interface PaginatedUsers {
   meta: { total: number; perPage: number; currentPage: number; lastPage: number }
 }
 
+interface InviteRow {
+  id: number
+  email: string
+  role: 'customer' | 'supplier' | 'admin'
+  createdAt: string
+  expiresAt: string
+  acceptedAt: string | null
+  revokedAt: string | null
+}
+
 const props = defineProps<{
   users: PaginatedUsers
   filters: { role: string; userId: string; disabled: string; sortBy: string; sortOrder: string }
   userOptions: { id: number; displayName: string }[]
+  invitations: InviteRow[]
+  registrationPolicy: {
+    mode: 'open' | 'invite_only' | 'domain_auto_approve' | 'closed'
+    allowedDomains: string[]
+  }
 }>()
 const { t } = useI18n()
 const page = usePage<SharedProps>()
@@ -146,6 +163,27 @@ function onSort(event: any) {
 function impersonateUser(userId: number) {
   router.post(`/admin/users/${userId}/impersonate`)
 }
+
+const inviteForm = useForm({
+  email: '',
+  role: 'customer' as 'customer' | 'supplier' | 'admin',
+  expiresInHours: 168,
+})
+
+function createInvite() {
+  inviteForm.post('/admin/invitations', {
+    preserveScroll: true,
+    onSuccess: () => {
+      inviteForm.reset('email')
+      inviteForm.role = 'customer'
+      inviteForm.expiresInHours = 168
+    },
+  })
+}
+
+function revokeInvite(inviteId: number) {
+  router.post(`/admin/invitations/${inviteId}/revoke`, {}, { preserveScroll: true })
+}
 </script>
 
 <template>
@@ -157,6 +195,98 @@ function impersonateUser(userId: number) {
       {{ t('admin.users_heading') }}
     </h1>
 
+    <div
+      class="mb-6 rounded-lg border border-gray-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900"
+    >
+      <div class="text-sm text-gray-700 dark:text-zinc-300">
+        {{ t('admin.registration_mode_label') }}:
+        <strong>{{ t(`admin.registration_mode_${registrationPolicy.mode}`) }}</strong>
+      </div>
+      <div
+        v-if="registrationPolicy.mode === 'domain_auto_approve'"
+        class="mt-2 text-sm text-gray-700 dark:text-zinc-300"
+      >
+        {{ t('admin.registration_allowed_domains') }}:
+        <strong>
+          {{
+            registrationPolicy.allowedDomains.length
+              ? registrationPolicy.allowedDomains.join(', ')
+              : '—'
+          }}
+        </strong>
+      </div>
+    </div>
+
+    <div
+      class="mb-6 rounded-lg border border-gray-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900"
+    >
+      <h2 class="mb-3 text-lg font-semibold text-gray-900 dark:text-zinc-100">
+        {{ t('admin.invites_heading') }}
+      </h2>
+      <form class="grid gap-3 md:grid-cols-4" @submit.prevent="createInvite">
+        <InputText
+          v-model="inviteForm.email"
+          type="email"
+          :placeholder="t('admin.invites_email_placeholder')"
+          :invalid="!!inviteForm.errors.email"
+        />
+        <Select
+          v-model="inviteForm.role"
+          :options="roleEditOptions"
+          optionLabel="label"
+          optionValue="value"
+        />
+        <InputNumber v-model="inviteForm.expiresInHours" :min="1" :max="8760" />
+        <Button
+          type="submit"
+          icon="pi pi-send"
+          :label="t('admin.invites_send')"
+          :loading="inviteForm.processing"
+        />
+      </form>
+
+      <div class="mt-4 overflow-auto">
+        <table class="min-w-full text-sm">
+          <thead>
+            <tr class="text-left text-gray-600 dark:text-zinc-300">
+              <th class="pb-2">{{ t('admin.invites_email') }}</th>
+              <th class="pb-2">{{ t('admin.invites_role') }}</th>
+              <th class="pb-2">{{ t('admin.invites_status') }}</th>
+              <th class="pb-2">{{ t('admin.invites_expires_at') }}</th>
+              <th class="pb-2">{{ t('admin.users_actions') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="invite in invitations"
+              :key="invite.id"
+              class="border-t border-gray-200 dark:border-zinc-700"
+            >
+              <td class="py-2">{{ invite.email }}</td>
+              <td class="py-2">{{ t(`auth.invite_role_${invite.role}`) }}</td>
+              <td class="py-2">
+                <span v-if="invite.acceptedAt">{{ t('admin.invites_status_accepted') }}</span>
+                <span v-else-if="invite.revokedAt">{{ t('admin.invites_status_revoked') }}</span>
+                <span v-else>{{ t('admin.invites_status_pending') }}</span>
+              </td>
+              <td class="py-2">{{ invite.expiresAt }}</td>
+              <td class="py-2">
+                <Button
+                  v-if="!invite.acceptedAt && !invite.revokedAt"
+                  icon="pi pi-times"
+                  severity="danger"
+                  size="small"
+                  text
+                  :label="t('admin.invites_revoke')"
+                  @click="revokeInvite(invite.id)"
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- Filter bar -->
     <FilterBar @apply="applyFilters" @clear="clearFilters">
       <div>
@@ -165,6 +295,7 @@ function impersonateUser(userId: number) {
         }}</label>
         <Select
           ref="userFilterSelect"
+          inputId="admin-users-filter-user"
           v-model="filterUserId"
           :options="userFilterOptions"
           optionLabel="displayName"
@@ -179,6 +310,7 @@ function impersonateUser(userId: number) {
           t('admin.users_filter_role')
         }}</label>
         <Select
+          inputId="admin-users-filter-role"
           v-model="filterRole"
           :options="roleOptions"
           optionLabel="label"
@@ -191,6 +323,7 @@ function impersonateUser(userId: number) {
           t('admin.users_filter_disabled')
         }}</label>
         <Select
+          inputId="admin-users-filter-disabled"
           v-model="filterDisabled"
           :options="disabledOptions"
           optionLabel="label"
@@ -288,6 +421,14 @@ function impersonateUser(userId: number) {
               text
               :aria-label="t('admin.users_generate_invoice')"
               @click="generateInvoiceForUser(data.id, data.displayName)"
+            />
+            <Button
+              icon="pi pi-envelope"
+              severity="secondary"
+              size="small"
+              text
+              :aria-label="t('admin.users_send_password_reset')"
+              @click="router.post(`/admin/users/${data.id}/send-password-reset`)"
             />
             <Button
               v-if="

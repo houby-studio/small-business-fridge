@@ -449,6 +449,23 @@ export default class NotificationService {
   }
 
   /**
+   * Send password reset email.
+   */
+  async sendPasswordResetEmail(params: { email: string; resetUrl: string }) {
+    await mail.send((message) => {
+      message
+        .to(params.email)
+        .subject(this.i18n.t('emails.password_reset_subject', { app_name: this.appName }))
+        .htmlView('emails/password_reset', {
+          i18n: this.i18n,
+          appName: this.appName,
+          appUrl: this.appUrl,
+          resetUrl: params.resetUrl,
+        })
+    })
+  }
+
+  /**
    * Notify users who favourited a product that it's back in stock.
    */
   async sendRestockNotification(delivery: Delivery) {

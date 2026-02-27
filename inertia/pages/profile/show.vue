@@ -7,6 +7,7 @@ import InputNumber from 'primevue/inputnumber'
 import ToggleSwitch from 'primevue/toggleswitch'
 import SelectButton from 'primevue/selectbutton'
 import MultiSelect from 'primevue/multiselect'
+import Password from 'primevue/password'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import DataTable from 'primevue/datatable'
@@ -73,6 +74,12 @@ const colorModeOptions = [
 ]
 
 const submitting = ref(false)
+const changingPassword = ref(false)
+const passwordForm = ref({
+  currentPassword: '',
+  newPassword: '',
+  newPasswordConfirmation: '',
+})
 
 function submit() {
   if (!form.value.displayName || !form.value.email) return
@@ -94,6 +101,26 @@ function submit() {
     },
     {
       onFinish: () => (submitting.value = false),
+    }
+  )
+}
+
+function changePassword() {
+  changingPassword.value = true
+  router.put(
+    '/profile/password',
+    {
+      currentPassword: passwordForm.value.currentPassword || undefined,
+      newPassword: passwordForm.value.newPassword,
+      newPasswordConfirmation: passwordForm.value.newPasswordConfirmation,
+    },
+    {
+      onFinish: () => {
+        changingPassword.value = false
+        passwordForm.value.currentPassword = ''
+        passwordForm.value.newPassword = ''
+        passwordForm.value.newPasswordConfirmation = ''
+      },
     }
   )
 }
@@ -304,6 +331,72 @@ function copyToken() {
               <p class="text-gray-900 dark:text-zinc-100">{{ formatDate(user.createdAt) }}</p>
             </div>
           </div>
+        </template>
+      </Card>
+
+      <Card>
+        <template #title>{{ t('profile.password_heading') }}</template>
+        <template #content>
+          <form @submit.prevent="changePassword" class="flex flex-col gap-4">
+            <div>
+              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                {{ t('profile.password_current') }}
+              </label>
+              <Password
+                inputId="profileCurrentPassword"
+                v-model="passwordForm.currentPassword"
+                :feedback="false"
+                toggleMask
+                autocomplete="current-password"
+                inputClass="w-full"
+                class="w-full"
+              />
+            </div>
+
+            <div>
+              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                {{ t('profile.password_new') }}
+              </label>
+              <Password
+                inputId="profileNewPassword"
+                v-model="passwordForm.newPassword"
+                :feedback="false"
+                toggleMask
+                autocomplete="new-password"
+                inputClass="w-full"
+                class="w-full"
+              />
+            </div>
+
+            <div>
+              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                {{ t('profile.password_new_confirm') }}
+              </label>
+              <Password
+                inputId="profileNewPasswordConfirmation"
+                v-model="passwordForm.newPasswordConfirmation"
+                :feedback="false"
+                toggleMask
+                autocomplete="new-password"
+                inputClass="w-full"
+                class="w-full"
+              />
+            </div>
+
+            <div>
+              <Button
+                type="submit"
+                :label="t('profile.password_submit')"
+                icon="pi pi-key"
+                :loading="changingPassword"
+                :disabled="
+                  !passwordForm.newPassword ||
+                  !passwordForm.newPasswordConfirmation ||
+                  passwordForm.newPassword.length < 8
+                "
+              />
+            </div>
+          </form>
         </template>
       </Card>
 

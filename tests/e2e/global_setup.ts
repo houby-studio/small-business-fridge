@@ -30,6 +30,7 @@ const TEST_ENV = getTestRuntimeEnv({
   APP_URL: 'http://localhost:3345',
 })
 const E2E_INVITE_TOKEN = 'e2e-customer-invite-token'
+const E2E_RESET_TOKEN = 'e2e-reset-token'
 
 /**
  * Playwright global setup:
@@ -148,6 +149,15 @@ export default async function globalSetup() {
       keypad_id: 89993,
       iban: null,
     },
+    {
+      username: 'resetuser',
+      email: 'resetuser@localhost',
+      display_name: 'Reset User',
+      password: await scrypt.make('initial123'),
+      role: 'customer',
+      keypad_id: 89988,
+      iban: null,
+    },
   ]
 
   // 3. Insert/upsert all seed data inside a single transaction so a partial
@@ -197,6 +207,13 @@ export default async function globalSetup() {
         accepted_at, revoked_at, created_at, updated_at
       ) VALUES ($1, 'customer', $2, NULL, NULL, NOW() + INTERVAL '2 days', NULL, NULL, NOW(), NOW())`,
       ['invitee-e2e@localhost', createHash('sha256').update(E2E_INVITE_TOKEN).digest('hex')]
+    )
+
+    await client.query(
+      `INSERT INTO password_reset_tokens (
+        email, token_hash, expires_at, used_at, created_at, updated_at
+      ) VALUES ($1, $2, NOW() + INTERVAL '2 days', NULL, NOW(), NOW())`,
+      ['resetuser@localhost', createHash('sha256').update(E2E_RESET_TOKEN).digest('hex')]
     )
 
     // 4. Seed categories

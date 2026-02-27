@@ -3,9 +3,11 @@ import logger from '@adonisjs/core/services/logger'
 import User from '#models/user'
 import { loginValidator } from '#validators/auth'
 import AuditService from '#services/audit_service'
+import RegistrationPolicyService from '#services/registration_policy_service'
 import env from '#start/env'
 
 export default class LoginController {
+  private registrationPolicy = new RegistrationPolicyService()
   private async hasAnyAdmin(): Promise<boolean> {
     const admin = await User.query().where('role', 'admin').first()
     return !!admin
@@ -19,8 +21,10 @@ export default class LoginController {
     if (env.get('LOCAL_LOGIN_DISABLED', false)) {
       return response.redirect('/auth/oidc/redirect')
     }
+    const mode = this.registrationPolicy.getMode()
     return inertia.render('auth/login', {
       oidcEnabled: env.get('OIDC_ENABLED', false),
+      allowLocalRegistration: mode === 'open' || mode === 'domain_auto_approve',
     })
   }
 

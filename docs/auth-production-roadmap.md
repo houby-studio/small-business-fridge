@@ -21,7 +21,7 @@ Make local accounts production-ready while keeping OIDC as primary auth.
 - [x] 2. Bootstrap
 - [x] 3. Safety
 - [x] 4. Onboarding
-- [ ] 5. Account lifecycle
-- [ ] 6. Admin UX
-- [ ] 7. Identity hardening
-- [ ] 8. Optional mode enhancements
+- [x] 5. Account lifecycle
+- [x] 6. Admin UX
+- [x] 7. Identity hardening
+- [x] 8. Optional mode enhancements

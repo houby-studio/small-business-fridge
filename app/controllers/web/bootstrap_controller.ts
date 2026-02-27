@@ -37,7 +37,7 @@ export default class BootstrapController {
 
     const user = await User.create({
       displayName: data.displayName,
-      email: data.email,
+      email: data.email.trim().toLowerCase(),
       username: data.username,
       password: data.password,
       keypadId: nextKeypadId,

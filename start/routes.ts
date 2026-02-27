@@ -23,6 +23,8 @@ import { extname } from 'node:path'
 const HomeController = () => import('#controllers/web/home_controller')
 const LoginController = () => import('#controllers/web/login_controller')
 const BootstrapController = () => import('#controllers/web/bootstrap_controller')
+const RegisterController = () => import('#controllers/web/register_controller')
+const PasswordResetController = () => import('#controllers/web/password_reset_controller')
 const InviteRegistrationController = () => import('#controllers/web/invite_registration_controller')
 const OidcController = () => import('#controllers/web/oidc_controller')
 const ShopController = () => import('#controllers/web/shop_controller')
@@ -115,6 +117,31 @@ router.group(() => {
       middleware.throttle({ maxRequests: authThrottleLimit, windowMs: 60_000 }),
     ])
 
+  router.get('/register', [RegisterController, 'show']).use(middleware.guest())
+  router
+    .post('/register', [RegisterController, 'store'])
+    .use([
+      middleware.guest(),
+      middleware.throttle({ maxRequests: authThrottleLimit, windowMs: 60_000 }),
+    ])
+
+  router.get('/forgot-password', [PasswordResetController, 'showForgot']).use(middleware.guest())
+  router
+    .post('/forgot-password', [PasswordResetController, 'sendReset'])
+    .use([
+      middleware.guest(),
+      middleware.throttle({ maxRequests: authThrottleLimit, windowMs: 60_000 }),
+    ])
+  router
+    .get('/reset-password/:token', [PasswordResetController, 'showReset'])
+    .use(middleware.guest())
+  router
+    .post('/reset-password/:token', [PasswordResetController, 'reset'])
+    .use([
+      middleware.guest(),
+      middleware.throttle({ maxRequests: authThrottleLimit, windowMs: 60_000 }),
+    ])
+
   router
     .get('/register/invite/:token', [InviteRegistrationController, 'show'])
     .use(middleware.guest())
@@ -166,6 +193,7 @@ router
     // Personal API tokens
     router.post('/profile/tokens', [ProfileController, 'createToken'])
     router.delete('/profile/tokens/:id', [ProfileController, 'revokeToken'])
+    router.put('/profile/password', [PasswordResetController, 'changeAuthenticated'])
 
     // Audit log (customer view)
     router.get('/audit', [AuditController, 'index'])
@@ -255,6 +283,7 @@ router
 
     // Generate invoice for a user (across all suppliers)
     router.post('/users/:id/generate-invoice', [AdminUsersController, 'generateInvoice'])
+    router.post('/users/:id/send-password-reset', [AdminUsersController, 'sendPasswordReset'])
   })
   .prefix('/admin')
   .use([middleware.auth(), middleware.role({ roles: ['admin'] })])

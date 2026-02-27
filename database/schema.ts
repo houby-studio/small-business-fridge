@@ -197,6 +197,25 @@ export class PageViewSchema extends BaseModel {
   declare createdAt: DateTime
 }
 
+export class PasswordResetTokenSchema extends BaseModel {
+  static $columns = ['id', 'email', 'tokenHash', 'expiresAt', 'usedAt', 'createdAt', 'updatedAt'] as const
+  $columns = PasswordResetTokenSchema.$columns
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare email: string
+  @column()
+  declare tokenHash: string
+  @column.dateTime()
+  declare expiresAt: DateTime
+  @column.dateTime()
+  declare usedAt: DateTime | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
 export class ProductAllergenSchema extends BaseModel {
   static $columns = ['id', 'productId', 'allergenId'] as const
   $columns = ProductAllergenSchema.$columns

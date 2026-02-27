@@ -53,4 +53,13 @@ test.group('RegistrationPolicyService', () => {
 
     assert.deepEqual(decision, { allowed: false, reason: 'missing_email' })
   })
+
+  test('getAllowedDomains returns normalized list', async ({ assert }) => {
+    const service = new RegistrationPolicyService({
+      mode: 'domain_auto_approve',
+      allowedDomains: [' Example.com ', 'Second.local'],
+    })
+
+    assert.deepEqual(service.getAllowedDomains(), ['example.com', 'second.local'])
+  })
 })

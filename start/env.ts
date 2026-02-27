@@ -65,6 +65,7 @@ export default await Env.create(new URL('../', import.meta.url), {
   REGISTRATION_MODE: Env.schema.string.optional(),
   REGISTRATION_ALLOWED_DOMAINS: Env.schema.string.optional(),
   INVITE_EXPIRY_HOURS: Env.schema.number.optional(),
+  PASSWORD_RESET_TTL_MINUTES: Env.schema.number.optional(),
 
   /*
   |----------------------------------------------------------

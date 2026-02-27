@@ -40,6 +40,16 @@ export const createApiTokenValidator = vine.compile(
   })
 )
 
+export const registerValidator = vine.compile(
+  vine.object({
+    displayName: vine.string().trim().minLength(1).maxLength(255),
+    email: vine.string().trim().email({ require_tld: false }).maxLength(255),
+    username: vine.string().trim().minLength(3).maxLength(255),
+    password: vine.string().minLength(8),
+    passwordConfirmation: vine.string().minLength(8),
+  })
+)
+
 export const createInviteValidator = vine.compile(
   vine.object({
     email: vine.string().trim().email({ require_tld: false }).maxLength(255),
@@ -58,5 +68,26 @@ export const acceptInviteValidator = vine.compile(
     username: vine.string().trim().minLength(3).maxLength(255),
     password: vine.string().minLength(8),
     passwordConfirmation: vine.string().minLength(8),
+  })
+)
+
+export const forgotPasswordValidator = vine.compile(
+  vine.object({
+    email: vine.string().trim().email({ require_tld: false }).maxLength(255),
+  })
+)
+
+export const resetPasswordValidator = vine.compile(
+  vine.object({
+    password: vine.string().minLength(8),
+    passwordConfirmation: vine.string().minLength(8),
+  })
+)
+
+export const changePasswordValidator = vine.compile(
+  vine.object({
+    currentPassword: vine.string().minLength(1).optional(),
+    newPassword: vine.string().minLength(8),
+    newPasswordConfirmation: vine.string().minLength(8),
   })
 )

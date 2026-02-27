@@ -70,7 +70,7 @@ export default class ProfileController {
     }
 
     user.displayName = data.displayName
-    user.email = data.email
+    user.email = data.email.trim().toLowerCase()
     user.phone = data.phone ?? null
     user.iban = data.iban ?? null
     user.showAllProducts = data.showAllProducts

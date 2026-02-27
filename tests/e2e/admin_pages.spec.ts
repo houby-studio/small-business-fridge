@@ -28,18 +28,18 @@ test.describe('Admin pages and filters', () => {
   test('admin users supports role filter', async ({ page }) => {
     await page.goto('/admin/users')
 
-    await page.getByRole('combobox').nth(1).click()
+    await page.locator('#admin-users-filter-role').click()
     await page.getByRole('option', { name: 'Dodavatel' }).click()
     await page.getByRole('button', { name: 'Použít filtry' }).click()
 
     await expect(page).toHaveURL(/\/admin\/users\?.*role=supplier/)
-    await expect(page.locator('table')).toContainText('Dodavatel')
+    await expect(page.locator('.p-datatable table')).toContainText('Dodavatel')
   })
 
   test('admin users supports disabled filter', async ({ page }) => {
     await page.goto('/admin/users')
 
-    await page.getByRole('combobox').nth(2).click()
+    await page.locator('#admin-users-filter-disabled').click()
     await page.getByRole('option', { name: 'Povolen' }).click()
     await page.getByRole('button', { name: 'Použít filtry' }).click()
 
@@ -49,7 +49,7 @@ test.describe('Admin pages and filters', () => {
   test('admin users filter search autofocuses and Enter selects first match', async ({ page }) => {
     await page.goto('/admin/users')
 
-    await page.getByRole('combobox').first().click()
+    await page.locator('#admin-users-filter-user').click()
     const searchInput = page.locator('.p-select-overlay:visible .p-select-filter').last()
     await expect(searchInput).toBeFocused()
     await searchInput.fill('Supplier User')
@@ -57,7 +57,22 @@ test.describe('Admin pages and filters', () => {
     await page.getByRole('button', { name: 'Použít filtry' }).click()
 
     await expect(page).toHaveURL(/\/admin\/users\?.*userId=/)
-    await expect(page.locator('table')).toContainText('Supplier User')
+    await expect(page.locator('.p-datatable table')).toContainText('Supplier User')
+  })
+
+  test('admin can create and revoke invitation from users page', async ({ page }) => {
+    await page.goto('/admin/users')
+
+    const inviteEmail = `invite-${Date.now()}@example.com`
+    await page.getByPlaceholder('uzivatel@example.com').fill(inviteEmail)
+    await page.getByRole('button', { name: 'Odeslat pozvánku' }).click()
+
+    await expect(page.locator('tr', { hasText: inviteEmail })).toBeVisible()
+    await page
+      .locator('tr', { hasText: inviteEmail })
+      .getByRole('button', { name: 'Zrušit' })
+      .click()
+    await expect(page.locator('tr', { hasText: inviteEmail })).toContainText('Zrušena')
   })
 
   test('admin orders supports supplier filter', async ({ page }) => {

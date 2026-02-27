@@ -12,6 +12,7 @@ import { useI18n } from '~/composables/use_i18n'
 
 defineProps<{
   oidcEnabled?: boolean
+  allowLocalRegistration?: boolean
 }>()
 
 const { t } = useI18n()
@@ -80,6 +81,19 @@ function submit() {
             <label for="rememberMe" class="cursor-pointer text-sm text-gray-700 dark:text-zinc-300">
               {{ t('auth.remember_me') }}
             </label>
+          </div>
+
+          <div class="flex items-center justify-between text-sm">
+            <a href="/forgot-password" class="text-zinc-300 hover:text-zinc-100">
+              {{ t('auth.forgot_password_link') }}
+            </a>
+            <a
+              v-if="allowLocalRegistration"
+              href="/register"
+              class="text-zinc-300 hover:text-zinc-100"
+            >
+              {{ t('auth.register_link') }}
+            </a>
           </div>
 
           <Button

@@ -88,5 +88,11 @@
   "registration_invite_role": "Assigned role: {role}",
   "registration_invite_expiry": "Invitation expires at: {expiresAt}",
   "registration_invite_accept": "Accept invitation and create account",
-  "registration_invite_note": "If you did not expect this invite, you can ignore this email."
+  "registration_invite_note": "If you did not expect this invite, you can ignore this email.",
+
+  "password_reset_subject": "Reset your password in {app_name}",
+  "password_reset_heading": "Password reset",
+  "password_reset_intro": "We received a request to reset your password for {app_name}.",
+  "password_reset_action": "Reset password",
+  "password_reset_note": "If you did not request this, you can ignore this email."
 }

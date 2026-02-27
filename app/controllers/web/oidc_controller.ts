@@ -42,8 +42,9 @@ export default class OidcController {
     // Get user info from Microsoft Graph (/me response — raw fields, no Ally normalization)
     const msUser: any = await microsoft.user()
     const oid = msUser.id as string // Azure AD object ID (unique, stable)
-    const email =
+    const rawEmail =
       (msUser.mail as string | null) || (msUser.userPrincipalName as string | null) || ''
+    const email = rawEmail.trim().toLowerCase()
     const displayName = (msUser.displayName as string | null) || email.split('@')[0]
     const phone = (msUser.mobilePhone as string | null) || null
 

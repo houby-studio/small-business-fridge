@@ -29,7 +29,7 @@ export default class RegistrationPolicyService {
       return this.overrides.mode
     }
 
-    const mode = env.get('REGISTRATION_MODE', 'open')
+    const mode = (process.env.REGISTRATION_MODE ?? env.get('REGISTRATION_MODE', 'open')) as string
     if (
       mode === 'open' ||
       mode === 'invite_only' ||
@@ -57,7 +57,7 @@ export default class RegistrationPolicyService {
     const domain = email.split('@')[1]?.trim().toLowerCase()
     if (!domain) return { allowed: false, reason: 'missing_email' }
 
-    const allowedDomains = this.getAllowedDomains()
+    const allowedDomains = this.allowedDomainsSet()
     if (allowedDomains.size === 0) return { allowed: false, reason: 'domain_not_allowed' }
 
     return allowedDomains.has(domain)
@@ -65,7 +65,11 @@ export default class RegistrationPolicyService {
       : { allowed: false, reason: 'domain_not_allowed' }
   }
 
-  private getAllowedDomains(): Set<string> {
+  getAllowedDomains(): string[] {
+    return [...this.allowedDomainsSet()]
+  }
+
+  private allowedDomainsSet(): Set<string> {
     if (this.overrides?.allowedDomains) {
       return new Set(
         this.overrides.allowedDomains
@@ -74,7 +78,8 @@ export default class RegistrationPolicyService {
       )
     }
 
-    const raw = env.get('REGISTRATION_ALLOWED_DOMAINS', '')
+    const raw =
+      process.env.REGISTRATION_ALLOWED_DOMAINS ?? env.get('REGISTRATION_ALLOWED_DOMAINS', '')
     return new Set(
       raw
         .split(',')

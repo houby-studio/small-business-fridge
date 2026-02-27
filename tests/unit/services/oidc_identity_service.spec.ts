@@ -1,7 +1,6 @@
 import '#tests/test_context'
 import { test } from '@japa/runner'
 import db from '@adonisjs/lucid/services/db'
-import User from '#models/user'
 import { UserFactory } from '#database/factories/user_factory'
 import OidcIdentityService from '#services/oidc_identity_service'
 
@@ -23,20 +22,21 @@ test.group('OidcIdentityService', (group) => {
       email: 'first@example.com',
     }).create()
 
-    await UserFactory.merge({
+    const byEmail = await UserFactory.merge({
       oid: null,
-      email: 'first@example.com',
+      email: 'second@example.com',
     }).create()
 
     const match = await oidcIdentityService.resolve({
       oid: 'oid-user-1',
-      email: 'first@example.com',
+      email: 'second@example.com',
     })
 
     assert.equal(match.kind, 'matched')
     if (match.kind === 'matched') {
       assert.equal(match.user.id, byOid.id)
       assert.equal(match.via, 'oid')
+      assert.notEqual(match.user.id, byEmail.id)
     }
   })
 
@@ -75,60 +75,6 @@ test.group('OidcIdentityService', (group) => {
     if (match.kind === 'matched') {
       assert.equal(match.user.id, local.id)
       assert.equal(match.via, 'email_linked')
-    }
-  })
-
-  test('rejects ambiguous email fallback when multiple users share same email', async ({
-    assert,
-  }) => {
-    await User.create({
-      displayName: 'First',
-      email: 'shared@example.com',
-      username: 'shared1',
-      password: 'secret123',
-      keypadId: 70001,
-      role: 'customer',
-      isKiosk: false,
-      isDisabled: false,
-      showAllProducts: false,
-      sendMailOnPurchase: true,
-      sendDailyReport: true,
-      colorMode: 'dark',
-      keypadDisabled: false,
-      oid: null,
-      cardId: null,
-      phone: null,
-      iban: null,
-    })
-
-    await User.create({
-      displayName: 'Second',
-      email: 'shared@example.com',
-      username: 'shared2',
-      password: 'secret123',
-      keypadId: 70002,
-      role: 'customer',
-      isKiosk: false,
-      isDisabled: false,
-      showAllProducts: false,
-      sendMailOnPurchase: true,
-      sendDailyReport: true,
-      colorMode: 'dark',
-      keypadDisabled: false,
-      oid: null,
-      cardId: null,
-      phone: null,
-      iban: null,
-    })
-
-    const match = await oidcIdentityService.resolve({
-      oid: 'oid-shared-1',
-      email: 'shared@example.com',
-    })
-
-    assert.equal(match.kind, 'ambiguous_email')
-    if (match.kind === 'ambiguous_email') {
-      assert.lengthOf(match.userIds, 2)
     }
   })
 

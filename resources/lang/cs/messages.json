@@ -66,5 +66,12 @@
   "invite_accepted": "Váš účet byl vytvořen z pozvánky.",
   "invite_invalid_or_expired": "Odkaz pozvánky je neplatný, vypršel nebo byl již použit.",
   "invite_email_already_registered": "Tento e-mail je již registrován.",
-  "invite_username_taken": "Toto uživatelské jméno je již obsazené."
+  "invite_username_taken": "Toto uživatelské jméno je již obsazené.",
+  "registration_not_allowed": "Samostatná registrace není podle aktuálních pravidel povolena.",
+  "registration_success": "Váš účet byl vytvořen.",
+  "password_reset_email_sent": "Pokud účet existuje, byl odeslán odkaz pro reset hesla.",
+  "password_reset_invalid": "Odkaz pro reset hesla je neplatný nebo vypršel.",
+  "password_reset_success": "Heslo bylo změněno. Nyní se můžete přihlásit.",
+  "password_current_invalid": "Aktuální heslo je nesprávné.",
+  "password_changed": "Heslo bylo úspěšně změněno."
 }

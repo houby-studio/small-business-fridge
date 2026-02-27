@@ -8,12 +8,9 @@ import InvitationService from '#services/invitation_service'
 
 test.group('InvitationService', (group) => {
   group.each.setup(async () => {
-    await db.from('orders').delete()
-    await db.from('deliveries').delete()
-    await db.from('products').delete()
-    await db.from('categories').delete()
-    await db.from('user_invitations').delete()
-    await db.from('users').delete()
+    await db.rawQuery(
+      'TRUNCATE TABLE user_invitations, password_reset_tokens, orders, deliveries, invoices, products, categories, users RESTART IDENTITY CASCADE'
+    )
   })
 
   test('createInvite persists invite with hashed token and normalized email', async ({
