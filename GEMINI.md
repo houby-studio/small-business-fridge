@@ -13,9 +13,9 @@ I have been configured with the following MCP servers:
 
 ## Project Stack Reference
 
-- **Backend**: AdonisJS 6 (Node.js 22+)
+- **Backend**: AdonisJS 7 (Node.js 22+)
 - **Frontend**: Vue 3 + Inertia.js + PrimeVue
-- **Database**: PostgreSQL (Port 5433 in dev)
+- **Database**: PostgreSQL (Port 5432 in dev)
 - **Style**: TailwindCSS 4 + PrimeVue Styled Mode
 
 ## Quality Gates

@@ -35,7 +35,7 @@ npm run test:e2e         # Playwright end-to-end suite
 
 ## Project Stack
 
-- **Runtime**: AdonisJS 6 (Node.js 22+), ESM modules
+- **Runtime**: AdonisJS 7 (Node.js 22+), ESM modules
 - **Database**: PostgreSQL 18 via Lucid ORM
 - **Frontend**: Vue 3 + Inertia.js + PrimeVue
 - **Auth**: Session-based web + token-based API
@@ -295,7 +295,7 @@ When adding user-facing text:
 
 ## Common Gotchas
 
-- `@adonisjs/mail` must be **v9+** (v3.x is for old AdonisJS 5)
+- `@adonisjs/mail` must be **v10+** (v3.x is for old AdonisJS 5)
 - PrimeVue themes: use `@primeuix/themes` (not deprecated `@primevue/themes`)
 - Login validator field: `username` (not `uid` or `email`)
 - Uploads: served via `/uploads/*` route, stored in `storage/uploads/`

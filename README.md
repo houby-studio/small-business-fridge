@@ -8,7 +8,7 @@ Colleagues browse available products, buy with one click, then pay later via QR 
 
 ## Stack
 
-- **Backend**: AdonisJS 6 (Node.js 22+), PostgreSQL 18, Lucid ORM
+- **Backend**: AdonisJS 7 (Node.js 22+), PostgreSQL 18, Lucid ORM
 - **Frontend**: Vue 3 + Inertia.js + PrimeVue
 - **Auth**: Session-based (web) + token-based (API), optional OIDC (Microsoft Entra ID)
 - **Language**: TypeScript throughout, Czech (cs) primary / English (en) secondary
