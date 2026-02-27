@@ -65,12 +65,15 @@ export async function fillLoginForm(page: Page, username: string, password: stri
   await passwordInput.fill(password)
   await expect(passwordInput).toHaveValue(password)
 
-  await page.locator('button[type="submit"]').click()
+  await passwordInput.press('Enter')
 }
 
 async function tryLogin(page: Page, username: string, password: string) {
   for (let attempt = 0; attempt < 3; attempt++) {
     await ensureLoginPage(page)
+    if (!/\/login(?:\?|$)/.test(page.url())) {
+      return true
+    }
 
     await fillLoginForm(page, username, password)
     await page.waitForLoadState('domcontentloaded')
