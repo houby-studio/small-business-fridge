@@ -1,41 +1,102 @@
-# Shared environment for app and scheduler services.
-# Secret values (APP_KEY, DB_PASSWORD, etc.) are intentionally absent here —
-# they are read from Docker secrets via .env.production (file: identifier).
-# Override any value by adding it to compose `environment:` or a .env file.
+# =============================================================================
+# Small Business Fridge — Production Docker Compose
+# =============================================================================
+# 1. Copy this file and .env.example to your server.
+# 2. Create a .env file next to this file (cp .env.example .env).
+# 3. Fill in the required values marked with [REQUIRED] below.
+# 4. Run: docker compose up -d
+#
+# Docker Compose automatically loads variables from a .env file in the same
+# directory. All ${VAR} references below are resolved from that file (or from
+# your shell environment if you prefer to export them).
+# =============================================================================
+
+# Shared environment block — applied to both app and scheduler containers.
 x-app-env: &app-env
-  HOST: 0.0.0.0
-  PORT: 3000
-  DB_HOST: postgres
-  DB_PORT: 5432
-  DB_USER: sbf
-  DB_DATABASE: sbf
-  SESSION_DRIVER: cookie
-  TZ: ${TZ:-UTC}
+  # ---------------------------------------------------------------------------
+  # Core — networking & identity
+  # ---------------------------------------------------------------------------
+  HOST: 0.0.0.0 # bind to all interfaces inside the container (don't change)
+  PORT: 3000 # internal port (maps to host via ports: below)
+  LOG_LEVEL: ${LOG_LEVEL:-info} # trace | debug | info | warn | error | fatal
+  TZ: ${TZ:-UTC} # e.g. Europe/Prague
   APP_NAME: ${APP_NAME:-Small Business Fridge}
-  APP_URL: ${APP_URL:-http://localhost:3000}
-  LOG_LEVEL: ${LOG_LEVEL:-info}
+  APP_URL: ${APP_URL:-http://localhost:3000} # [REQUIRED] public URL used in email links
+  FEEDBACK_URL: ${FEEDBACK_URL:-} # optional link shown in the UI sidebar
+
+  # ---------------------------------------------------------------------------
+  # Security — [REQUIRED] generate once and keep secret
+  # node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+  # ---------------------------------------------------------------------------
+  APP_KEY: ${APP_KEY} # no default — app refuses to start if missing
+
+  # ---------------------------------------------------------------------------
+  # Database — postgres service below uses the same DB_PASSWORD
+  # ---------------------------------------------------------------------------
+  DB_HOST: postgres # Docker service name — don't change
+  DB_PORT: 5432
+  DB_USER: ${DB_USER:-sbf}
+  DB_DATABASE: ${DB_DATABASE:-sbf}
+  DB_PASSWORD: ${DB_PASSWORD:-} # [REQUIRED] set a strong password
+
+  # ---------------------------------------------------------------------------
+  # Mail (SMTP)
+  # ---------------------------------------------------------------------------
   SMTP_HOST: ${SMTP_HOST:-localhost}
-  SMTP_PORT: ${SMTP_PORT:-587}
-  SMTP_USERNAME: ${SMTP_USERNAME:-}
+  SMTP_PORT: ${SMTP_PORT:-587} # 587 (STARTTLS) or 465 (SSL)
+  SMTP_USERNAME: ${SMTP_USERNAME:-} # leave empty if no auth
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-} # leave empty if no auth
   SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS:-noreply@localhost.localdomain}
   SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Small Business Fridge}
-  SMTP_IGNORE_TLS: ${SMTP_IGNORE_TLS:-false}
+  SMTP_IGNORE_TLS: ${SMTP_IGNORE_TLS:-false} # true = plain SMTP, no TLS
+
+  # ---------------------------------------------------------------------------
+  # Session
+  # ---------------------------------------------------------------------------
+  SESSION_DRIVER: cookie # cookie is the only option for single-node deployments
+
+  # ---------------------------------------------------------------------------
+  # OIDC / Microsoft Entra ID (optional — only needed when OIDC_ENABLED=true)
+  # ---------------------------------------------------------------------------
   OIDC_ENABLED: ${OIDC_ENABLED:-false}
-  OIDC_AUTO_REGISTER: ${OIDC_AUTO_REGISTER:-false}
-  LOCAL_LOGIN_DISABLED: ${LOCAL_LOGIN_DISABLED:-false}
+  OIDC_AUTO_REGISTER: ${OIDC_AUTO_REGISTER:-false} # auto-create account on first OIDC login
+  LOCAL_LOGIN_DISABLED: ${LOCAL_LOGIN_DISABLED:-false} # set true for OIDC-only mode
   OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+  OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
   OIDC_TENANT_ID: ${OIDC_TENANT_ID:-}
-  OIDC_REDIRECT_URI: ${OIDC_REDIRECT_URI:-}
-  FEEDBACK_URL: ${FEEDBACK_URL:-}
-  SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
+  OIDC_REDIRECT_URI: ${OIDC_REDIRECT_URI:-} # e.g. https://yourdomain.com/auth/oidc/callback
+
+  # ---------------------------------------------------------------------------
+  # API authentication (optional)
+  # ---------------------------------------------------------------------------
+  API_SECRET: ${API_SECRET:-} # bearer token for REST API access; leave empty to disable
+
+  # ---------------------------------------------------------------------------
+  # Swagger UI (optional)
+  # ---------------------------------------------------------------------------
+  SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false} # expose /docs endpoint
+
+  # ---------------------------------------------------------------------------
+  # OpenAI integration (optional)
+  # ---------------------------------------------------------------------------
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+
+  # ---------------------------------------------------------------------------
+  # ESL — AIMS electronic shelf labels (optional)
+  # ---------------------------------------------------------------------------
   ESL_AIMS_ENABLED: ${ESL_AIMS_ENABLED:-false}
   ESL_AIMS_BASE_URL: ${ESL_AIMS_BASE_URL:-}
   ESL_AIMS_STORE: ${ESL_AIMS_STORE:-}
   ESL_AIMS_CRON: ${ESL_AIMS_CRON:-}
   ESL_AIMS_VERIFY_TLS: ${ESL_AIMS_VERIFY_TLS:-true}
+
+  # ---------------------------------------------------------------------------
+  # ESL — JAMES electronic shelf labels (optional)
+  # ---------------------------------------------------------------------------
   ESL_JAMES_ENABLED: ${ESL_JAMES_ENABLED:-false}
   ESL_JAMES_BASE_URL: ${ESL_JAMES_BASE_URL:-}
   ESL_JAMES_STORE: ${ESL_JAMES_STORE:-}
+  ESL_JAMES_API_KEY: ${ESL_JAMES_API_KEY:-}
   ESL_JAMES_CRON: ${ESL_JAMES_CRON:-}
   ESL_JAMES_VERIFY_TLS: ${ESL_JAMES_VERIFY_TLS:-true}
 
@@ -43,17 +104,9 @@ services:
   app:
     image: houbystudio/sbf:latest
     ports:
-      - '3000:3000'
+      - '${PORT:-3000}:3000'
     environment:
       <<: *app-env
-    secrets:
-      - app_key
-      - db_password
-      # - oidc_client_secret  # uncomment when OIDC_ENABLED=true
-      # - api_secret          # uncomment when API auth is needed
-      # - smtp_password
-      # - openai_api_key
-      # - esl_james_api_key
     volumes:
       - app_uploads:/app/storage/uploads
     depends_on:
@@ -67,18 +120,11 @@ services:
     command: node ace scheduler:run
     environment:
       <<: *app-env
+      # Cron expressions (optional — Mon–Fri defaults are built into the app)
       CRON_DAILY_REPORT: ${CRON_DAILY_REPORT:-}
       CRON_UNPAID_REMINDER: ${CRON_UNPAID_REMINDER:-}
       CRON_PENDING_APPROVAL: ${CRON_PENDING_APPROVAL:-}
       UNPAID_REMINDER_MIN_AGE_DAYS: ${UNPAID_REMINDER_MIN_AGE_DAYS:-}
-    secrets:
-      - app_key
-      - db_password
-      # - oidc_client_secret  # uncomment when OIDC_ENABLED=true
-      # - api_secret          # uncomment when API auth is needed
-      # - smtp_password
-      # - openai_api_key
-      # - esl_james_api_key
     volumes:
       - app_uploads:/app/storage/uploads
     depends_on:
@@ -90,35 +136,17 @@ services:
     image: postgres:18-alpine
     container_name: postgres
     environment:
-      POSTGRES_USER: sbf
-      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
-      POSTGRES_DB: sbf
-    secrets:
-      - db_password
+      POSTGRES_USER: ${DB_USER:-sbf}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-}
+      POSTGRES_DB: ${DB_DATABASE:-sbf}
     volumes:
       - pgdata:/var/lib/postgresql
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U sbf']
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-sbf}']
       interval: 5s
       timeout: 5s
       retries: 5
     restart: unless-stopped
-
-secrets:
-  app_key:
-    file: ./secrets/app_key
-  db_password:
-    file: ./secrets/db_password
-  # oidc_client_secret:
-  #   file: ./secrets/oidc_client_secret
-  # api_secret:
-  #   file: ./secrets/api_secret
-  # smtp_password:
-  #   file: ./secrets/smtp_password
-  # openai_api_key:
-  #   file: ./secrets/openai_api_key
-  # esl_james_api_key:
-  #   file: ./secrets/esl_james_api_key
 
 volumes:
   pgdata:
