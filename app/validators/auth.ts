@@ -39,3 +39,24 @@ export const createApiTokenValidator = vine.compile(
     expiresInDays: vine.number().min(1).max(3650).optional(),
   })
 )
+
+export const createInviteValidator = vine.compile(
+  vine.object({
+    email: vine.string().trim().email({ require_tld: false }).maxLength(255),
+    role: vine.enum(['customer', 'supplier', 'admin'] as const).optional(),
+    expiresInHours: vine
+      .number()
+      .min(1)
+      .max(24 * 365)
+      .optional(),
+  })
+)
+
+export const acceptInviteValidator = vine.compile(
+  vine.object({
+    displayName: vine.string().trim().minLength(1).maxLength(255),
+    username: vine.string().trim().minLength(3).maxLength(255),
+    password: vine.string().minLength(8),
+    passwordConfirmation: vine.string().minLength(8),
+  })
+)

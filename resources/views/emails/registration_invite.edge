@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      {{ i18n.t('emails.registration_invite_heading') }}
+    </title>
+  </head>
+  <body style="font-family: Arial, sans-serif; color: #111827; line-height: 1.5">
+    <h2>
+      {{ i18n.t('emails.registration_invite_heading') }}
+    </h2>
+    <p>
+      {{ i18n.t('emails.registration_invite_intro', { app_name: appName }) }}
+    </p>
+    <p>
+      {{ i18n.t('emails.registration_invite_role', { role }) }}
+    </p>
+    <p>
+      {{ i18n.t('emails.registration_invite_expiry', { expiresAt }) }}
+    </p>
+    <p>
+      <a href="{{ inviteUrl }}">{{ i18n.t('emails.registration_invite_accept') }}</a>
+    </p>
+    <p>
+      {{ i18n.t('emails.registration_invite_note') }}
+    </p>
+  </body>
+</html>

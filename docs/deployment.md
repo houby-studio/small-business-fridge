@@ -160,6 +160,7 @@ result with the `image:` name (`houbystudio/sbf:latest`).
 | `LOCAL_LOGIN_DISABLED`         | No       | No     | `false`                 | Disable username/password login                                             |
 | `REGISTRATION_MODE`            | No       | No     | `open`                  | Self-signup policy (`open`, `invite_only`, `domain_auto_approve`, `closed`) |
 | `REGISTRATION_ALLOWED_DOMAINS` | No       | No     | —                       | Comma-separated domain allowlist for `domain_auto_approve` mode             |
+| `INVITE_EXPIRY_HOURS`          | No       | No     | `168`                   | Invite-link validity window in hours                                        |
 | `OIDC_CLIENT_ID`               | No       | No     | —                       | Azure AD application (client) ID                                            |
 | `OIDC_CLIENT_SECRET`           | No       | Yes    | —                       | Azure AD client secret                                                      |
 | `OIDC_TENANT_ID`               | No       | No     | —                       | Azure AD tenant ID                                                          |

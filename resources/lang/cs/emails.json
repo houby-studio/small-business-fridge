@@ -80,5 +80,13 @@
   "purchase_batch_unit_price": "Cena/ks",
   "purchase_batch_subtotal": "Mezisoučet",
   "purchase_batch_total": "Celkem",
-  "purchase_batch_date": "Datum"
+  "purchase_batch_date": "Datum",
+
+  "registration_invite_subject": "Pozvánka do {app_name}",
+  "registration_invite_heading": "Pozvánka k registraci",
+  "registration_invite_intro": "Byli jste pozváni do aplikace {app_name}.",
+  "registration_invite_role": "Přiřazená role: {role}",
+  "registration_invite_expiry": "Pozvánka vyprší: {expiresAt}",
+  "registration_invite_accept": "Přijmout pozvánku a vytvořit účet",
+  "registration_invite_note": "Pokud jste tuto pozvánku neočekávali, e-mail ignorujte."
 }

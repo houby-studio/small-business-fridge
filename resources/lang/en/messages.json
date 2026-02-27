@@ -60,5 +60,11 @@
   "user_has_uninvoiced_orders": "Cannot disable user — they have uninvoiced orders or unpaid invoices. Generate invoices first.",
   "last_active_admin_required": "Cannot disable or demote the last active administrator.",
   "invoice_generated_for_user": "{count, plural, one {{count} invoice generated} other {{count} invoices generated}} for user {name}.",
-  "invoice_no_orders_for_buyer": "Customer has no uninvoiced orders."
+  "invoice_no_orders_for_buyer": "Customer has no uninvoiced orders.",
+  "invite_created": "Invitation sent to {email}.",
+  "invite_revoked": "Invitation for {email} has been revoked.",
+  "invite_accepted": "Your account has been created from the invitation.",
+  "invite_invalid_or_expired": "Invitation link is invalid, expired, or already used.",
+  "invite_email_already_registered": "This email is already registered.",
+  "invite_username_taken": "This username is already taken."
 }

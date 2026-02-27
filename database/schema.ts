@@ -291,6 +291,33 @@ export class UserFavoriteSchema extends BaseModel {
   declare createdAt: DateTime
 }
 
+export class UserInvitationSchema extends BaseModel {
+  static $columns = ['id', 'email', 'role', 'tokenHash', 'invitedByUserId', 'acceptedUserId', 'expiresAt', 'acceptedAt', 'revokedAt', 'createdAt', 'updatedAt'] as const
+  $columns = UserInvitationSchema.$columns
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare email: string
+  @column()
+  declare role: string
+  @column()
+  declare tokenHash: string
+  @column()
+  declare invitedByUserId: number | null
+  @column()
+  declare acceptedUserId: number | null
+  @column.dateTime()
+  declare expiresAt: DateTime
+  @column.dateTime()
+  declare acceptedAt: DateTime | null
+  @column.dateTime()
+  declare revokedAt: DateTime | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
 export class UserSchema extends BaseModel {
   static $columns = ['id', 'oid', 'username', 'password', 'displayName', 'email', 'phone', 'iban', 'keypadId', 'cardId', 'role', 'isKiosk', 'isDisabled', 'showAllProducts', 'sendMailOnPurchase', 'sendDailyReport', 'colorMode', 'keypadDisabled', 'createdAt', 'updatedAt', 'isPremium'] as const
   $columns = UserSchema.$columns

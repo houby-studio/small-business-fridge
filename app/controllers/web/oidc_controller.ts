@@ -5,11 +5,13 @@ import AuditService from '#services/audit_service'
 import NotificationService from '#services/notification_service'
 import OidcIdentityService from '#services/oidc_identity_service'
 import RegistrationPolicyService from '#services/registration_policy_service'
+import InvitationService from '#services/invitation_service'
 import env from '#start/env'
 
 export default class OidcController {
   private oidcIdentity = new OidcIdentityService()
   private registrationPolicy = new RegistrationPolicyService()
+  private invitations = new InvitationService()
 
   async redirect({ ally }: HttpContext) {
     return ally.use('microsoft').redirect()
@@ -95,11 +97,15 @@ export default class OidcController {
         return response.redirect('/login')
       }
 
+      let invitation = null
       const registration = this.registrationPolicy.canSelfRegister({
         provider: 'oidc',
         email,
       })
-      if (!registration.allowed) {
+      if (!registration.allowed && registration.reason === 'invite_required') {
+        invitation = await this.invitations.findActiveByEmail(email)
+      }
+      if (!registration.allowed && !invitation) {
         logger.warn(
           { email, reason: registration.reason, mode: this.registrationPolicy.getMode() },
           'OIDC login denied: self-registration policy rejected user'
@@ -121,9 +127,25 @@ export default class OidcController {
         email,
         displayName,
         phone,
-        role: hasAnyAdmin ? 'customer' : 'admin',
+        role: invitation?.role ?? (hasAnyAdmin ? 'customer' : 'admin'),
         keypadId: nextKeypadId,
       })
+
+      if (invitation) {
+        await this.invitations.acceptInviteForUser(invitation.id, user.id)
+        await AuditService.log(
+          user.id,
+          'invitation.accepted',
+          'user_invitation',
+          invitation.id,
+          user.id,
+          {
+            via: 'oidc',
+            ip: request.ip(),
+            ua: request.header('user-agent') ?? null,
+          }
+        )
+      }
 
       logger.info({ userId: user.id, email, role: user.role }, 'OIDC auto-registered new user')
 

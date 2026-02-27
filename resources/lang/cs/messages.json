@@ -60,5 +60,11 @@
   "user_has_uninvoiced_orders": "Nelze deaktivovat uživatele — má nefakturované objednávky nebo nezaplacené faktury. Nejprve vygenerujte faktury.",
   "last_active_admin_required": "Nelze deaktivovat nebo změnit roli posledního aktivního administrátora.",
   "invoice_generated_for_user": "{count, plural, one {Vygenerována {count} faktura} few {Vygenerovány {count} faktury} other {Vygenerováno {count} faktur}} pro uživatele {name}.",
-  "invoice_no_orders_for_buyer": "Zákazník nemá žádné nefakturované objednávky."
+  "invoice_no_orders_for_buyer": "Zákazník nemá žádné nefakturované objednávky.",
+  "invite_created": "Pozvánka byla odeslána na {email}.",
+  "invite_revoked": "Pozvánka pro {email} byla zrušena.",
+  "invite_accepted": "Váš účet byl vytvořen z pozvánky.",
+  "invite_invalid_or_expired": "Odkaz pozvánky je neplatný, vypršel nebo byl již použit.",
+  "invite_email_already_registered": "Tento e-mail je již registrován.",
+  "invite_username_taken": "Toto uživatelské jméno je již obsazené."
 }

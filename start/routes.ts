@@ -23,6 +23,7 @@ import { extname } from 'node:path'
 const HomeController = () => import('#controllers/web/home_controller')
 const LoginController = () => import('#controllers/web/login_controller')
 const BootstrapController = () => import('#controllers/web/bootstrap_controller')
+const InviteRegistrationController = () => import('#controllers/web/invite_registration_controller')
 const OidcController = () => import('#controllers/web/oidc_controller')
 const ShopController = () => import('#controllers/web/shop_controller')
 const OrdersController = () => import('#controllers/web/orders_controller')
@@ -35,6 +36,7 @@ const SupplierStockController = () => import('#controllers/web/supplier/stock_co
 const SupplierProductsController = () => import('#controllers/web/supplier/products_controller')
 const AdminDashboardController = () => import('#controllers/web/admin/dashboard_controller')
 const AdminUsersController = () => import('#controllers/web/admin/users_controller')
+const AdminInvitationsController = () => import('#controllers/web/admin/invitations_controller')
 const AdminCategoriesController = () => import('#controllers/web/admin/categories_controller')
 const AdminAllergensController = () => import('#controllers/web/admin/allergens_controller')
 const AdminMusicTracksController = () => import('#controllers/web/admin/music_tracks_controller')
@@ -108,6 +110,16 @@ router.group(() => {
   router.get('/login', [LoginController, 'show']).use(middleware.guest())
   router
     .post('/login', [LoginController, 'store'])
+    .use([
+      middleware.guest(),
+      middleware.throttle({ maxRequests: authThrottleLimit, windowMs: 60_000 }),
+    ])
+
+  router
+    .get('/register/invite/:token', [InviteRegistrationController, 'show'])
+    .use(middleware.guest())
+  router
+    .post('/register/invite/:token', [InviteRegistrationController, 'store'])
     .use([
       middleware.guest(),
       middleware.throttle({ maxRequests: authThrottleLimit, windowMs: 60_000 }),
@@ -207,6 +219,8 @@ router
     // User management
     router.get('/users', [AdminUsersController, 'index'])
     router.put('/users/:id', [AdminUsersController, 'update'])
+    router.post('/invitations', [AdminInvitationsController, 'store'])
+    router.post('/invitations/:id/revoke', [AdminInvitationsController, 'revoke'])
 
     // Category management
     router.get('/categories', [AdminCategoriesController, 'index'])

@@ -80,5 +80,13 @@
   "purchase_batch_unit_price": "Unit Price",
   "purchase_batch_subtotal": "Subtotal",
   "purchase_batch_total": "Total",
-  "purchase_batch_date": "Date"
+  "purchase_batch_date": "Date",
+
+  "registration_invite_subject": "You're invited to {app_name}",
+  "registration_invite_heading": "Registration Invitation",
+  "registration_invite_intro": "You have been invited to join {app_name}.",
+  "registration_invite_role": "Assigned role: {role}",
+  "registration_invite_expiry": "Invitation expires at: {expiresAt}",
+  "registration_invite_accept": "Accept invitation and create account",
+  "registration_invite_note": "If you did not expect this invite, you can ignore this email."
 }

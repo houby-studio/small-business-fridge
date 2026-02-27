@@ -1,4 +1,5 @@
 import { execSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { Scrypt } from '@adonisjs/hash/drivers/scrypt'
@@ -28,6 +29,7 @@ const TEST_ENV = getTestRuntimeEnv({
   LOG_LEVEL: 'silent',
   APP_URL: 'http://localhost:3345',
 })
+const E2E_INVITE_TOKEN = 'e2e-customer-invite-token'
 
 /**
  * Playwright global setup:
@@ -187,6 +189,15 @@ export default async function globalSetup() {
         ]
       )
     }
+
+    // 3b. Seed one active invitation used by auth e2e tests.
+    await client.query(
+      `INSERT INTO user_invitations (
+        email, role, token_hash, invited_by_user_id, accepted_user_id, expires_at,
+        accepted_at, revoked_at, created_at, updated_at
+      ) VALUES ($1, 'customer', $2, NULL, NULL, NOW() + INTERVAL '2 days', NULL, NULL, NOW(), NOW())`,
+      ['invitee-e2e@localhost', createHash('sha256').update(E2E_INVITE_TOKEN).digest('hex')]
+    )
 
     // 4. Seed categories
     const categories = [
