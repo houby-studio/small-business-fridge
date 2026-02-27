@@ -50,6 +50,16 @@ export async function ensureLoginPage(page: Page) {
     await page.goto('/login')
     await page.waitForLoadState('domcontentloaded')
   }
+
+  if (/\/auth\/oidc\/redirect(?:\?|$)/.test(page.url())) {
+    throw new Error(
+      'Unexpected OIDC redirect during e2e local-login flow. Ensure LOCAL_LOGIN_DISABLED=false for Playwright web server.'
+    )
+  }
+
+  if (/\/login(?:\?|$)/.test(page.url())) {
+    await expect(page.locator('#username')).toBeVisible({ timeout: 10_000 })
+  }
 }
 
 export async function fillLoginForm(page: Page, username: string, password: string) {
@@ -68,11 +78,25 @@ export async function fillLoginForm(page: Page, username: string, password: stri
   await passwordInput.press('Enter')
 }
 
+async function hasLoginForm(page: Page) {
+  const usernameInput = page.locator('#username')
+  const passwordInput = page.locator('#password')
+  const isUsernameVisible = await usernameInput.isVisible().catch(() => false)
+  const isPasswordVisible = await passwordInput.isVisible().catch(() => false)
+  return isUsernameVisible && isPasswordVisible
+}
+
 async function tryLogin(page: Page, username: string, password: string) {
   for (let attempt = 0; attempt < 3; attempt++) {
     await ensureLoginPage(page)
     if (!/\/login(?:\?|$)/.test(page.url())) {
       return true
+    }
+    if (!(await hasLoginForm(page))) {
+      if (!/\/login(?:\?|$)/.test(page.url())) {
+        return true
+      }
+      continue
     }
 
     await fillLoginForm(page, username, password)
@@ -81,8 +105,6 @@ async function tryLogin(page: Page, username: string, password: string) {
     if (!/\/login(?:\?|$)/.test(page.url())) {
       return true
     }
-
-    await page.waitForTimeout(250)
   }
 
   return false
@@ -104,9 +126,20 @@ async function rememberSession(page: Page, sessionKey: string) {
   cachedSessionCookies.set(sessionKey, cookies)
 }
 
+/**
+ * Logs in as the given test user.
+ *
+ * Uses domcontentloaded for session checks to keep tests fast — we only need the
+ * server's redirect decision (is the session valid?), not full JS execution.
+ * Test assertions that need Vue-rendered content use their own retry timeouts.
+ *
+ * After loginAs the page is on /shop (or the post-login redirect target).
+ */
 export async function loginAs(page: Page, user: TestUser) {
   const sessionKey = resolveSessionKey(user)
 
+  // Fast path: check if this browser context is already authenticated.
+  // domcontentloaded is enough — only the server-side redirect matters here.
   await page.goto('/shop')
   await page.waitForLoadState('domcontentloaded')
   if (!/\/login(?:\?|$)/.test(page.url())) {
@@ -114,11 +147,13 @@ export async function loginAs(page: Page, user: TestUser) {
     return
   }
 
+  // Try restoring a session saved in this test run (avoids repeating the login form)
   if (await tryWithCachedSession(page, sessionKey)) {
     await expect(page).not.toHaveURL(/\/login/)
     return
   }
 
+  // Full login flow
   const succeeded = await tryLogin(page, user, PASSWORDS[user])
   if (succeeded) {
     await rememberSession(page, sessionKey)

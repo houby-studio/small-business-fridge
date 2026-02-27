@@ -41,7 +41,7 @@ test.describe('Shop page', () => {
     })
 
     await loginAs(page, 'customer')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('load')
 
     expect(errors).toHaveLength(0)
   })

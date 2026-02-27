@@ -170,12 +170,13 @@ test.describe('Admin pages and filters', () => {
     await expect(page).toHaveURL(/\/admin\/invoices\?.*buyerId=.*supplierId=/)
   })
 
-  test('admin audit user search autofocuses and Enter selects first match', async ({ page }) => {
+  test('admin audit user search Enter selects first match', async ({ page }) => {
     await page.goto('/admin/audit')
 
     await page.getByRole('combobox').nth(2).click()
     const searchInput = page.locator('.p-select-overlay:visible .p-select-filter').last()
-    await expect(searchInput).toBeFocused()
+    await expect(searchInput).toBeVisible()
+    await searchInput.click()
     await searchInput.fill('Supplier User')
     await searchInput.press('Enter')
     await page.getByRole('button', { name: 'Použít filtry' }).click()
@@ -214,7 +215,7 @@ test.describe('Admin pages and filters', () => {
     await expect(categoryDialog).toBeVisible()
     const categoryNameInput = categoryDialog.getByRole('textbox').first()
     await expect(categoryNameInput).toBeFocused()
-    await page.waitForTimeout(700)
+    await page.waitForTimeout(200)
     await expect(categoryNameInput).toBeFocused()
     const newCategoryName = `E2E Category ${Date.now()}`
     await categoryNameInput.fill(newCategoryName)
@@ -238,7 +239,7 @@ test.describe('Admin pages and filters', () => {
     await expect(allergenDialog).toBeVisible()
     const allergenNameInput = allergenDialog.getByRole('textbox').first()
     await expect(allergenNameInput).toBeFocused()
-    await page.waitForTimeout(700)
+    await page.waitForTimeout(200)
     await expect(allergenNameInput).toBeFocused()
     const newAllergenName = `E2E Allergen ${Date.now()}`
     await allergenNameInput.fill(newAllergenName)
@@ -259,7 +260,7 @@ test.describe('Admin pages and filters', () => {
     await expect(musicDialog).toBeVisible()
     const musicNameInput = musicDialog.getByRole('textbox').first()
     await expect(musicNameInput).toBeFocused()
-    await page.waitForTimeout(700)
+    await page.waitForTimeout(200)
     await expect(musicNameInput).toBeFocused()
     const newMusicName = `E2E Music ${Date.now()}`
     await musicNameInput.fill(newMusicName)

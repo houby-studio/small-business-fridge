@@ -67,7 +67,10 @@ export function getTestRuntimeEnv(overrides: Record<string, string> = {}): Recor
     SMTP_PASSWORD: process.env.SMTP_PASSWORD ?? '',
     SMTP_FROM_ADDRESS: process.env.SMTP_FROM_ADDRESS ?? 'noreply@test.local',
     SMTP_FROM_NAME: process.env.SMTP_FROM_NAME ?? 'Test',
-    OIDC_ENABLED: process.env.OIDC_ENABLED ?? 'false',
+    // Keep auth mode deterministic for tests, regardless of developer shell env.
+    OIDC_ENABLED: 'false',
+    LOCAL_LOGIN_DISABLED: 'false',
+    OIDC_AUTO_REGISTER: 'false',
     API_SECRET: process.env.API_SECRET ?? 'test-api-secret',
     APP_URL: process.env.APP_URL ?? 'http://localhost:3334',
     ...overrides,
