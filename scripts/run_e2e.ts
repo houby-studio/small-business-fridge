@@ -19,6 +19,8 @@ const LOCK_PATH = resolve(process.cwd(), '.tmp', 'playwright-e2e.lock')
 const ADVISORY_LOCK_A = 125901
 const ADVISORY_LOCK_B = 3345
 
+type TestDbConfig = ReturnType<typeof getTestDbConfigFromEnv>
+
 type LockMetadata = {
   pid: number
   startedAt: string
@@ -100,6 +102,40 @@ async function acquireRunLock() {
 
 async function releaseRunLock() {
   await rm(LOCK_PATH, { force: true })
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolveDelay) => setTimeout(resolveDelay, ms))
+}
+
+async function terminateIdleConnections(config: TestDbConfig, pids: number[]): Promise<number> {
+  if (pids.length === 0) return 0
+
+  const adminClient = new Client({
+    host: config.host,
+    port: config.port,
+    user: config.user,
+    password: config.password,
+    database: 'postgres',
+  })
+
+  await adminClient.connect()
+
+  try {
+    const result = await adminClient.query<{ terminated: boolean }>(
+      `SELECT pg_terminate_backend(pid) AS terminated
+       FROM pg_stat_activity
+       WHERE datname = $1
+         AND pid = ANY($2::int[])
+         AND backend_type = 'client backend'
+         AND pid <> pg_backend_pid()`,
+      [config.database, pids]
+    )
+
+    return result.rows.filter((row) => row.terminated).length
+  } finally {
+    await adminClient.end()
+  }
 }
 
 async function run() {
@@ -190,15 +226,35 @@ async function run() {
       )
     }
 
-    const activeConnections = await listOtherDatabaseConnections(dbConfig.database)
-    if (activeConnections.length > 1) {
-      const connectionSummary = activeConnections
+    const lockPidResult = await lockClient.query<{ pid: number }>('SELECT pg_backend_pid() AS pid')
+    const lockPid = lockPidResult.rows[0]?.pid
+    if (!lockPid) {
+      throw new Error('Could not determine database lock connection PID.')
+    }
+
+    let activeConnections = await listOtherDatabaseConnections(dbConfig.database)
+    let externalConnections = activeConnections.filter((conn) => conn.pid !== lockPid)
+
+    if (externalConnections.length > 0) {
+      const idleExternalPids = externalConnections
+        .filter((conn) => conn.state === 'idle')
+        .map((conn) => conn.pid)
+      const terminatedCount = await terminateIdleConnections(dbConfig, idleExternalPids)
+      if (terminatedCount > 0) {
+        await delay(300)
+      }
+
+      activeConnections = await listOtherDatabaseConnections(dbConfig.database)
+      externalConnections = activeConnections.filter((conn) => conn.pid !== lockPid)
+    }
+
+    if (externalConnections.length > 0) {
+      const connectionSummary = externalConnections
         .map(
           (conn) =>
             `pid=${conn.pid} app=${conn.applicationName ?? 'unknown'} state=${conn.state ?? 'unknown'}`
         )
         .join(', ')
-
       throw new Error(
         `Refusing to start E2E run: database "${dbConfig.database}" has active external connections: ${connectionSummary}`
       )
