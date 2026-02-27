@@ -2,6 +2,8 @@ node_modules
 build
 tmp
 public/assets
+database/schema.ts
+.adonisjs
 
 # Generated test output
 test-results

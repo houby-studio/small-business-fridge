@@ -22,9 +22,9 @@ export interface Impersonation {
 }
 
 export interface SharedProps {
-  user: User | null
+  user: User | undefined
   flash: FlashMessages
-  impersonation: Impersonation | null
+  impersonation: Impersonation | undefined
   appName: string
   [key: string]: unknown
 }

@@ -4,7 +4,7 @@ import env from '#start/env'
 import User from '#models/user'
 import Order from '#models/order'
 import Invoice from '#models/invoice'
-import Delivery from '#models/delivery'
+import type Delivery from '#models/delivery'
 import QrPaymentService from '#services/qr_payment_service'
 import db from '@adonisjs/lucid/services/db'
 

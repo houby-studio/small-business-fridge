@@ -30,6 +30,5 @@ ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=production-deps /app/node_modules /app/node_modules
 COPY --from=build /app/build /app
-COPY .env.production .env.production
 EXPOSE 3000
 CMD ["sh", "-c", "node ace migration:run --force && node ./bin/server.js"]

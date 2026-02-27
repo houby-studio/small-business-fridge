@@ -14,7 +14,8 @@
  * The script is idempotent — it truncates target tables before inserting.
  */
 
-import { MongoClient, ObjectId, Db } from 'mongodb'
+import { MongoClient, ObjectId } from 'mongodb'
+import type { Db } from 'mongodb'
 import pg from 'pg'
 import dotenv from 'dotenv'
 import { resolve } from 'node:path'
