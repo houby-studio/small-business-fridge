@@ -16,8 +16,10 @@ x-app-env: &app-env
   # ---------------------------------------------------------------------------
   # Core — networking & identity
   # ---------------------------------------------------------------------------
-  HOST: 0.0.0.0 # bind to all interfaces inside the container (don't change)
-  PORT: 3000 # listen port inside the container (don't change)
+  NODE_ENV: production
+  HOST: ${HOST:-0.0.0.0} # bind to all interfaces inside the container (don't change)
+  PORT: ${PORT:-3000} # listen port inside the container (don't change)
+
   LOG_LEVEL: ${LOG_LEVEL:-info} # trace | debug | info | warn | error | fatal
   TZ: ${TZ:-UTC} # e.g. Europe/Prague
   APP_NAME: ${APP_NAME:-Small Business Fridge}
@@ -53,7 +55,7 @@ x-app-env: &app-env
   # ---------------------------------------------------------------------------
   # Session
   # ---------------------------------------------------------------------------
-  SESSION_DRIVER: cookie # cookie is the only option for single-node deployments
+  SESSION_DRIVER: ${SESSION_DRIVER:-cookie}
 
   # ---------------------------------------------------------------------------
   # OIDC / Microsoft Entra ID (optional — only needed when OIDC_ENABLED=true)

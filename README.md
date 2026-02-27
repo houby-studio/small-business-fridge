@@ -16,12 +16,14 @@ Colleagues browse available products, buy with one click, then pay later via QR 
 ## Developer quickstart
 
 ```bash
-cp .env.example .env          # set APP_KEY (see comment in file) and adjust as needed
-docker compose -f compose.dev.yaml up -d   # postgres :5432, mailpit :8025/:1025
+cp .env.example .env
 npm install
+node ace generate:key
+docker compose -f compose.dev.yaml up -d
+export NODE_ENV=development                  # tracking bug https://github.com/adonisjs/env/issues/48
 node ace migration:run
-node ace db:seed              # creates admin / supplier / customer / kiosk seed users
-npm run dev                   # app at http://localhost:3333
+node ace db:seed                             # creates admin / supplier / customer / kiosk seed users
+npm run dev                                  # app at http://localhost:3333
 ```
 
 Seed credentials: `admin / admin123`, `supplier / supplier123`, `customer / customer123`, `kiosk / kiosk123`.

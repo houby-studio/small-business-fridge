@@ -4,10 +4,12 @@ import User from '#models/user'
 import AuditService from '#services/audit_service'
 import NotificationService from '#services/notification_service'
 import OidcIdentityService from '#services/oidc_identity_service'
+import RegistrationPolicyService from '#services/registration_policy_service'
 import env from '#start/env'
 
 export default class OidcController {
   private oidcIdentity = new OidcIdentityService()
+  private registrationPolicy = new RegistrationPolicyService()
 
   async redirect({ ally }: HttpContext) {
     return ally.use('microsoft').redirect()
@@ -86,6 +88,22 @@ export default class OidcController {
 
       if (!env.get('OIDC_AUTO_REGISTER', false)) {
         logger.warn({ email }, 'OIDC login denied: user not found in app')
+        session.flash('alert', {
+          type: 'danger',
+          message: i18n.t('messages.login_not_registered'),
+        })
+        return response.redirect('/login')
+      }
+
+      const registration = this.registrationPolicy.canSelfRegister({
+        provider: 'oidc',
+        email,
+      })
+      if (!registration.allowed) {
+        logger.warn(
+          { email, reason: registration.reason, mode: this.registrationPolicy.getMode() },
+          'OIDC login denied: self-registration policy rejected user'
+        )
         session.flash('alert', {
           type: 'danger',
           message: i18n.t('messages.login_not_registered'),
