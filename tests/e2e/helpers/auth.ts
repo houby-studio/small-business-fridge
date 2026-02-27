@@ -75,7 +75,10 @@ export async function fillLoginForm(page: Page, username: string, password: stri
   await passwordInput.fill(password)
   await expect(passwordInput).toHaveValue(password)
 
-  await passwordInput.press('Enter')
+  // press('Enter') submits the form; the subsequent Inertia navigation may detach the
+  // element before Playwright's internal keyup fires, causing a spurious "detached" error.
+  // Swallow it — waitForLoadState in tryLogin confirms whether login actually succeeded.
+  await passwordInput.press('Enter').catch(() => {})
 }
 
 async function hasLoginForm(page: Page) {
@@ -118,7 +121,12 @@ async function tryWithCachedSession(page: Page, sessionKey: string) {
   await page.context().addCookies(cookies)
   await page.goto('/shop')
   await page.waitForLoadState('domcontentloaded')
-  return !/\/login(?:\?|$)/.test(page.url())
+  if (!/\/login(?:\?|$)/.test(page.url())) return true
+
+  // Session was stale — evict cache and clear cookies so tryLogin starts clean
+  cachedSessionCookies.delete(sessionKey)
+  await page.context().clearCookies()
+  return false
 }
 
 async function rememberSession(page: Page, sessionKey: string) {
@@ -149,6 +157,7 @@ export async function loginAs(page: Page, user: TestUser) {
 
   // Try restoring a session saved in this test run (avoids repeating the login form)
   if (await tryWithCachedSession(page, sessionKey)) {
+    await rememberSession(page, sessionKey)
     await expect(page).not.toHaveURL(/\/login/)
     return
   }
