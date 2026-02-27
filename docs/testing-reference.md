@@ -305,7 +305,10 @@ real user would experience it.
 ```bash
 # All E2E tests
 npm run test:e2e
-# (uses guarded launcher: lock + port + DB preflight)
+# (uses guarded launcher: lock + build + port + DB preflight)
+
+# Reset stuck E2E state after interrupted/killed run
+npm run test:e2e:reset
 
 # With UI (interactive)
 npm run test:e2e -- --ui
@@ -322,7 +325,7 @@ npm run test:e2e -- --headed
 `playwright.config.ts` uses `webServer` to auto-start the app:
 
 ```
-command: node ace serve
+command: cd build && node bin/server.js
 url:     http://localhost:3345
 ```
 

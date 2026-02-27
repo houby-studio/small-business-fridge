@@ -39,7 +39,7 @@ export default defineConfig({
 
   /* Start the AdonisJS server in test mode before running E2E tests */
   webServer: {
-    command: 'node ace serve',
+    command: 'cd build && node bin/server.js',
     url: E2E_BASE_URL,
     // Always use a Playwright-managed server to avoid attaching to a stale local process.
     reuseExistingServer: false,

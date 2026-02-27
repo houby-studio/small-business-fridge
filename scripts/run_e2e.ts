@@ -147,6 +147,26 @@ async function run() {
   })
 
   try {
+    console.log('Building app for Playwright E2E...')
+    const buildExitCode = await new Promise<number>((resolveBuildExit, rejectBuildExit) => {
+      const buildProcess = spawn('npm', ['run', 'build'], {
+        stdio: 'inherit',
+        shell: process.platform === 'win32',
+        env: getTestRuntimeEnv(),
+      })
+      buildProcess.once('error', rejectBuildExit)
+      buildProcess.once('exit', (code, signal) => {
+        if (signal) {
+          rejectBuildExit(new Error(`Build process terminated by signal ${signal}`))
+          return
+        }
+        resolveBuildExit(code ?? 1)
+      })
+    })
+    if (buildExitCode !== 0) {
+      throw new Error(`Refusing to start E2E run: build failed with exit code ${buildExitCode}.`)
+    }
+
     const portInUse = await isPortInUse(Number(E2E_PORT))
     if (portInUse) {
       throw new Error(

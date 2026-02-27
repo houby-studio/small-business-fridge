@@ -52,7 +52,15 @@ export async function ensureLoginPage(page: Page) {
   }
 
   if (/\/login(?:\?|$)/.test(page.url())) {
-    await expect(page.locator('#username')).toBeVisible({ timeout: 10_000 })
+    const usernameInput = page.locator('#username')
+    try {
+      await expect(usernameInput).toBeVisible({ timeout: 10_000 })
+    } catch {
+      // In rare startup races the login shell renders before the JS app hydrates.
+      // Reload once to force a clean render before failing.
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await expect(usernameInput).toBeVisible({ timeout: 10_000 })
+    }
   }
 }
 

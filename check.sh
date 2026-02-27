@@ -47,6 +47,7 @@ else
   run_step "Ensure test database exists" node --import=tsx scripts/ensure_test_db.ts
   run_step "Test migrations" node ace migration:run --force
   run_step "Unit + Functional tests" node ace test --no-color
+  run_step "Reset E2E state" npm run test:e2e:reset
   run_step "Playwright E2E tests" npm run test:e2e
 fi
 
