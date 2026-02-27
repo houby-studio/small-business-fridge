@@ -32,19 +32,15 @@ Mailpit web UI: <http://localhost:8025>
 ## Production quickstart (Docker)
 
 ```bash
-# 1. Prepare secrets
-mkdir secrets
-node -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex'))" > secrets/app_key
-printf 'strong-db-password' > secrets/db_password
-chmod 600 secrets/*
-
-# 2. Set required env vars (export in shell or create .env next to compose.yaml)
-#    APP_URL=https://your-domain.example.com
-#    SMTP_HOST=smtp.your-provider.com  SMTP_PORT=587  SMTP_USERNAME=...
+# 1. Download compose.yaml and .env.example as .env
+wget https://raw.githubusercontent.com/houby-studio/small-business-fridge/refs/heads/master/compose.yaml
+wget https://raw.githubusercontent.com/houby-studio/small-business-fridge/refs/heads/master/.env.example -O .env
+# 2. Set at least [REQUIRED] env vars in .env file (it is recommend to read through all configration options)
+#    APP_KEY=
+#    DB_PASSWORD=
 
 # 3. Start
 docker compose up -d
-docker compose exec app node ace migration:run
 ```
 
 ## Features
