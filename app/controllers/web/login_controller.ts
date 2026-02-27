@@ -6,7 +6,16 @@ import AuditService from '#services/audit_service'
 import env from '#start/env'
 
 export default class LoginController {
+  private async hasAnyAdmin(): Promise<boolean> {
+    const admin = await User.query().where('role', 'admin').first()
+    return !!admin
+  }
+
   async show({ inertia, response }: HttpContext) {
+    if (!(await this.hasAnyAdmin())) {
+      return response.redirect('/setup/bootstrap')
+    }
+
     if (env.get('LOCAL_LOGIN_DISABLED', false)) {
       return response.redirect('/auth/oidc/redirect')
     }
@@ -16,6 +25,10 @@ export default class LoginController {
   }
 
   async store({ request, auth, response, session, i18n }: HttpContext) {
+    if (!(await this.hasAnyAdmin())) {
+      return response.redirect('/setup/bootstrap')
+    }
+
     if (env.get('LOCAL_LOGIN_DISABLED', false)) {
       return response.redirect('/auth/oidc/redirect')
     }

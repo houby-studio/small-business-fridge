@@ -112,6 +112,7 @@ export default class OidcController {
       }
 
       // Auto-register new user
+      const hasAnyAdmin = !!(await User.query().where('role', 'admin').first())
       const maxKeypad = await User.query().max('keypad_id as max').first()
       const nextKeypadId = (maxKeypad?.$extras.max ?? 0) + 1
 
@@ -120,15 +121,9 @@ export default class OidcController {
         email,
         displayName,
         phone,
-        role: 'customer',
+        role: hasAnyAdmin ? 'customer' : 'admin',
         keypadId: nextKeypadId,
       })
-
-      // First user on a fresh deployment becomes admin
-      if (user.id === 1) {
-        user.role = 'admin'
-        await user.save()
-      }
 
       logger.info({ userId: user.id, email, role: user.role }, 'OIDC auto-registered new user')
 

@@ -8,6 +8,16 @@ export const loginValidator = vine.compile(
   })
 )
 
+export const bootstrapAdminValidator = vine.compile(
+  vine.object({
+    displayName: vine.string().trim().minLength(1).maxLength(255),
+    email: vine.string().trim().email({ require_tld: false }).maxLength(255),
+    username: vine.string().trim().minLength(3).maxLength(255),
+    password: vine.string().minLength(8),
+    passwordConfirmation: vine.string().minLength(8),
+  })
+)
+
 export const apiTokenLoginValidator = vine.compile(
   vine.object({
     username: vine.string().trim().minLength(1),

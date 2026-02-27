@@ -17,7 +17,18 @@ export type RegistrationDecision =
  * Production deployments should explicitly set REGISTRATION_MODE (recommended: invite_only).
  */
 export default class RegistrationPolicyService {
+  constructor(
+    private readonly overrides?: {
+      mode?: RegistrationMode
+      allowedDomains?: string[]
+    }
+  ) {}
+
   getMode(): RegistrationMode {
+    if (this.overrides?.mode) {
+      return this.overrides.mode
+    }
+
     const mode = env.get('REGISTRATION_MODE', 'open')
     if (
       mode === 'open' ||
@@ -55,6 +66,14 @@ export default class RegistrationPolicyService {
   }
 
   private getAllowedDomains(): Set<string> {
+    if (this.overrides?.allowedDomains) {
+      return new Set(
+        this.overrides.allowedDomains
+          .map((domain) => domain.trim().toLowerCase())
+          .filter((domain) => domain.length > 0)
+      )
+    }
+
     const raw = env.get('REGISTRATION_ALLOWED_DOMAINS', '')
     return new Set(
       raw

@@ -43,6 +43,7 @@
   "login_state_mismatch": "Security error during login. Please try again.",
   "login_not_registered": "Your Microsoft account is not registered in this app. Contact your administrator.",
   "login_auto_registered": "Your account has been automatically created. Welcome!",
+  "bootstrap_admin_created": "First administrator account created successfully.",
   "favorite_added": "Product added to favorites.",
   "favorite_already_added": "Product is already in your favorites.",
   "impersonate_started": "Signed in as user {name}.",

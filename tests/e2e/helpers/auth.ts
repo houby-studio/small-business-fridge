@@ -16,9 +16,43 @@ function resolveSessionKey(user: TestUser) {
   return user
 }
 
-export async function fillLoginForm(page: Page, username: string, password: string) {
+async function completeBootstrapIfNeeded(page: Page) {
+  if (!/\/setup\/bootstrap(?:\?|$)/.test(page.url())) return
+
+  const bootstrapUsername = 'bootstrap-e2e-admin'
+  const bootstrapPassword = 'admin123'
+
+  await expect(page.locator('#bootstrapDisplayName')).toBeVisible()
+  await page.locator('#bootstrapDisplayName').fill('Bootstrap E2E Admin')
+  await page.locator('#bootstrapEmail').fill('bootstrap-e2e-admin@localhost')
+  await page.locator('#bootstrapUsername').fill(bootstrapUsername)
+  await page.locator('#bootstrapPassword').fill(bootstrapPassword)
+  await page.locator('#bootstrapPasswordConfirmation').fill(bootstrapPassword)
+  await page.locator('button[type="submit"]').click()
   await page.waitForLoadState('domcontentloaded')
 
+  // Bootstrap logs in the newly created admin. Clear session to continue as guest in auth tests.
+  await page.context().clearCookies()
+}
+
+export async function ensureLoginPage(page: Page) {
+  const url = page.url()
+  if (!/\/(?:login|setup\/bootstrap)(?:\?|$)/.test(url)) {
+    await page.goto('/login')
+    await page.waitForLoadState('domcontentloaded')
+  }
+
+  if (/\/setup\/bootstrap(?:\?|$)/.test(page.url())) {
+    await completeBootstrapIfNeeded(page)
+  }
+
+  if (!/\/login(?:\?|$)/.test(page.url())) {
+    await page.goto('/login')
+    await page.waitForLoadState('domcontentloaded')
+  }
+}
+
+export async function fillLoginForm(page: Page, username: string, password: string) {
   const usernameInput = page.locator('#username')
   const passwordInput = page.locator('#password')
 
@@ -36,14 +70,10 @@ export async function fillLoginForm(page: Page, username: string, password: stri
 
 async function tryLogin(page: Page, username: string, password: string) {
   for (let attempt = 0; attempt < 3; attempt++) {
-    await page.goto('/login')
-    await page.waitForLoadState('networkidle')
-    if (!/\/login(?:\?|$)/.test(page.url())) {
-      return true
-    }
+    await ensureLoginPage(page)
 
     await fillLoginForm(page, username, password)
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
 
     if (!/\/login(?:\?|$)/.test(page.url())) {
       return true
@@ -62,7 +92,7 @@ async function tryWithCachedSession(page: Page, sessionKey: string) {
   await page.context().clearCookies()
   await page.context().addCookies(cookies)
   await page.goto('/shop')
-  await page.waitForLoadState('networkidle')
+  await page.waitForLoadState('domcontentloaded')
   return !/\/login(?:\?|$)/.test(page.url())
 }
 
@@ -75,7 +105,7 @@ export async function loginAs(page: Page, user: TestUser) {
   const sessionKey = resolveSessionKey(user)
 
   await page.goto('/shop')
-  await page.waitForLoadState('networkidle')
+  await page.waitForLoadState('domcontentloaded')
   if (!/\/login(?:\?|$)/.test(page.url())) {
     await rememberSession(page, sessionKey)
     return

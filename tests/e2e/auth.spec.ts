@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { fillLoginForm, loginAs } from './helpers/auth'
+import { ensureLoginPage, fillLoginForm, loginAs } from './helpers/auth'
 
 /**
  * E2E: Authentication flows (login / logout)
@@ -15,7 +15,7 @@ import { fillLoginForm, loginAs } from './helpers/auth'
 
 test.describe('Login page', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login')
+    await ensureLoginPage(page)
   })
 
   test('shows login form with required fields', async ({ page }) => {
@@ -32,6 +32,11 @@ test.describe('Login page', () => {
 
   test('unauthenticated visit to /shop redirects to /login', async ({ page }) => {
     await page.goto('/shop')
+    await expect(page).toHaveURL(/\/login/)
+  })
+
+  test('bootstrap route redirects to login when admin already exists', async ({ page }) => {
+    await page.goto('/setup/bootstrap')
     await expect(page).toHaveURL(/\/login/)
   })
 

@@ -22,6 +22,7 @@ import { extname } from 'node:path'
 // Web controllers
 const HomeController = () => import('#controllers/web/home_controller')
 const LoginController = () => import('#controllers/web/login_controller')
+const BootstrapController = () => import('#controllers/web/bootstrap_controller')
 const OidcController = () => import('#controllers/web/oidc_controller')
 const ShopController = () => import('#controllers/web/shop_controller')
 const OrdersController = () => import('#controllers/web/orders_controller')
@@ -96,6 +97,14 @@ router.get('/uploads/*', async ({ request, response }) => {
 */
 
 router.group(() => {
+  router.get('/setup/bootstrap', [BootstrapController, 'show']).use(middleware.guest())
+  router
+    .post('/setup/bootstrap', [BootstrapController, 'store'])
+    .use([
+      middleware.guest(),
+      middleware.throttle({ maxRequests: authThrottleLimit, windowMs: 60_000 }),
+    ])
+
   router.get('/login', [LoginController, 'show']).use(middleware.guest())
   router
     .post('/login', [LoginController, 'store'])

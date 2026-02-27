@@ -25,6 +25,7 @@ export const controllers = {
       Users: () => import('#controllers/web/admin/users_controller'),
     },
     Audit: () => import('#controllers/web/audit_controller'),
+    Bootstrap: () => import('#controllers/web/bootstrap_controller'),
     Home: () => import('#controllers/web/home_controller'),
     Invoices: () => import('#controllers/web/invoices_controller'),
     Kiosk: () => import('#controllers/web/kiosk_controller'),

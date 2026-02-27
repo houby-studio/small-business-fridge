@@ -5,6 +5,8 @@ type ParamValue = string | number | bigint | boolean
 export type ScannedRoutes = {
   ALL: {
     'home.index': { paramsTuple?: []; params?: {} }
+    'bootstrap.show': { paramsTuple?: []; params?: {} }
+    'bootstrap.store': { paramsTuple?: []; params?: {} }
     'login.show': { paramsTuple?: []; params?: {} }
     'login.store': { paramsTuple?: []; params?: {} }
     'oidc.redirect': { paramsTuple?: []; params?: {} }
@@ -78,6 +80,7 @@ export type ScannedRoutes = {
   }
   GET: {
     'home.index': { paramsTuple?: []; params?: {} }
+    'bootstrap.show': { paramsTuple?: []; params?: {} }
     'login.show': { paramsTuple?: []; params?: {} }
     'oidc.redirect': { paramsTuple?: []; params?: {} }
     'oidc.callback': { paramsTuple?: []; params?: {} }
@@ -114,6 +117,7 @@ export type ScannedRoutes = {
   }
   HEAD: {
     'home.index': { paramsTuple?: []; params?: {} }
+    'bootstrap.show': { paramsTuple?: []; params?: {} }
     'login.show': { paramsTuple?: []; params?: {} }
     'oidc.redirect': { paramsTuple?: []; params?: {} }
     'oidc.callback': { paramsTuple?: []; params?: {} }
@@ -149,6 +153,7 @@ export type ScannedRoutes = {
     'api_customers.insights': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   POST: {
+    'bootstrap.store': { paramsTuple?: []; params?: {} }
     'login.store': { paramsTuple?: []; params?: {} }
     'logout.post': { paramsTuple?: []; params?: {} }
     'admin_impersonation.destroy': { paramsTuple?: []; params?: {} }
