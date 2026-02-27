@@ -14,7 +14,8 @@ RUN npm ci
 FROM deps AS build
 WORKDIR /app
 COPY . .
-RUN node ace docs:generate \
+RUN cp .env.example .env \
+  && node ace docs:generate \
   && node ace build
 
 # ----------------------------
