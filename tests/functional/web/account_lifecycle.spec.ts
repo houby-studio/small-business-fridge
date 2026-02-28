@@ -56,6 +56,27 @@ test.group('Web Auth - Registration and Password Lifecycle', (group) => {
     assert.equal(created!.email, 'new-open-user@example.com')
   })
 
+  test('register rejects invalid email/username/password payload', async ({ client, assert }) => {
+    await UserFactory.apply('admin').create()
+
+    const response = await client
+      .post('/register')
+      .form({
+        displayName: 'Invalid User',
+        email: 'not-an-email',
+        username: 'x',
+        password: 'short',
+        passwordConfirmation: 'short',
+      })
+      .withCsrfToken()
+      .redirects(0)
+
+    assert.include([302, 422], response.status())
+
+    const created = await User.findBy('displayName', 'Invalid User')
+    assert.isNull(created)
+  })
+
   test('forgot password creates reset token and reset updates password', async ({
     client,
     assert,
@@ -108,6 +129,21 @@ test.group('Web Auth - Registration and Password Lifecycle', (group) => {
     loginResponse.assertHeader('location', '/shop')
   })
 
+  test('forgot password rejects invalid email input', async ({ client, assert }) => {
+    await UserFactory.apply('admin').create()
+
+    const response = await client
+      .post('/forgot-password')
+      .form({ email: 'invalid-email' })
+      .withCsrfToken()
+      .redirects(0)
+
+    assert.include([302, 422], response.status())
+
+    const tokenRow = await db.from('password_reset_tokens').where('email', 'invalid-email').first()
+    assert.isNotOk(tokenRow)
+  })
+
   test('authenticated user can change password from profile', async ({ client }) => {
     await UserFactory.apply('admin').create()
     const user = await UserFactory.merge({ username: 'profile-pass-user' }).create()
@@ -137,6 +173,49 @@ test.group('Web Auth - Registration and Password Lifecycle', (group) => {
 
     loginResponse.assertStatus(302)
     loginResponse.assertHeader('location', '/shop')
+  })
+
+  test('profile password change rejects mismatched confirmation', async ({ client, assert }) => {
+    await UserFactory.apply('admin').create()
+    const user = await UserFactory.merge({ username: 'mismatch-pass-user' }).create()
+
+    const response = await client
+      .put('/profile/password')
+      .loginAs(user)
+      .form({
+        currentPassword: 'password123',
+        newPassword: 'changed-pass-123',
+        newPasswordConfirmation: 'different-pass-123',
+      })
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    response.assertHeader('location', '/profile')
+
+    const loginOldPassword = await client
+      .post('/login')
+      .form({
+        username: 'mismatch-pass-user',
+        password: 'password123',
+      })
+      .withCsrfToken()
+      .redirects(0)
+
+    loginOldPassword.assertStatus(302)
+    loginOldPassword.assertHeader('location', '/shop')
+
+    const loginNewPassword = await client
+      .post('/login')
+      .form({
+        username: 'mismatch-pass-user',
+        password: 'changed-pass-123',
+      })
+      .withCsrfToken()
+      .redirects(0)
+
+    loginNewPassword.assertStatus(302)
+    assert.notEqual(loginNewPassword.header('location'), '/shop')
   })
 
   test('admin can trigger password reset for another user', async ({ client, assert }) => {

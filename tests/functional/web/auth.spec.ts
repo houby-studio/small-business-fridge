@@ -109,6 +109,25 @@ test.group('Web Auth - Bootstrap', (group) => {
     assert.equal(created!.role, 'admin')
   })
 
+  test('POST /setup/bootstrap rejects invalid payload', async ({ client, assert }) => {
+    const response = await client
+      .post('/setup/bootstrap')
+      .form({
+        displayName: '',
+        email: 'invalid-email',
+        username: 'x',
+        password: 'short',
+        passwordConfirmation: 'short',
+      })
+      .withCsrfToken()
+      .redirects(0)
+
+    assert.include([302, 422], response.status())
+
+    const users = await User.query().where('role', 'admin')
+    assert.lengthOf(users, 0)
+  })
+
   test('GET /setup/bootstrap redirects to /login when admin already exists', async ({ client }) => {
     await UserFactory.apply('admin').create()
 

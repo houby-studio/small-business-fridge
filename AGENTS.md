@@ -45,3 +45,37 @@ For every feature or bugfix, add/update tests at all relevant levels:
 - Playwright e2e tests for user-visible flows and UI behavior.
 
 UI-related changes (layout, navigation, breakpoints, visibility, overlays, interactions) must include or update Playwright coverage.
+
+## Form UX and Validation Standards
+
+Apply these standards to all user-management flows (authentication, invitation, profile/account settings, and admin user actions with free-text input):
+
+1. Validation layering (mandatory):
+
+- Enforce server-side validation in controllers/validators for every input.
+- Mirror critical constraints on the client (required fields, min lengths, basic format checks) to prevent avoidable submits.
+
+2. Submit guard (mandatory):
+
+- Primary submit buttons for free-input forms must be disabled when client-side validation fails or while the request is processing.
+- Do not rely only on server rejection for obviously invalid payloads.
+
+3. Error visibility (mandatory):
+
+- Surface backend validation and error flashes to users in the UI.
+- Global flash rendering must include structured validation payloads (`errorsBag`, `inputErrorsBag`) in addition to generic alerts.
+- Field-level errors should be visible near related inputs when available.
+
+4. Inline hints (mandatory):
+
+- Show concise, contextual validation hints under inputs for active client-side violations (e.g., invalid email, min length, password mismatch).
+
+5. Alternative navigation (mandatory for auth-like forms):
+
+- Guest/auth forms should include a small secondary link under the main submit action for common alternative flows (e.g., back to login, register instead, forgot password).
+
+6. Testing requirements for form changes:
+
+- Unit: cover shared form/flash mapping logic when introduced.
+- Functional: include valid and invalid submissions; assert guards prevent unsafe state changes.
+- E2E: verify disabled/enabled submit behavior and visible user feedback for invalid and valid flows.

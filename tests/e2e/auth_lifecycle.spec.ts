@@ -61,4 +61,21 @@ test.describe('Authentication lifecycle', () => {
     await fillLoginForm(page, 'resetuser', 'reset12345')
     await expect(page).toHaveURL(/\/shop/)
   })
+
+  test('forgot password form blocks invalid email and links back to login', async ({ page }) => {
+    await page.goto('/forgot-password')
+
+    const submitButton = page.getByRole('button', { name: 'Odeslat odkaz' })
+    await expect(submitButton).toBeDisabled()
+    await expect(page.getByRole('link', { name: 'Zpět na přihlášení' })).toHaveAttribute(
+      'href',
+      '/login'
+    )
+
+    await page.locator('#forgotEmail').fill('invalid-email')
+    await expect(submitButton).toBeDisabled()
+
+    await page.locator('#forgotEmail').fill('valid-user@example.com')
+    await expect(submitButton).toBeEnabled()
+  })
 })

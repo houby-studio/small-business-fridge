@@ -101,6 +101,7 @@ function submit() {
             :label="t('auth.submit')"
             icon="pi pi-sign-in"
             :loading="form.processing"
+            :disabled="form.processing || !form.username.trim() || !form.password"
             class="w-full"
           />
 

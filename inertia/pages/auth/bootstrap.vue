@@ -1,14 +1,19 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3'
+import { Head, useForm, usePage } from '@inertiajs/vue3'
 import GuestLayout from '~/layouts/GuestLayout.vue'
 import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
+import { computed } from 'vue'
+import { useToast } from 'primevue/usetoast'
 import { useI18n } from '~/composables/use_i18n'
+import type { SharedProps } from '~/types'
 
 const { t } = useI18n()
+const toast = useToast()
+const page = usePage<SharedProps>()
 
 const form = useForm({
   displayName: '',
@@ -18,8 +23,64 @@ const form = useForm({
   passwordConfirmation: '',
 })
 
+const displayNameMissing = computed(() => form.displayName.trim().length === 0)
+const emailInvalid = computed(() => {
+  if (form.email.length === 0) return false
+  return !/.+@.+/.test(form.email.trim())
+})
+const usernameTooShort = computed(() => form.username.length > 0 && form.username.trim().length < 3)
+const passwordTooShort = computed(() => form.password.length > 0 && form.password.length < 8)
+const confirmationTooShort = computed(
+  () => form.passwordConfirmation.length > 0 && form.passwordConfirmation.length < 8
+)
+const passwordsMismatch = computed(
+  () => form.passwordConfirmation.length > 0 && form.password !== form.passwordConfirmation
+)
+const flashInputErrorsBag = computed(
+  () =>
+    (((page.props.flash as any)?.inputErrorsBag ?? {}) as Record<string, string[] | undefined>) ||
+    {}
+)
+const getFieldError = (field: string) =>
+  form.errors[field as keyof typeof form.errors] || flashInputErrorsBag.value[field]?.[0]
+const getFieldInvalid = (field: string) => !!getFieldError(field)
+const firstErrorMessage = computed(
+  () =>
+    getFieldError('displayName') ||
+    getFieldError('email') ||
+    getFieldError('username') ||
+    getFieldError('password') ||
+    getFieldError('passwordConfirmation')
+)
+const submitDisabled = computed(
+  () =>
+    form.processing ||
+    displayNameMissing.value ||
+    form.email.trim().length === 0 ||
+    emailInvalid.value ||
+    form.username.trim().length < 3 ||
+    form.password.length < 8 ||
+    form.passwordConfirmation.length < 8 ||
+    form.password !== form.passwordConfirmation
+)
+
 function submit() {
   form.post('/setup/bootstrap', {
+    onError: (errors) => {
+      const firstError =
+        errors.displayName ||
+        errors.email ||
+        errors.username ||
+        errors.password ||
+        errors.passwordConfirmation ||
+        t('auth.bootstrap_invalid')
+
+      toast.add({
+        severity: 'error',
+        summary: firstError,
+        life: 4500,
+      })
+    },
     onFinish: () => form.reset('password', 'passwordConfirmation'),
   })
 }
@@ -37,8 +98,8 @@ function submit() {
         <p class="mb-5 text-sm text-zinc-400">{{ t('auth.bootstrap_intro') }}</p>
 
         <form @submit.prevent="submit" class="space-y-5">
-          <Message v-if="Object.keys(form.errors).length > 0" severity="error" :closable="false">
-            {{ t('auth.bootstrap_invalid') }}
+          <Message v-if="firstErrorMessage" severity="error" :closable="false">
+            {{ firstErrorMessage }}
           </Message>
 
           <div class="flex flex-col gap-2">
@@ -51,7 +112,7 @@ function submit() {
             <InputText
               id="bootstrapDisplayName"
               v-model="form.displayName"
-              :invalid="!!form.errors.displayName"
+              :invalid="getFieldInvalid('displayName')"
               autocomplete="name"
               :placeholder="t('auth.bootstrap_display_name_placeholder')"
             />
@@ -67,10 +128,13 @@ function submit() {
             <InputText
               id="bootstrapEmail"
               v-model="form.email"
-              :invalid="!!form.errors.email"
+              :invalid="getFieldInvalid('email') || emailInvalid"
               autocomplete="email"
               :placeholder="t('auth.bootstrap_email_placeholder')"
             />
+            <small v-if="emailInvalid" class="text-red-300">
+              {{ t('auth.email_invalid') }}
+            </small>
           </div>
 
           <div class="flex flex-col gap-2">
@@ -83,10 +147,13 @@ function submit() {
             <InputText
               id="bootstrapUsername"
               v-model="form.username"
-              :invalid="!!form.errors.username"
+              :invalid="getFieldInvalid('username') || usernameTooShort"
               autocomplete="username"
               :placeholder="t('auth.bootstrap_username_placeholder')"
             />
+            <small v-if="usernameTooShort" class="text-red-300">
+              {{ t('auth.username_min_length') }}
+            </small>
           </div>
 
           <div class="flex flex-col gap-2">
@@ -99,7 +166,7 @@ function submit() {
             <Password
               inputId="bootstrapPassword"
               v-model="form.password"
-              :invalid="!!form.errors.password"
+              :invalid="getFieldInvalid('password')"
               :feedback="false"
               toggleMask
               autocomplete="new-password"
@@ -107,6 +174,9 @@ function submit() {
               inputClass="w-full"
               class="w-full"
             />
+            <small v-if="passwordTooShort" class="text-red-300">
+              {{ t('auth.password_min_length') }}
+            </small>
           </div>
 
           <div class="flex flex-col gap-2">
@@ -119,7 +189,7 @@ function submit() {
             <Password
               inputId="bootstrapPasswordConfirmation"
               v-model="form.passwordConfirmation"
-              :invalid="!!form.errors.passwordConfirmation"
+              :invalid="getFieldInvalid('passwordConfirmation')"
               :feedback="false"
               toggleMask
               autocomplete="new-password"
@@ -127,6 +197,12 @@ function submit() {
               inputClass="w-full"
               class="w-full"
             />
+            <small v-if="confirmationTooShort" class="text-red-300">
+              {{ t('auth.password_min_length') }}
+            </small>
+            <small v-if="passwordsMismatch" class="text-red-300">
+              {{ t('auth.bootstrap_password_mismatch') }}
+            </small>
           </div>
 
           <Button
@@ -134,6 +210,7 @@ function submit() {
             :label="t('auth.bootstrap_submit')"
             icon="pi pi-check"
             :loading="form.processing"
+            :disabled="submitDisabled"
             class="w-full"
           />
         </form>

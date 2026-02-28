@@ -80,9 +80,26 @@ const passwordForm = ref({
   newPassword: '',
   newPasswordConfirmation: '',
 })
+const profileEmailInvalid = computed(() => {
+  if (form.value.email.length === 0) return false
+  return !/.+@.+/.test(form.value.email.trim())
+})
+const newPasswordTooShort = computed(
+  () => passwordForm.value.newPassword.length > 0 && passwordForm.value.newPassword.length < 8
+)
+const newPasswordConfirmationTooShort = computed(
+  () =>
+    passwordForm.value.newPasswordConfirmation.length > 0 &&
+    passwordForm.value.newPasswordConfirmation.length < 8
+)
+const newPasswordsMismatch = computed(
+  () =>
+    passwordForm.value.newPasswordConfirmation.length > 0 &&
+    passwordForm.value.newPassword !== passwordForm.value.newPasswordConfirmation
+)
 
 function submit() {
-  if (!form.value.displayName || !form.value.email) return
+  if (!form.value.displayName || !form.value.email || profileEmailInvalid.value) return
   submitting.value = true
 
   router.put(
@@ -205,6 +222,9 @@ function copyToken() {
                 t('profile.email')
               }}</label>
               <InputText v-model="form.email" type="email" class="w-full" />
+              <small v-if="profileEmailInvalid" class="text-red-500 dark:text-red-300">
+                {{ t('auth.email_invalid') }}
+              </small>
             </div>
 
             <div>
@@ -366,6 +386,9 @@ function copyToken() {
                 inputClass="w-full"
                 class="w-full"
               />
+              <small v-if="newPasswordTooShort" class="text-red-500 dark:text-red-300">
+                {{ t('auth.password_min_length') }}
+              </small>
             </div>
 
             <div>
@@ -381,6 +404,12 @@ function copyToken() {
                 inputClass="w-full"
                 class="w-full"
               />
+              <small v-if="newPasswordConfirmationTooShort" class="text-red-500 dark:text-red-300">
+                {{ t('auth.password_min_length') }}
+              </small>
+              <small v-if="newPasswordsMismatch" class="text-red-500 dark:text-red-300">
+                {{ t('auth.bootstrap_password_mismatch') }}
+              </small>
             </div>
 
             <div>
@@ -392,7 +421,9 @@ function copyToken() {
                 :disabled="
                   !passwordForm.newPassword ||
                   !passwordForm.newPasswordConfirmation ||
-                  passwordForm.newPassword.length < 8
+                  passwordForm.newPassword.length < 8 ||
+                  passwordForm.newPasswordConfirmation.length < 8 ||
+                  passwordForm.newPassword !== passwordForm.newPasswordConfirmation
                 "
               />
             </div>

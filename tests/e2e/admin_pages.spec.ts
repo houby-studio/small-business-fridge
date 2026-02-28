@@ -62,10 +62,16 @@ test.describe('Admin pages and filters', () => {
 
   test('admin can create and revoke invitation from users page', async ({ page }) => {
     await page.goto('/admin/users')
+    const submitButton = page.getByRole('button', { name: 'Odeslat pozvánku' })
+    await expect(submitButton).toBeDisabled()
+
+    await page.getByPlaceholder('uzivatel@example.com').fill('invalid-email')
+    await expect(submitButton).toBeDisabled()
 
     const inviteEmail = `invite-${Date.now()}@example.com`
     await page.getByPlaceholder('uzivatel@example.com').fill(inviteEmail)
-    await page.getByRole('button', { name: 'Odeslat pozvánku' }).click()
+    await expect(submitButton).toBeEnabled()
+    await submitButton.click()
 
     await expect(page.locator('tr', { hasText: inviteEmail })).toBeVisible()
     await page

@@ -11,6 +11,7 @@ import InputText from 'primevue/inputtext'
 import ConfirmDialog from 'primevue/confirmdialog'
 import Paginator from 'primevue/paginator'
 import { useConfirm } from 'primevue/useconfirm'
+import { useToast } from 'primevue/usetoast'
 import { useI18n } from '~/composables/use_i18n'
 import { useListFilters } from '~/composables/use_list_filters'
 import { useSelectEnterKey } from '~/composables/use_select_enter_key'
@@ -65,6 +66,7 @@ const props = defineProps<{
   }
 }>()
 const { t } = useI18n()
+const toast = useToast()
 const page = usePage<SharedProps>()
 const currentUserId = computed(() => page.props.user?.id)
 const confirm = useConfirm()
@@ -175,10 +177,23 @@ const inviteForm = useForm({
   email: '',
   role: 'customer' as 'customer' | 'supplier' | 'admin',
 })
+const inviteEmailInvalid = computed(() => {
+  if (inviteForm.email.length === 0) return false
+  return !/.+@.+/.test(inviteForm.email.trim())
+})
 
 function createInvite() {
+  if (!inviteForm.email.trim() || inviteEmailInvalid.value) return
+
   inviteForm.post('/admin/invitations', {
     preserveScroll: true,
+    onError: (errors) => {
+      toast.add({
+        severity: 'error',
+        summary: errors.email || t('auth.bootstrap_invalid'),
+        life: 4500,
+      })
+    },
     onSuccess: () => {
       inviteForm.reset('email')
       inviteForm.role = 'customer'
@@ -253,7 +268,7 @@ function changeInvitePage(page: number) {
           v-model="inviteForm.email"
           type="email"
           :placeholder="t('admin.invites_email_placeholder')"
-          :invalid="!!inviteForm.errors.email"
+          :invalid="!!inviteForm.errors.email || inviteEmailInvalid"
         />
         <Select
           v-model="inviteForm.role"
@@ -266,8 +281,12 @@ function changeInvitePage(page: number) {
           icon="pi pi-send"
           :label="t('admin.invites_send')"
           :loading="inviteForm.processing"
+          :disabled="inviteForm.processing || !inviteForm.email.trim() || inviteEmailInvalid"
         />
       </form>
+      <small v-if="inviteEmailInvalid" class="mt-2 block text-red-500 dark:text-red-300">
+        {{ t('auth.email_invalid') }}
+      </small>
 
       <div class="mt-4 overflow-auto">
         <table class="min-w-full text-sm">

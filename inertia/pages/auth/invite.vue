@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3'
+import { Head, useForm, usePage } from '@inertiajs/vue3'
 import GuestLayout from '~/layouts/GuestLayout.vue'
 import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
+import { computed } from 'vue'
+import { useToast } from 'primevue/usetoast'
 import { useI18n } from '~/composables/use_i18n'
+import type { SharedProps } from '~/types'
 
 const props = defineProps<{
   token: string
@@ -15,6 +18,8 @@ const props = defineProps<{
 }>()
 
 const { t } = useI18n()
+const toast = useToast()
+const page = usePage<SharedProps>()
 
 const form = useForm({
   displayName: '',
@@ -23,8 +28,56 @@ const form = useForm({
   passwordConfirmation: '',
 })
 
+const displayNameMissing = computed(() => form.displayName.trim().length === 0)
+const usernameTooShort = computed(() => form.username.length > 0 && form.username.trim().length < 3)
+const passwordTooShort = computed(() => form.password.length > 0 && form.password.length < 8)
+const confirmationTooShort = computed(
+  () => form.passwordConfirmation.length > 0 && form.passwordConfirmation.length < 8
+)
+const passwordsMismatch = computed(
+  () => form.passwordConfirmation.length > 0 && form.password !== form.passwordConfirmation
+)
+const flashInputErrorsBag = computed(
+  () =>
+    (((page.props.flash as any)?.inputErrorsBag ?? {}) as Record<string, string[] | undefined>) ||
+    {}
+)
+const getFieldError = (field: string) =>
+  form.errors[field as keyof typeof form.errors] || flashInputErrorsBag.value[field]?.[0]
+const getFieldInvalid = (field: string) => !!getFieldError(field)
+const firstErrorMessage = computed(
+  () =>
+    getFieldError('displayName') ||
+    getFieldError('username') ||
+    getFieldError('password') ||
+    getFieldError('passwordConfirmation')
+)
+const submitDisabled = computed(
+  () =>
+    form.processing ||
+    displayNameMissing.value ||
+    form.username.trim().length < 3 ||
+    form.password.length < 8 ||
+    form.passwordConfirmation.length < 8 ||
+    form.password !== form.passwordConfirmation
+)
+
 function submit() {
   form.post(`/register/invite/${props.token}`, {
+    onError: (errors) => {
+      const firstError =
+        errors.displayName ||
+        errors.username ||
+        errors.password ||
+        errors.passwordConfirmation ||
+        t('auth.bootstrap_invalid')
+
+      toast.add({
+        severity: 'error',
+        summary: firstError,
+        life: 4500,
+      })
+    },
     onFinish: () => form.reset('password', 'passwordConfirmation'),
   })
 }
@@ -42,8 +95,8 @@ function submit() {
             <p class="text-sm text-zinc-400">{{ t('auth.invite_intro') }}</p>
           </div>
 
-          <Message v-if="form.hasErrors" severity="error" :closable="false">
-            {{ t('auth.bootstrap_invalid') }}
+          <Message v-if="firstErrorMessage" severity="error" :closable="false">
+            {{ firstErrorMessage }}
           </Message>
 
           <div class="flex flex-col gap-2">
@@ -67,7 +120,7 @@ function submit() {
             <InputText
               id="inviteDisplayName"
               v-model="form.displayName"
-              :invalid="!!form.errors.displayName"
+              :invalid="getFieldInvalid('displayName')"
               autocomplete="name"
               :placeholder="t('auth.bootstrap_display_name_placeholder')"
             />
@@ -80,10 +133,13 @@ function submit() {
             <InputText
               id="inviteUsername"
               v-model="form.username"
-              :invalid="!!form.errors.username"
+              :invalid="getFieldInvalid('username') || usernameTooShort"
               autocomplete="username"
               :placeholder="t('auth.bootstrap_username_placeholder')"
             />
+            <small v-if="usernameTooShort" class="text-red-300">
+              {{ t('auth.username_min_length') }}
+            </small>
           </div>
 
           <div class="flex flex-col gap-2">
@@ -93,7 +149,7 @@ function submit() {
             <Password
               inputId="invitePassword"
               v-model="form.password"
-              :invalid="!!form.errors.password"
+              :invalid="getFieldInvalid('password')"
               :feedback="false"
               toggleMask
               autocomplete="new-password"
@@ -101,6 +157,9 @@ function submit() {
               inputClass="w-full"
               class="w-full"
             />
+            <small v-if="passwordTooShort" class="text-red-300">
+              {{ t('auth.password_min_length') }}
+            </small>
           </div>
 
           <div class="flex flex-col gap-2">
@@ -110,7 +169,7 @@ function submit() {
             <Password
               inputId="invitePasswordConfirmation"
               v-model="form.passwordConfirmation"
-              :invalid="!!form.errors.passwordConfirmation"
+              :invalid="getFieldInvalid('passwordConfirmation')"
               :feedback="false"
               toggleMask
               autocomplete="new-password"
@@ -118,6 +177,12 @@ function submit() {
               inputClass="w-full"
               class="w-full"
             />
+            <small v-if="confirmationTooShort" class="text-red-300">
+              {{ t('auth.password_min_length') }}
+            </small>
+            <small v-if="passwordsMismatch" class="text-red-300">
+              {{ t('auth.bootstrap_password_mismatch') }}
+            </small>
           </div>
 
           <Button
@@ -125,8 +190,15 @@ function submit() {
             :label="t('auth.invite_submit')"
             icon="pi pi-user-plus"
             :loading="form.processing"
+            :disabled="submitDisabled"
             class="w-full"
           />
+
+          <div class="text-sm">
+            <a href="/login" class="text-zinc-300 hover:text-zinc-100">
+              {{ t('auth.back_to_login_link') }}
+            </a>
+          </div>
         </form>
       </template>
     </Card>

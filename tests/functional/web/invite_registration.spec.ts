@@ -36,6 +36,25 @@ test.group('Web Auth - Invitations', (group) => {
     assert.equal(invite!.role, 'supplier')
   })
 
+  test('admin invitation rejects invalid email', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+
+    const response = await client
+      .post('/admin/invitations')
+      .loginAs(admin)
+      .form({
+        email: 'invalid-email',
+        role: 'supplier',
+      })
+      .withCsrfToken()
+      .redirects(0)
+
+    assert.include([302, 422], response.status())
+
+    const invite = await UserInvitation.query().where('email', 'invalid-email').first()
+    assert.isNull(invite)
+  })
+
   test('admin can revoke invitation', async ({ client, assert }) => {
     const admin = await UserFactory.apply('admin').create()
     const service = new InvitationService()
@@ -155,5 +174,37 @@ test.group('Web Auth - Invitations', (group) => {
 
     response.assertStatus(302)
     response.assertHeader('location', '/login')
+  })
+
+  test('invite acceptance rejects invalid username and short password', async ({
+    client,
+    assert,
+  }) => {
+    const service = new InvitationService()
+    const { invitation, inviteUrl } = await service.createInvite({
+      email: 'invalid-fields@example.com',
+      role: 'customer',
+      invitedByUserId: null,
+    })
+    const token = inviteUrl.split('/').pop()!
+
+    const response = await client
+      .post(`/register/invite/${token}`)
+      .form({
+        displayName: 'Invalid Invite User',
+        username: 'x',
+        password: 'short',
+        passwordConfirmation: 'short',
+      })
+      .withCsrfToken()
+      .redirects(0)
+
+    assert.include([302, 422], response.status())
+
+    await invitation.refresh()
+    assert.isNull(invitation.acceptedAt)
+
+    const created = await User.findBy('email', 'invalid-fields@example.com')
+    assert.isNull(created)
   })
 })
