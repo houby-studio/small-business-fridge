@@ -93,6 +93,7 @@
   "invites_expires_at": "Expires",
   "invites_send": "Send invite",
   "invites_revoke": "Revoke",
+  "invites_copy_link": "Copy link",
   "invites_status_pending": "Pending",
   "invites_status_accepted": "Accepted",
   "invites_status_revoked": "Revoked",

@@ -29,6 +29,12 @@ export const AUDIT_ACTION_I18N_KEYS: Record<string, string> = {
   'profile.token.revoked': 'audit.action_profile_token_revoked',
   'admin.impersonate.start': 'audit.action_admin_impersonate_start',
   'admin.impersonate.stop': 'audit.action_admin_impersonate_stop',
+  'invitation.created': 'audit.action_invitation_created',
+  'invitation.revoked': 'audit.action_invitation_revoked',
+  'invitation.accepted': 'audit.action_invitation_accepted',
+  'user.password_reset': 'audit.action_user_password_reset',
+  'user.password_changed': 'audit.action_user_password_changed',
+  'user.password_reset.requested': 'audit.action_user_password_reset_requested',
 }
 
 export type TranslateFn = (key: string) => string

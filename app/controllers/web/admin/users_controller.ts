@@ -1,4 +1,5 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import { DateTime } from 'luxon'
 import AdminService from '#services/admin_service'
 import InvoiceService from '#services/invoice_service'
 import User from '#models/user'
@@ -9,6 +10,7 @@ import NotificationService from '#services/notification_service'
 import logger from '@adonisjs/core/services/logger'
 import RegistrationPolicyService from '#services/registration_policy_service'
 import PasswordResetService from '#services/password_reset_service'
+import InvitationService from '#services/invitation_service'
 
 /**
  * Return the referer URL if it points to /admin/users (preserving active filters),
@@ -28,6 +30,7 @@ function usersUrl(request: HttpContext['request']): string {
 export default class UsersController {
   async index({ inertia, request }: HttpContext) {
     const page = request.input('page', 1)
+    const invitePage = Number(request.input('invitePage', 1))
     const role = request.input('role')
     const userId = request.input('userId')
     const disabled = request.input('disabled')
@@ -53,7 +56,10 @@ export default class UsersController {
     ])
 
     const userOptions = await User.query().select('id', 'displayName').orderBy('displayName', 'asc')
-    const invites = await UserInvitation.query().orderBy('createdAt', 'desc').limit(50)
+    const invitationService = new InvitationService()
+    const invites = await UserInvitation.query()
+      .orderBy('createdAt', 'desc')
+      .paginate(invitePage, 5)
     const policy = new RegistrationPolicyService()
 
     return inertia.render('admin/users/index', {
@@ -81,18 +87,28 @@ export default class UsersController {
         sortOrder: sortOrder || '',
       },
       userOptions: userOptions.map((u) => ({ id: u.id, displayName: u.displayName })),
-      invitations: invites.map((invite) => ({
-        id: invite.id,
-        email: invite.email,
-        role: invite.role,
-        createdAt: invite.createdAt.toISO(),
-        expiresAt: invite.expiresAt.toISO(),
-        acceptedAt: invite.acceptedAt?.toISO() ?? null,
-        revokedAt: invite.revokedAt?.toISO() ?? null,
-      })),
+      invitations: {
+        data: invites.all().map((invite) => ({
+          id: invite.id,
+          email: invite.email,
+          role: invite.role,
+          createdAt: invite.createdAt.toISO(),
+          expiresAt: invite.expiresAt.toISO(),
+          acceptedAt: invite.acceptedAt?.toISO() ?? null,
+          revokedAt: invite.revokedAt?.toISO() ?? null,
+          inviteUrl:
+            !invite.acceptedAt && !invite.revokedAt && invite.expiresAt > DateTime.now()
+              ? invitationService.getInviteUrl(invite)
+              : null,
+        })),
+        meta: invites.getMeta(),
+      },
       registrationPolicy: {
         mode: policy.getMode(),
         allowedDomains: policy.getAllowedDomains(),
+      },
+      inviteFilters: {
+        invitePage,
       },
     })
   }

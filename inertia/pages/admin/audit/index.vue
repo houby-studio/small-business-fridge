@@ -58,6 +58,7 @@ const entityOptions = [
   { label: 'category', value: 'category' },
   { label: 'music', value: 'music' },
   { label: 'user', value: 'user' },
+  { label: 'user_invitation', value: 'user_invitation' },
 ]
 
 const { onSelectShow } = useSelectEnterKey([

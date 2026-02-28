@@ -93,6 +93,7 @@
   "invites_expires_at": "Vyprší",
   "invites_send": "Odeslat pozvánku",
   "invites_revoke": "Zrušit",
+  "invites_copy_link": "Kopírovat odkaz",
   "invites_status_pending": "Čeká",
   "invites_status_accepted": "Přijata",
   "invites_status_revoked": "Zrušena",

@@ -8,8 +8,8 @@ import Select from 'primevue/select'
 import ToggleSwitch from 'primevue/toggleswitch'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
-import InputNumber from 'primevue/inputnumber'
 import ConfirmDialog from 'primevue/confirmdialog'
+import Paginator from 'primevue/paginator'
 import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from '~/composables/use_i18n'
 import { useListFilters } from '~/composables/use_list_filters'
@@ -45,13 +45,20 @@ interface InviteRow {
   expiresAt: string
   acceptedAt: string | null
   revokedAt: string | null
+  inviteUrl: string | null
+}
+
+interface PaginatedInvites {
+  data: InviteRow[]
+  meta: { total: number; perPage: number; currentPage: number; lastPage: number }
 }
 
 const props = defineProps<{
   users: PaginatedUsers
   filters: { role: string; userId: string; disabled: string; sortBy: string; sortOrder: string }
   userOptions: { id: number; displayName: string }[]
-  invitations: InviteRow[]
+  invitations: PaginatedInvites
+  inviteFilters: { invitePage: number }
   registrationPolicy: {
     mode: 'open' | 'invite_only' | 'domain_auto_approve' | 'closed'
     allowedDomains: string[]
@@ -167,7 +174,6 @@ function impersonateUser(userId: number) {
 const inviteForm = useForm({
   email: '',
   role: 'customer' as 'customer' | 'supplier' | 'admin',
-  expiresInHours: 168,
 })
 
 function createInvite() {
@@ -176,13 +182,32 @@ function createInvite() {
     onSuccess: () => {
       inviteForm.reset('email')
       inviteForm.role = 'customer'
-      inviteForm.expiresInHours = 168
     },
   })
 }
 
 function revokeInvite(inviteId: number) {
   router.post(`/admin/invitations/${inviteId}/revoke`, {}, { preserveScroll: true })
+}
+
+async function copyInviteLink(invite: InviteRow) {
+  if (!invite.inviteUrl) return
+  await navigator.clipboard.writeText(invite.inviteUrl)
+}
+
+function changeInvitePage(page: number) {
+  router.get(
+    '/admin/users',
+    {
+      ...buildFilterParams(),
+      invitePage: page,
+    },
+    {
+      only: ['invitations', 'inviteFilters'],
+      preserveState: true,
+      preserveScroll: true,
+    }
+  )
 }
 </script>
 
@@ -223,7 +248,7 @@ function revokeInvite(inviteId: number) {
       <h2 class="mb-3 text-lg font-semibold text-gray-900 dark:text-zinc-100">
         {{ t('admin.invites_heading') }}
       </h2>
-      <form class="grid gap-3 md:grid-cols-4" @submit.prevent="createInvite">
+      <form class="grid gap-3 md:grid-cols-3" @submit.prevent="createInvite">
         <InputText
           v-model="inviteForm.email"
           type="email"
@@ -236,7 +261,6 @@ function revokeInvite(inviteId: number) {
           optionLabel="label"
           optionValue="value"
         />
-        <InputNumber v-model="inviteForm.expiresInHours" :min="1" :max="8760" />
         <Button
           type="submit"
           icon="pi pi-send"
@@ -258,7 +282,7 @@ function revokeInvite(inviteId: number) {
           </thead>
           <tbody>
             <tr
-              v-for="invite in invitations"
+              v-for="invite in invitations.data"
               :key="invite.id"
               class="border-t border-gray-200 dark:border-zinc-700"
             >
@@ -273,6 +297,15 @@ function revokeInvite(inviteId: number) {
               <td class="py-2">
                 <Button
                   v-if="!invite.acceptedAt && !invite.revokedAt"
+                  icon="pi pi-copy"
+                  severity="secondary"
+                  size="small"
+                  text
+                  :label="t('admin.invites_copy_link')"
+                  @click="copyInviteLink(invite)"
+                />
+                <Button
+                  v-if="!invite.acceptedAt && !invite.revokedAt"
                   icon="pi pi-times"
                   severity="danger"
                   size="small"
@@ -285,6 +318,14 @@ function revokeInvite(inviteId: number) {
           </tbody>
         </table>
       </div>
+      <Paginator
+        v-if="invitations.meta.total > invitations.meta.perPage"
+        class="mt-4"
+        :first="(invitations.meta.currentPage - 1) * invitations.meta.perPage"
+        :rows="invitations.meta.perPage"
+        :totalRecords="invitations.meta.total"
+        @page="(event) => changeInvitePage(Math.floor(event.first / event.rows) + 1)"
+      />
     </div>
 
     <!-- Filter bar -->

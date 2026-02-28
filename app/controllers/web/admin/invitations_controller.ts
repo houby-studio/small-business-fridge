@@ -27,7 +27,6 @@ export default class InvitationsController {
       const { invitation, inviteUrl } = await this.invitations.createInvite({
         email: data.email,
         role: data.role ?? 'customer',
-        expiresInHours: data.expiresInHours,
         invitedByUserId: auth.user!.id,
       })
 

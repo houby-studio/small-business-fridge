@@ -58,6 +58,30 @@ test.group('Web Auth - Invitations', (group) => {
     assert.isNotNull(invitation.revokedAt)
   })
 
+  test('admin users page paginates invitations and includes copy link for pending invite', async ({
+    client,
+  }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const service = new InvitationService()
+
+    for (let i = 0; i < 6; i++) {
+      await service.createInvite({
+        email: `paged-${i}@example.com`,
+        role: 'customer',
+        invitedByUserId: admin.id,
+      })
+    }
+
+    const firstPage = await client.get('/admin/users').loginAs(admin)
+    firstPage.assertStatus(200)
+    firstPage.assertTextIncludes('paged-5@example.com')
+    firstPage.assertTextIncludes('/register/invite/sbfv2.')
+
+    const secondPage = await client.get('/admin/users?invitePage=2').loginAs(admin)
+    secondPage.assertStatus(200)
+    secondPage.assertTextIncludes('paged-0@example.com')
+  })
+
   test('invite accept page renders for valid token', async ({ client }) => {
     const service = new InvitationService()
     const { inviteUrl } = await service.createInvite({

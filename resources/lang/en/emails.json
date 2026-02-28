@@ -86,7 +86,9 @@
   "registration_invite_heading": "Registration Invitation",
   "registration_invite_intro": "You have been invited to join {app_name}.",
   "registration_invite_role": "Assigned role: {role}",
+  "registration_invite_role_label": "Assigned role",
   "registration_invite_expiry": "Invitation expires at: {expiresAt}",
+  "registration_invite_expiry_label": "Invitation expires at",
   "registration_invite_accept": "Accept invitation and create account",
   "registration_invite_note": "If you did not expect this invite, you can ignore this email.",
 
