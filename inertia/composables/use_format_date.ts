@@ -20,12 +20,25 @@ const CS_DATETIME_OPTIONS: Intl.DateTimeFormatOptions = {
   timeZone: 'Europe/Prague',
 }
 
+function getActiveLocale(): string {
+  if (typeof document !== 'undefined') {
+    const lang = document.documentElement?.lang
+    if (lang) return lang
+  }
+
+  if (typeof navigator !== 'undefined' && navigator.language) {
+    return navigator.language
+  }
+
+  return 'cs-CZ'
+}
+
 export function formatDate(iso: string | undefined | null): string {
   if (!iso) return ''
-  return new Date(iso).toLocaleDateString('cs-CZ', CS_DATE_OPTIONS)
+  return new Date(iso).toLocaleDateString(getActiveLocale(), CS_DATE_OPTIONS)
 }
 
 export function formatDateTime(iso: string | undefined | null): string {
   if (!iso) return ''
-  return new Date(iso).toLocaleString('cs-CZ', CS_DATETIME_OPTIONS)
+  return new Date(iso).toLocaleString(getActiveLocale(), CS_DATETIME_OPTIONS)
 }

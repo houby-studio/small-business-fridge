@@ -190,7 +190,7 @@ onMounted(() => {
         <template #content>
           <form @submit.prevent="submit" class="flex flex-col gap-5">
             <div class="text-sm text-gray-500 dark:text-zinc-400">
-              Keypad ID: <strong>{{ product.keypadId }}</strong>
+              {{ t('supplier.products_keypad_id') }}: <strong>{{ product.keypadId }}</strong>
             </div>
 
             <div>

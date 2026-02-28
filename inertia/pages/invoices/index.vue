@@ -276,7 +276,12 @@ function onSort(event: any) {
           <span class="pi pi-spin pi-spinner text-3xl text-gray-400 dark:text-zinc-500" />
         </div>
         <template v-else>
-          <img v-if="qrImage" :src="qrImage" alt="QR platba" class="mx-auto mb-4" />
+          <img
+            v-if="qrImage"
+            :src="qrImage"
+            :alt="t('invoices.qr_image_alt')"
+            class="mx-auto mb-4"
+          />
           <p class="break-all text-xs text-gray-500 dark:text-zinc-400">{{ qrCode }}</p>
         </template>
       </div>

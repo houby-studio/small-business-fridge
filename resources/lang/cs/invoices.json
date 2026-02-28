@@ -10,6 +10,7 @@
   "filter_unpaid": "Nezaplaceno",
   "filter_awaiting": "Čeká na schválení",
   "qr_header": "QR platba",
+  "qr_image_alt": "QR kód platby",
   "confirm_payment_header": "Potvrdit platbu",
-  "confirm_payment_message": "Označit fakturu #{id} ({amount} Kč) jako zaplacenou?"
+  "confirm_payment_message": "Označit fakturu #{id} ({amount} {currency}) jako zaplacenou?"
 }

@@ -16,6 +16,7 @@ export function useI18n() {
   const page = usePage()
 
   const locale = computed(() => ((page.props as any).locale as string) ?? 'cs')
+  const currency = computed(() => ((page.props as any).currency as string) ?? '')
 
   const translations = computed(() => ((page.props as any).translations as TranslationsMap) ?? {})
 
@@ -33,11 +34,14 @@ export function useI18n() {
     const value = translations.value?.[namespace]?.[k]
     if (value === undefined) return key
 
-    if (!params) return value
+    const resolvedParams: Record<string, string | number> = {
+      ...(currency.value ? { currency: currency.value } : {}),
+      ...(params ?? {}),
+    }
 
     // Simple {param} substitution
     return value.replace(/\{(\w+)\}/g, (_, p) => {
-      return p in params ? String(params[p]) : `{${p}}`
+      return p in resolvedParams ? String(resolvedParams[p]) : `{${p}}`
     })
   }
 

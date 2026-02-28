@@ -32,7 +32,7 @@ const emit = defineEmits<{
   addProduct: [product: ProductItem]
 }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const filterCategory = ref<string | null>(null)
 
@@ -56,7 +56,7 @@ const sortedProducts = computed(() => {
     const rankB = b.isRecommended && b.isFavorite ? 0 : b.isRecommended ? 1 : b.isFavorite ? 2 : 3
     if (rankA !== rankB) return rankA - rankB
     if (a.isRecommended && b.isRecommended) return a.recommendationRank - b.recommendationRank
-    return a.displayName.localeCompare(b.displayName, 'cs')
+    return a.displayName.localeCompare(b.displayName, locale.value)
   })
 })
 

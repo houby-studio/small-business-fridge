@@ -26,6 +26,8 @@ export interface SharedProps {
   flash: FlashMessages
   impersonation: Impersonation | undefined
   appName: string
+  currencyCode?: string
+  currency?: string
   [key: string]: unknown
 }
 

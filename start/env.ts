@@ -18,6 +18,7 @@ export default await Env.create(new URL('../', import.meta.url), {
   HOST: Env.schema.string({ format: 'host' }),
   LOG_LEVEL: Env.schema.string(),
   APP_NAME: Env.schema.string.optional(),
+  CURRENCY: Env.schema.string.optional(),
 
   /*
   |----------------------------------------------------------

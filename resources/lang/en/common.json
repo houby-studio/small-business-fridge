@@ -74,5 +74,9 @@
   "nav_categories": "Categories",
   "nav_allergens": "Allergens",
   "nav_music": "Music",
-  "nav_audit_log": "Audit log"
+  "nav_audit_log": "Audit log",
+  "guest_tagline": "Shared drinks and snacks",
+  "page_not_found": "Page not found.",
+  "server_error": "Server error.",
+  "back_to_home": "Back to home"
 }

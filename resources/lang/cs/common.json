@@ -74,5 +74,9 @@
   "nav_categories": "Kategorie",
   "nav_allergens": "Alergeny",
   "nav_music": "Hudba",
-  "nav_audit_log": "Audit log"
+  "nav_audit_log": "Audit log",
+  "guest_tagline": "Sdílení nápojů a svačin",
+  "page_not_found": "Stránka nebyla nalezena.",
+  "server_error": "Chyba serveru.",
+  "back_to_home": "Zpět na úvod"
 }

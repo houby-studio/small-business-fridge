@@ -1,7 +1,7 @@
 {
   "title": "Obchod",
   "confirm_title": "Potvrdit nákup",
-  "confirm_message": "Koupit {name} za {price} Kč?",
+  "confirm_message": "Koupit {name} za {price} {currency}?",
   "confirm_accept": "Koupit",
   "no_products": "Žádné produkty k zobrazení.",
   "favorite": "Oblíbené",

@@ -48,7 +48,7 @@
   "invoice_customers": "Customers",
   "invoice_orders": "Orders",
   "invoice_generate_for_buyer": "Generate invoice",
-  "invoice_confirm_buyer": "Generate invoice for {name}? ({count} orders, {amount} CZK) This action cannot be undone.",
+  "invoice_confirm_buyer": "Generate invoice for {name}? ({count} orders, {amount} {currency}) This action cannot be undone.",
   "invoice_generated_for_buyer": "Invoice for customer {name} has been generated.",
   "payments_title": "Payments",
   "payments_heading": "Payment Management",
@@ -63,7 +63,7 @@
   "stock_filter_product": "Filter by product",
   "stock_filter_in_stock": "In stock only",
   "review_payment_header": "Review Payment",
-  "review_payment_message": "Customer {buyer} has marked invoice #{id} ({amount} CZK) as paid. Approve the payment?",
+  "review_payment_message": "Customer {buyer} has marked invoice #{id} ({amount} {currency}) as paid. Approve the payment?",
   "stock_scope": "Scope",
   "stock_scope_store": "Store-wide",
   "stock_scope_mine": "My deliveries",
@@ -91,5 +91,6 @@
   "stock_full_table": "Full inventory table",
   "stock_show_table": "Show full table",
   "stock_hide_table": "Hide full table",
-  "deliveries_open_inventory": "Open inventory workspace"
+  "deliveries_open_inventory": "Open inventory workspace",
+  "products_keypad_id": "Keypad ID"
 }

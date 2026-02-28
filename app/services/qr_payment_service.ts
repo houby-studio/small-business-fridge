@@ -1,9 +1,10 @@
 import QRCode from 'qrcode'
+import { getCurrencyCode } from '#services/currency_service'
 
 export default class QrPaymentService {
   /**
    * Generate a Czech SPD QR payment code.
-   * SPD format: SPD*1.0*ACC:{IBAN}*AM:{amount}*CC:CZK*RN:{receiver}*MSG:{message}
+   * SPD format: SPD*1.0*ACC:{IBAN}*AM:{amount}*CC:{currency}*RN:{receiver}*MSG:{message}
    */
   async generate(options: {
     iban: string
@@ -11,6 +12,7 @@ export default class QrPaymentService {
     receiverName: string
     payerName: string
   }): Promise<{ imageData: string; code: string }> {
+    const currencyCode = getCurrencyCode()
     const message = this.sanitize(`LEDNICE IT - ${options.payerName}`).substring(0, 60)
     const receiverName = this.sanitize(options.receiverName).substring(0, 35)
 
@@ -18,7 +20,7 @@ export default class QrPaymentService {
       'SPD*1.0',
       `ACC:${options.iban}`,
       `AM:${options.amount.toFixed(2)}`,
-      'CC:CZK',
+      `CC:${currencyCode}`,
       `RN:${receiverName}`,
       `MSG:${message}`,
     ].join('*')
