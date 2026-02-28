@@ -11,6 +11,10 @@ import { useToast } from 'primevue/usetoast'
 import { useI18n } from '~/composables/use_i18n'
 import type { SharedProps } from '~/types'
 
+const props = defineProps<{
+  oidcEnabled?: boolean
+}>()
+
 const { t } = useI18n()
 const toast = useToast()
 const page = usePage<SharedProps>()
@@ -63,6 +67,7 @@ const submitDisabled = computed(
     form.passwordConfirmation.length < 8 ||
     form.password !== form.passwordConfirmation
 )
+const oidcBootstrapHref = '/auth/oidc/redirect?intent=bootstrap'
 
 function submit() {
   form.post('/setup/bootstrap', {
@@ -213,6 +218,22 @@ function submit() {
             :disabled="submitDisabled"
             class="w-full"
           />
+
+          <template v-if="props.oidcEnabled">
+            <div class="flex items-center gap-3 py-1">
+              <div class="h-px flex-1 bg-zinc-700" />
+              <span class="text-xs uppercase tracking-wide text-zinc-400">{{ t('auth.or') }}</span>
+              <div class="h-px flex-1 bg-zinc-700" />
+            </div>
+
+            <a
+              :href="oidcBootstrapHref"
+              class="inline-flex w-full items-center justify-center gap-2 rounded-md border border-zinc-600 px-4 py-2 text-sm font-medium text-zinc-100 transition hover:border-zinc-500 hover:bg-zinc-800"
+            >
+              <i class="pi pi-microsoft" aria-hidden="true" />
+              <span>{{ t('auth.bootstrap_submit_oidc') }}</span>
+            </a>
+          </template>
         </form>
       </template>
     </Card>

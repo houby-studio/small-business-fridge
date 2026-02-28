@@ -3,8 +3,11 @@ import logger from '@adonisjs/core/services/logger'
 import User from '#models/user'
 import { bootstrapAdminValidator } from '#validators/auth'
 import AuditService from '#services/audit_service'
+import AuthModeService from '#services/auth_mode_service'
 
 export default class BootstrapController {
+  private authModes = new AuthModeService()
+
   private async hasAnyAdmin(): Promise<boolean> {
     const admin = await User.query().where('role', 'admin').first()
     return !!admin
@@ -15,7 +18,9 @@ export default class BootstrapController {
       return response.redirect('/login')
     }
 
-    return inertia.render('auth/bootstrap', {})
+    return inertia.render('auth/bootstrap', {
+      oidcEnabled: this.authModes.isOidcEnabled(),
+    })
   }
 
   async store({ request, auth, response, session, i18n }: HttpContext) {

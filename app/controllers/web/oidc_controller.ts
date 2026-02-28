@@ -9,14 +9,25 @@ import InvitationService from '#services/invitation_service'
 import AuthModeService from '#services/auth_mode_service'
 
 export default class OidcController {
+  private static readonly BOOTSTRAP_INTENT_KEY = 'oidcBootstrapFirstAdminIntent'
+
   private oidcIdentity = new OidcIdentityService()
   private registrationPolicy = new RegistrationPolicyService()
   private invitations = new InvitationService()
   private authModes = new AuthModeService()
 
-  async redirect({ ally, response }: HttpContext) {
+  private async hasAnyAdmin(): Promise<boolean> {
+    const admin = await User.query().where('role', 'admin').first()
+    return !!admin
+  }
+
+  async redirect({ ally, request, response, session }: HttpContext) {
     if (!this.authModes.isOidcEnabled()) {
       return response.redirect('/login')
+    }
+
+    if (request.input('intent') === 'bootstrap' && !(await this.hasAnyAdmin())) {
+      session.put(OidcController.BOOTSTRAP_INTENT_KEY, true)
     }
 
     return ally.use('microsoft').redirect()
@@ -26,6 +37,10 @@ export default class OidcController {
     if (!this.authModes.isOidcEnabled()) {
       return response.redirect('/login')
     }
+
+    const hasAnyAdmin = await this.hasAnyAdmin()
+    const bootstrapIntent = session.pull(OidcController.BOOTSTRAP_INTENT_KEY, false) === true
+    const allowBootstrapRegistration = bootstrapIntent && !hasAnyAdmin
 
     const microsoft = ally.use('microsoft')
 
@@ -98,7 +113,7 @@ export default class OidcController {
         return response.redirect('/login')
       }
 
-      if (!this.authModes.isOidcAutoRegisterEnabled()) {
+      if (!this.authModes.isOidcAutoRegisterEnabled() && !allowBootstrapRegistration) {
         logger.warn({ email }, 'OIDC login denied: user not found in app')
         session.flash('alert', {
           type: 'danger',
@@ -108,27 +123,28 @@ export default class OidcController {
       }
 
       let invitation = null
-      const registration = this.registrationPolicy.canSelfRegister({
-        provider: 'oidc',
-        email,
-      })
-      if (!registration.allowed && registration.reason === 'invite_required') {
-        invitation = await this.invitations.findActiveByEmail(email)
-      }
-      if (!registration.allowed && !invitation) {
-        logger.warn(
-          { email, reason: registration.reason, mode: this.registrationPolicy.getMode() },
-          'OIDC login denied: self-registration policy rejected user'
-        )
-        session.flash('alert', {
-          type: 'danger',
-          message: i18n.t('messages.login_not_registered'),
+      if (!allowBootstrapRegistration) {
+        const registration = this.registrationPolicy.canSelfRegister({
+          provider: 'oidc',
+          email,
         })
-        return response.redirect('/login')
+        if (!registration.allowed && registration.reason === 'invite_required') {
+          invitation = await this.invitations.findActiveByEmail(email)
+        }
+        if (!registration.allowed && !invitation) {
+          logger.warn(
+            { email, reason: registration.reason, mode: this.registrationPolicy.getMode() },
+            'OIDC login denied: self-registration policy rejected user'
+          )
+          session.flash('alert', {
+            type: 'danger',
+            message: i18n.t('messages.login_not_registered'),
+          })
+          return response.redirect('/login')
+        }
       }
 
       // Auto-register new user
-      const hasAnyAdmin = !!(await User.query().where('role', 'admin').first())
       const maxKeypad = await User.query().max('keypad_id as max').first()
       const nextKeypadId = (maxKeypad?.$extras.max ?? 0) + 1
 
@@ -137,7 +153,9 @@ export default class OidcController {
         email,
         displayName,
         phone,
-        role: invitation?.role ?? (hasAnyAdmin ? 'customer' : 'admin'),
+        role: allowBootstrapRegistration
+          ? 'admin'
+          : (invitation?.role ?? (hasAnyAdmin ? 'customer' : 'admin')),
         keypadId: nextKeypadId,
       })
 
@@ -170,7 +188,12 @@ export default class OidcController {
         ip: request.ip(),
         ua: request.header('user-agent') ?? null,
       })
-      session.flash('alert', { type: 'success', message: i18n.t('messages.login_auto_registered') })
+      session.flash('alert', {
+        type: 'success',
+        message: allowBootstrapRegistration
+          ? i18n.t('messages.bootstrap_admin_created')
+          : i18n.t('messages.login_auto_registered'),
+      })
     }
 
     if (user.isDisabled) {

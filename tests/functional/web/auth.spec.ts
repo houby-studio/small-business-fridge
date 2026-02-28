@@ -74,10 +74,21 @@ test.group('Web Auth', (group) => {
 })
 
 test.group('Web Auth - Bootstrap', (group) => {
+  const previousOidcEnabled = process.env.OIDC_ENABLED
+
   group.each.setup(async () => {
     throttleStore.clear()
     await db.from('remember_me_tokens').delete()
     await db.from('users').delete()
+    process.env.OIDC_ENABLED = 'false'
+  })
+
+  group.teardown(() => {
+    if (previousOidcEnabled === undefined) {
+      delete process.env.OIDC_ENABLED
+    } else {
+      process.env.OIDC_ENABLED = previousOidcEnabled
+    }
   })
 
   test('GET /setup/bootstrap renders for guests when no admin exists', async ({ client }) => {
