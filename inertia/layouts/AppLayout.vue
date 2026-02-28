@@ -83,40 +83,45 @@ function toggleColorMode() {
 // ─── Navigation ──────────────────────────────────────────────────────────────
 const menuItems = computed(() => {
   const items: NavItem[] = [
-    { label: 'Obchod', icon: 'pi pi-shopping-cart', url: '/shop' },
-    { label: 'Objednávky', icon: 'pi pi-list', url: '/orders' },
-    { label: 'Faktury', icon: 'pi pi-file', url: '/invoices' },
-    { label: 'Aktivita', icon: 'pi pi-history', url: '/audit', compactIconOnly: true },
+    { label: t('common.nav_shop'), icon: 'pi pi-shopping-cart', url: '/shop' },
+    { label: t('common.nav_orders'), icon: 'pi pi-list', url: '/orders' },
+    { label: t('common.nav_invoices'), icon: 'pi pi-file', url: '/invoices' },
+    {
+      label: t('common.nav_activity'),
+      icon: 'pi pi-history',
+      url: '/audit',
+      compactIconOnly: true,
+    },
   ]
 
   if (isSupplier.value) {
     items.push({
-      label: 'Dodavatel',
+      label: t('common.nav_supplier'),
       icon: 'pi pi-box',
       compactIconOnly: true,
       items: [
-        { label: 'Sklad', icon: 'pi pi-warehouse', url: '/supplier/stock' },
-        { label: 'Produkty', icon: 'pi pi-tags', url: '/supplier/products' },
-        { label: 'Fakturace', icon: 'pi pi-file-export', url: '/supplier/invoice' },
-        { label: 'Platby', icon: 'pi pi-credit-card', url: '/supplier/payments' },
+        { label: t('common.nav_stock'), icon: 'pi pi-warehouse', url: '/supplier/stock' },
+        { label: t('common.nav_products'), icon: 'pi pi-tags', url: '/supplier/products' },
+        { label: t('common.nav_billing'), icon: 'pi pi-file-export', url: '/supplier/invoice' },
+        { label: t('common.nav_payments'), icon: 'pi pi-credit-card', url: '/supplier/payments' },
       ],
     })
   }
 
   if (isAdmin.value) {
     items.push({
-      label: 'Admin',
+      label: t('common.nav_admin'),
       icon: 'pi pi-cog',
       compactIconOnly: true,
       items: [
-        { label: 'Dashboard', icon: 'pi pi-chart-bar', url: '/admin/dashboard' },
-        { label: 'Uživatelé', icon: 'pi pi-users', url: '/admin/users' },
-        { label: 'Kategorie', icon: 'pi pi-palette', url: '/admin/categories' },
-        { label: 'Alergeny', icon: 'pi pi-tags', url: '/admin/allergens' },
-        { label: 'Hudba', icon: 'pi pi-volume-up', url: '/admin/music' },
-        { label: 'Objednávky', icon: 'pi pi-list-check', url: '/admin/orders' },
-        { label: 'Faktury', icon: 'pi pi-file-check', url: '/admin/invoices' },
-        { label: 'Audit log', icon: 'pi pi-history', url: '/admin/audit' },
+        { label: t('common.nav_dashboard'), icon: 'pi pi-chart-bar', url: '/admin/dashboard' },
+        { label: t('common.nav_users'), icon: 'pi pi-users', url: '/admin/users' },
+        { label: t('common.nav_categories'), icon: 'pi pi-palette', url: '/admin/categories' },
+        { label: t('common.nav_allergens'), icon: 'pi pi-tags', url: '/admin/allergens' },
+        { label: t('common.nav_music'), icon: 'pi pi-volume-up', url: '/admin/music' },
+        { label: t('common.nav_orders'), icon: 'pi pi-list-check', url: '/admin/orders' },
+        { label: t('common.nav_invoices'), icon: 'pi pi-file-check', url: '/admin/invoices' },
+        { label: t('common.nav_audit_log'), icon: 'pi pi-history', url: '/admin/audit' },
       ],
     })
   }
@@ -232,7 +237,9 @@ onUnmounted(() => {
               severity="secondary"
               text
               size="small"
-              :aria-label="localIsDark ? 'Přepnout na světlý režim' : 'Přepnout na tmavý režim'"
+              :aria-label="
+                localIsDark ? t('common.switch_to_light_mode') : t('common.switch_to_dark_mode')
+              "
               @click="toggleColorMode"
             />
             <Link
@@ -247,7 +254,7 @@ onUnmounted(() => {
               severity="secondary"
               text
               size="small"
-              aria-label="Odhlásit se"
+              :aria-label="t('common.sign_out')"
               @click="logout"
             />
           </div>

@@ -36,4 +36,18 @@ test.describe('Role-aware app bar navigation', () => {
     await loginAs(page, 'supplier')
     await expect(page.locator('button[aria-label="Odhlásit se"]')).toBeVisible()
   })
+
+  test('english locale renders app bar labels in english', async ({ page }) => {
+    await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await loginAs(page, 'admin')
+
+    const nav = page.locator('.sbf-nav')
+    await expect(nav.getByText('Shop', { exact: true })).toBeVisible()
+    await expect(nav.getByText('Orders', { exact: true }).first()).toBeVisible()
+    await expect(nav.getByText('Invoices', { exact: true }).first()).toBeVisible()
+    await expect(nav.getByText('Activity', { exact: true })).toBeVisible()
+    await expect(nav.getByText('Supplier', { exact: true })).toBeVisible()
+    await expect(nav.getByText('Admin', { exact: true })).toBeVisible()
+    await expect(page.locator('button[aria-label="Sign out"]')).toBeVisible()
+  })
 })
