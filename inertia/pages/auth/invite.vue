@@ -15,6 +15,7 @@ const props = defineProps<{
   token: string
   email: string
   role: 'customer' | 'supplier' | 'admin'
+  oidcEnabled?: boolean
 }>()
 
 const { t } = useI18n()
@@ -56,6 +57,9 @@ const submitDisabled = computed(
     form.password.length < 8 ||
     form.passwordConfirmation.length < 8 ||
     form.password !== form.passwordConfirmation
+)
+const oidcInviteHref = computed(
+  () => `/auth/oidc/redirect?intent=invite&token=${encodeURIComponent(props.token)}`
 )
 
 function submit() {
@@ -172,6 +176,22 @@ function submit() {
             :disabled="submitDisabled"
             class="w-full"
           />
+
+          <template v-if="props.oidcEnabled">
+            <div class="flex items-center gap-3 py-1">
+              <div class="h-px flex-1 bg-zinc-700" />
+              <span class="text-xs uppercase tracking-wide text-zinc-400">{{ t('auth.or') }}</span>
+              <div class="h-px flex-1 bg-zinc-700" />
+            </div>
+
+            <a
+              :href="oidcInviteHref"
+              class="inline-flex w-full items-center justify-center gap-2 rounded-md border border-zinc-600 px-4 py-2 text-sm font-medium text-zinc-100 transition hover:border-zinc-500 hover:bg-zinc-800"
+            >
+              <i class="pi pi-microsoft" aria-hidden="true" />
+              <span>{{ t('auth.invite_submit_oidc') }}</span>
+            </a>
+          </template>
 
           <div class="text-sm">
             <a href="/login" class="text-zinc-300 hover:text-zinc-100">

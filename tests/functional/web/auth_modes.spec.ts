@@ -127,6 +127,45 @@ test.group('Web Auth - Environment Modes', (group) => {
     assert.include(oidcResponse.header('location') ?? '', 'login.microsoftonline.com')
   })
 
+  test('OIDC invite intent rejects invalid invite token before provider redirect', async ({
+    client,
+  }) => {
+    process.env.OIDC_ENABLED = 'true'
+    process.env.LOCAL_LOGIN_DISABLED = 'false'
+
+    await UserFactory.apply('admin').create()
+
+    const response = await client
+      .get('/auth/oidc/redirect?intent=invite&token=bad-token')
+      .redirects(0)
+    response.assertStatus(302)
+    response.assertHeader('location', '/login')
+  })
+
+  test('OIDC invite intent with valid token proceeds to provider redirect', async ({
+    client,
+    assert,
+  }) => {
+    process.env.OIDC_ENABLED = 'true'
+    process.env.LOCAL_LOGIN_DISABLED = 'false'
+
+    await UserFactory.apply('admin').create()
+
+    const invitationService = new InvitationService()
+    const { inviteUrl } = await invitationService.createInvite({
+      email: 'invite-intent-valid@example.com',
+      role: 'customer',
+      invitedByUserId: null,
+    })
+    const token = inviteUrl.split('/').pop()!
+
+    const response = await client
+      .get(`/auth/oidc/redirect?intent=invite&token=${encodeURIComponent(token)}`)
+      .redirects(0)
+    response.assertStatus(302)
+    assert.include(response.header('location') ?? '', 'login.microsoftonline.com')
+  })
+
   test('local-only mode hides OIDC button', async ({ client, assert }) => {
     process.env.OIDC_ENABLED = 'false'
     process.env.LOCAL_LOGIN_DISABLED = 'false'

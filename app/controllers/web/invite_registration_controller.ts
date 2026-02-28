@@ -31,6 +31,7 @@ export default class InviteRegistrationController {
       email: status.invitation.email,
       role: status.invitation.role,
       expiresAt: status.invitation.expiresAt.toISO(),
+      oidcEnabled: this.authModes.isOidcEnabled(),
     })
   }
 

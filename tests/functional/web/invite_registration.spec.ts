@@ -8,11 +8,29 @@ import { UserFactory } from '#database/factories/user_factory'
 import { store as throttleStore } from '#middleware/throttle_middleware'
 
 test.group('Web Auth - Invitations', (group) => {
+  const previousEnv = {
+    OIDC_ENABLED: process.env.OIDC_ENABLED,
+    LOCAL_LOGIN_DISABLED: process.env.LOCAL_LOGIN_DISABLED,
+  }
+
   group.each.setup(async () => {
     throttleStore.clear()
     await db.from('remember_me_tokens').delete()
     await db.from('user_invitations').delete()
     await db.from('users').delete()
+
+    process.env.OIDC_ENABLED = 'false'
+    process.env.LOCAL_LOGIN_DISABLED = 'false'
+  })
+
+  group.teardown(() => {
+    for (const [key, value] of Object.entries(previousEnv)) {
+      if (value === undefined) {
+        delete process.env[key]
+      } else {
+        process.env[key] = value
+      }
+    }
   })
 
   test('admin can create invitation', async ({ client, assert }) => {
@@ -112,6 +130,29 @@ test.group('Web Auth - Invitations', (group) => {
 
     const response = await client.get(`/register/invite/${token}`)
     response.assertStatus(200)
+  })
+
+  test('invite accept page includes OIDC completion link when OIDC is enabled', async ({
+    client,
+    assert,
+  }) => {
+    process.env.OIDC_ENABLED = 'true'
+    process.env.LOCAL_LOGIN_DISABLED = 'false'
+
+    const service = new InvitationService()
+    const { inviteUrl } = await service.createInvite({
+      email: 'accepted-via-oidc-view@example.com',
+      role: 'customer',
+      invitedByUserId: null,
+    })
+    const token = inviteUrl.split('/').pop()!
+
+    const response = await client
+      .get(`/register/invite/${token}`)
+      .header('X-Inertia', 'true')
+      .header('X-Inertia-Version', '1')
+    response.assertStatus(200)
+    assert.isTrue(response.body().props.oidcEnabled)
   })
 
   test('invite accept page redirects for invalid token', async ({ client }) => {

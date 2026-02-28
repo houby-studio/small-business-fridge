@@ -10,6 +10,7 @@ import AuthModeService from '#services/auth_mode_service'
 
 export default class OidcController {
   private static readonly BOOTSTRAP_INTENT_KEY = 'oidcBootstrapFirstAdminIntent'
+  private static readonly INVITE_INTENT_TOKEN_KEY = 'oidcInviteIntentToken'
 
   private oidcIdentity = new OidcIdentityService()
   private registrationPolicy = new RegistrationPolicyService()
@@ -30,6 +31,16 @@ export default class OidcController {
       session.put(OidcController.BOOTSTRAP_INTENT_KEY, true)
     }
 
+    if (request.input('intent') === 'invite') {
+      const token = String(request.input('token') ?? '')
+      const status = await this.invitations.validateToken(token)
+      if (!status.valid) {
+        return response.redirect('/login')
+      }
+
+      session.put(OidcController.INVITE_INTENT_TOKEN_KEY, token)
+    }
+
     return ally.use('microsoft').redirect()
   }
 
@@ -41,6 +52,12 @@ export default class OidcController {
     const hasAnyAdmin = await this.hasAnyAdmin()
     const bootstrapIntent = session.pull(OidcController.BOOTSTRAP_INTENT_KEY, false) === true
     const allowBootstrapRegistration = bootstrapIntent && !hasAnyAdmin
+    const inviteIntentToken = session.pull(OidcController.INVITE_INTENT_TOKEN_KEY, null)
+    const inviteIntentStatus =
+      typeof inviteIntentToken === 'string' && inviteIntentToken.length > 0
+        ? await this.invitations.validateToken(inviteIntentToken)
+        : null
+    const inviteIntentInvitation = inviteIntentStatus?.valid ? inviteIntentStatus.invitation : null
 
     const microsoft = ally.use('microsoft')
 
@@ -113,7 +130,11 @@ export default class OidcController {
         return response.redirect('/login')
       }
 
-      if (!this.authModes.isOidcAutoRegisterEnabled() && !allowBootstrapRegistration) {
+      if (
+        !this.authModes.isOidcAutoRegisterEnabled() &&
+        !allowBootstrapRegistration &&
+        !inviteIntentInvitation
+      ) {
         logger.warn({ email }, 'OIDC login denied: user not found in app')
         session.flash('alert', {
           type: 'danger',
@@ -123,7 +144,21 @@ export default class OidcController {
       }
 
       let invitation = null
-      if (!allowBootstrapRegistration) {
+      if (inviteIntentInvitation) {
+        if (inviteIntentInvitation.email !== email) {
+          logger.warn(
+            { email, inviteEmail: inviteIntentInvitation.email },
+            'OIDC login denied: invite token email does not match OIDC identity'
+          )
+          session.flash('alert', {
+            type: 'danger',
+            message: i18n.t('messages.login_not_registered'),
+          })
+          return response.redirect('/login')
+        }
+
+        invitation = inviteIntentInvitation
+      } else if (!allowBootstrapRegistration) {
         const registration = this.registrationPolicy.canSelfRegister({
           provider: 'oidc',
           email,
