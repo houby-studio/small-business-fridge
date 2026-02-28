@@ -73,5 +73,6 @@
   "password_reset_invalid": "Odkaz pro reset hesla je neplatný nebo vypršel.",
   "password_reset_success": "Heslo bylo změněno. Nyní se můžete přihlásit.",
   "password_current_invalid": "Aktuální heslo je nesprávné.",
-  "password_changed": "Heslo bylo úspěšně změněno."
+  "password_changed": "Heslo bylo úspěšně změněno.",
+  "too_many_requests": "Příliš mnoho požadavků. Zkuste to prosím znovu za {retryAfter} sekund."
 }

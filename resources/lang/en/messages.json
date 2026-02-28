@@ -73,5 +73,6 @@
   "password_reset_invalid": "Password reset link is invalid or expired.",
   "password_reset_success": "Password updated. You can now sign in.",
   "password_current_invalid": "Current password is incorrect.",
-  "password_changed": "Password changed successfully."
+  "password_changed": "Password changed successfully.",
+  "too_many_requests": "Too many requests. Please try again in {retryAfter} seconds."
 }
