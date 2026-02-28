@@ -21,6 +21,33 @@ export function useFlash() {
         life: 4000,
       })
     }
+
+    const errorsBag = (flash as any)?.errorsBag as Record<string, string> | undefined
+    if (errorsBag) {
+      for (const message of Object.values(errorsBag)) {
+        if (!message) continue
+        toast.add({
+          severity: 'error',
+          summary: message,
+          life: 5000,
+        })
+      }
+    }
+
+    const inputErrorsBag = (flash as any)?.inputErrorsBag as Record<string, string[]> | undefined
+    if (inputErrorsBag) {
+      for (const messages of Object.values(inputErrorsBag)) {
+        if (!Array.isArray(messages)) continue
+        for (const message of messages) {
+          if (!message) continue
+          toast.add({
+            severity: 'error',
+            summary: message,
+            life: 5000,
+          })
+        }
+      }
+    }
   }
 
   // Fire on mount so the Toast component is ready to receive messages.
