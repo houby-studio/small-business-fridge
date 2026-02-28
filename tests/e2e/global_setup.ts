@@ -51,7 +51,6 @@ export default async function globalSetup() {
 
   const users = [
     {
-      username: 'admin',
       email: 'admin@localhost',
       display_name: 'Admin User',
       password: await scrypt.make('admin123'),
@@ -60,7 +59,6 @@ export default async function globalSetup() {
       iban: 'CZ6508000000192000145399',
     },
     {
-      username: 'supplier',
       email: 'supplier@localhost',
       display_name: 'Supplier User',
       password: await scrypt.make('supplier123'),
@@ -69,7 +67,6 @@ export default async function globalSetup() {
       iban: 'CZ6508000000192000145399',
     },
     {
-      username: 'supplier2',
       email: 'supplier2@localhost',
       display_name: 'Supplier User 2',
       password: await scrypt.make('supplier123'),
@@ -78,7 +75,6 @@ export default async function globalSetup() {
       iban: 'CZ6508000000192000145399',
     },
     {
-      username: 'supplier3',
       email: 'supplier3@localhost',
       display_name: 'Supplier User 3',
       password: await scrypt.make('supplier123'),
@@ -87,7 +83,6 @@ export default async function globalSetup() {
       iban: 'CZ6508000000192000145399',
     },
     {
-      username: 'customer',
       email: 'customer@localhost',
       display_name: 'Customer User',
       password: await scrypt.make('customer123'),
@@ -96,7 +91,6 @@ export default async function globalSetup() {
       iban: null,
     },
     {
-      username: 'customer2',
       email: 'customer2@localhost',
       display_name: 'Second Customer',
       password: await scrypt.make('customer123'),
@@ -105,7 +99,6 @@ export default async function globalSetup() {
       iban: null,
     },
     {
-      username: 'customer3',
       email: 'customer3@localhost',
       display_name: 'Third Customer',
       password: await scrypt.make('customer123'),
@@ -114,7 +107,6 @@ export default async function globalSetup() {
       iban: null,
     },
     {
-      username: 'customer4',
       email: 'customer4@localhost',
       display_name: 'Fourth Customer',
       password: await scrypt.make('customer123'),
@@ -123,7 +115,6 @@ export default async function globalSetup() {
       iban: null,
     },
     {
-      username: 'customer5',
       email: 'customer5@localhost',
       display_name: 'Fifth Customer',
       password: await scrypt.make('customer123'),
@@ -132,7 +123,6 @@ export default async function globalSetup() {
       iban: null,
     },
     {
-      username: 'admin2',
       email: 'admin2@localhost',
       display_name: 'Admin User 2',
       password: await scrypt.make('admin123'),
@@ -141,7 +131,6 @@ export default async function globalSetup() {
       iban: 'CZ6508000000192000145399',
     },
     {
-      username: 'kiosk',
       email: 'kiosk@localhost',
       display_name: 'Kiosk Device',
       password: await scrypt.make('kiosk123'),
@@ -150,7 +139,6 @@ export default async function globalSetup() {
       iban: null,
     },
     {
-      username: 'resetuser',
       email: 'resetuser@localhost',
       display_name: 'Reset User',
       password: await scrypt.make('initial123'),
@@ -172,31 +160,18 @@ export default async function globalSetup() {
       await client.query(
         `
       INSERT INTO users (
-        username, email, display_name, password, role, keypad_id, iban,
+        email, display_name, password, role, keypad_id, iban,
         is_kiosk, is_disabled, show_all_products, send_mail_on_purchase,
         send_daily_report, color_mode, keypad_disabled,
         created_at, updated_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7,
+        $1, $2, $3, $4, $5, $6,
         false, false, false, true,
         true, 'dark', false,
         NOW(), NOW()
       )
-      ON CONFLICT (username) DO UPDATE SET
-        email = EXCLUDED.email,
-        display_name = EXCLUDED.display_name,
-        password = EXCLUDED.password,
-        role = EXCLUDED.role
     `,
-        [
-          user.username,
-          user.email,
-          user.display_name,
-          user.password,
-          user.role,
-          user.keypad_id,
-          user.iban,
-        ]
+        [user.email, user.display_name, user.password, user.role, user.keypad_id, user.iban]
       )
     }
 
@@ -364,21 +339,23 @@ export default async function globalSetup() {
     }
 
     // 6. Get user IDs
-    const supplierResult = await client.query('SELECT id FROM users WHERE username = $1', [
-      'supplier',
+    const supplierResult = await client.query('SELECT id FROM users WHERE email = $1', [
+      'supplier@localhost',
     ])
     const supplierId = supplierResult.rows[0].id
 
-    const customerResult = await client.query('SELECT id FROM users WHERE username = $1', [
-      'customer',
+    const customerResult = await client.query('SELECT id FROM users WHERE email = $1', [
+      'customer@localhost',
     ])
     const customerId = customerResult.rows[0].id
 
-    const customer2Result = await client.query('SELECT id FROM users WHERE username = $1', [
-      'customer2',
+    const customer2Result = await client.query('SELECT id FROM users WHERE email = $1', [
+      'customer2@localhost',
     ])
     const customer2Id = customer2Result.rows[0].id
-    const adminResult = await client.query('SELECT id FROM users WHERE username = $1', ['admin'])
+    const adminResult = await client.query('SELECT id FROM users WHERE email = $1', [
+      'admin@localhost',
+    ])
     const adminId = adminResult.rows[0].id
 
     // 6b. Seed kiosk music tracks

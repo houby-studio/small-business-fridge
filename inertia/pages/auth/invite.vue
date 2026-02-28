@@ -23,13 +23,11 @@ const page = usePage<SharedProps>()
 
 const form = useForm({
   displayName: '',
-  username: '',
   password: '',
   passwordConfirmation: '',
 })
 
 const displayNameMissing = computed(() => form.displayName.trim().length === 0)
-const usernameTooShort = computed(() => form.username.length > 0 && form.username.trim().length < 3)
 const passwordTooShort = computed(() => form.password.length > 0 && form.password.length < 8)
 const confirmationTooShort = computed(
   () => form.passwordConfirmation.length > 0 && form.passwordConfirmation.length < 8
@@ -48,7 +46,6 @@ const getFieldInvalid = (field: string) => !!getFieldError(field)
 const firstErrorMessage = computed(
   () =>
     getFieldError('displayName') ||
-    getFieldError('username') ||
     getFieldError('password') ||
     getFieldError('passwordConfirmation')
 )
@@ -56,7 +53,6 @@ const submitDisabled = computed(
   () =>
     form.processing ||
     displayNameMissing.value ||
-    form.username.trim().length < 3 ||
     form.password.length < 8 ||
     form.passwordConfirmation.length < 8 ||
     form.password !== form.passwordConfirmation
@@ -67,7 +63,6 @@ function submit() {
     onError: (errors) => {
       const firstError =
         errors.displayName ||
-        errors.username ||
         errors.password ||
         errors.passwordConfirmation ||
         t('auth.bootstrap_invalid')
@@ -124,22 +119,6 @@ function submit() {
               autocomplete="name"
               :placeholder="t('auth.bootstrap_display_name_placeholder')"
             />
-          </div>
-
-          <div class="flex flex-col gap-2">
-            <label for="inviteUsername" class="text-sm font-medium text-zinc-300">
-              {{ t('auth.bootstrap_username') }}
-            </label>
-            <InputText
-              id="inviteUsername"
-              v-model="form.username"
-              :invalid="getFieldInvalid('username') || usernameTooShort"
-              autocomplete="username"
-              :placeholder="t('auth.bootstrap_username_placeholder')"
-            />
-            <small v-if="usernameTooShort" class="text-red-300">
-              {{ t('auth.username_min_length') }}
-            </small>
           </div>
 
           <div class="flex flex-col gap-2">

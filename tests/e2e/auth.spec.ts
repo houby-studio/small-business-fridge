@@ -10,7 +10,7 @@ const { Client } = pg
  * Requires dev users seeded in the test DB (see global-setup.ts).
  *
  * Selectors used:
- *   #username     — InputText component (id maps directly to input)
+ *   #email        — InputText component (id maps directly to input)
  *   #password     — Password component (inputId maps to inner input)
  *   button[type="submit"] — submit button
  *   button:has(.pi-sign-out) — logout icon button in the nav bar
@@ -22,7 +22,7 @@ test.describe('Login page', () => {
   })
 
   test('shows login form with required fields', async ({ page }) => {
-    await expect(page.locator('#username')).toBeVisible()
+    await expect(page.locator('#email')).toBeVisible()
     await expect(page.locator('#password')).toBeVisible()
     await expect(page.locator('button[type="submit"]')).toBeVisible()
   })
@@ -79,24 +79,24 @@ test.describe('Login page', () => {
   })
 
   test('invalid credentials stays on login and shows error', async ({ page }) => {
-    await fillLoginForm(page, 'nobody', 'wrongpassword')
+    await fillLoginForm(page, 'nobody@example.com', 'wrongpassword')
     await expect(page).toHaveURL(/\/login/)
     // Error displayed as a PrimeVue Toast (flash message via session.flash -> useFlash composable)
     await expect(page.locator('[role="alert"]')).toBeVisible()
   })
 
   test('customer can log in and is redirected to shop', async ({ page }) => {
-    await fillLoginForm(page, 'customer', 'customer123')
+    await fillLoginForm(page, 'customer@localhost', 'customer123')
     await expect(page).toHaveURL(/\/shop/)
   })
 
   test('admin can log in', async ({ page }) => {
-    await fillLoginForm(page, 'admin', 'admin123')
+    await fillLoginForm(page, 'admin@localhost', 'admin123')
     await expect(page).not.toHaveURL(/\/login/)
   })
 
   test('supplier can log in', async ({ page }) => {
-    await fillLoginForm(page, 'supplier', 'supplier123')
+    await fillLoginForm(page, 'supplier@localhost', 'supplier123')
     await expect(page).not.toHaveURL(/\/login/)
   })
 })

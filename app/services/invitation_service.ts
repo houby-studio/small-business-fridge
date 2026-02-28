@@ -123,12 +123,7 @@ export default class InvitationService {
     return invite
   }
 
-  async acceptInvite(params: {
-    token: string
-    displayName: string
-    username: string
-    password: string
-  }) {
+  async acceptInvite(params: { token: string; displayName: string; password: string }) {
     return db.transaction(async (trx) => {
       const signed = this.resolveSignedToken(params.token)
       const invite = signed
@@ -157,11 +152,6 @@ export default class InvitationService {
         .first()
       if (existingEmail) throw new Error('EMAIL_ALREADY_REGISTERED')
 
-      const existingUsername = await User.query({ client: trx })
-        .whereRaw('LOWER(username) = ?', [params.username.trim().toLowerCase()])
-        .first()
-      if (existingUsername) throw new Error('USERNAME_ALREADY_TAKEN')
-
       const maxKeypad = await User.query({ client: trx }).max('keypad_id as max').first()
       const nextKeypadId = (maxKeypad?.$extras.max ?? 0) + 1
 
@@ -169,7 +159,6 @@ export default class InvitationService {
       user.useTransaction(trx)
       user.displayName = params.displayName.trim()
       user.email = invite.email
-      user.username = params.username.trim()
       user.password = params.password
       user.keypadId = nextKeypadId
       user.role = invite.role

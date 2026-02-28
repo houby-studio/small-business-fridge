@@ -19,7 +19,6 @@ import type { SharedProps } from '~/types'
 
 interface UserData {
   id: number
-  username: string | null
   displayName: string
   email: string
   phone: string | null
@@ -320,12 +319,6 @@ function copyToken() {
         <template #title>{{ t('profile.account_info') }}</template>
         <template #content>
           <div class="flex flex-col gap-4">
-            <div>
-              <span class="text-sm font-medium text-gray-500 dark:text-zinc-400">{{
-                t('profile.username')
-              }}</span>
-              <p class="text-gray-900 dark:text-zinc-100">{{ user.username ?? '—' }}</p>
-            </div>
             <div>
               <span class="text-sm font-medium text-gray-500 dark:text-zinc-400">{{
                 t('profile.keypad_id')

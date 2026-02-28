@@ -14,11 +14,9 @@ test.describe('Authentication lifecycle', () => {
     const suffix = Date.now().toString()
     await page.locator('#registerDisplayName').fill(`E2E Register ${suffix}`)
     await page.locator('#registerEmail').fill('bad-email')
-    await page.locator('#registerUsername').fill('x')
     await expect(submitButton).toBeDisabled()
 
     await page.locator('#registerEmail').fill(`e2e-register-${suffix}@localhost`)
-    await page.locator('#registerUsername').fill(`e2eregister${suffix}`)
     await page.locator('#registerPassword').fill('short')
     await page.locator('#registerPasswordConfirmation').fill('short')
     await expect(submitButton).toBeDisabled()
@@ -58,7 +56,7 @@ test.describe('Authentication lifecycle', () => {
     await expect(page).toHaveURL(/\/login/)
 
     await ensureLoginPage(page)
-    await fillLoginForm(page, 'resetuser', 'reset12345')
+    await fillLoginForm(page, 'resetuser@localhost', 'reset12345')
     await expect(page).toHaveURL(/\/shop/)
   })
 

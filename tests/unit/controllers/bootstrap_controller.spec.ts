@@ -8,7 +8,9 @@ test.group('BootstrapController.show', (group) => {
   const previousOidcEnabled = process.env.OIDC_ENABLED
 
   group.each.setup(async () => {
-    await db.from('users').delete()
+    await db.rawQuery(
+      'TRUNCATE TABLE user_invitations, password_reset_tokens, orders, deliveries, invoices, products, categories, users RESTART IDENTITY CASCADE'
+    )
     process.env.OIDC_ENABLED = 'false'
   })
 
@@ -64,7 +66,6 @@ test.group('BootstrapController.show', (group) => {
 
   test('redirects to login when an admin already exists', async ({ assert }) => {
     await User.create({
-      username: 'existing-admin',
       password: 'secret123',
       displayName: 'Existing Admin',
       email: 'existing-admin@localhost',

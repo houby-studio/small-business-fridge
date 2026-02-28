@@ -8,7 +8,6 @@ export const UserFactory = factory
     return {
       displayName: faker.person.fullName(),
       email: faker.internet.email(),
-      username: faker.internet.username(),
       password: 'password123',
       keypadId: keypadCounter++,
       role: 'customer' as const,

@@ -157,7 +157,7 @@ result with the `image:` name (`houbystudio/sbf:latest`).
 | `SMTP_IGNORE_TLS`              | No       | No     | `false`                 | Set true for plain SMTP without TLS                                         |
 | `OIDC_ENABLED`                 | No       | No     | `false`                 | Enable OIDC (Microsoft Entra ID) login                                      |
 | `OIDC_AUTO_REGISTER`           | No       | No     | `false`                 | Auto-create account on first OIDC login                                     |
-| `LOCAL_LOGIN_DISABLED`         | No       | No     | `false`                 | Disable username/password login                                             |
+| `LOCAL_LOGIN_DISABLED`         | No       | No     | `false`                 | Disable email/password login                                                |
 | `REGISTRATION_MODE`            | No       | No     | `open`                  | Self-signup policy (`open`, `invite_only`, `domain_auto_approve`, `closed`) |
 | `REGISTRATION_ALLOWED_DOMAINS` | No       | No     | —                       | Comma-separated domain allowlist for `domain_auto_approve` mode             |
 | `INVITE_EXPIRY_HOURS`          | No       | No     | `168`                   | Invite-link validity window in hours                                        |

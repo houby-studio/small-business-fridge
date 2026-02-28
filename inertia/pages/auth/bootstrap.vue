@@ -22,7 +22,6 @@ const page = usePage<SharedProps>()
 const form = useForm({
   displayName: '',
   email: '',
-  username: '',
   password: '',
   passwordConfirmation: '',
 })
@@ -32,7 +31,6 @@ const emailInvalid = computed(() => {
   if (form.email.length === 0) return false
   return !/.+@.+/.test(form.email.trim())
 })
-const usernameTooShort = computed(() => form.username.length > 0 && form.username.trim().length < 3)
 const passwordTooShort = computed(() => form.password.length > 0 && form.password.length < 8)
 const confirmationTooShort = computed(
   () => form.passwordConfirmation.length > 0 && form.passwordConfirmation.length < 8
@@ -52,7 +50,6 @@ const firstErrorMessage = computed(
   () =>
     getFieldError('displayName') ||
     getFieldError('email') ||
-    getFieldError('username') ||
     getFieldError('password') ||
     getFieldError('passwordConfirmation')
 )
@@ -62,7 +59,6 @@ const submitDisabled = computed(
     displayNameMissing.value ||
     form.email.trim().length === 0 ||
     emailInvalid.value ||
-    form.username.trim().length < 3 ||
     form.password.length < 8 ||
     form.passwordConfirmation.length < 8 ||
     form.password !== form.passwordConfirmation
@@ -75,7 +71,6 @@ function submit() {
       const firstError =
         errors.displayName ||
         errors.email ||
-        errors.username ||
         errors.password ||
         errors.passwordConfirmation ||
         t('auth.bootstrap_invalid')
@@ -139,25 +134,6 @@ function submit() {
             />
             <small v-if="emailInvalid" class="text-red-300">
               {{ t('auth.email_invalid') }}
-            </small>
-          </div>
-
-          <div class="flex flex-col gap-2">
-            <label
-              for="bootstrapUsername"
-              class="text-sm font-medium text-gray-700 dark:text-zinc-300"
-            >
-              {{ t('auth.bootstrap_username') }}
-            </label>
-            <InputText
-              id="bootstrapUsername"
-              v-model="form.username"
-              :invalid="getFieldInvalid('username') || usernameTooShort"
-              autocomplete="username"
-              :placeholder="t('auth.bootstrap_username_placeholder')"
-            />
-            <small v-if="usernameTooShort" class="text-red-300">
-              {{ t('auth.username_min_length') }}
             </small>
           </div>
 

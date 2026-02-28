@@ -133,7 +133,6 @@ test.group('Web Auth - Invitations', (group) => {
       .post(`/register/invite/${token}`)
       .form({
         displayName: 'New Customer',
-        username: 'new-customer',
         password: 'secret12345',
         passwordConfirmation: 'secret12345',
       })
@@ -146,7 +145,7 @@ test.group('Web Auth - Invitations', (group) => {
     await invitation.refresh()
     assert.isNotNull(invitation.acceptedAt)
 
-    const user = await User.findBy('username', 'new-customer')
+    const user = await User.findBy('email', 'new-customer@example.com')
     assert.exists(user)
     assert.equal(user!.email, 'new-customer@example.com')
   })
@@ -165,7 +164,6 @@ test.group('Web Auth - Invitations', (group) => {
       .post(`/register/invite/${token}`)
       .form({
         displayName: 'Revoked User',
-        username: 'revoked-user',
         password: 'secret12345',
         passwordConfirmation: 'secret12345',
       })
@@ -176,10 +174,7 @@ test.group('Web Auth - Invitations', (group) => {
     response.assertHeader('location', '/login')
   })
 
-  test('invite acceptance rejects invalid username and short password', async ({
-    client,
-    assert,
-  }) => {
+  test('invite acceptance rejects short password payload', async ({ client, assert }) => {
     const service = new InvitationService()
     const { invitation, inviteUrl } = await service.createInvite({
       email: 'invalid-fields@example.com',
@@ -192,7 +187,6 @@ test.group('Web Auth - Invitations', (group) => {
       .post(`/register/invite/${token}`)
       .form({
         displayName: 'Invalid Invite User',
-        username: 'x',
         password: 'short',
         passwordConfirmation: 'short',
       })

@@ -338,14 +338,12 @@ export class UserInvitationSchema extends BaseModel {
 }
 
 export class UserSchema extends BaseModel {
-  static $columns = ['id', 'oid', 'username', 'password', 'displayName', 'email', 'phone', 'iban', 'keypadId', 'cardId', 'role', 'isKiosk', 'isDisabled', 'showAllProducts', 'sendMailOnPurchase', 'sendDailyReport', 'colorMode', 'keypadDisabled', 'createdAt', 'updatedAt', 'isPremium'] as const
+  static $columns = ['id', 'oid', 'password', 'displayName', 'email', 'phone', 'iban', 'keypadId', 'cardId', 'role', 'isKiosk', 'isDisabled', 'showAllProducts', 'sendMailOnPurchase', 'sendDailyReport', 'colorMode', 'keypadDisabled', 'createdAt', 'updatedAt', 'isPremium'] as const
   $columns = UserSchema.$columns
   @column({ isPrimary: true })
   declare id: number
   @column()
   declare oid: string | null
-  @column()
-  declare username: string | null
   @column({ serializeAs: null })
   declare password: string | null
   @column()

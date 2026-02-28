@@ -10,16 +10,22 @@ const PASSWORDS: Record<TestUser, string> = {
   kiosk: 'kiosk123',
 }
 
+const EMAILS: Record<TestUser, string> = {
+  admin: 'admin@localhost',
+  supplier: 'supplier@localhost',
+  customer: 'customer@localhost',
+  customer2: 'customer2@localhost',
+  kiosk: 'kiosk@localhost',
+}
+
 async function completeBootstrapIfNeeded(page: Page) {
   if (!/\/setup\/bootstrap(?:\?|$)/.test(page.url())) return
 
-  const bootstrapUsername = 'bootstrap-e2e-admin'
   const bootstrapPassword = 'admin123'
 
   await expect(page.locator('#bootstrapDisplayName')).toBeVisible()
   await page.locator('#bootstrapDisplayName').fill('Bootstrap E2E Admin')
   await page.locator('#bootstrapEmail').fill('bootstrap-e2e-admin@localhost')
-  await page.locator('#bootstrapUsername').fill(bootstrapUsername)
   await page.locator('#bootstrapPassword').fill(bootstrapPassword)
   await page.locator('#bootstrapPasswordConfirmation').fill(bootstrapPassword)
   await page.locator('button[type="submit"]').click()
@@ -52,28 +58,28 @@ export async function ensureLoginPage(page: Page) {
   }
 
   if (/\/login(?:\?|$)/.test(page.url())) {
-    const usernameInput = page.locator('#username')
+    const emailInput = page.locator('#email')
     try {
-      await expect(usernameInput).toBeVisible({ timeout: 10_000 })
+      await expect(emailInput).toBeVisible({ timeout: 10_000 })
     } catch {
       // In rare startup races the login shell renders before the JS app hydrates.
       // Reload once to force a clean render before failing.
       await page.reload({ waitUntil: 'domcontentloaded' })
-      await expect(usernameInput).toBeVisible({ timeout: 10_000 })
+      await expect(emailInput).toBeVisible({ timeout: 10_000 })
     }
   }
 }
 
-export async function fillLoginForm(page: Page, username: string, password: string) {
-  const usernameInput = page.locator('#username')
+export async function fillLoginForm(page: Page, email: string, password: string) {
+  const emailInput = page.locator('#email')
   const passwordInput = page.locator('#password')
   const submitButton = page.locator('button[type="submit"]')
 
-  await expect(usernameInput).toBeVisible()
+  await expect(emailInput).toBeVisible()
   await expect(passwordInput).toBeVisible()
   await expect(submitButton).toBeVisible()
 
-  await usernameInput.fill(username)
+  await emailInput.fill(email)
   await passwordInput.fill(password)
   await expect(submitButton).toBeEnabled({ timeout: 10_000 })
   await submitButton.click()
@@ -101,7 +107,7 @@ export async function loginAs(page: Page, user: TestUser) {
   // Keep login deterministic across tests/users in the same browser context.
   await page.context().clearCookies()
   await ensureLoginPage(page)
-  await fillLoginForm(page, user, PASSWORDS[user])
+  await fillLoginForm(page, EMAILS[user], PASSWORDS[user])
   await waitForLoginAttemptToSettle(page)
 
   await expect(page).not.toHaveURL(/\/login/)

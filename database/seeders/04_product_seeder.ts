@@ -13,7 +13,7 @@ export default class extends BaseSeeder {
 
     const categories = await Category.all()
     const allergens = await Allergen.all()
-    const supplier = await User.findBy('username', 'supplier')
+    const supplier = await User.findBy('email', 'supplier@localhost')
     if (!supplier) return
 
     const categoryMap = new Map(categories.map((c) => [c.name, c.id]))

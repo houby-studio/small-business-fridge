@@ -11,7 +11,7 @@ test.group('Flash toast message extraction', () => {
       } as any,
       inputErrorsBag: {
         email: ['Email is invalid'],
-        username: ['Username too short'],
+        password: ['Password is too short'],
       } as any,
     } as any)
 
@@ -19,7 +19,7 @@ test.group('Flash toast message extraction', () => {
       { severity: 'error', summary: 'Top-level alert', life: 4000 },
       { severity: 'error', summary: 'Form failed validation', life: 5000 },
       { severity: 'error', summary: 'Email is invalid', life: 5000 },
-      { severity: 'error', summary: 'Username too short', life: 5000 },
+      { severity: 'error', summary: 'Password is too short', life: 5000 },
     ])
   })
 

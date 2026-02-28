@@ -18,7 +18,7 @@ defineProps<{
 const { t } = useI18n()
 
 const form = useForm({
-  username: '',
+  email: '',
   password: '',
   rememberMe: false,
 })
@@ -38,24 +38,24 @@ function submit() {
       <template #content>
         <form @submit.prevent="submit" class="space-y-5">
           <Message
-            v-if="form.errors.username || form.errors.password"
+            v-if="form.errors.email || form.errors.password"
             severity="error"
             :closable="false"
           >
-            {{ form.errors.username || form.errors.password }}
+            {{ form.errors.email || form.errors.password }}
           </Message>
 
           <div class="flex flex-col gap-2">
-            <label for="username" class="text-sm font-medium text-gray-700 dark:text-zinc-300">
-              {{ t('auth.username') }}
+            <label for="email" class="text-sm font-medium text-gray-700 dark:text-zinc-300">
+              {{ t('auth.bootstrap_email') }}
             </label>
             <InputText
-              id="username"
-              v-model="form.username"
-              :invalid="!!form.errors.username"
-              autocomplete="username"
+              id="email"
+              v-model="form.email"
+              :invalid="!!form.errors.email"
+              autocomplete="email"
               autofocus
-              :placeholder="t('auth.username_placeholder')"
+              :placeholder="t('auth.bootstrap_email_placeholder')"
             />
           </div>
 
@@ -101,7 +101,7 @@ function submit() {
             :label="t('auth.submit')"
             icon="pi pi-sign-in"
             :loading="form.processing"
-            :disabled="form.processing || !form.username.trim() || !form.password"
+            :disabled="form.processing || !form.email.trim() || !form.password"
             class="w-full"
           />
 

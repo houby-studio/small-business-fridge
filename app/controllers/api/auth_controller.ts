@@ -57,7 +57,7 @@ export default class AuthController {
   /**
    * @token
    * @summary Obtain a personal API token
-   * @description Authenticates with username and password, returns a Bearer token valid for 30 days.
+   * @description Authenticates with email and password, returns a Bearer token valid for 30 days.
    * @tag Auth
    * @requestBody <apiTokenLoginValidator>
    * @responseBody 200 - {"token": "oat_...", "user": {"id": 1, "displayName": "John Doe", "email": "john@example.com", "role": "customer"}}
@@ -65,10 +65,10 @@ export default class AuthController {
    * @noAuth true
    */
   async token({ request, response }: HttpContext) {
-    const { username, password } = await request.validateUsing(apiTokenLoginValidator)
+    const { email, password } = await request.validateUsing(apiTokenLoginValidator)
 
     try {
-      const user = await User.verifyCredentials(username, password)
+      const user = await User.verifyCredentials(email, password)
 
       if (user.isDisabled) {
         return response.unauthorized({ error: 'User account is disabled.' })

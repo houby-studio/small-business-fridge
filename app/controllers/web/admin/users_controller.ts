@@ -68,7 +68,6 @@ export default class UsersController {
           id: u.id,
           displayName: u.displayName,
           email: u.email,
-          username: u.username,
           role: u.role,
           isKiosk: u.isKiosk,
           isDisabled: u.isDisabled,

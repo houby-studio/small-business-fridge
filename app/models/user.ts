@@ -13,7 +13,7 @@ import Product from '#models/product'
 import Allergen from '#models/allergen'
 
 const AuthFinder = withAuthFinder(() => hash.use('scrypt'), {
-  uids: ['email', 'username'],
+  uids: ['email'],
   passwordColumnName: 'password',
 })
 
@@ -23,9 +23,6 @@ export default class User extends compose(BaseModel, AuthFinder) {
 
   @column()
   declare oid: string | null
-
-  @column()
-  declare username: string | null
 
   @column({ serializeAs: null })
   declare password: string | null

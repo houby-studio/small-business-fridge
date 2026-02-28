@@ -105,7 +105,6 @@ test.group('Web Auth - Bootstrap', (group) => {
       .form({
         displayName: 'Bootstrap Admin',
         email: 'bootstrap@local.test',
-        username: 'bootstrap-admin',
         password: 'supersecret123',
         passwordConfirmation: 'supersecret123',
       })
@@ -115,7 +114,7 @@ test.group('Web Auth - Bootstrap', (group) => {
     response.assertStatus(302)
     response.assertHeader('location', '/shop')
 
-    const created = await User.findBy('username', 'bootstrap-admin')
+    const created = await User.findBy('email', 'bootstrap@local.test')
     assert.exists(created)
     assert.equal(created!.role, 'admin')
   })
@@ -126,7 +125,6 @@ test.group('Web Auth - Bootstrap', (group) => {
       .form({
         displayName: '',
         email: 'invalid-email',
-        username: 'x',
         password: 'short',
         passwordConfirmation: 'short',
       })
@@ -151,14 +149,13 @@ test.group('Web Auth - Bootstrap', (group) => {
     client,
     assert,
   }) => {
-    await UserFactory.merge({ username: 'existing-admin' }).apply('admin').create()
+    await UserFactory.merge({ email: 'existing-admin@local.test' }).apply('admin').create()
 
     const response = await client
       .post('/setup/bootstrap')
       .form({
         displayName: 'Second Admin',
         email: 'second-admin@local.test',
-        username: 'second-admin',
         password: 'supersecret123',
         passwordConfirmation: 'supersecret123',
       })
@@ -170,7 +167,7 @@ test.group('Web Auth - Bootstrap', (group) => {
 
     const users = await User.query().where('role', 'admin')
     assert.lengthOf(users, 1)
-    assert.equal(users[0].username, 'existing-admin')
+    assert.equal(users[0].email, 'existing-admin@local.test')
   })
 })
 
@@ -183,7 +180,6 @@ test.group('Web Auth - Remember Me', (group) => {
   group.each.setup(async () => {
     await cleanAll()
     await User.create({
-      username: 'bootstrap-admin',
       password: 'secret123',
       displayName: 'Bootstrap Admin',
       email: 'bootstrap-admin@test.local',
@@ -198,7 +194,6 @@ test.group('Web Auth - Remember Me', (group) => {
     assert,
   }) => {
     const user = await User.create({
-      username: 'remtest',
       password: 'secret123',
       displayName: 'Remember Test',
       email: 'remtest@test.local',
@@ -208,7 +203,7 @@ test.group('Web Auth - Remember Me', (group) => {
 
     const response = await client
       .post('/login')
-      .form({ username: 'remtest', password: 'secret123', rememberMe: true })
+      .form({ email: 'remtest@test.local', password: 'secret123', rememberMe: true })
       .withCsrfToken()
       .redirects(0)
 
@@ -223,7 +218,6 @@ test.group('Web Auth - Remember Me', (group) => {
     assert,
   }) => {
     await User.create({
-      username: 'noremtest',
       password: 'secret123',
       displayName: 'No Remember Test',
       email: 'noremtest@test.local',
@@ -233,7 +227,7 @@ test.group('Web Auth - Remember Me', (group) => {
 
     const response = await client
       .post('/login')
-      .form({ username: 'noremtest', password: 'secret123' })
+      .form({ email: 'noremtest@test.local', password: 'secret123' })
       .withCsrfToken()
       .redirects(0)
 

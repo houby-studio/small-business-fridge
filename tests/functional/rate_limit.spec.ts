@@ -27,7 +27,7 @@ test.group('Rate Limit Middleware', (group) => {
       .header('X-Forwarded-For', ip)
       .header('Referer', '/login')
       .form({
-        username: 'someone',
+        email: 'someone@example.com',
         password: 'invalid',
       })
       .withCsrfToken()

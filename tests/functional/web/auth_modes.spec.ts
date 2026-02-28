@@ -46,7 +46,6 @@ test.group('Web Auth - Environment Modes', (group) => {
 
     await UserFactory.apply('admin').create()
     await User.create({
-      username: 'local-user',
       password: 'secret123',
       displayName: 'Local User',
       email: 'local-user@example.com',
@@ -59,7 +58,7 @@ test.group('Web Auth - Environment Modes', (group) => {
 
     const loginResponse = await client
       .post('/login')
-      .form({ username: 'local-user', password: 'secret123' })
+      .form({ email: 'local-user@example.com', password: 'secret123' })
       .withCsrfToken()
       .redirects(0)
     loginResponse.assertStatus(302)
@@ -149,7 +148,6 @@ test.group('Web Auth - Environment Modes', (group) => {
       .form({
         displayName: 'Invite Blocked',
         email: 'invite-blocked@example.com',
-        username: 'invite-blocked',
         password: 'secret12345',
         passwordConfirmation: 'secret12345',
       })
@@ -157,7 +155,7 @@ test.group('Web Auth - Environment Modes', (group) => {
       .redirects(0)
     inviteOnly.assertStatus(302)
     inviteOnly.assertHeader('location', '/login')
-    assert.isNull(await User.findBy('username', 'invite-blocked'))
+    assert.isNull(await User.findBy('email', 'invite-blocked@example.com'))
 
     process.env.REGISTRATION_MODE = 'closed'
     const closed = await client
@@ -165,7 +163,6 @@ test.group('Web Auth - Environment Modes', (group) => {
       .form({
         displayName: 'Closed Blocked',
         email: 'closed-blocked@example.com',
-        username: 'closed-blocked',
         password: 'secret12345',
         passwordConfirmation: 'secret12345',
       })
@@ -173,7 +170,7 @@ test.group('Web Auth - Environment Modes', (group) => {
       .redirects(0)
     closed.assertStatus(302)
     closed.assertHeader('location', '/login')
-    assert.isNull(await User.findBy('username', 'closed-blocked'))
+    assert.isNull(await User.findBy('email', 'closed-blocked@example.com'))
   })
 
   test('domain_auto_approve allows only configured domains for local registration', async ({
@@ -189,7 +186,6 @@ test.group('Web Auth - Environment Modes', (group) => {
       .form({
         displayName: 'Denied Domain',
         email: 'denied@example.com',
-        username: 'denied-domain',
         password: 'secret12345',
         passwordConfirmation: 'secret12345',
       })
@@ -197,14 +193,13 @@ test.group('Web Auth - Environment Modes', (group) => {
       .redirects(0)
     denied.assertStatus(302)
     denied.assertHeader('location', '/login')
-    assert.isNull(await User.findBy('username', 'denied-domain'))
+    assert.isNull(await User.findBy('email', 'denied@example.com'))
 
     const allowed = await client
       .post('/register')
       .form({
         displayName: 'Allowed Domain',
         email: 'allowed@allowed.test',
-        username: 'allowed-domain',
         password: 'secret12345',
         passwordConfirmation: 'secret12345',
       })
@@ -212,6 +207,6 @@ test.group('Web Auth - Environment Modes', (group) => {
       .redirects(0)
     allowed.assertStatus(302)
     allowed.assertHeader('location', '/shop')
-    assert.exists(await User.findBy('username', 'allowed-domain'))
+    assert.exists(await User.findBy('email', 'allowed@allowed.test'))
   })
 })

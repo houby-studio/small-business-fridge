@@ -65,21 +65,12 @@ export default class RegisterController {
       return response.redirect('/register')
     }
 
-    const existingUsername = await User.query()
-      .whereRaw('LOWER(username) = ?', [data.username.trim().toLowerCase()])
-      .first()
-    if (existingUsername) {
-      session.flash('alert', { type: 'danger', message: i18n.t('messages.invite_username_taken') })
-      return response.redirect('/register')
-    }
-
     const maxKeypad = await User.query().max('keypad_id as max').first()
     const nextKeypadId = (maxKeypad?.$extras.max ?? 0) + 1
 
     const user = await User.create({
       displayName: data.displayName.trim(),
       email: normalizedEmail,
-      username: data.username.trim(),
       password: data.password,
       keypadId: nextKeypadId,
       role: 'customer',

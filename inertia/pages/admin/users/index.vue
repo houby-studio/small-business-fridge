@@ -23,7 +23,6 @@ interface UserRow {
   id: number
   displayName: string
   email: string
-  username: string | null
   role: 'customer' | 'supplier' | 'admin'
   isKiosk: boolean
   isDisabled: boolean

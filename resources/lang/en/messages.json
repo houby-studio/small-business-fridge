@@ -66,7 +66,6 @@
   "invite_accepted": "Your account has been created from the invitation.",
   "invite_invalid_or_expired": "Invitation link is invalid, expired, or already used.",
   "invite_email_already_registered": "This email is already registered.",
-  "invite_username_taken": "This username is already taken.",
   "registration_not_allowed": "Self-registration is not allowed by the current policy.",
   "registration_success": "Your account has been created.",
   "password_reset_email_sent": "If the account exists, a reset link has been sent.",

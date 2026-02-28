@@ -370,7 +370,7 @@ E2E tests do **not** clean up after themselves. The global setup is designed to 
 
 #### `tests/e2e/auth.spec.ts`
 
-- Login page shows form with `#username`, `#password`, submit button
+- Login page shows form with `#email`, `#password`, submit button
 - Unauthenticated `/` shows sign-in link (not a redirect)
 - Unauthenticated `/shop` redirects to `/login`
 - Invalid credentials stays on `/login` and shows a `[role="alert"]` toast
@@ -409,10 +409,10 @@ UserFactory.apply('admin').create() // role: 'admin'
 UserFactory.apply('kiosk').create() // isKiosk: true
 UserFactory.apply('disabled').create() // isDisabled: true
 UserFactory.apply('withIban').create() // random CZ IBAN
-UserFactory.merge({ username: 'alice', password: 'pass123' }).create()
+UserFactory.merge({ email: 'alice@example.com', password: 'pass123' }).create()
 ```
 
-Defaults: random `displayName`, `email`, `username`; password `'password123'`; `keypadId`
+Defaults: random `displayName`, `email`; password `'password123'`; `keypadId`
 auto-increments from 100; `colorMode: 'dark'`.
 
 > **Note**: Passwords in factories are stored as **plain text** and AdonisJS hashes them

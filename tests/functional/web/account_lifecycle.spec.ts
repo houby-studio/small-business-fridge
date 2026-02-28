@@ -41,7 +41,6 @@ test.group('Web Auth - Registration and Password Lifecycle', (group) => {
       .form({
         displayName: 'New Open User',
         email: 'new-open-user@example.com',
-        username: 'new-open-user',
         password: 'supersecret123',
         passwordConfirmation: 'supersecret123',
       })
@@ -51,12 +50,12 @@ test.group('Web Auth - Registration and Password Lifecycle', (group) => {
     response.assertStatus(302)
     response.assertHeader('location', '/shop')
 
-    const created = await User.findBy('username', 'new-open-user')
+    const created = await User.findBy('email', 'new-open-user@example.com')
     assert.exists(created)
     assert.equal(created!.email, 'new-open-user@example.com')
   })
 
-  test('register rejects invalid email/username/password payload', async ({ client, assert }) => {
+  test('register rejects invalid email/password payload', async ({ client, assert }) => {
     await UserFactory.apply('admin').create()
 
     const response = await client
@@ -64,7 +63,6 @@ test.group('Web Auth - Registration and Password Lifecycle', (group) => {
       .form({
         displayName: 'Invalid User',
         email: 'not-an-email',
-        username: 'x',
         password: 'short',
         passwordConfirmation: 'short',
       })
@@ -82,7 +80,7 @@ test.group('Web Auth - Registration and Password Lifecycle', (group) => {
     assert,
   }) => {
     await UserFactory.apply('admin').create()
-    await UserFactory.merge({ email: 'reset-me@example.com', username: 'resetme' }).create()
+    await UserFactory.merge({ email: 'reset-me@example.com' }).create()
 
     const forgotResponse = await client
       .post('/forgot-password')
@@ -119,7 +117,7 @@ test.group('Web Auth - Registration and Password Lifecycle', (group) => {
     const loginResponse = await client
       .post('/login')
       .form({
-        username: 'resetme',
+        email: 'reset-me@example.com',
         password: 'new-password-123',
       })
       .withCsrfToken()
@@ -146,7 +144,7 @@ test.group('Web Auth - Registration and Password Lifecycle', (group) => {
 
   test('authenticated user can change password from profile', async ({ client }) => {
     await UserFactory.apply('admin').create()
-    const user = await UserFactory.merge({ username: 'profile-pass-user' }).create()
+    const user = await UserFactory.merge({ email: 'profile-pass-user@example.com' }).create()
 
     const response = await client
       .put('/profile/password')
@@ -165,7 +163,7 @@ test.group('Web Auth - Registration and Password Lifecycle', (group) => {
     const loginResponse = await client
       .post('/login')
       .form({
-        username: 'profile-pass-user',
+        email: 'profile-pass-user@example.com',
         password: 'changed-pass-123',
       })
       .withCsrfToken()
@@ -177,7 +175,7 @@ test.group('Web Auth - Registration and Password Lifecycle', (group) => {
 
   test('profile password change rejects mismatched confirmation', async ({ client, assert }) => {
     await UserFactory.apply('admin').create()
-    const user = await UserFactory.merge({ username: 'mismatch-pass-user' }).create()
+    const user = await UserFactory.merge({ email: 'mismatch-pass-user@example.com' }).create()
 
     const response = await client
       .put('/profile/password')
@@ -196,7 +194,7 @@ test.group('Web Auth - Registration and Password Lifecycle', (group) => {
     const loginOldPassword = await client
       .post('/login')
       .form({
-        username: 'mismatch-pass-user',
+        email: 'mismatch-pass-user@example.com',
         password: 'password123',
       })
       .withCsrfToken()
@@ -208,7 +206,7 @@ test.group('Web Auth - Registration and Password Lifecycle', (group) => {
     const loginNewPassword = await client
       .post('/login')
       .form({
-        username: 'mismatch-pass-user',
+        email: 'mismatch-pass-user@example.com',
         password: 'changed-pass-123',
       })
       .withCsrfToken()

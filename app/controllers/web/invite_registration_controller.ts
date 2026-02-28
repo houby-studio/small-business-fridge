@@ -54,7 +54,6 @@ export default class InviteRegistrationController {
       const user = await this.invitations.acceptInvite({
         token,
         displayName: data.displayName,
-        username: data.username,
         password: data.password,
       })
 
@@ -108,14 +107,6 @@ export default class InviteRegistrationController {
           message: i18n.t('messages.invite_email_already_registered'),
         })
         return response.redirect('/login')
-      }
-
-      if (message === 'USERNAME_ALREADY_TAKEN') {
-        session.flash('alert', {
-          type: 'danger',
-          message: i18n.t('messages.invite_username_taken'),
-        })
-        return response.redirect(`/register/invite/${token}`)
       }
 
       throw error

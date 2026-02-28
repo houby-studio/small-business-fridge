@@ -60,7 +60,6 @@ test.group('InvitationService', (group) => {
     const user = await service.acceptInvite({
       token,
       displayName: 'Accepted User',
-      username: 'accepted-user',
       password: 'secret12345',
     })
 
@@ -76,7 +75,6 @@ test.group('InvitationService', (group) => {
     await User.create({
       displayName: 'Existing',
       email: 'existing@example.com',
-      username: 'existing',
       password: 'secret12345',
       keypadId: 7000,
       role: 'customer',

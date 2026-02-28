@@ -9,12 +9,10 @@ test.describe('Invitation registration', () => {
     await expect(submitButton).toBeDisabled()
 
     await page.locator('#inviteDisplayName').fill('Invite E2E User')
-    await page.locator('#inviteUsername').fill('x')
     await page.locator('#invitePassword').fill('short')
     await page.locator('#invitePasswordConfirmation').fill('short')
     await expect(submitButton).toBeDisabled()
 
-    await page.locator('#inviteUsername').fill('invitee-e2e')
     await page.locator('#invitePassword').fill('invitee12345')
     await page.locator('#invitePasswordConfirmation').fill('mismatch12345')
     await expect(submitButton).toBeDisabled()
