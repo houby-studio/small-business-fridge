@@ -4,10 +4,11 @@ import User from '#models/user'
 import { loginValidator } from '#validators/auth'
 import AuditService from '#services/audit_service'
 import RegistrationPolicyService from '#services/registration_policy_service'
-import env from '#start/env'
+import AuthModeService from '#services/auth_mode_service'
 
 export default class LoginController {
   private registrationPolicy = new RegistrationPolicyService()
+  private authModes = new AuthModeService()
   private async hasAnyAdmin(): Promise<boolean> {
     const admin = await User.query().where('role', 'admin').first()
     return !!admin
@@ -18,12 +19,12 @@ export default class LoginController {
       return response.redirect('/setup/bootstrap')
     }
 
-    if (env.get('LOCAL_LOGIN_DISABLED', false)) {
+    if (this.authModes.isOidcOnlyMode()) {
       return response.redirect('/auth/oidc/redirect')
     }
     const mode = this.registrationPolicy.getMode()
     return inertia.render('auth/login', {
-      oidcEnabled: env.get('OIDC_ENABLED', false),
+      oidcEnabled: this.authModes.isOidcEnabled(),
       allowLocalRegistration: mode === 'open' || mode === 'domain_auto_approve',
     })
   }
@@ -33,7 +34,7 @@ export default class LoginController {
       return response.redirect('/setup/bootstrap')
     }
 
-    if (env.get('LOCAL_LOGIN_DISABLED', false)) {
+    if (this.authModes.isOidcOnlyMode()) {
       return response.redirect('/auth/oidc/redirect')
     }
 

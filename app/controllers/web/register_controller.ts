@@ -4,12 +4,18 @@ import User from '#models/user'
 import AuditService from '#services/audit_service'
 import NotificationService from '#services/notification_service'
 import RegistrationPolicyService from '#services/registration_policy_service'
+import AuthModeService from '#services/auth_mode_service'
 import { registerValidator } from '#validators/auth'
 
 export default class RegisterController {
   private registrationPolicy = new RegistrationPolicyService()
+  private authModes = new AuthModeService()
 
   async show({ inertia, response }: HttpContext) {
+    if (this.authModes.isOidcOnlyMode()) {
+      return response.redirect('/login')
+    }
+
     const hasAnyAdmin = !!(await User.query().where('role', 'admin').first())
     if (!hasAnyAdmin) {
       return response.redirect('/setup/bootstrap')
@@ -19,6 +25,10 @@ export default class RegisterController {
   }
 
   async store({ request, auth, response, session, i18n }: HttpContext) {
+    if (this.authModes.isOidcOnlyMode()) {
+      return response.redirect('/login')
+    }
+
     const hasAnyAdmin = !!(await User.query().where('role', 'admin').first())
     if (!hasAnyAdmin) {
       return response.redirect('/setup/bootstrap')

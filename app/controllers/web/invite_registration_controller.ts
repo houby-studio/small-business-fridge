@@ -4,11 +4,17 @@ import { acceptInviteValidator } from '#validators/auth'
 import AuditService from '#services/audit_service'
 import InvitationService from '#services/invitation_service'
 import NotificationService from '#services/notification_service'
+import AuthModeService from '#services/auth_mode_service'
 
 export default class InviteRegistrationController {
   private invitations = new InvitationService()
+  private authModes = new AuthModeService()
 
   async show({ inertia, params, response, session, i18n }: HttpContext) {
+    if (this.authModes.isOidcOnlyMode()) {
+      return response.redirect('/login')
+    }
+
     const token = String(params.token)
     const status = await this.invitations.validateToken(token)
 
@@ -29,6 +35,10 @@ export default class InviteRegistrationController {
   }
 
   async store({ params, request, auth, response, session, i18n }: HttpContext) {
+    if (this.authModes.isOidcOnlyMode()) {
+      return response.redirect('/login')
+    }
+
     const token = String(params.token)
     const data = await request.validateUsing(acceptInviteValidator)
 

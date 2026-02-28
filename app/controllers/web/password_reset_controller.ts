@@ -8,16 +8,26 @@ import {
 import AuditService from '#services/audit_service'
 import NotificationService from '#services/notification_service'
 import PasswordResetService from '#services/password_reset_service'
+import AuthModeService from '#services/auth_mode_service'
 import hash from '@adonisjs/core/services/hash'
 
 export default class PasswordResetController {
   private resets = new PasswordResetService()
+  private authModes = new AuthModeService()
 
-  async showForgot({ inertia }: HttpContext) {
+  async showForgot({ inertia, response }: HttpContext) {
+    if (this.authModes.isOidcOnlyMode()) {
+      return response.redirect('/login')
+    }
+
     return inertia.render('auth/forgot_password', {})
   }
 
   async sendReset({ request, response, session, i18n }: HttpContext) {
+    if (this.authModes.isOidcOnlyMode()) {
+      return response.redirect('/login')
+    }
+
     const data = await request.validateUsing(forgotPasswordValidator)
 
     const payload = await this.resets.createToken(data.email)
@@ -36,6 +46,10 @@ export default class PasswordResetController {
   }
 
   async showReset({ params, inertia, response, session, i18n }: HttpContext) {
+    if (this.authModes.isOidcOnlyMode()) {
+      return response.redirect('/login')
+    }
+
     const token = String(params.token)
     const status = await this.resets.validateToken(token)
     if (!status.valid) {
@@ -50,6 +64,10 @@ export default class PasswordResetController {
   }
 
   async reset({ params, request, response, session, i18n }: HttpContext) {
+    if (this.authModes.isOidcOnlyMode()) {
+      return response.redirect('/login')
+    }
+
     const token = String(params.token)
     const data = await request.validateUsing(resetPasswordValidator)
 

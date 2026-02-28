@@ -6,18 +6,27 @@ import NotificationService from '#services/notification_service'
 import OidcIdentityService from '#services/oidc_identity_service'
 import RegistrationPolicyService from '#services/registration_policy_service'
 import InvitationService from '#services/invitation_service'
-import env from '#start/env'
+import AuthModeService from '#services/auth_mode_service'
 
 export default class OidcController {
   private oidcIdentity = new OidcIdentityService()
   private registrationPolicy = new RegistrationPolicyService()
   private invitations = new InvitationService()
+  private authModes = new AuthModeService()
 
-  async redirect({ ally }: HttpContext) {
+  async redirect({ ally, response }: HttpContext) {
+    if (!this.authModes.isOidcEnabled()) {
+      return response.redirect('/login')
+    }
+
     return ally.use('microsoft').redirect()
   }
 
   async callback({ ally, auth, request, response, session, i18n }: HttpContext) {
+    if (!this.authModes.isOidcEnabled()) {
+      return response.redirect('/login')
+    }
+
     const microsoft = ally.use('microsoft')
 
     // Handle user cancelling or errors from Microsoft
@@ -89,7 +98,7 @@ export default class OidcController {
         return response.redirect('/login')
       }
 
-      if (!env.get('OIDC_AUTO_REGISTER', false)) {
+      if (!this.authModes.isOidcAutoRegisterEnabled()) {
         logger.warn({ email }, 'OIDC login denied: user not found in app')
         session.flash('alert', {
           type: 'danger',
