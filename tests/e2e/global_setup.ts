@@ -26,7 +26,7 @@ const SCRYPT_CONFIG = {
 const TEST_ENV = getTestRuntimeEnv({
   HOST: 'localhost',
   PORT: '3345',
-  LOG_LEVEL: 'silent',
+  LOG_LEVEL: 'fatal',
   APP_URL: 'http://localhost:3345',
 })
 const E2E_INVITE_TOKEN = 'e2e-customer-invite-token'
