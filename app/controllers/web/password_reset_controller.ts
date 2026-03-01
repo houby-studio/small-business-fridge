@@ -16,7 +16,7 @@ export default class PasswordResetController {
   private authModes = new AuthModeService()
 
   async showForgot({ inertia, response }: HttpContext) {
-    if (this.authModes.isOidcOnlyMode()) {
+    if (this.authModes.isLocalLoginDisabled()) {
       return response.redirect('/login')
     }
 
@@ -24,7 +24,7 @@ export default class PasswordResetController {
   }
 
   async sendReset({ request, response, session, i18n }: HttpContext) {
-    if (this.authModes.isOidcOnlyMode()) {
+    if (this.authModes.isLocalLoginDisabled()) {
       return response.redirect('/login')
     }
 
@@ -46,7 +46,7 @@ export default class PasswordResetController {
   }
 
   async showReset({ params, inertia, response, session, i18n }: HttpContext) {
-    if (this.authModes.isOidcOnlyMode()) {
+    if (this.authModes.isLocalLoginDisabled()) {
       return response.redirect('/login')
     }
 
@@ -64,7 +64,7 @@ export default class PasswordResetController {
   }
 
   async reset({ params, request, response, session, i18n }: HttpContext) {
-    if (this.authModes.isOidcOnlyMode()) {
+    if (this.authModes.isLocalLoginDisabled()) {
       return response.redirect('/login')
     }
 

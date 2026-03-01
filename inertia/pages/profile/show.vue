@@ -48,7 +48,13 @@ interface ApiToken {
   expires_at: string | null
 }
 
-const props = defineProps<{ user: UserData; tokens: ApiToken[]; allergens: AllergenOption[] }>()
+const props = defineProps<{
+  user: UserData
+  tokens: ApiToken[]
+  allergens: AllergenOption[]
+  externalProviders: Array<'microsoft' | 'discord'>
+  linkedProviders: Array<'microsoft' | 'discord'>
+}>()
 const { t } = useI18n()
 const page = usePage<SharedProps>()
 
@@ -107,6 +113,22 @@ const canSubmitPassword = computed(
     passwordForm.value.newPasswordConfirmation.length >= 8 &&
     passwordForm.value.newPassword === passwordForm.value.newPasswordConfirmation
 )
+
+function providerLabel(provider: 'microsoft' | 'discord'): string {
+  return provider === 'microsoft' ? 'Microsoft' : 'Discord'
+}
+
+function providerIcon(provider: 'microsoft' | 'discord'): string {
+  return provider === 'microsoft' ? 'pi pi-microsoft' : 'pi pi-discord'
+}
+
+function isLinked(provider: 'microsoft' | 'discord'): boolean {
+  return props.linkedProviders.includes(provider)
+}
+
+function linkProvider(provider: 'microsoft' | 'discord') {
+  window.location.href = `/auth/${provider}/redirect?intent=link&userId=${props.user.id}`
+}
 
 function submit() {
   if (!form.value.displayName || !form.value.email || profileEmailInvalid.value) return
@@ -234,6 +256,23 @@ function copyToken() {
             {{ t('profile.role') }}: {{ user.role }}
           </span>
         </div>
+      </div>
+      <div v-if="props.externalProviders.length > 0" class="mt-4 flex flex-wrap gap-2">
+        <Button
+          v-for="provider in props.externalProviders"
+          :key="provider"
+          size="small"
+          severity="secondary"
+          outlined
+          :disabled="isLinked(provider)"
+          :icon="providerIcon(provider)"
+          :label="
+            isLinked(provider)
+              ? `${providerLabel(provider)} linked`
+              : `Link ${providerLabel(provider)}`
+          "
+          @click="linkProvider(provider)"
+        />
       </div>
     </section>
 

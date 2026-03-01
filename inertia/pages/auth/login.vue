@@ -11,8 +11,9 @@ import Message from 'primevue/message'
 import { useI18n } from '~/composables/use_i18n'
 
 defineProps<{
-  oidcEnabled?: boolean
+  externalProviders?: Array<'microsoft' | 'discord'>
   allowLocalRegistration?: boolean
+  localEnabled?: boolean
 }>()
 
 const { t } = useI18n()
@@ -27,6 +28,17 @@ function submit() {
   form.post('/login', {
     onFinish: () => form.reset('password'),
   })
+}
+function providerLabel(provider: 'microsoft' | 'discord'): string {
+  return provider === 'microsoft' ? t('auth.sign_in_microsoft') : t('auth.sign_in_discord')
+}
+
+function providerIcon(provider: 'microsoft' | 'discord'): string {
+  return provider === 'microsoft' ? 'pi pi-microsoft' : 'pi pi-discord'
+}
+
+function providerHref(provider: 'microsoft' | 'discord'): string {
+  return `/auth/${provider}/redirect`
 }
 </script>
 
@@ -83,7 +95,7 @@ function submit() {
             </label>
           </div>
 
-          <div class="flex items-center justify-between text-sm">
+          <div v-if="localEnabled !== false" class="flex items-center justify-between text-sm">
             <a href="/forgot-password" class="text-zinc-300 hover:text-zinc-100">
               {{ t('auth.forgot_password_link') }}
             </a>
@@ -97,6 +109,7 @@ function submit() {
           </div>
 
           <Button
+            v-if="localEnabled !== false"
             type="submit"
             :label="t('auth.submit')"
             icon="pi pi-sign-in"
@@ -105,7 +118,7 @@ function submit() {
             class="w-full"
           />
 
-          <template v-if="oidcEnabled">
+          <template v-if="(externalProviders?.length ?? 0) > 0">
             <Divider class="text-gray-400 dark:text-zinc-500" align="center">
               <span
                 class="text-sm text-gray-400 dark:text-zinc-500 bg-zinc-900/90 px-1 shadow-zinc-950/80 backdrop-blur-sm"
@@ -114,10 +127,12 @@ function submit() {
             </Divider>
 
             <Button
+              v-for="provider in externalProviders"
+              :key="provider"
               as="a"
-              href="/auth/oidc/redirect"
-              :label="t('auth.sign_in_microsoft')"
-              icon="pi pi-microsoft"
+              :href="providerHref(provider)"
+              :label="providerLabel(provider)"
+              :icon="providerIcon(provider)"
               severity="secondary"
               outlined
               class="w-full"

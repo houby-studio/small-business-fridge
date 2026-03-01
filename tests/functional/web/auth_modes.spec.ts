@@ -5,26 +5,25 @@ import User from '#models/user'
 import { UserFactory } from '#database/factories/user_factory'
 import InvitationService from '#services/invitation_service'
 
-test.group('Web Auth - Environment Modes', (group) => {
+test.group('Web Auth - Provider Modes', (group) => {
   const previousEnv = {
-    OIDC_ENABLED: process.env.OIDC_ENABLED,
-    LOCAL_LOGIN_DISABLED: process.env.LOCAL_LOGIN_DISABLED,
-    OIDC_AUTO_REGISTER: process.env.OIDC_AUTO_REGISTER,
-    REGISTRATION_MODE: process.env.REGISTRATION_MODE,
-    REGISTRATION_ALLOWED_DOMAINS: process.env.REGISTRATION_ALLOWED_DOMAINS,
+    AUTH_PROVIDERS: process.env.AUTH_PROVIDERS,
+    AUTH_AUTO_REGISTER_PROVIDERS: process.env.AUTH_AUTO_REGISTER_PROVIDERS,
+    AUTH_REGISTRATION_MODE: process.env.AUTH_REGISTRATION_MODE,
+    AUTH_REGISTRATION_ALLOWED_DOMAINS: process.env.AUTH_REGISTRATION_ALLOWED_DOMAINS,
   }
 
   group.each.setup(async () => {
     await db.from('remember_me_tokens').delete()
     await db.from('password_reset_tokens').delete()
     await db.from('user_invitations').delete()
+    await db.from('user_auth_identities').delete()
     await db.from('users').delete()
 
-    process.env.OIDC_ENABLED = 'false'
-    process.env.LOCAL_LOGIN_DISABLED = 'false'
-    process.env.OIDC_AUTO_REGISTER = 'false'
-    process.env.REGISTRATION_MODE = 'open'
-    process.env.REGISTRATION_ALLOWED_DOMAINS = ''
+    process.env.AUTH_PROVIDERS = 'local'
+    process.env.AUTH_AUTO_REGISTER_PROVIDERS = ''
+    process.env.AUTH_REGISTRATION_MODE = 'open'
+    process.env.AUTH_REGISTRATION_ALLOWED_DOMAINS = ''
   })
 
   group.teardown(() => {
@@ -37,53 +36,21 @@ test.group('Web Auth - Environment Modes', (group) => {
     }
   })
 
-  test('misconfigured local-disabled without OIDC keeps local login available', async ({
-    client,
-    assert,
-  }) => {
-    process.env.OIDC_ENABLED = 'false'
-    process.env.LOCAL_LOGIN_DISABLED = 'true'
-
-    await UserFactory.apply('admin').create()
-    await User.create({
-      password: 'secret123',
-      displayName: 'Local User',
-      email: 'local-user@example.com',
-      keypadId: 9040,
-      role: 'customer',
-    })
-
-    const showResponse = await client.get('/login')
-    showResponse.assertStatus(200)
-
-    const loginResponse = await client
-      .post('/login')
-      .form({ email: 'local-user@example.com', password: 'secret123' })
-      .withCsrfToken()
-      .redirects(0)
-    loginResponse.assertStatus(302)
-    loginResponse.assertHeader('location', '/shop')
-
-    assert.notInclude(showResponse.text(), '/auth/oidc/redirect')
-  })
-
-  test('OIDC-only mode redirects login to OIDC provider', async ({ client }) => {
-    process.env.OIDC_ENABLED = 'true'
-    process.env.LOCAL_LOGIN_DISABLED = 'true'
+  test('provider-only mode redirects /login directly to provider', async ({ client }) => {
+    process.env.AUTH_PROVIDERS = 'microsoft'
 
     await UserFactory.apply('admin').create()
 
     const response = await client.get('/login').redirects(0)
     response.assertStatus(302)
-    response.assertHeader('location', '/auth/oidc/redirect')
+    response.assertHeader('location', '/auth/microsoft/redirect')
   })
 
-  test('OIDC-only mode blocks local registration and password reset pages', async ({
+  test('provider-only mode blocks local registration and password reset pages', async ({
     client,
     assert,
   }) => {
-    process.env.OIDC_ENABLED = 'true'
-    process.env.LOCAL_LOGIN_DISABLED = 'true'
+    process.env.AUTH_PROVIDERS = 'microsoft'
 
     await UserFactory.apply('admin').create()
 
@@ -97,7 +64,7 @@ test.group('Web Auth - Environment Modes', (group) => {
 
     const service = new InvitationService()
     const { inviteUrl } = await service.createInvite({
-      email: 'invite-only-oidc@example.com',
+      email: 'invite-only-provider@example.com',
       role: 'customer',
       invitedByUserId: null,
     })
@@ -109,45 +76,41 @@ test.group('Web Auth - Environment Modes', (group) => {
     assert.notInclude(inviteResponse.text(), 'Complete Your Account Setup')
   })
 
-  test('both login methods enabled keeps local login and OIDC redirect active', async ({
+  test('hybrid mode keeps local login and microsoft redirect active', async ({
     client,
     assert,
   }) => {
-    process.env.OIDC_ENABLED = 'true'
-    process.env.LOCAL_LOGIN_DISABLED = 'false'
-    process.env.REGISTRATION_MODE = 'open'
+    process.env.AUTH_PROVIDERS = 'local,microsoft'
 
     await UserFactory.apply('admin').create()
 
     const response = await client.get('/login')
     response.assertStatus(200)
 
-    const oidcResponse = await client.get('/auth/oidc/redirect').redirects(0)
-    oidcResponse.assertStatus(302)
-    assert.include(oidcResponse.header('location') ?? '', 'login.microsoftonline.com')
+    const oauthResponse = await client.get('/auth/microsoft/redirect').redirects(0)
+    oauthResponse.assertStatus(302)
+    assert.include(oauthResponse.header('location') ?? '', 'login.microsoftonline.com')
   })
 
-  test('OIDC invite intent rejects invalid invite token before provider redirect', async ({
+  test('provider invite intent rejects invalid invite token before provider redirect', async ({
     client,
   }) => {
-    process.env.OIDC_ENABLED = 'true'
-    process.env.LOCAL_LOGIN_DISABLED = 'false'
+    process.env.AUTH_PROVIDERS = 'local,microsoft'
 
     await UserFactory.apply('admin').create()
 
     const response = await client
-      .get('/auth/oidc/redirect?intent=invite&token=bad-token')
+      .get('/auth/microsoft/redirect?intent=invite&token=bad-token')
       .redirects(0)
     response.assertStatus(302)
     response.assertHeader('location', '/login')
   })
 
-  test('OIDC invite intent with valid token proceeds to provider redirect', async ({
+  test('provider invite intent with valid token proceeds to provider redirect', async ({
     client,
     assert,
   }) => {
-    process.env.OIDC_ENABLED = 'true'
-    process.env.LOCAL_LOGIN_DISABLED = 'false'
+    process.env.AUTH_PROVIDERS = 'local,microsoft'
 
     await UserFactory.apply('admin').create()
 
@@ -160,28 +123,27 @@ test.group('Web Auth - Environment Modes', (group) => {
     const token = inviteUrl.split('/').pop()!
 
     const response = await client
-      .get(`/auth/oidc/redirect?intent=invite&token=${encodeURIComponent(token)}`)
+      .get(`/auth/microsoft/redirect?intent=invite&token=${encodeURIComponent(token)}`)
       .redirects(0)
     response.assertStatus(302)
     assert.include(response.header('location') ?? '', 'login.microsoftonline.com')
   })
 
-  test('local-only mode hides OIDC button', async ({ client, assert }) => {
-    process.env.OIDC_ENABLED = 'false'
-    process.env.LOCAL_LOGIN_DISABLED = 'false'
-    process.env.REGISTRATION_MODE = 'open'
+  test('local-only mode hides provider button', async ({ client, assert }) => {
+    process.env.AUTH_PROVIDERS = 'local'
+    process.env.AUTH_REGISTRATION_MODE = 'open'
 
     await UserFactory.apply('admin').create()
 
     const response = await client.get('/login')
     response.assertStatus(200)
-    assert.notInclude(response.text(), '/auth/oidc/redirect')
+    assert.notInclude(response.text(), '/auth/microsoft/redirect')
   })
 
   test('local registration respects invite_only and closed modes', async ({ client, assert }) => {
     await UserFactory.apply('admin').create()
 
-    process.env.REGISTRATION_MODE = 'invite_only'
+    process.env.AUTH_REGISTRATION_MODE = 'invite_only'
     const inviteOnly = await client
       .post('/register')
       .form({
@@ -196,7 +158,7 @@ test.group('Web Auth - Environment Modes', (group) => {
     inviteOnly.assertHeader('location', '/login')
     assert.isNull(await User.findBy('email', 'invite-blocked@example.com'))
 
-    process.env.REGISTRATION_MODE = 'closed'
+    process.env.AUTH_REGISTRATION_MODE = 'closed'
     const closed = await client
       .post('/register')
       .form({
@@ -217,8 +179,8 @@ test.group('Web Auth - Environment Modes', (group) => {
     assert,
   }) => {
     await UserFactory.apply('admin').create()
-    process.env.REGISTRATION_MODE = 'domain_auto_approve'
-    process.env.REGISTRATION_ALLOWED_DOMAINS = 'allowed.test'
+    process.env.AUTH_REGISTRATION_MODE = 'domain_auto_approve'
+    process.env.AUTH_REGISTRATION_ALLOWED_DOMAINS = 'allowed.test'
 
     const denied = await client
       .post('/register')

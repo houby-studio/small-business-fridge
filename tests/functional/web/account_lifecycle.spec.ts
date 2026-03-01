@@ -7,18 +7,18 @@ import { UserFactory } from '#database/factories/user_factory'
 import { store as throttleStore } from '#middleware/throttle_middleware'
 
 test.group('Web Auth - Registration and Password Lifecycle', (group) => {
-  const previousMode = process.env.REGISTRATION_MODE
+  const previousMode = process.env.AUTH_REGISTRATION_MODE
 
   group.setup(() => {
-    process.env.REGISTRATION_MODE = 'open'
+    process.env.AUTH_REGISTRATION_MODE = 'open'
   })
 
   group.teardown(() => {
     if (previousMode === undefined) {
-      delete process.env.REGISTRATION_MODE
+      delete process.env.AUTH_REGISTRATION_MODE
       return
     }
-    process.env.REGISTRATION_MODE = previousMode
+    process.env.AUTH_REGISTRATION_MODE = previousMode
   })
 
   group.each.setup(async () => {

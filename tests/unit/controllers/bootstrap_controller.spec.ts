@@ -5,27 +5,27 @@ import BootstrapController from '#controllers/web/bootstrap_controller'
 import User from '#models/user'
 
 test.group('BootstrapController.show', (group) => {
-  const previousOidcEnabled = process.env.OIDC_ENABLED
+  const previousAuthProviders = process.env.AUTH_PROVIDERS
 
   group.each.setup(async () => {
     await db.rawQuery(
-      'TRUNCATE TABLE user_invitations, password_reset_tokens, orders, deliveries, invoices, products, categories, users RESTART IDENTITY CASCADE'
+      'TRUNCATE TABLE user_auth_identities, user_invitations, password_reset_tokens, orders, deliveries, invoices, products, categories, users RESTART IDENTITY CASCADE'
     )
-    process.env.OIDC_ENABLED = 'false'
+    process.env.AUTH_PROVIDERS = 'local'
   })
 
   group.teardown(() => {
-    if (previousOidcEnabled === undefined) {
-      delete process.env.OIDC_ENABLED
+    if (previousAuthProviders === undefined) {
+      delete process.env.AUTH_PROVIDERS
     } else {
-      process.env.OIDC_ENABLED = previousOidcEnabled
+      process.env.AUTH_PROVIDERS = previousAuthProviders
     }
   })
 
-  test('returns bootstrap page props with oidcEnabled=true when OIDC is enabled', async ({
+  test('returns bootstrap page props with external provider list when provider is enabled', async ({
     assert,
   }) => {
-    process.env.OIDC_ENABLED = 'true'
+    process.env.AUTH_PROVIDERS = 'local,microsoft'
 
     const controller = new BootstrapController()
     const result = await controller.show({
@@ -39,14 +39,14 @@ test.group('BootstrapController.show', (group) => {
 
     assert.deepEqual(result, {
       component: 'auth/bootstrap',
-      props: { oidcEnabled: true },
+      props: { externalProviders: ['microsoft'] },
     })
   })
 
-  test('returns bootstrap page props with oidcEnabled=false when OIDC is disabled', async ({
+  test('returns bootstrap page props with empty provider list when local only', async ({
     assert,
   }) => {
-    process.env.OIDC_ENABLED = 'false'
+    process.env.AUTH_PROVIDERS = 'local'
 
     const controller = new BootstrapController()
     const result = await controller.show({
@@ -60,7 +60,7 @@ test.group('BootstrapController.show', (group) => {
 
     assert.deepEqual(result, {
       component: 'auth/bootstrap',
-      props: { oidcEnabled: false },
+      props: { externalProviders: [] },
     })
   })
 

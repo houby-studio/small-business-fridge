@@ -12,7 +12,7 @@ import { useI18n } from '~/composables/use_i18n'
 import type { SharedProps } from '~/types'
 
 const props = defineProps<{
-  oidcEnabled?: boolean
+  externalProviders?: Array<'microsoft' | 'discord'>
 }>()
 
 const { t } = useI18n()
@@ -63,7 +63,17 @@ const submitDisabled = computed(
     form.passwordConfirmation.length < 8 ||
     form.password !== form.passwordConfirmation
 )
-const oidcBootstrapHref = '/auth/oidc/redirect?intent=bootstrap'
+function providerLabel(provider: 'microsoft' | 'discord'): string {
+  return provider === 'microsoft' ? t('auth.sign_in_microsoft') : t('auth.sign_in_discord')
+}
+
+function providerIcon(provider: 'microsoft' | 'discord'): string {
+  return provider === 'microsoft' ? 'pi pi-microsoft' : 'pi pi-discord'
+}
+
+function providerHref(provider: 'microsoft' | 'discord'): string {
+  return `/auth/${provider}/redirect?intent=bootstrap`
+}
 
 function submit() {
   form.post('/setup/bootstrap', {
@@ -195,7 +205,7 @@ function submit() {
             class="w-full"
           />
 
-          <template v-if="props.oidcEnabled">
+          <template v-if="(props.externalProviders?.length ?? 0) > 0">
             <div class="flex items-center gap-3 py-1">
               <div class="h-px flex-1 bg-zinc-700" />
               <span class="text-xs uppercase tracking-wide text-zinc-400">{{ t('auth.or') }}</span>
@@ -203,11 +213,15 @@ function submit() {
             </div>
 
             <a
-              :href="oidcBootstrapHref"
+              v-for="provider in props.externalProviders"
+              :key="provider"
+              :href="providerHref(provider)"
               class="inline-flex w-full items-center justify-center gap-2 rounded-md border border-zinc-600 px-4 py-2 text-sm font-medium text-zinc-100 transition hover:border-zinc-500 hover:bg-zinc-800"
             >
-              <i class="pi pi-microsoft" aria-hidden="true" />
-              <span>{{ t('auth.bootstrap_submit_oidc') }}</span>
+              <i :class="providerIcon(provider)" aria-hidden="true" />
+              <span>{{
+                t('auth.bootstrap_submit_oauth', { provider: providerLabel(provider) })
+              }}</span>
             </a>
           </template>
         </form>

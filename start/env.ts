@@ -53,18 +53,21 @@ export default await Env.create(new URL('../', import.meta.url), {
 
   /*
   |----------------------------------------------------------
-  | Variables for configuring OIDC (Microsoft Entra ID)
+  | Variables for configuring external authentication providers
   |----------------------------------------------------------
   */
-  OIDC_ENABLED: Env.schema.boolean.optional(),
-  LOCAL_LOGIN_DISABLED: Env.schema.boolean.optional(),
-  OIDC_AUTO_REGISTER: Env.schema.boolean.optional(),
-  OIDC_CLIENT_ID: Env.schema.string.optional(),
-  OIDC_CLIENT_SECRET: Env.schema.string.optional(),
-  OIDC_TENANT_ID: Env.schema.string.optional(),
-  OIDC_REDIRECT_URI: Env.schema.string.optional(),
-  REGISTRATION_MODE: Env.schema.string.optional(),
-  REGISTRATION_ALLOWED_DOMAINS: Env.schema.string.optional(),
+  AUTH_PROVIDERS: Env.schema.string.optional(),
+  AUTH_AUTO_REGISTER_PROVIDERS: Env.schema.string.optional(),
+  AUTH_PROVIDER_MICROSOFT_CLIENT_ID: Env.schema.string.optional(),
+  AUTH_PROVIDER_MICROSOFT_CLIENT_SECRET: Env.schema.string.optional(),
+  AUTH_PROVIDER_MICROSOFT_TENANT_ID: Env.schema.string.optional(),
+  AUTH_PROVIDER_MICROSOFT_REDIRECT_URI: Env.schema.string.optional(),
+  AUTH_PROVIDER_DISCORD_CLIENT_ID: Env.schema.string.optional(),
+  AUTH_PROVIDER_DISCORD_CLIENT_SECRET: Env.schema.string.optional(),
+  AUTH_PROVIDER_DISCORD_REDIRECT_URI: Env.schema.string.optional(),
+  AUTH_PROVIDER_DISCORD_SCOPES: Env.schema.string.optional(),
+  AUTH_REGISTRATION_MODE: Env.schema.string.optional(),
+  AUTH_REGISTRATION_ALLOWED_DOMAINS: Env.schema.string.optional(),
   INVITE_EXPIRY_HOURS: Env.schema.number.optional(),
   PASSWORD_RESET_TTL_MINUTES: Env.schema.number.optional(),
 

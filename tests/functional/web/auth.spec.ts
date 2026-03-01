@@ -74,20 +74,21 @@ test.group('Web Auth', (group) => {
 })
 
 test.group('Web Auth - Bootstrap', (group) => {
-  const previousOidcEnabled = process.env.OIDC_ENABLED
+  const previousProviders = process.env.AUTH_PROVIDERS
 
   group.each.setup(async () => {
     throttleStore.clear()
     await db.from('remember_me_tokens').delete()
+    await db.from('user_auth_identities').delete()
     await db.from('users').delete()
-    process.env.OIDC_ENABLED = 'false'
+    process.env.AUTH_PROVIDERS = 'local'
   })
 
   group.teardown(() => {
-    if (previousOidcEnabled === undefined) {
-      delete process.env.OIDC_ENABLED
+    if (previousProviders === undefined) {
+      delete process.env.AUTH_PROVIDERS
     } else {
-      process.env.OIDC_ENABLED = previousOidcEnabled
+      process.env.AUTH_PROVIDERS = previousProviders
     }
   })
 

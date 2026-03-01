@@ -480,7 +480,7 @@ DB_HOST=127.0.0.1
 DB_PORT=5432
 DB_DATABASE=sbf_test
 SESSION_DRIVER=memory    # ← in-memory sessions, no Redis needed
-OIDC_ENABLED=false
+AUTH_PROVIDERS=local
 API_SECRET=test-api-secret
 APP_KEY=test-app-key-for-testing-only-123
 ```

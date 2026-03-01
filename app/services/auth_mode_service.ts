@@ -1,45 +1,88 @@
 import env from '#start/env'
 
-function parseBoolean(raw: string | undefined): boolean | null {
-  if (raw === undefined) return null
+export type ExternalAuthProvider = 'microsoft' | 'discord'
+export type AuthProvider = 'local' | ExternalAuthProvider
 
-  const normalized = raw.trim().toLowerCase()
-  if (normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'on') {
-    return true
-  }
-  if (
-    normalized === 'false' ||
-    normalized === '0' ||
-    normalized === 'no' ||
-    normalized === 'off' ||
-    normalized === ''
-  ) {
-    return false
-  }
+function parseCommaList(raw: string | undefined, fallback: string[] = []): Set<string> {
+  if (raw === undefined) return new Set(fallback)
 
-  return null
+  return new Set(
+    raw
+      .split(',')
+      .map((value) => value.trim().toLowerCase())
+      .filter((value) => value.length > 0)
+  )
 }
 
 export default class AuthModeService {
+  private readonly supportedExternalProviders: ExternalAuthProvider[] = ['microsoft', 'discord']
+
+  getEnabledProviders(): Set<AuthProvider> {
+    const configured = parseCommaList(process.env.AUTH_PROVIDERS ?? env.get('AUTH_PROVIDERS'), [
+      'local',
+    ])
+    const providers = new Set<AuthProvider>()
+
+    if (configured.has('local')) {
+      providers.add('local')
+    }
+
+    for (const provider of this.supportedExternalProviders) {
+      if (configured.has(provider)) {
+        providers.add(provider)
+      }
+    }
+
+    if (providers.size === 0) {
+      providers.add('local')
+    }
+
+    return providers
+  }
+
+  getEnabledExternalProviders(): ExternalAuthProvider[] {
+    const enabled = this.getEnabledProviders()
+    return this.supportedExternalProviders.filter((provider) => enabled.has(provider))
+  }
+
+  getDefaultExternalProvider(): ExternalAuthProvider | null {
+    return this.getEnabledExternalProviders()[0] ?? null
+  }
+
+  isProviderEnabled(provider: ExternalAuthProvider): boolean {
+    return this.getEnabledProviders().has(provider)
+  }
+
+  isLocalEnabled(): boolean {
+    return this.getEnabledProviders().has('local')
+  }
+
   isOidcEnabled(): boolean {
-    const parsed = parseBoolean(process.env.OIDC_ENABLED)
-    if (parsed !== null) return parsed
-    return env.get('OIDC_ENABLED', false)
+    return this.getEnabledExternalProviders().length > 0
   }
 
   isLocalLoginDisabled(): boolean {
-    const parsed = parseBoolean(process.env.LOCAL_LOGIN_DISABLED)
-    if (parsed !== null) return parsed
-    return env.get('LOCAL_LOGIN_DISABLED', false)
+    return !this.isLocalEnabled()
+  }
+
+  isProviderAutoRegisterEnabled(provider: ExternalAuthProvider): boolean {
+    const processProviders = parseCommaList(process.env.AUTH_AUTO_REGISTER_PROVIDERS)
+    if (processProviders.size > 0) {
+      return processProviders.has(provider)
+    }
+
+    const configuredProviders = parseCommaList(env.get('AUTH_AUTO_REGISTER_PROVIDERS'))
+    if (configuredProviders.size > 0) {
+      return configuredProviders.has(provider)
+    }
+    return false
   }
 
   isOidcAutoRegisterEnabled(): boolean {
-    const parsed = parseBoolean(process.env.OIDC_AUTO_REGISTER)
-    if (parsed !== null) return parsed
-    return env.get('OIDC_AUTO_REGISTER', false)
+    return this.isProviderAutoRegisterEnabled('microsoft')
   }
 
   isOidcOnlyMode(): boolean {
-    return this.isOidcEnabled() && this.isLocalLoginDisabled()
+    return this.getEnabledExternalProviders().length > 0 && !this.isLocalEnabled()
   }
 }

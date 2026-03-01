@@ -13,8 +13,8 @@ export type RegistrationDecision =
 /**
  * Central policy for self-registration across all auth providers.
  *
- * Defaults to `open` to preserve existing behavior when OIDC auto-register is enabled.
- * Production deployments should explicitly set REGISTRATION_MODE (recommended: invite_only).
+ * Production deployments should explicitly set AUTH_REGISTRATION_MODE
+ * (recommended: invite_only).
  */
 export default class RegistrationPolicyService {
   constructor(
@@ -29,7 +29,7 @@ export default class RegistrationPolicyService {
       return this.overrides.mode
     }
 
-    const mode = (process.env.REGISTRATION_MODE ?? env.get('REGISTRATION_MODE', 'open')) as string
+    const mode = this.resolveMode()
     if (
       mode === 'open' ||
       mode === 'invite_only' ||
@@ -78,13 +78,25 @@ export default class RegistrationPolicyService {
       )
     }
 
-    const raw =
-      process.env.REGISTRATION_ALLOWED_DOMAINS ?? env.get('REGISTRATION_ALLOWED_DOMAINS', '')
+    const raw = this.resolveAllowedDomainsRaw()
     return new Set(
       raw
         .split(',')
         .map((domain) => domain.trim().toLowerCase())
         .filter((domain) => domain.length > 0)
     )
+  }
+
+  private resolveMode(): string {
+    const preferredMode = process.env.AUTH_REGISTRATION_MODE ?? env.get('AUTH_REGISTRATION_MODE')
+    if (typeof preferredMode === 'string' && preferredMode.trim().length > 0) return preferredMode
+    return 'open'
+  }
+
+  private resolveAllowedDomainsRaw(): string {
+    const preferredDomains =
+      process.env.AUTH_REGISTRATION_ALLOWED_DOMAINS ?? env.get('AUTH_REGISTRATION_ALLOWED_DOMAINS')
+    if (typeof preferredDomains === 'string') return preferredDomains
+    return ''
   }
 }

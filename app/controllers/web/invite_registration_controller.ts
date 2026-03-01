@@ -11,7 +11,7 @@ export default class InviteRegistrationController {
   private authModes = new AuthModeService()
 
   async show({ inertia, params, response, session, i18n }: HttpContext) {
-    if (this.authModes.isOidcOnlyMode()) {
+    if (this.authModes.isLocalLoginDisabled()) {
       return response.redirect('/login')
     }
 
@@ -31,12 +31,12 @@ export default class InviteRegistrationController {
       email: status.invitation.email,
       role: status.invitation.role,
       expiresAt: status.invitation.expiresAt.toISO(),
-      oidcEnabled: this.authModes.isOidcEnabled(),
+      externalProviders: this.authModes.getEnabledExternalProviders(),
     })
   }
 
   async store({ params, request, auth, response, session, i18n }: HttpContext) {
-    if (this.authModes.isOidcOnlyMode()) {
+    if (this.authModes.isLocalLoginDisabled()) {
       return response.redirect('/login')
     }
 

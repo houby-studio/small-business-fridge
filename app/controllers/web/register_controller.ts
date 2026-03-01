@@ -12,7 +12,7 @@ export default class RegisterController {
   private authModes = new AuthModeService()
 
   async show({ inertia, response }: HttpContext) {
-    if (this.authModes.isOidcOnlyMode()) {
+    if (this.authModes.isLocalLoginDisabled()) {
       return response.redirect('/login')
     }
 
@@ -25,7 +25,7 @@ export default class RegisterController {
   }
 
   async store({ request, auth, response, session, i18n }: HttpContext) {
-    if (this.authModes.isOidcOnlyMode()) {
+    if (this.authModes.isLocalLoginDisabled()) {
       return response.redirect('/login')
     }
 

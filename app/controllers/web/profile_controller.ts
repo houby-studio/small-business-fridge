@@ -10,8 +10,11 @@ import AuditService from '#services/audit_service'
 import User from '#models/user'
 import Allergen from '#models/allergen'
 import Product from '#models/product'
+import AuthModeService from '#services/auth_mode_service'
 
 export default class ProfileController {
+  private authModes = new AuthModeService()
+
   private async getExcludedAllergenIds(userId: number): Promise<number[]> {
     const rows = await db
       .from('user_excluded_allergen')
@@ -30,7 +33,7 @@ export default class ProfileController {
 
   async show({ inertia, auth }: HttpContext) {
     const user = auth.user!
-    await user.load((loader) => loader.load('favoriteProducts'))
+    await user.load((loader) => loader.load('favoriteProducts').load('authIdentities'))
     const excludedAllergenIds = await this.getExcludedAllergenIds(user.id)
 
     // List personal API tokens — exclude short-lived kiosk tokens
@@ -50,6 +53,8 @@ export default class ProfileController {
       user: { ...user.serialize(), excludedAllergenIds },
       tokens,
       allergens: allergens.map((a) => ({ id: a.id, name: a.name })),
+      externalProviders: this.authModes.getEnabledExternalProviders(),
+      linkedProviders: user.authIdentities.map((identity) => identity.provider),
     })
   }
 

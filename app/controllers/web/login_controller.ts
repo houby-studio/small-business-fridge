@@ -19,13 +19,18 @@ export default class LoginController {
       return response.redirect('/setup/bootstrap')
     }
 
-    if (this.authModes.isOidcOnlyMode()) {
-      return response.redirect('/auth/oidc/redirect')
+    if (this.authModes.isLocalLoginDisabled()) {
+      const provider = this.authModes.getDefaultExternalProvider()
+      if (provider) {
+        return response.redirect(`/auth/${provider}/redirect`)
+      }
     }
     const mode = this.registrationPolicy.getMode()
+    const externalProviders = this.authModes.getEnabledExternalProviders()
     return inertia.render('auth/login', {
-      oidcEnabled: this.authModes.isOidcEnabled(),
+      externalProviders,
       allowLocalRegistration: mode === 'open' || mode === 'domain_auto_approve',
+      localEnabled: this.authModes.isLocalEnabled(),
     })
   }
 
@@ -34,8 +39,9 @@ export default class LoginController {
       return response.redirect('/setup/bootstrap')
     }
 
-    if (this.authModes.isOidcOnlyMode()) {
-      return response.redirect('/auth/oidc/redirect')
+    if (this.authModes.isLocalLoginDisabled()) {
+      const provider = this.authModes.getDefaultExternalProvider()
+      return response.redirect(provider ? `/auth/${provider}/redirect` : '/login')
     }
 
     const { email, password, rememberMe } = await request.validateUsing(loginValidator)

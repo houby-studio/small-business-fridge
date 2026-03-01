@@ -153,8 +153,8 @@ router.group(() => {
     ])
 })
 
-router.get('/auth/oidc/redirect', [OidcController, 'redirect'])
-router.get('/auth/oidc/callback', [OidcController, 'callback'])
+router.get('/auth/:provider/redirect', [OidcController, 'redirect'])
+router.get('/auth/:provider/callback', [OidcController, 'callback'])
 
 router.get('/logout', [LoginController, 'destroy']).use(middleware.auth()).as('logout.get')
 router.post('/logout', [LoginController, 'destroy']).use(middleware.auth()).as('logout.post')

@@ -15,7 +15,7 @@ const props = defineProps<{
   token: string
   email: string
   role: 'customer' | 'supplier' | 'admin'
-  oidcEnabled?: boolean
+  externalProviders?: Array<'microsoft' | 'discord'>
 }>()
 
 const { t } = useI18n()
@@ -58,9 +58,16 @@ const submitDisabled = computed(
     form.passwordConfirmation.length < 8 ||
     form.password !== form.passwordConfirmation
 )
-const oidcInviteHref = computed(
-  () => `/auth/oidc/redirect?intent=invite&token=${encodeURIComponent(props.token)}`
-)
+function providerLabel(provider: 'microsoft' | 'discord'): string {
+  return provider === 'microsoft' ? t('auth.sign_in_microsoft') : t('auth.sign_in_discord')
+}
+
+function providerIcon(provider: 'microsoft' | 'discord'): string {
+  return provider === 'microsoft' ? 'pi pi-microsoft' : 'pi pi-discord'
+}
+
+const providerInviteHref = (provider: 'microsoft' | 'discord') =>
+  `/auth/${provider}/redirect?intent=invite&token=${encodeURIComponent(props.token)}`
 
 function submit() {
   form.post(`/register/invite/${props.token}`, {
@@ -177,7 +184,7 @@ function submit() {
             class="w-full"
           />
 
-          <template v-if="props.oidcEnabled">
+          <template v-if="(props.externalProviders?.length ?? 0) > 0">
             <div class="flex items-center gap-3 py-1">
               <div class="h-px flex-1 bg-zinc-700" />
               <span class="text-xs uppercase tracking-wide text-zinc-400">{{ t('auth.or') }}</span>
@@ -185,11 +192,15 @@ function submit() {
             </div>
 
             <a
-              :href="oidcInviteHref"
+              v-for="provider in props.externalProviders"
+              :key="provider"
+              :href="providerInviteHref(provider)"
               class="inline-flex w-full items-center justify-center gap-2 rounded-md border border-zinc-600 px-4 py-2 text-sm font-medium text-zinc-100 transition hover:border-zinc-500 hover:bg-zinc-800"
             >
-              <i class="pi pi-microsoft" aria-hidden="true" />
-              <span>{{ t('auth.invite_submit_oidc') }}</span>
+              <i :class="providerIcon(provider)" aria-hidden="true" />
+              <span>{{
+                t('auth.invite_submit_oauth', { provider: providerLabel(provider) })
+              }}</span>
             </a>
           </template>
 

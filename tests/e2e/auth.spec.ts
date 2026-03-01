@@ -64,7 +64,9 @@ test.describe('Login page', () => {
       await page.goto('/setup/bootstrap')
       await expect(page).toHaveURL(/\/setup\/bootstrap/)
       await expect(page.locator('#bootstrapDisplayName')).toBeVisible()
-      await expect(page.locator('a[href="/auth/oidc/redirect?intent=bootstrap"]')).toHaveCount(0)
+      await expect(
+        page.locator('a[href*="/auth/"][href*="/redirect?intent=bootstrap"]')
+      ).toHaveCount(0)
 
       const submit = page.locator('button[type="submit"]')
       await expect(submit).toBeDisabled()

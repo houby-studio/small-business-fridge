@@ -19,7 +19,7 @@ export default class BootstrapController {
     }
 
     return inertia.render('auth/bootstrap', {
-      oidcEnabled: this.authModes.isOidcEnabled(),
+      externalProviders: this.authModes.getEnabledExternalProviders(),
     })
   }
 

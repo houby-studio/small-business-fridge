@@ -9,18 +9,17 @@ import { store as throttleStore } from '#middleware/throttle_middleware'
 
 test.group('Web Auth - Invitations', (group) => {
   const previousEnv = {
-    OIDC_ENABLED: process.env.OIDC_ENABLED,
-    LOCAL_LOGIN_DISABLED: process.env.LOCAL_LOGIN_DISABLED,
+    AUTH_PROVIDERS: process.env.AUTH_PROVIDERS,
   }
 
   group.each.setup(async () => {
     throttleStore.clear()
     await db.from('remember_me_tokens').delete()
     await db.from('user_invitations').delete()
+    await db.from('user_auth_identities').delete()
     await db.from('users').delete()
 
-    process.env.OIDC_ENABLED = 'false'
-    process.env.LOCAL_LOGIN_DISABLED = 'false'
+    process.env.AUTH_PROVIDERS = 'local'
   })
 
   group.teardown(() => {
@@ -132,12 +131,11 @@ test.group('Web Auth - Invitations', (group) => {
     response.assertStatus(200)
   })
 
-  test('invite accept page includes OIDC completion link when OIDC is enabled', async ({
+  test('invite accept page includes external provider links when provider is enabled', async ({
     client,
     assert,
   }) => {
-    process.env.OIDC_ENABLED = 'true'
-    process.env.LOCAL_LOGIN_DISABLED = 'false'
+    process.env.AUTH_PROVIDERS = 'local,microsoft'
 
     const service = new InvitationService()
     const { inviteUrl } = await service.createInvite({
@@ -152,7 +150,7 @@ test.group('Web Auth - Invitations', (group) => {
       .header('X-Inertia', 'true')
       .header('X-Inertia-Version', '1')
     response.assertStatus(200)
-    assert.isTrue(response.body().props.oidcEnabled)
+    assert.deepEqual(response.body().props.externalProviders, ['microsoft'])
   })
 
   test('invite accept page redirects for invalid token', async ({ client }) => {

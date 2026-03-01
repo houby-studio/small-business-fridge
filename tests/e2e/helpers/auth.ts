@@ -51,9 +51,9 @@ export async function ensureLoginPage(page: Page) {
     await page.waitForLoadState('domcontentloaded')
   }
 
-  if (/\/auth\/oidc\/redirect(?:\?|$)/.test(page.url())) {
+  if (/\/auth\/[^/]+\/redirect(?:\?|$)/.test(page.url())) {
     throw new Error(
-      'Unexpected OIDC redirect during e2e local-login flow. Ensure LOCAL_LOGIN_DISABLED=false for Playwright web server.'
+      'Unexpected provider redirect during e2e local-login flow. Ensure AUTH_PROVIDERS includes local for Playwright web server.'
     )
   }
 
