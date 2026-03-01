@@ -14,13 +14,17 @@ export default class LoginController {
     return !!admin
   }
 
-  async show({ inertia, response }: HttpContext) {
+  async show({ inertia, response, session }: HttpContext) {
     if (!(await this.hasAnyAdmin())) {
       return response.redirect('/setup/bootstrap')
     }
 
     const externalProviders = this.authModes.getEnabledExternalProviders()
-    if (this.authModes.isLocalLoginDisabled() && externalProviders.length === 1) {
+    if (
+      this.authModes.isLocalLoginDisabled() &&
+      externalProviders.length === 1 &&
+      !session.flashMessages.has('alert')
+    ) {
       return response.redirect(`/auth/${externalProviders[0]}/redirect`)
     }
     const mode = this.registrationPolicy.getMode()

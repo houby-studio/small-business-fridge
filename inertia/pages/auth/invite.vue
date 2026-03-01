@@ -16,6 +16,7 @@ const props = defineProps<{
   email: string
   role: 'customer' | 'supplier' | 'admin'
   externalProviders?: Array<'microsoft' | 'discord'>
+  localEnabled?: boolean
 }>()
 
 const { t } = useI18n()
@@ -119,70 +120,72 @@ function submit() {
             <InputText id="inviteRole" :model-value="t(`auth.invite_role_${role}`)" disabled />
           </div>
 
-          <div class="flex flex-col gap-2">
-            <label for="inviteDisplayName" class="text-sm font-medium text-zinc-300">
-              {{ t('auth.bootstrap_display_name') }}
-            </label>
-            <InputText
-              id="inviteDisplayName"
-              v-model="form.displayName"
-              :invalid="getFieldInvalid('displayName')"
-              autocomplete="name"
-              :placeholder="t('auth.bootstrap_display_name_placeholder')"
-            />
-          </div>
+          <template v-if="localEnabled !== false">
+            <div class="flex flex-col gap-2">
+              <label for="inviteDisplayName" class="text-sm font-medium text-zinc-300">
+                {{ t('auth.bootstrap_display_name') }}
+              </label>
+              <InputText
+                id="inviteDisplayName"
+                v-model="form.displayName"
+                :invalid="getFieldInvalid('displayName')"
+                autocomplete="name"
+                :placeholder="t('auth.bootstrap_display_name_placeholder')"
+              />
+            </div>
 
-          <div class="flex flex-col gap-2">
-            <label for="invitePassword" class="text-sm font-medium text-zinc-300">
-              {{ t('auth.bootstrap_password') }}
-            </label>
-            <Password
-              inputId="invitePassword"
-              v-model="form.password"
-              :invalid="getFieldInvalid('password')"
-              :feedback="false"
-              toggleMask
-              autocomplete="new-password"
-              :placeholder="t('auth.bootstrap_password_placeholder')"
-              inputClass="w-full"
+            <div class="flex flex-col gap-2">
+              <label for="invitePassword" class="text-sm font-medium text-zinc-300">
+                {{ t('auth.bootstrap_password') }}
+              </label>
+              <Password
+                inputId="invitePassword"
+                v-model="form.password"
+                :invalid="getFieldInvalid('password')"
+                :feedback="false"
+                toggleMask
+                autocomplete="new-password"
+                :placeholder="t('auth.bootstrap_password_placeholder')"
+                inputClass="w-full"
+                class="w-full"
+              />
+              <small v-if="passwordTooShort" class="text-red-300">
+                {{ t('auth.password_min_length') }}
+              </small>
+            </div>
+
+            <div class="flex flex-col gap-2">
+              <label for="invitePasswordConfirmation" class="text-sm font-medium text-zinc-300">
+                {{ t('auth.bootstrap_password_confirm') }}
+              </label>
+              <Password
+                inputId="invitePasswordConfirmation"
+                v-model="form.passwordConfirmation"
+                :invalid="getFieldInvalid('passwordConfirmation')"
+                :feedback="false"
+                toggleMask
+                autocomplete="new-password"
+                :placeholder="t('auth.bootstrap_password_confirm_placeholder')"
+                inputClass="w-full"
+                class="w-full"
+              />
+              <small v-if="confirmationTooShort" class="text-red-300">
+                {{ t('auth.password_min_length') }}
+              </small>
+              <small v-if="passwordsMismatch" class="text-red-300">
+                {{ t('auth.bootstrap_password_mismatch') }}
+              </small>
+            </div>
+
+            <Button
+              type="submit"
+              :label="t('auth.invite_submit')"
+              icon="pi pi-user-plus"
+              :loading="form.processing"
+              :disabled="submitDisabled"
               class="w-full"
             />
-            <small v-if="passwordTooShort" class="text-red-300">
-              {{ t('auth.password_min_length') }}
-            </small>
-          </div>
-
-          <div class="flex flex-col gap-2">
-            <label for="invitePasswordConfirmation" class="text-sm font-medium text-zinc-300">
-              {{ t('auth.bootstrap_password_confirm') }}
-            </label>
-            <Password
-              inputId="invitePasswordConfirmation"
-              v-model="form.passwordConfirmation"
-              :invalid="getFieldInvalid('passwordConfirmation')"
-              :feedback="false"
-              toggleMask
-              autocomplete="new-password"
-              :placeholder="t('auth.bootstrap_password_confirm_placeholder')"
-              inputClass="w-full"
-              class="w-full"
-            />
-            <small v-if="confirmationTooShort" class="text-red-300">
-              {{ t('auth.password_min_length') }}
-            </small>
-            <small v-if="passwordsMismatch" class="text-red-300">
-              {{ t('auth.bootstrap_password_mismatch') }}
-            </small>
-          </div>
-
-          <Button
-            type="submit"
-            :label="t('auth.invite_submit')"
-            icon="pi pi-user-plus"
-            :loading="form.processing"
-            :disabled="submitDisabled"
-            class="w-full"
-          />
+          </template>
 
           <template v-if="(props.externalProviders?.length ?? 0) > 0">
             <div class="flex items-center gap-3 py-1">

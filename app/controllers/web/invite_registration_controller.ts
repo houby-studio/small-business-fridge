@@ -11,10 +11,6 @@ export default class InviteRegistrationController {
   private authModes = new AuthModeService()
 
   async show({ inertia, params, response, session, i18n }: HttpContext) {
-    if (this.authModes.isLocalLoginDisabled()) {
-      return response.redirect('/login')
-    }
-
     const token = String(params.token)
     const status = await this.invitations.validateToken(token)
 
@@ -26,12 +22,24 @@ export default class InviteRegistrationController {
       return response.redirect('/login')
     }
 
+    const externalProviders = this.authModes.getEnabledExternalProviders()
+    const localEnabled = this.authModes.isLocalEnabled()
+
+    if (!localEnabled) {
+      if (externalProviders.length === 1) {
+        return response.redirect(
+          `/auth/${externalProviders[0]}/redirect?intent=invite&token=${encodeURIComponent(token)}`
+        )
+      }
+    }
+
     return inertia.render('auth/invite', {
       token,
       email: status.invitation.email,
       role: status.invitation.role,
       expiresAt: status.invitation.expiresAt.toISO(),
-      externalProviders: this.authModes.getEnabledExternalProviders(),
+      externalProviders,
+      localEnabled,
     })
   }
 
