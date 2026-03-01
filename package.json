@@ -11,6 +11,7 @@
     "scheduler": "node ace scheduler:run",
     "test": "node ace test",
     "test:e2e": "node --import=tsx scripts/run_e2e.ts",
+    "test:e2e:auth-matrix": "node --import=tsx scripts/run_e2e.ts -c playwright.auth-matrix.config.ts",
     "test:e2e:reset": "./scripts/reset_e2e_state.sh",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",

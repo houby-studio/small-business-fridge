@@ -20,6 +20,7 @@ const testEnv = getTestRuntimeEnv({
  */
 export default defineConfig({
   testDir: './tests/e2e',
+  testIgnore: ['auth_env_matrix.spec.ts'],
   globalSetup: './tests/e2e/global_setup.ts',
   fullyParallel: false, // Avoid DB conflicts between parallel tests
   forbidOnly: !!process.env.CI,

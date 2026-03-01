@@ -90,6 +90,16 @@ jobs:
           ls -la test-results || true
           test -s test-results/junit-e2e.xml
 
+      - name: Run Playwright Auth Matrix smoke tests (PR only)
+        if: github.event_name == 'pull_request'
+        run: npm run test:e2e:auth-matrix
+
+      - name: Verify Playwright Auth Matrix JUnit report exists (PR only)
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          ls -la test-results || true
+          test -s test-results/junit-e2e-auth-matrix.xml
+
       - name: Publish Japa test results
         uses: mikepenz/action-junit-report@v4
         if: always()
@@ -112,6 +122,17 @@ jobs:
           include_passed: true
           detailed_summary: true
 
+      - name: Publish Playwright Auth Matrix results (PR only)
+        uses: mikepenz/action-junit-report@v4
+        if: always() && github.event_name == 'pull_request'
+        with:
+          report_paths: 'test-results/junit-e2e-auth-matrix.xml'
+          check_name: 'Playwright Auth Matrix Results'
+          require_tests: true
+          require_passed_tests: true
+          include_passed: true
+          detailed_summary: true
+
       - name: Upload raw test result artifacts
         uses: actions/upload-artifact@v4
         if: always()
@@ -120,6 +141,7 @@ jobs:
           path: |
             test-results/junit-japa.xml
             test-results/junit-e2e.xml
+            test-results/junit-e2e-auth-matrix.xml
             playwright-report/**
             test-results/**
             playwright-artifacts/**
