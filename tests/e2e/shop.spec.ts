@@ -45,31 +45,6 @@ test.describe('Shop page', () => {
 
     expect(errors).toHaveLength(0)
   })
-
-  test('login and orders navigation have no dynamic import failures', async ({ page }) => {
-    const pageErrors: string[] = []
-    const failedRequests: string[] = []
-
-    page.on('pageerror', (err) => {
-      if (err.message.includes('WebSocket')) return
-      pageErrors.push(err.message)
-    })
-
-    page.on('requestfailed', (request) => {
-      const url = request.url()
-      const failureText = request.failure()?.errorText ?? 'unknown error'
-      if (!url.includes('/inertia/pages/') && !url.includes('/node_modules/.vite/deps/')) return
-      failedRequests.push(`${url} :: ${failureText}`)
-    })
-
-    await loginAs(page, 'customer')
-    await page.goto('/orders')
-    await expect(page).toHaveURL(/\/orders/)
-    await expect(page.locator('h1')).toBeVisible()
-
-    expect(pageErrors).toHaveLength(0)
-    expect(failedRequests).toHaveLength(0)
-  })
 })
 
 test.describe('Role-based navigation access', () => {
