@@ -32,6 +32,7 @@ export const AUDIT_ACTION_I18N_KEYS: Record<string, string> = {
   'invitation.created': 'audit.action_invitation_created',
   'invitation.revoked': 'audit.action_invitation_revoked',
   'invitation.accepted': 'audit.action_invitation_accepted',
+  'user.identity.linked': 'audit.action_user_identity_linked',
   'user.password_reset': 'audit.action_user_password_reset',
   'user.password_changed': 'audit.action_user_password_changed',
   'user.password_reset.requested': 'audit.action_user_password_reset_requested',

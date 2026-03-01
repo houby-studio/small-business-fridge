@@ -268,8 +268,8 @@ function copyToken() {
           :icon="providerIcon(provider)"
           :label="
             isLinked(provider)
-              ? `${providerLabel(provider)} linked`
-              : `Link ${providerLabel(provider)}`
+              ? t('auth.provider_linked', { provider: providerLabel(provider) })
+              : t('auth.link_provider', { provider: providerLabel(provider) })
           "
           @click="linkProvider(provider)"
         />

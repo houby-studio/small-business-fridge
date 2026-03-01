@@ -59,7 +59,7 @@ const submitDisabled = computed(
     form.password !== form.passwordConfirmation
 )
 function providerLabel(provider: 'microsoft' | 'discord'): string {
-  return provider === 'microsoft' ? t('auth.sign_in_microsoft') : t('auth.sign_in_discord')
+  return provider === 'microsoft' ? 'Microsoft' : 'Discord'
 }
 
 function providerIcon(provider: 'microsoft' | 'discord'): string {
@@ -191,6 +191,8 @@ function submit() {
               <div class="h-px flex-1 bg-zinc-700" />
             </div>
 
+            <p class="text-sm text-center text-zinc-400">{{ t('auth.invite_submit_oauth') }}</p>
+
             <a
               v-for="provider in props.externalProviders"
               :key="provider"
@@ -198,9 +200,7 @@ function submit() {
               class="inline-flex w-full items-center justify-center gap-2 rounded-md border border-zinc-600 px-4 py-2 text-sm font-medium text-zinc-100 transition hover:border-zinc-500 hover:bg-zinc-800"
             >
               <i :class="providerIcon(provider)" aria-hidden="true" />
-              <span>{{
-                t('auth.invite_submit_oauth', { provider: providerLabel(provider) })
-              }}</span>
+              <span>{{ providerLabel(provider) }}</span>
             </a>
           </template>
 

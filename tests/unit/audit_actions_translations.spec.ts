@@ -36,6 +36,10 @@ test.group('Audit action translations', () => {
     const fakeT = (key: string) => `__${key}__`
 
     assert.equal(getAuditActionLabel('music.created', fakeT), '__audit.action_music_created__')
+    assert.equal(
+      getAuditActionLabel('user.identity.linked', fakeT),
+      '__audit.action_user_identity_linked__'
+    )
 
     const unknown = getAuditActionLabel('custom.action_name', fakeT)
     assert.equal(unknown, 'custom action name')

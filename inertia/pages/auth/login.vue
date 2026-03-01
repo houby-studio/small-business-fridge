@@ -55,7 +55,7 @@ function submit() {
   })
 }
 function providerLabel(provider: 'microsoft' | 'discord'): string {
-  return provider === 'microsoft' ? t('auth.sign_in_microsoft') : t('auth.sign_in_discord')
+  return provider === 'microsoft' ? 'Microsoft' : 'Discord'
 }
 
 function providerIcon(provider: 'microsoft' | 'discord'): string {
@@ -157,6 +157,10 @@ function providerHref(provider: 'microsoft' | 'discord'): string {
                 >{{ t('auth.or') }}</span
               >
             </Divider>
+
+            <p class="text-sm text-center text-gray-400 dark:text-zinc-400">
+              {{ t('auth.sign_in_via') }}
+            </p>
 
             <Button
               v-for="provider in externalProviders"
