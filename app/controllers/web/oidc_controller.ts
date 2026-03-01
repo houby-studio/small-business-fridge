@@ -7,6 +7,7 @@ import RegistrationPolicyService from '#services/registration_policy_service'
 import InvitationService from '#services/invitation_service'
 import AuthModeService, { type ExternalAuthProvider } from '#services/auth_mode_service'
 import AuthIdentityService from '#services/auth_identity_service'
+import ExternalProfileSyncService from '#services/external_profile_sync_service'
 
 export default class OidcController {
   private static readonly BOOTSTRAP_INTENT_KEY = 'oauthBootstrapFirstAdminIntent'
@@ -17,6 +18,7 @@ export default class OidcController {
   private registrationPolicy = new RegistrationPolicyService()
   private invitations = new InvitationService()
   private authModes = new AuthModeService()
+  private externalProfileSync = new ExternalProfileSyncService()
 
   private resolveProvider(input: unknown): ExternalAuthProvider | null {
     const provider = String(input ?? '')
@@ -357,33 +359,7 @@ export default class OidcController {
       return response.redirect('/login')
     }
 
-    // Sync profile fields from provider when useful.
-    let dirty = false
-    if (displayName && user.displayName !== displayName) {
-      user.displayName = displayName
-      dirty = true
-    }
-    if (email && user.email !== email) {
-      const emailTaken = await User.query()
-        .whereRaw('LOWER(email) = ?', [email.toLowerCase()])
-        .whereNot('id', user.id)
-        .first()
-
-      if (emailTaken) {
-        logger.warn(
-          { userId: user.id, email, emailTakenBy: emailTaken.id },
-          'External email sync skipped: target email is already used by another user'
-        )
-      } else {
-        user.email = email
-        dirty = true
-      }
-    }
-    if (phone && !user.phone) {
-      user.phone = phone
-      dirty = true
-    }
-    if (dirty) await user.save()
+    await this.externalProfileSync.syncAfterExternalLogin(user, { phone })
 
     // Always remember for external providers.
     await auth.use('web').login(user, true)
