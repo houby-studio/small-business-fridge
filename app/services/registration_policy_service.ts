@@ -1,13 +1,13 @@
 import env from '#start/env'
 
-export type RegistrationMode = 'open' | 'invite_only' | 'domain_auto_approve' | 'closed'
+export type RegistrationMode = 'open' | 'invite_only' | 'domain_auto_approve'
 export type RegistrationProvider = 'local' | 'oidc' | 'social'
 
 export type RegistrationDecision =
   | { allowed: true; reason: 'allowed' }
   | {
       allowed: false
-      reason: 'mode_closed' | 'invite_required' | 'missing_email' | 'domain_not_allowed'
+      reason: 'invite_required' | 'missing_email' | 'domain_not_allowed'
     }
 
 /**
@@ -30,12 +30,7 @@ export default class RegistrationPolicyService {
     }
 
     const mode = this.resolveMode()
-    if (
-      mode === 'open' ||
-      mode === 'invite_only' ||
-      mode === 'domain_auto_approve' ||
-      mode === 'closed'
-    ) {
+    if (mode === 'open' || mode === 'invite_only' || mode === 'domain_auto_approve') {
       return mode
     }
     return 'open'
@@ -48,7 +43,6 @@ export default class RegistrationPolicyService {
     const mode = this.getMode()
 
     if (mode === 'open') return { allowed: true, reason: 'allowed' }
-    if (mode === 'closed') return { allowed: false, reason: 'mode_closed' }
     if (mode === 'invite_only') return { allowed: false, reason: 'invite_required' }
 
     const email = params.email?.trim().toLowerCase() || null

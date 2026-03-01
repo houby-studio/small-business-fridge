@@ -101,6 +101,5 @@
   "registration_mode_open": "Open",
   "registration_mode_invite_only": "Invite only",
   "registration_mode_domain_auto_approve": "Domain auto-approve",
-  "registration_mode_closed": "Closed",
   "registration_allowed_domains": "Allowed domains"
 }

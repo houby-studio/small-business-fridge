@@ -60,7 +60,7 @@ const props = defineProps<{
   invitations: PaginatedInvites
   inviteFilters: { invitePage: number }
   registrationPolicy: {
-    mode: 'open' | 'invite_only' | 'domain_auto_approve' | 'closed'
+    mode: 'open' | 'invite_only' | 'domain_auto_approve'
     allowedDomains: string[]
   }
 }>()

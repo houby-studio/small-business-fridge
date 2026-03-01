@@ -101,6 +101,5 @@
   "registration_mode_open": "Otevřený",
   "registration_mode_invite_only": "Pouze pozvánky",
   "registration_mode_domain_auto_approve": "Automatické schválení dle domény",
-  "registration_mode_closed": "Uzavřený",
   "registration_allowed_domains": "Povolené domény"
 }

@@ -131,61 +131,61 @@ result with the `image:` name (`houbystudio/sbf:latest`).
 
 ## Environment variable reference
 
-| Variable                                | Required | Secret | Default                 | Description                                                                 |
-| --------------------------------------- | -------- | ------ | ----------------------- | --------------------------------------------------------------------------- |
-| `APP_KEY`                               | Yes      | Yes    | —                       | Encryption/signing key (32+ random chars)                                   |
-| `PORT`                                  | Yes      | No     | `3000`                  | HTTP port                                                                   |
-| `HOST`                                  | Yes      | No     | `0.0.0.0`               | Bind address                                                                |
-| `LOG_LEVEL`                             | No       | No     | `info`                  | trace/debug/info/warn/error/fatal                                           |
-| `TZ`                                    | No       | No     | `UTC`                   | Timezone (e.g. `Europe/Prague`)                                             |
-| `APP_NAME`                              | No       | No     | `Small Business Fridge` | App brand name used in UI/emails/API docs                                   |
-| `APP_URL`                               | No       | No     | `http://localhost:3000` | Public URL (used in email links)                                            |
-| `FEEDBACK_URL`                          | No       | No     | —                       | URL shown in feedback link                                                  |
-| `SWAGGER_ENABLED`                       | No       | No     | `false`                 | Enable Swagger UI at `/docs`                                                |
-| `SESSION_DRIVER`                        | Yes      | No     | `cookie`                | cookie or memory                                                            |
-| `DB_HOST`                               | Yes      | No     | `postgres`              | PostgreSQL hostname                                                         |
-| `DB_PORT`                               | Yes      | No     | `5432`                  | PostgreSQL port                                                             |
-| `DB_USER`                               | Yes      | No     | `sbf`                   | PostgreSQL user                                                             |
-| `DB_DATABASE`                           | Yes      | No     | `sbf`                   | PostgreSQL database name                                                    |
-| `DB_PASSWORD`                           | No       | Yes    | —                       | PostgreSQL password                                                         |
-| `SMTP_HOST`                             | Yes      | No     | —                       | SMTP server hostname                                                        |
-| `SMTP_PORT`                             | Yes      | No     | `587`                   | SMTP server port                                                            |
-| `SMTP_USERNAME`                         | No       | No     | —                       | SMTP username (leave empty if no auth)                                      |
-| `SMTP_PASSWORD`                         | No       | Yes    | —                       | SMTP password                                                               |
-| `SMTP_FROM_ADDRESS`                     | Yes      | No     | `noreply@example.com`   | Sender address for outgoing mail                                            |
-| `SMTP_FROM_NAME`                        | Yes      | No     | `Small Business Fridge` | Sender display name                                                         |
-| `SMTP_IGNORE_TLS`                       | No       | No     | `false`                 | Set true for plain SMTP without TLS                                         |
-| `AUTH_PROVIDERS`                        | No       | No     | `local`                 | Comma-separated providers (`local`, `microsoft`, `discord`)                 |
-| `AUTH_AUTO_REGISTER_PROVIDERS`          | No       | No     | —                       | Comma list for auto-provisioning (`microsoft`, `discord`)                   |
-| `AUTH_REGISTRATION_MODE`                | No       | No     | `open`                  | Self-signup policy (`open`, `invite_only`, `domain_auto_approve`, `closed`) |
-| `AUTH_REGISTRATION_ALLOWED_DOMAINS`     | No       | No     | —                       | Domain allowlist for `domain_auto_approve`                                  |
-| `INVITE_EXPIRY_HOURS`                   | No       | No     | `168`                   | Invite-link validity window in hours                                        |
-| `PASSWORD_RESET_TTL_MINUTES`            | No       | No     | `60`                    | Password reset link validity in minutes                                     |
-| `AUTH_PROVIDER_MICROSOFT_CLIENT_ID`     | No       | No     | —                       | Microsoft Entra application (client) ID                                     |
-| `AUTH_PROVIDER_MICROSOFT_CLIENT_SECRET` | No       | Yes    | —                       | Microsoft Entra client secret                                               |
-| `AUTH_PROVIDER_MICROSOFT_TENANT_ID`     | No       | No     | `common`                | Microsoft Entra tenant ID                                                   |
-| `AUTH_PROVIDER_MICROSOFT_REDIRECT_URI`  | No       | No     | —                       | Microsoft callback URL                                                      |
-| `AUTH_PROVIDER_DISCORD_CLIENT_ID`       | No       | No     | —                       | Discord application client ID                                               |
-| `AUTH_PROVIDER_DISCORD_CLIENT_SECRET`   | No       | Yes    | —                       | Discord application client secret                                           |
-| `AUTH_PROVIDER_DISCORD_REDIRECT_URI`    | No       | No     | —                       | Discord callback URL                                                        |
-| `AUTH_PROVIDER_DISCORD_SCOPES`          | No       | No     | `identify,email`        | Discord OAuth scopes                                                        |
-| `API_SECRET`                            | No       | Yes    | —                       | Token for API authentication                                                |
-| `CRON_DAILY_REPORT`                     | No       | No     | `30 16 * * 1-5`         | Cron for daily report email                                                 |
-| `CRON_UNPAID_REMINDER`                  | No       | No     | `0 9 * * 1-5`           | Cron for unpaid invoice reminders                                           |
-| `CRON_PENDING_APPROVAL`                 | No       | No     | `0 9 * * 1-5`           | Cron for pending approval notifications                                     |
-| `UNPAID_REMINDER_MIN_AGE_DAYS`          | No       | No     | `3`                     | Min invoice age (days) before reminder sent                                 |
-| `OPENAI_API_KEY`                        | No       | Yes    | —                       | OpenAI API key                                                              |
-| `ESL_AIMS_ENABLED`                      | No       | No     | `false`                 | Enable AIMS ESL integration                                                 |
-| `ESL_AIMS_BASE_URL`                     | No       | No     | —                       | AIMS base URL                                                               |
-| `ESL_AIMS_STORE`                        | No       | No     | —                       | AIMS store identifier                                                       |
-| `ESL_AIMS_CRON`                         | No       | No     | —                       | AIMS sync cron expression                                                   |
-| `ESL_AIMS_VERIFY_TLS`                   | No       | No     | `true`                  | Verify TLS for AIMS                                                         |
-| `ESL_JAMES_ENABLED`                     | No       | No     | `false`                 | Enable JAMES ESL integration                                                |
-| `ESL_JAMES_BASE_URL`                    | No       | No     | —                       | JAMES base URL                                                              |
-| `ESL_JAMES_STORE`                       | No       | No     | —                       | JAMES store identifier                                                      |
-| `ESL_JAMES_API_KEY`                     | No       | Yes    | —                       | JAMES API key                                                               |
-| `ESL_JAMES_CRON`                        | No       | No     | —                       | JAMES sync cron expression                                                  |
-| `ESL_JAMES_VERIFY_TLS`                  | No       | No     | `true`                  | Verify TLS for JAMES                                                        |
+| Variable                                | Required | Secret | Default                 | Description                                                       |
+| --------------------------------------- | -------- | ------ | ----------------------- | ----------------------------------------------------------------- |
+| `APP_KEY`                               | Yes      | Yes    | —                       | Encryption/signing key (32+ random chars)                         |
+| `PORT`                                  | Yes      | No     | `3000`                  | HTTP port                                                         |
+| `HOST`                                  | Yes      | No     | `0.0.0.0`               | Bind address                                                      |
+| `LOG_LEVEL`                             | No       | No     | `info`                  | trace/debug/info/warn/error/fatal                                 |
+| `TZ`                                    | No       | No     | `UTC`                   | Timezone (e.g. `Europe/Prague`)                                   |
+| `APP_NAME`                              | No       | No     | `Small Business Fridge` | App brand name used in UI/emails/API docs                         |
+| `APP_URL`                               | No       | No     | `http://localhost:3000` | Public URL (used in email links)                                  |
+| `FEEDBACK_URL`                          | No       | No     | —                       | URL shown in feedback link                                        |
+| `SWAGGER_ENABLED`                       | No       | No     | `false`                 | Enable Swagger UI at `/docs`                                      |
+| `SESSION_DRIVER`                        | Yes      | No     | `cookie`                | cookie or memory                                                  |
+| `DB_HOST`                               | Yes      | No     | `postgres`              | PostgreSQL hostname                                               |
+| `DB_PORT`                               | Yes      | No     | `5432`                  | PostgreSQL port                                                   |
+| `DB_USER`                               | Yes      | No     | `sbf`                   | PostgreSQL user                                                   |
+| `DB_DATABASE`                           | Yes      | No     | `sbf`                   | PostgreSQL database name                                          |
+| `DB_PASSWORD`                           | No       | Yes    | —                       | PostgreSQL password                                               |
+| `SMTP_HOST`                             | Yes      | No     | —                       | SMTP server hostname                                              |
+| `SMTP_PORT`                             | Yes      | No     | `587`                   | SMTP server port                                                  |
+| `SMTP_USERNAME`                         | No       | No     | —                       | SMTP username (leave empty if no auth)                            |
+| `SMTP_PASSWORD`                         | No       | Yes    | —                       | SMTP password                                                     |
+| `SMTP_FROM_ADDRESS`                     | Yes      | No     | `noreply@example.com`   | Sender address for outgoing mail                                  |
+| `SMTP_FROM_NAME`                        | Yes      | No     | `Small Business Fridge` | Sender display name                                               |
+| `SMTP_IGNORE_TLS`                       | No       | No     | `false`                 | Set true for plain SMTP without TLS                               |
+| `AUTH_PROVIDERS`                        | No       | No     | `local`                 | Comma-separated providers (`local`, `microsoft`, `discord`)       |
+| `AUTH_AUTO_REGISTER_PROVIDERS`          | No       | No     | —                       | Comma list for auto-provisioning (`microsoft`, `discord`)         |
+| `AUTH_REGISTRATION_MODE`                | No       | No     | `open`                  | Self-signup policy (`open`, `invite_only`, `domain_auto_approve`) |
+| `AUTH_REGISTRATION_ALLOWED_DOMAINS`     | No       | No     | —                       | Domain allowlist for `domain_auto_approve`                        |
+| `INVITE_EXPIRY_HOURS`                   | No       | No     | `168`                   | Invite-link validity window in hours                              |
+| `PASSWORD_RESET_TTL_MINUTES`            | No       | No     | `60`                    | Password reset link validity in minutes                           |
+| `AUTH_PROVIDER_MICROSOFT_CLIENT_ID`     | No       | No     | —                       | Microsoft Entra application (client) ID                           |
+| `AUTH_PROVIDER_MICROSOFT_CLIENT_SECRET` | No       | Yes    | —                       | Microsoft Entra client secret                                     |
+| `AUTH_PROVIDER_MICROSOFT_TENANT_ID`     | No       | No     | `common`                | Microsoft Entra tenant ID                                         |
+| `AUTH_PROVIDER_MICROSOFT_REDIRECT_URI`  | No       | No     | —                       | Microsoft callback URL                                            |
+| `AUTH_PROVIDER_DISCORD_CLIENT_ID`       | No       | No     | —                       | Discord application client ID                                     |
+| `AUTH_PROVIDER_DISCORD_CLIENT_SECRET`   | No       | Yes    | —                       | Discord application client secret                                 |
+| `AUTH_PROVIDER_DISCORD_REDIRECT_URI`    | No       | No     | —                       | Discord callback URL                                              |
+| `AUTH_PROVIDER_DISCORD_SCOPES`          | No       | No     | `identify,email`        | Discord OAuth scopes                                              |
+| `API_SECRET`                            | No       | Yes    | —                       | Token for API authentication                                      |
+| `CRON_DAILY_REPORT`                     | No       | No     | `30 16 * * 1-5`         | Cron for daily report email                                       |
+| `CRON_UNPAID_REMINDER`                  | No       | No     | `0 9 * * 1-5`           | Cron for unpaid invoice reminders                                 |
+| `CRON_PENDING_APPROVAL`                 | No       | No     | `0 9 * * 1-5`           | Cron for pending approval notifications                           |
+| `UNPAID_REMINDER_MIN_AGE_DAYS`          | No       | No     | `3`                     | Min invoice age (days) before reminder sent                       |
+| `OPENAI_API_KEY`                        | No       | Yes    | —                       | OpenAI API key                                                    |
+| `ESL_AIMS_ENABLED`                      | No       | No     | `false`                 | Enable AIMS ESL integration                                       |
+| `ESL_AIMS_BASE_URL`                     | No       | No     | —                       | AIMS base URL                                                     |
+| `ESL_AIMS_STORE`                        | No       | No     | —                       | AIMS store identifier                                             |
+| `ESL_AIMS_CRON`                         | No       | No     | —                       | AIMS sync cron expression                                         |
+| `ESL_AIMS_VERIFY_TLS`                   | No       | No     | `true`                  | Verify TLS for AIMS                                               |
+| `ESL_JAMES_ENABLED`                     | No       | No     | `false`                 | Enable JAMES ESL integration                                      |
+| `ESL_JAMES_BASE_URL`                    | No       | No     | —                       | JAMES base URL                                                    |
+| `ESL_JAMES_STORE`                       | No       | No     | —                       | JAMES store identifier                                            |
+| `ESL_JAMES_API_KEY`                     | No       | Yes    | —                       | JAMES API key                                                     |
+| `ESL_JAMES_CRON`                        | No       | No     | —                       | JAMES sync cron expression                                        |
+| `ESL_JAMES_VERIFY_TLS`                  | No       | No     | `true`                  | Verify TLS for JAMES                                              |
 
 ---
 

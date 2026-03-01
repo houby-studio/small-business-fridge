@@ -140,7 +140,7 @@ test.group('Web Auth - Provider Modes', (group) => {
     assert.notInclude(response.text(), '/auth/microsoft/redirect')
   })
 
-  test('local registration respects invite_only and closed modes', async ({ client, assert }) => {
+  test('local registration respects invite_only mode', async ({ client, assert }) => {
     await UserFactory.apply('admin').create()
 
     process.env.AUTH_REGISTRATION_MODE = 'invite_only'
@@ -157,21 +157,6 @@ test.group('Web Auth - Provider Modes', (group) => {
     inviteOnly.assertStatus(302)
     inviteOnly.assertHeader('location', '/login')
     assert.isNull(await User.findBy('email', 'invite-blocked@example.com'))
-
-    process.env.AUTH_REGISTRATION_MODE = 'closed'
-    const closed = await client
-      .post('/register')
-      .form({
-        displayName: 'Closed Blocked',
-        email: 'closed-blocked@example.com',
-        password: 'secret12345',
-        passwordConfirmation: 'secret12345',
-      })
-      .withCsrfToken()
-      .redirects(0)
-    closed.assertStatus(302)
-    closed.assertHeader('location', '/login')
-    assert.isNull(await User.findBy('email', 'closed-blocked@example.com'))
   })
 
   test('domain_auto_approve allows only configured domains for local registration', async ({
