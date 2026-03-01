@@ -19,6 +19,7 @@ export default class BootstrapController {
     }
 
     return inertia.render('auth/bootstrap', {
+      localEnabled: this.authModes.isLocalEnabled(),
       externalProviders: this.authModes.getEnabledExternalProviders(),
     })
   }
@@ -26,6 +27,14 @@ export default class BootstrapController {
   async store({ request, auth, response, session, i18n }: HttpContext) {
     if (await this.hasAnyAdmin()) {
       return response.redirect('/login')
+    }
+
+    if (this.authModes.isLocalLoginDisabled()) {
+      session.flash('alert', {
+        type: 'danger',
+        message: i18n.t('auth.bootstrap_local_disabled'),
+      })
+      return response.redirect('/setup/bootstrap')
     }
 
     const data = await request.validateUsing(bootstrapAdminValidator)

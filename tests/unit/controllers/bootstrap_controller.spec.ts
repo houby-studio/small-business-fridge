@@ -39,7 +39,7 @@ test.group('BootstrapController.show', (group) => {
 
     assert.deepEqual(result, {
       component: 'auth/bootstrap',
-      props: { externalProviders: ['microsoft'] },
+      props: { localEnabled: true, externalProviders: ['microsoft'] },
     })
   })
 
@@ -60,7 +60,28 @@ test.group('BootstrapController.show', (group) => {
 
     assert.deepEqual(result, {
       component: 'auth/bootstrap',
-      props: { externalProviders: [] },
+      props: { localEnabled: true, externalProviders: [] },
+    })
+  })
+
+  test('returns localEnabled false and external providers when local is disabled', async ({
+    assert,
+  }) => {
+    process.env.AUTH_PROVIDERS = 'microsoft'
+
+    const controller = new BootstrapController()
+    const result = await controller.show({
+      inertia: {
+        render: (component: string, props: unknown) => ({ component, props }),
+      },
+      response: {
+        redirect: (path: string) => ({ redirectTo: path }),
+      },
+    } as any)
+
+    assert.deepEqual(result, {
+      component: 'auth/bootstrap',
+      props: { localEnabled: false, externalProviders: ['microsoft'] },
     })
   })
 
