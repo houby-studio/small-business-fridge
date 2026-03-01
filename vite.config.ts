@@ -24,4 +24,12 @@ export default defineConfig({
       '~/': `${currentDir}/inertia/`,
     },
   },
+
+  // PrimeVue 4 ships as native ESM. Excluding it from Vite's dep optimizer
+  // prevents stale shared chunks (chunk-XXXXXXXX.js) that appear when Inertia's
+  // lazy-loaded pages introduce new PrimeVue imports mid-session, triggering
+  // re-optimization that invalidates already-cached chunk references.
+  optimizeDeps: {
+    exclude: ['primevue', '@primeuix/themes', '@primeuix/styled'],
+  },
 })
