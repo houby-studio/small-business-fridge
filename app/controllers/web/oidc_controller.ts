@@ -146,7 +146,17 @@ export default class OidcController {
       return response.redirect('/login')
     }
 
-    const providerUser: any = await externalProvider.user()
+    let providerUser: any
+    try {
+      providerUser = await externalProvider.user()
+    } catch (error) {
+      logger.error({ err: error, provider }, 'External provider user info request failed')
+      session.flash('alert', {
+        type: 'danger',
+        message: i18n.t('messages.login_provider_unavailable'),
+      })
+      return response.redirect('/login')
+    }
     const profile = this.getProviderProfile(provider, providerUser)
     const providerUserId = profile.providerUserId?.trim() || null
     const email = profile.email?.trim().toLowerCase() || null

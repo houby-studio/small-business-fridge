@@ -39,6 +39,7 @@
   "not_found": "Požadovaný záznam nebyl nalezen.",
   "forbidden": "Tuto akci nemáte oprávnění provést.",
   "profile_updated": "Profil byl aktualizován.",
+  "login_provider_unavailable": "Přihlašovací služba je dočasně nedostupná. Zkuste to prosím znovu.",
   "login_cancelled": "Přihlášení bylo zrušeno.",
   "login_state_mismatch": "Chyba zabezpečení při přihlašování. Zkuste to prosím znovu.",
   "login_not_registered": "Váš externí účet není registrován v aplikaci. Kontaktujte správce.",

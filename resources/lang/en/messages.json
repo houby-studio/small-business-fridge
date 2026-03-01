@@ -39,6 +39,7 @@
   "not_found": "The requested record was not found.",
   "forbidden": "You do not have permission to perform this action.",
   "profile_updated": "Profile has been updated.",
+  "login_provider_unavailable": "The login service is temporarily unavailable. Please try again.",
   "login_cancelled": "Login was cancelled.",
   "login_state_mismatch": "Security error during login. Please try again.",
   "login_not_registered": "Your external account is not registered in this app. Contact your administrator.",
