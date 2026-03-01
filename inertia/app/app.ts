@@ -12,10 +12,7 @@ import { definePreset } from '@primeuix/themes'
 import ToastService from 'primevue/toastservice'
 import ConfirmationService from 'primevue/confirmationservice'
 import Tooltip from 'primevue/tooltip'
-import {
-  clearDynamicImportRecoveryReloadAttempt,
-  installDynamicImportRecovery,
-} from './dynamic_import_recovery'
+import { installDynamicImportRecovery } from './dynamic_import_recovery'
 
 const DEFAULT_APP_NAME = 'Small Business Fridge'
 const BOOT_MIN_VISIBLE_MS = 1000
@@ -109,7 +106,6 @@ createInertiaApp({
 
   setup({ el, App, props, plugin }) {
     const bootStart = typeof performance !== 'undefined' ? performance.now() : Date.now()
-    clearDynamicImportRecoveryReloadAttempt(window.sessionStorage)
 
     createApp({ render: () => h(App, props) })
       .use(plugin)
