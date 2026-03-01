@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3'
+import { Head, useForm, usePage } from '@inertiajs/vue3'
 import GuestLayout from '~/layouts/GuestLayout.vue'
 import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
@@ -8,7 +8,9 @@ import Button from 'primevue/button'
 import Checkbox from 'primevue/checkbox'
 import Divider from 'primevue/divider'
 import Message from 'primevue/message'
+import { computed } from 'vue'
 import { useI18n } from '~/composables/use_i18n'
+import type { SharedProps } from '~/types'
 
 defineProps<{
   externalProviders?: Array<'microsoft' | 'discord'>
@@ -17,12 +19,35 @@ defineProps<{
 }>()
 
 const { t } = useI18n()
+const page = usePage<SharedProps>()
 
 const form = useForm({
   email: '',
   password: '',
   rememberMe: false,
 })
+
+const emailInvalid = computed(() => {
+  if (form.email.length === 0) return false
+  return !/.+@.+/.test(form.email.trim())
+})
+const flashInputErrorsBag = computed(
+  () =>
+    (((page.props.flash as any)?.inputErrorsBag ?? {}) as Record<string, string[] | undefined>) ||
+    {}
+)
+const emailError = computed(() => form.errors.email || flashInputErrorsBag.value.email?.[0])
+const passwordError = computed(
+  () => form.errors.password || flashInputErrorsBag.value.password?.[0]
+)
+const firstErrorMessage = computed(() => emailError.value || passwordError.value)
+const submitDisabled = computed(
+  () =>
+    form.processing ||
+    form.email.trim().length === 0 ||
+    emailInvalid.value ||
+    form.password.length === 0
+)
 
 function submit() {
   form.post('/login', {
@@ -49,12 +74,8 @@ function providerHref(provider: 'microsoft' | 'discord'): string {
     <Card>
       <template #content>
         <form @submit.prevent="submit" class="space-y-5">
-          <Message
-            v-if="form.errors.email || form.errors.password"
-            severity="error"
-            :closable="false"
-          >
-            {{ form.errors.email || form.errors.password }}
+          <Message v-if="firstErrorMessage" severity="error" :closable="false">
+            {{ firstErrorMessage }}
           </Message>
 
           <div class="flex flex-col gap-2">
@@ -64,11 +85,14 @@ function providerHref(provider: 'microsoft' | 'discord'): string {
             <InputText
               id="email"
               v-model="form.email"
-              :invalid="!!form.errors.email"
+              :invalid="!!emailError || emailInvalid"
               autocomplete="email"
               autofocus
               :placeholder="t('auth.bootstrap_email_placeholder')"
             />
+            <small v-if="emailInvalid" class="text-red-300">
+              {{ t('auth.email_invalid') }}
+            </small>
           </div>
 
           <div class="flex flex-col gap-2">
@@ -114,7 +138,7 @@ function providerHref(provider: 'microsoft' | 'discord'): string {
             :label="t('auth.submit')"
             icon="pi pi-sign-in"
             :loading="form.processing"
-            :disabled="form.processing || !form.email.trim() || !form.password"
+            :disabled="submitDisabled"
             class="w-full"
           />
 

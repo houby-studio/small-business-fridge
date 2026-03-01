@@ -17,8 +17,8 @@ export type ScannedRoutes = {
     'password_reset.reset': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
     'invite_registration.show': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
     'invite_registration.store': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
-    'oidc.redirect': { paramsTuple?: []; params?: {} }
-    'oidc.callback': { paramsTuple?: []; params?: {} }
+    'oidc.redirect': { paramsTuple: [ParamValue]; params: {'provider': ParamValue} }
+    'oidc.callback': { paramsTuple: [ParamValue]; params: {'provider': ParamValue} }
     'logout.get': { paramsTuple?: []; params?: {} }
     'logout.post': { paramsTuple?: []; params?: {} }
     'admin_impersonation.destroy': { paramsTuple?: []; params?: {} }
@@ -98,8 +98,8 @@ export type ScannedRoutes = {
     'password_reset.show_forgot': { paramsTuple?: []; params?: {} }
     'password_reset.show_reset': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
     'invite_registration.show': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
-    'oidc.redirect': { paramsTuple?: []; params?: {} }
-    'oidc.callback': { paramsTuple?: []; params?: {} }
+    'oidc.redirect': { paramsTuple: [ParamValue]; params: {'provider': ParamValue} }
+    'oidc.callback': { paramsTuple: [ParamValue]; params: {'provider': ParamValue} }
     'logout.get': { paramsTuple?: []; params?: {} }
     'shop.index': { paramsTuple?: []; params?: {} }
     'orders.index': { paramsTuple?: []; params?: {} }
@@ -139,8 +139,8 @@ export type ScannedRoutes = {
     'password_reset.show_forgot': { paramsTuple?: []; params?: {} }
     'password_reset.show_reset': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
     'invite_registration.show': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
-    'oidc.redirect': { paramsTuple?: []; params?: {} }
-    'oidc.callback': { paramsTuple?: []; params?: {} }
+    'oidc.redirect': { paramsTuple: [ParamValue]; params: {'provider': ParamValue} }
+    'oidc.callback': { paramsTuple: [ParamValue]; params: {'provider': ParamValue} }
     'logout.get': { paramsTuple?: []; params?: {} }
     'shop.index': { paramsTuple?: []; params?: {} }
     'orders.index': { paramsTuple?: []; params?: {} }

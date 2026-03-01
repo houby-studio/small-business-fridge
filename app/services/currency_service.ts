@@ -40,7 +40,8 @@ export function resolveCurrencyDisplay(code: string, locale: string): string {
 }
 
 export function getCurrencyCode(): string {
-  return normalizeCurrencyCode(env.get('CURRENCY', DEFAULT_CURRENCY_CODE))
+  const configured = process.env.CURRENCY ?? env.get('CURRENCY', DEFAULT_CURRENCY_CODE)
+  return normalizeCurrencyCode(configured)
 }
 
 export function getCurrencyDisplay(locale: string): string {

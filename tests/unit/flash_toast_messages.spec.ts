@@ -27,4 +27,23 @@ test.group('Flash toast message extraction', () => {
     assert.deepEqual(extractFlashToastMessages(undefined), [])
     assert.deepEqual(extractFlashToastMessages({} as any), [])
   })
+
+  test('ignores non-string bag values and flattens nested string payloads', ({ assert }) => {
+    const messages = extractFlashToastMessages({
+      errorsBag: {
+        top: { nested: ['Nested validation error'] },
+        bad: 1234,
+      } as any,
+      inputErrorsBag: {
+        email: [{ deep: ['Email required'] }, null],
+        password: 'Password is required',
+      } as any,
+    } as any)
+
+    assert.deepEqual(messages, [
+      { severity: 'error', summary: 'Nested validation error', life: 5000 },
+      { severity: 'error', summary: 'Email required', life: 5000 },
+      { severity: 'error', summary: 'Password is required', life: 5000 },
+    ])
+  })
 })

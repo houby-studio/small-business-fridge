@@ -237,6 +237,30 @@ test.group('Web Auth - Remember Me', (group) => {
     const tokens = await db.from('remember_me_tokens')
     assert.lengthOf(tokens, 0)
   })
+
+  test('POST /login rejects non-email login payload without authenticating', async ({
+    client,
+    assert,
+  }) => {
+    await User.create({
+      password: 'admin123',
+      displayName: 'Admin',
+      email: 'admin@localhost',
+      keypadId: 9903,
+      role: 'admin',
+    })
+
+    const response = await client
+      .post('/login')
+      .form({ email: 'admin', password: 'admin123' })
+      .withCsrfToken()
+      .redirects(0)
+
+    assert.include([302, 422], response.status())
+
+    const tokens = await db.from('remember_me_tokens')
+    assert.lengthOf(tokens, 0)
+  })
 })
 
 test.group('Web Role Middleware', (group) => {

@@ -9,6 +9,23 @@ export interface ToastFlashMessage {
   life: number
 }
 
+function collectStringMessages(value: unknown): string[] {
+  if (typeof value === 'string') {
+    const message = value.trim()
+    return message ? [message] : []
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) => collectStringMessages(entry))
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.values(value).flatMap((entry) => collectStringMessages(entry))
+  }
+
+  return []
+}
+
 export function extractFlashToastMessages(flash: FlashMessages | undefined): ToastFlashMessage[] {
   const messages: ToastFlashMessage[] = []
 
@@ -26,10 +43,11 @@ export function extractFlashToastMessages(flash: FlashMessages | undefined): Toa
     })
   }
 
-  const errorsBag = (flash as any)?.errorsBag as Record<string, string> | undefined
+  const errorsBag = (flash as any)?.errorsBag as Record<string, unknown> | undefined
   if (errorsBag) {
-    for (const message of Object.values(errorsBag)) {
-      if (!message) continue
+    for (const message of Object.values(errorsBag).flatMap((entry) =>
+      collectStringMessages(entry)
+    )) {
       messages.push({
         severity: 'error',
         summary: message,
@@ -38,12 +56,10 @@ export function extractFlashToastMessages(flash: FlashMessages | undefined): Toa
     }
   }
 
-  const inputErrorsBag = (flash as any)?.inputErrorsBag as Record<string, string[]> | undefined
+  const inputErrorsBag = (flash as any)?.inputErrorsBag as Record<string, unknown> | undefined
   if (inputErrorsBag) {
     for (const fieldMessages of Object.values(inputErrorsBag)) {
-      if (!Array.isArray(fieldMessages)) continue
-      for (const message of fieldMessages) {
-        if (!message) continue
+      for (const message of collectStringMessages(fieldMessages)) {
         messages.push({
           severity: 'error',
           summary: message,

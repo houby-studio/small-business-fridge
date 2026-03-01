@@ -87,6 +87,18 @@ test.describe('Login page', () => {
     await expect(page.locator('[role="alert"]')).toBeVisible()
   })
 
+  test('invalid email format keeps submit disabled and shows inline hint', async ({ page }) => {
+    const emailInput = page.locator('#email')
+    const passwordInput = page.locator('#password')
+    const submitButton = page.locator('button[type="submit"]')
+
+    await emailInput.fill('admin')
+    await passwordInput.fill('admin123')
+
+    await expect(submitButton).toBeDisabled()
+    await expect(page).toHaveURL(/\/login/)
+  })
+
   test('customer can log in and is redirected to shop', async ({ page }) => {
     await fillLoginForm(page, 'customer@localhost', 'customer123')
     await expect(page).toHaveURL(/\/shop/)
