@@ -19,14 +19,11 @@ export default class LoginController {
       return response.redirect('/setup/bootstrap')
     }
 
-    if (this.authModes.isLocalLoginDisabled()) {
-      const provider = this.authModes.getDefaultExternalProvider()
-      if (provider) {
-        return response.redirect(`/auth/${provider}/redirect`)
-      }
+    const externalProviders = this.authModes.getEnabledExternalProviders()
+    if (this.authModes.isLocalLoginDisabled() && externalProviders.length === 1) {
+      return response.redirect(`/auth/${externalProviders[0]}/redirect`)
     }
     const mode = this.registrationPolicy.getMode()
-    const externalProviders = this.authModes.getEnabledExternalProviders()
     return inertia.render('auth/login', {
       externalProviders,
       allowLocalRegistration: mode === 'open' || mode === 'domain_auto_approve',
@@ -40,8 +37,10 @@ export default class LoginController {
     }
 
     if (this.authModes.isLocalLoginDisabled()) {
-      const provider = this.authModes.getDefaultExternalProvider()
-      return response.redirect(provider ? `/auth/${provider}/redirect` : '/login')
+      const externalProviders = this.authModes.getEnabledExternalProviders()
+      return response.redirect(
+        externalProviders.length === 1 ? `/auth/${externalProviders[0]}/redirect` : '/login'
+      )
     }
 
     const { email, password, rememberMe } = await request.validateUsing(loginValidator)

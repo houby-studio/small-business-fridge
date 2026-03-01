@@ -46,6 +46,21 @@ test.group('Web Auth - Provider Modes', (group) => {
     response.assertHeader('location', '/auth/microsoft/redirect')
   })
 
+  test('multiple external providers show login form instead of auto-redirecting', async ({
+    client,
+    assert,
+  }) => {
+    process.env.AUTH_PROVIDERS = 'microsoft,discord'
+
+    await UserFactory.apply('admin').create()
+
+    const response = await client.get('/login').redirects(0)
+    response.assertStatus(200)
+    // Inertia embeds provider names in data-page JSON (double-quotes are HTML-encoded)
+    assert.include(response.text(), 'microsoft')
+    assert.include(response.text(), 'discord')
+  })
+
   test('provider-only mode blocks local registration and password reset pages', async ({
     client,
     assert,
