@@ -74,5 +74,6 @@
   "password_reset_success": "Password updated. You can now sign in.",
   "password_current_invalid": "Current password is incorrect.",
   "password_changed": "Password changed successfully.",
+  "oidc_already_linked": "This external account is already linked to a different user.",
   "too_many_requests": "Too many requests. Please try again in {retryAfter} seconds."
 }

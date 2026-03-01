@@ -74,5 +74,6 @@
   "password_reset_success": "Heslo bylo změněno. Nyní se můžete přihlásit.",
   "password_current_invalid": "Aktuální heslo je nesprávné.",
   "password_changed": "Heslo bylo úspěšně změněno.",
+  "oidc_already_linked": "Tento externí účet je již propojen s jiným uživatelem.",
   "too_many_requests": "Příliš mnoho požadavků. Zkuste to prosím znovu za {retryAfter} sekund."
 }

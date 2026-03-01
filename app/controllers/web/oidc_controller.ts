@@ -207,7 +207,14 @@ export default class OidcController {
           { err: error, provider, userId: currentUser.id },
           'External identity link failed'
         )
-        session.flash('alert', { type: 'danger', message: i18n.t('messages.login_failed') })
+        const isAlreadyLinked =
+          error instanceof Error && error.message === 'PROVIDER_IDENTITY_ALREADY_LINKED'
+        session.flash('alert', {
+          type: 'danger',
+          message: i18n.t(
+            isAlreadyLinked ? 'messages.oidc_already_linked' : 'messages.login_failed'
+          ),
+        })
       }
 
       return response.redirect('/profile')
