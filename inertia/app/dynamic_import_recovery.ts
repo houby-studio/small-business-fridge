@@ -4,8 +4,7 @@ const DYNAMIC_IMPORT_ERROR_PATTERNS = [
   'Outdated Optimize Dep',
 ]
 
-const RECOVERY_RELOAD_GUARD_KEY = 'sbf:dynamic-import-recovery:last-reload-at'
-const RECOVERY_RELOAD_COOLDOWN_MS = 60_000
+const RECOVERY_RELOAD_GUARD_KEY = 'sbf:dynamic-import-recovery:reloaded'
 const INSTALL_GUARD_KEY = '__sbfDynamicImportRecoveryInstalled'
 
 function normalizeErrorMessage(reason: unknown): string {
@@ -30,20 +29,15 @@ export function shouldRecoverFromDynamicImportError(reason: unknown): boolean {
   return DYNAMIC_IMPORT_ERROR_PATTERNS.some((pattern) => message.includes(pattern))
 }
 
-export function markDynamicImportRecoveryReloadAttempt(
-  storage?: Storage,
-  now = Date.now(),
-  cooldownMs = RECOVERY_RELOAD_COOLDOWN_MS
-): boolean {
+export function markDynamicImportRecoveryReloadAttempt(storage?: Storage): boolean {
   if (!storage) return true
-
-  const lastReloadRaw = storage.getItem(RECOVERY_RELOAD_GUARD_KEY)
-  const lastReloadAt = lastReloadRaw ? Number.parseInt(lastReloadRaw, 10) : Number.NaN
-
-  if (Number.isFinite(lastReloadAt) && now - lastReloadAt < cooldownMs) return false
-
-  storage.setItem(RECOVERY_RELOAD_GUARD_KEY, `${now}`)
+  if (storage.getItem(RECOVERY_RELOAD_GUARD_KEY) === '1') return false
+  storage.setItem(RECOVERY_RELOAD_GUARD_KEY, '1')
   return true
+}
+
+export function clearDynamicImportRecoveryReloadAttempt(storage?: Storage) {
+  storage?.removeItem(RECOVERY_RELOAD_GUARD_KEY)
 }
 
 export function installDynamicImportRecovery(windowObject: Window) {

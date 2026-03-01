@@ -1,6 +1,7 @@
 import '#tests/test_context'
 import { test } from '@japa/runner'
 import {
+  clearDynamicImportRecoveryReloadAttempt,
   markDynamicImportRecoveryReloadAttempt,
   shouldRecoverFromDynamicImportError,
 } from '../../inertia/app/dynamic_import_recovery.ts'
@@ -56,13 +57,14 @@ test.group('Dynamic import recovery', () => {
     assert.isFalse(shouldRecoverFromDynamicImportError(null))
   })
 
-  test('blocks repeated forced reloads within cooldown and allows retry afterwards', ({
-    assert,
-  }) => {
+  test('allows only one forced reload per session until app boots successfully', ({ assert }) => {
     const storage = new MemoryStorage()
 
-    assert.isTrue(markDynamicImportRecoveryReloadAttempt(storage, 1_000, 10_000))
-    assert.isFalse(markDynamicImportRecoveryReloadAttempt(storage, 5_000, 10_000))
-    assert.isTrue(markDynamicImportRecoveryReloadAttempt(storage, 11_001, 10_000))
+    assert.isTrue(markDynamicImportRecoveryReloadAttempt(storage))
+    assert.isFalse(markDynamicImportRecoveryReloadAttempt(storage))
+
+    clearDynamicImportRecoveryReloadAttempt(storage)
+
+    assert.isTrue(markDynamicImportRecoveryReloadAttempt(storage))
   })
 })
