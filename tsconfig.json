@@ -9,7 +9,7 @@
     "./bin/test.ts",
     "./tests/**/*",
     "./scripts/**/*",
-    "./playwright.config.ts",
+    "./playwright*.config.ts",
     "node_modules",
     "build"
   ]
