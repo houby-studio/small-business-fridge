@@ -16,8 +16,9 @@ export default await Env.create(new URL('../', import.meta.url), {
   PORT: Env.schema.number(),
   APP_KEY: Env.schema.string(),
   HOST: Env.schema.string({ format: 'host' }),
-  LOG_LEVEL: Env.schema.string(),
+  LOG_LEVEL: Env.schema.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal'] as const),
   APP_NAME: Env.schema.string.optional(),
+  CURRENCY: Env.schema.string.optional(),
 
   /*
   |----------------------------------------------------------
@@ -46,22 +47,33 @@ export default await Env.create(new URL('../', import.meta.url), {
   SMTP_PORT: Env.schema.number(),
   SMTP_USERNAME: Env.schema.string.optional(),
   SMTP_PASSWORD: Env.schema.string.optional(),
-  SMTP_FROM_ADDRESS: Env.schema.string.optional(),
+  SMTP_FROM_ADDRESS: Env.schema.string.optional({ format: 'email' }),
   SMTP_FROM_NAME: Env.schema.string.optional(),
   SMTP_IGNORE_TLS: Env.schema.boolean.optional(),
 
   /*
   |----------------------------------------------------------
-  | Variables for configuring OIDC (Microsoft Entra ID)
+  | Variables for configuring external authentication providers
   |----------------------------------------------------------
   */
-  OIDC_ENABLED: Env.schema.boolean.optional(),
-  LOCAL_LOGIN_DISABLED: Env.schema.boolean.optional(),
-  OIDC_AUTO_REGISTER: Env.schema.boolean.optional(),
-  OIDC_CLIENT_ID: Env.schema.string.optional(),
-  OIDC_CLIENT_SECRET: Env.schema.string.optional(),
-  OIDC_TENANT_ID: Env.schema.string.optional(),
-  OIDC_REDIRECT_URI: Env.schema.string.optional(),
+  AUTH_PROVIDERS: Env.schema.string.optional(),
+  AUTH_AUTO_REGISTER_PROVIDERS: Env.schema.string.optional(),
+  AUTH_PROVIDER_MICROSOFT_CLIENT_ID: Env.schema.string.optional(),
+  AUTH_PROVIDER_MICROSOFT_CLIENT_SECRET: Env.schema.string.optional(),
+  AUTH_PROVIDER_MICROSOFT_TENANT_ID: Env.schema.string.optional(),
+  AUTH_PROVIDER_MICROSOFT_REDIRECT_URI: Env.schema.string.optional({ format: 'url', tld: false }),
+  AUTH_PROVIDER_DISCORD_CLIENT_ID: Env.schema.string.optional(),
+  AUTH_PROVIDER_DISCORD_CLIENT_SECRET: Env.schema.string.optional(),
+  AUTH_PROVIDER_DISCORD_REDIRECT_URI: Env.schema.string.optional({ format: 'url', tld: false }),
+  AUTH_PROVIDER_DISCORD_SCOPES: Env.schema.string.optional(),
+  AUTH_REGISTRATION_MODE: Env.schema.enum.optional([
+    'open',
+    'invite_only',
+    'domain_auto_approve',
+  ] as const),
+  AUTH_REGISTRATION_ALLOWED_DOMAINS: Env.schema.string.optional(),
+  INVITE_EXPIRY_HOURS: Env.schema.number.optional(),
+  PASSWORD_RESET_TTL_MINUTES: Env.schema.number.optional(),
 
   /*
   |----------------------------------------------------------
@@ -76,8 +88,8 @@ export default await Env.create(new URL('../', import.meta.url), {
   | Application settings
   |----------------------------------------------------------
   */
-  APP_URL: Env.schema.string.optional(),
-  FEEDBACK_URL: Env.schema.string.optional(),
+  APP_URL: Env.schema.string.optional({ format: 'url', tld: false }),
+  FEEDBACK_URL: Env.schema.string.optional({ format: 'url', tld: false }),
   SWAGGER_ENABLED: Env.schema.boolean.optional(),
 
   /*
@@ -103,13 +115,13 @@ export default await Env.create(new URL('../', import.meta.url), {
   |----------------------------------------------------------
   */
   ESL_AIMS_ENABLED: Env.schema.boolean.optional(),
-  ESL_AIMS_BASE_URL: Env.schema.string.optional(),
+  ESL_AIMS_BASE_URL: Env.schema.string.optional({ format: 'url', tld: false }),
   ESL_AIMS_STORE: Env.schema.string.optional(),
   ESL_AIMS_CRON: Env.schema.string.optional(),
   ESL_AIMS_VERIFY_TLS: Env.schema.boolean.optional(),
 
   ESL_JAMES_ENABLED: Env.schema.boolean.optional(),
-  ESL_JAMES_BASE_URL: Env.schema.string.optional(),
+  ESL_JAMES_BASE_URL: Env.schema.string.optional({ format: 'url', tld: false }),
   ESL_JAMES_STORE: Env.schema.string.optional(),
   ESL_JAMES_API_KEY: Env.schema.string.optional(),
   ESL_JAMES_CRON: Env.schema.string.optional(),

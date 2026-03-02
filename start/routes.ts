@@ -22,6 +22,10 @@ import { extname } from 'node:path'
 // Web controllers
 const HomeController = () => import('#controllers/web/home_controller')
 const LoginController = () => import('#controllers/web/login_controller')
+const BootstrapController = () => import('#controllers/web/bootstrap_controller')
+const RegisterController = () => import('#controllers/web/register_controller')
+const PasswordResetController = () => import('#controllers/web/password_reset_controller')
+const InviteRegistrationController = () => import('#controllers/web/invite_registration_controller')
 const OidcController = () => import('#controllers/web/oidc_controller')
 const ShopController = () => import('#controllers/web/shop_controller')
 const OrdersController = () => import('#controllers/web/orders_controller')
@@ -34,6 +38,7 @@ const SupplierStockController = () => import('#controllers/web/supplier/stock_co
 const SupplierProductsController = () => import('#controllers/web/supplier/products_controller')
 const AdminDashboardController = () => import('#controllers/web/admin/dashboard_controller')
 const AdminUsersController = () => import('#controllers/web/admin/users_controller')
+const AdminInvitationsController = () => import('#controllers/web/admin/invitations_controller')
 const AdminCategoriesController = () => import('#controllers/web/admin/categories_controller')
 const AdminAllergensController = () => import('#controllers/web/admin/allergens_controller')
 const AdminMusicTracksController = () => import('#controllers/web/admin/music_tracks_controller')
@@ -96,6 +101,14 @@ router.get('/uploads/*', async ({ request, response }) => {
 */
 
 router.group(() => {
+  router.get('/setup/bootstrap', [BootstrapController, 'show']).use(middleware.guest())
+  router
+    .post('/setup/bootstrap', [BootstrapController, 'store'])
+    .use([
+      middleware.guest(),
+      middleware.throttle({ maxRequests: authThrottleLimit, windowMs: 60_000 }),
+    ])
+
   router.get('/login', [LoginController, 'show']).use(middleware.guest())
   router
     .post('/login', [LoginController, 'store'])
@@ -103,10 +116,45 @@ router.group(() => {
       middleware.guest(),
       middleware.throttle({ maxRequests: authThrottleLimit, windowMs: 60_000 }),
     ])
+
+  router.get('/register', [RegisterController, 'show']).use(middleware.guest())
+  router
+    .post('/register', [RegisterController, 'store'])
+    .use([
+      middleware.guest(),
+      middleware.throttle({ maxRequests: authThrottleLimit, windowMs: 60_000 }),
+    ])
+
+  router.get('/forgot-password', [PasswordResetController, 'showForgot']).use(middleware.guest())
+  router
+    .post('/forgot-password', [PasswordResetController, 'sendReset'])
+    .use([
+      middleware.guest(),
+      middleware.throttle({ maxRequests: authThrottleLimit, windowMs: 60_000 }),
+    ])
+  router
+    .get('/reset-password/:token', [PasswordResetController, 'showReset'])
+    .use(middleware.guest())
+  router
+    .post('/reset-password/:token', [PasswordResetController, 'reset'])
+    .use([
+      middleware.guest(),
+      middleware.throttle({ maxRequests: authThrottleLimit, windowMs: 60_000 }),
+    ])
+
+  router
+    .get('/register/invite/:token', [InviteRegistrationController, 'show'])
+    .use(middleware.guest())
+  router
+    .post('/register/invite/:token', [InviteRegistrationController, 'store'])
+    .use([
+      middleware.guest(),
+      middleware.throttle({ maxRequests: authThrottleLimit, windowMs: 60_000 }),
+    ])
 })
 
-router.get('/auth/oidc/redirect', [OidcController, 'redirect'])
-router.get('/auth/oidc/callback', [OidcController, 'callback'])
+router.get('/auth/:provider/redirect', [OidcController, 'redirect'])
+router.get('/auth/:provider/callback', [OidcController, 'callback'])
 
 router.get('/logout', [LoginController, 'destroy']).use(middleware.auth()).as('logout.get')
 router.post('/logout', [LoginController, 'destroy']).use(middleware.auth()).as('logout.post')
@@ -145,6 +193,7 @@ router
     // Personal API tokens
     router.post('/profile/tokens', [ProfileController, 'createToken'])
     router.delete('/profile/tokens/:id', [ProfileController, 'revokeToken'])
+    router.put('/profile/password', [PasswordResetController, 'changeAuthenticated'])
 
     // Audit log (customer view)
     router.get('/audit', [AuditController, 'index'])
@@ -198,6 +247,8 @@ router
     // User management
     router.get('/users', [AdminUsersController, 'index'])
     router.put('/users/:id', [AdminUsersController, 'update'])
+    router.post('/invitations', [AdminInvitationsController, 'store'])
+    router.post('/invitations/:id/revoke', [AdminInvitationsController, 'revoke'])
 
     // Category management
     router.get('/categories', [AdminCategoriesController, 'index'])
@@ -232,6 +283,7 @@ router
 
     // Generate invoice for a user (across all suppliers)
     router.post('/users/:id/generate-invoice', [AdminUsersController, 'generateInvoice'])
+    router.post('/users/:id/send-password-reset', [AdminUsersController, 'sendPasswordReset'])
   })
   .prefix('/admin')
   .use([middleware.auth(), middleware.role({ roles: ['admin'] })])

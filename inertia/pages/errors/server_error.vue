@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import Button from 'primevue/button'
+import { useI18n } from '~/composables/use_i18n'
 
 defineProps<{ error: any }>()
+const { t } = useI18n()
 </script>
 
 <template>
@@ -11,8 +13,8 @@ defineProps<{ error: any }>()
     <span class="pi pi-times-circle mb-6 block text-8xl text-slate-300 dark:text-zinc-700" />
     <h1 class="mb-2 text-5xl font-bold text-slate-800 dark:text-zinc-100">500</h1>
     <p class="mb-8 text-lg text-slate-500 dark:text-zinc-400">
-      {{ error?.message || 'Chyba serveru.' }}
+      {{ error?.message || t('common.server_error') }}
     </p>
-    <Button as="a" href="/" label="Zpět na úvod" icon="pi pi-home" />
+    <Button as="a" href="/" :label="t('common.back_to_home')" icon="pi pi-home" />
   </div>
 </template>

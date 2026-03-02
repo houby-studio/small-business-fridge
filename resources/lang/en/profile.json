@@ -17,7 +17,6 @@
   "keypad_disabled": "Disable keypad login",
   "exclude_allergens": "Exclude allergens in shop",
   "exclude_allergens_hint": "Products containing selected allergens will be hidden in the shop.",
-  "username": "Username",
   "keypad_id": "Keypad ID",
   "card_id": "Card ID",
   "role": "Role",
@@ -39,5 +38,10 @@
   "tokens_new_value_heading": "New API Token",
   "tokens_new_value_info": "Copy this value now. It cannot be shown again after closing.",
   "tokens_copy": "Copy",
-  "tokens_copied": "Copied!"
+  "tokens_copied": "Copied!",
+  "password_heading": "Password",
+  "password_current": "Current password (optional for first setup)",
+  "password_new": "New password",
+  "password_new_confirm": "Confirm new password",
+  "password_submit": "Change password"
 }

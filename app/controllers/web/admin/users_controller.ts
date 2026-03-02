@@ -1,11 +1,16 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import { DateTime } from 'luxon'
 import AdminService from '#services/admin_service'
 import InvoiceService from '#services/invoice_service'
 import User from '#models/user'
+import UserInvitation from '#models/user_invitation'
 import { updateUserValidator } from '#validators/user'
 import AuditService from '#services/audit_service'
 import NotificationService from '#services/notification_service'
 import logger from '@adonisjs/core/services/logger'
+import RegistrationPolicyService from '#services/registration_policy_service'
+import PasswordResetService from '#services/password_reset_service'
+import InvitationService from '#services/invitation_service'
 
 /**
  * Return the referer URL if it points to /admin/users (preserving active filters),
@@ -25,6 +30,7 @@ function usersUrl(request: HttpContext['request']): string {
 export default class UsersController {
   async index({ inertia, request }: HttpContext) {
     const page = request.input('page', 1)
+    const invitePage = Number(request.input('invitePage', 1))
     const role = request.input('role')
     const userId = request.input('userId')
     const disabled = request.input('disabled')
@@ -50,6 +56,11 @@ export default class UsersController {
     ])
 
     const userOptions = await User.query().select('id', 'displayName').orderBy('displayName', 'asc')
+    const invitationService = new InvitationService()
+    const invites = await UserInvitation.query()
+      .orderBy('createdAt', 'desc')
+      .paginate(invitePage, 5)
+    const policy = new RegistrationPolicyService()
 
     return inertia.render('admin/users/index', {
       users: {
@@ -57,7 +68,6 @@ export default class UsersController {
           id: u.id,
           displayName: u.displayName,
           email: u.email,
-          username: u.username,
           role: u.role,
           isKiosk: u.isKiosk,
           isDisabled: u.isDisabled,
@@ -76,6 +86,29 @@ export default class UsersController {
         sortOrder: sortOrder || '',
       },
       userOptions: userOptions.map((u) => ({ id: u.id, displayName: u.displayName })),
+      invitations: {
+        data: invites.all().map((invite) => ({
+          id: invite.id,
+          email: invite.email,
+          role: invite.role,
+          createdAt: invite.createdAt.toISO(),
+          expiresAt: invite.expiresAt.toISO(),
+          acceptedAt: invite.acceptedAt?.toISO() ?? null,
+          revokedAt: invite.revokedAt?.toISO() ?? null,
+          inviteUrl:
+            !invite.acceptedAt && !invite.revokedAt && invite.expiresAt > DateTime.now()
+              ? invitationService.getInviteUrl(invite)
+              : null,
+        })),
+        meta: invites.getMeta(),
+      },
+      registrationPolicy: {
+        mode: policy.getMode(),
+        allowedDomains: policy.getAllowedDomains(),
+      },
+      inviteFilters: {
+        invitePage,
+      },
     })
   }
 
@@ -95,6 +128,13 @@ export default class UsersController {
     try {
       user = await service.updateUser(params.id, data)
     } catch (err) {
+      if (err instanceof Error && err.message === 'LAST_ACTIVE_ADMIN_REQUIRED') {
+        session.flash('alert', {
+          type: 'danger',
+          message: i18n.t('messages.last_active_admin_required'),
+        })
+        return response.redirect(usersUrl(request))
+      }
       if (err instanceof Error && err.message === 'USER_HAS_UNINVOICED_ORDERS') {
         return response.redirect(usersUrl(request))
       }
@@ -154,6 +194,39 @@ export default class UsersController {
       }
     }
 
+    return response.redirect(usersUrl(request))
+  }
+
+  async sendPasswordReset({ params, request, response, session, i18n, auth }: HttpContext) {
+    const userId = Number(params.id)
+    const user = await User.findOrFail(userId)
+
+    const resetService = new PasswordResetService()
+    const payload = await resetService.createToken(user.email)
+    if (!payload) {
+      session.flash('alert', { type: 'danger', message: i18n.t('messages.action_failed') })
+      return response.redirect(usersUrl(request))
+    }
+
+    const notificationService = new NotificationService()
+    notificationService.sendPasswordResetEmail(payload).catch((err) => {
+      logger.error({ err, userId }, 'Failed to send admin-triggered password reset email')
+    })
+
+    await AuditService.log(
+      auth.user!.id,
+      'user.password_reset.requested',
+      'user',
+      user.id,
+      user.id,
+      {
+        via: 'admin',
+      }
+    )
+    session.flash('alert', {
+      type: 'success',
+      message: i18n.t('messages.password_reset_email_sent'),
+    })
     return response.redirect(usersUrl(request))
   }
 }

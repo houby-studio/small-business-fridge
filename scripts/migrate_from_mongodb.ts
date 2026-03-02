@@ -108,11 +108,11 @@ async function createPlaceholders(pgDb: pg.Client) {
   // Placeholder user — disabled, will absorb orphaned deliveries/invoices/orders
   const userResult = await pgDb.query(
     `INSERT INTO users (
-      oid, username, password, display_name, email, phone, iban,
+      oid, password, display_name, email, phone, iban,
       keypad_id, card_id, role, is_kiosk, is_disabled,
       show_all_products, send_mail_on_purchase, send_daily_report,
       color_mode, keypad_disabled, created_at, updated_at
-    ) VALUES (NULL, 'migration-deleted', NULL, 'Deleted User', 'migration-deleted@placeholder.local',
+    ) VALUES (NULL, NULL, 'Deleted User', 'migration-deleted@placeholder.local',
       NULL, NULL, 89999, NULL, 'customer', false, true,
       false, false, false, 'dark', false, NOW(), NOW())
     RETURNING id`
@@ -225,15 +225,14 @@ async function migrateUsers(mongo: Db, pgDb: pg.Client) {
     try {
       const result = await pgDb.query(
         `INSERT INTO users (
-          oid, username, password, display_name, email, phone, iban,
+          oid, password, display_name, email, phone, iban,
           keypad_id, card_id, role, is_kiosk, is_disabled,
           show_all_products, send_mail_on_purchase, send_daily_report,
           color_mode, keypad_disabled, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW(), NOW())
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW(), NOW())
          RETURNING id`,
         [
           userOid, // oid
-          null, // username (OIDC users don't have one)
           null, // password (OIDC users don't have one)
           displayName, // display_name
           email, // email

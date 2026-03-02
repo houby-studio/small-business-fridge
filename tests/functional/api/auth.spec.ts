@@ -11,11 +11,11 @@ test.group('API Auth - Token', (group) => {
     await db.from('users').delete()
   })
 
-  test('can get token with valid username/password', async ({ client, assert }) => {
-    await UserFactory.merge({ username: 'apiuser', password: 'password123' }).create()
+  test('can get token with valid email/password', async ({ client, assert }) => {
+    await UserFactory.merge({ email: 'apiuser@example.com', password: 'password123' }).create()
 
     const response = await client.post('/api/v1/auth/token').json({
-      username: 'apiuser',
+      email: 'apiuser@example.com',
       password: 'password123',
     })
 
@@ -25,10 +25,10 @@ test.group('API Auth - Token', (group) => {
   })
 
   test('returns 401 with wrong password', async ({ client }) => {
-    await UserFactory.merge({ username: 'apiuser2', password: 'password123' }).create()
+    await UserFactory.merge({ email: 'apiuser2@example.com', password: 'password123' }).create()
 
     const response = await client.post('/api/v1/auth/token').json({
-      username: 'apiuser2',
+      email: 'apiuser2@example.com',
       password: 'wrongpassword',
     })
 
@@ -36,12 +36,12 @@ test.group('API Auth - Token', (group) => {
   })
 
   test('returns 401 for disabled user', async ({ client }) => {
-    await UserFactory.merge({ username: 'disabled3', password: 'password123' })
+    await UserFactory.merge({ email: 'disabled3@example.com', password: 'password123' })
       .apply('disabled')
       .create()
 
     const response = await client.post('/api/v1/auth/token').json({
-      username: 'disabled3',
+      email: 'disabled3@example.com',
       password: 'password123',
     })
 

@@ -98,6 +98,7 @@ else {
   Run-Step 'Ensure test database exists' { node --import=tsx scripts/ensure_test_db.ts }
   Run-Step 'Test migrations' { node ace migration:run --force }
   Run-Step 'Unit + Functional tests' { node ace test --no-color }
+  Run-Step 'Reset E2E state' { npm run test:e2e:reset }
   Run-Step 'Playwright E2E tests' { npm run test:e2e }
 }
 
@@ -105,4 +106,3 @@ Write-Host ''
 Write-Host '================================================'
 Write-Host "  $PASS All checks passed!"
 Write-Host '================================================'
-

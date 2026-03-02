@@ -23,6 +23,7 @@ test.describe('Shop UI responsiveness', () => {
   }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await loginAs(page, 'supplier')
+    await page.waitForLoadState('load')
 
     let positions = await firstTwoCardPositions(page)
     expect(positions).not.toBeNull()

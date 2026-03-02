@@ -22,6 +22,12 @@ test.group('Web Auth', (group) => {
     response.assertHeader('expires', '0')
   })
 
+  test('login redirects to bootstrap when no admin exists', async ({ client }) => {
+    const response = await client.get('/login').redirects(0)
+    response.assertStatus(302)
+    response.assertHeader('location', '/setup/bootstrap')
+  })
+
   test('unauthenticated user is redirected from /shop', async ({ client }) => {
     const response = await client.get('/shop').redirects(0)
     response.assertStatus(302)
@@ -67,13 +73,121 @@ test.group('Web Auth', (group) => {
   })
 })
 
+test.group('Web Auth - Bootstrap', (group) => {
+  const previousProviders = process.env.AUTH_PROVIDERS
+
+  group.each.setup(async () => {
+    throttleStore.clear()
+    await db.from('remember_me_tokens').delete()
+    await db.from('user_auth_identities').delete()
+    await db.from('users').delete()
+    process.env.AUTH_PROVIDERS = 'local'
+  })
+
+  group.teardown(() => {
+    if (previousProviders === undefined) {
+      delete process.env.AUTH_PROVIDERS
+    } else {
+      process.env.AUTH_PROVIDERS = previousProviders
+    }
+  })
+
+  test('GET /setup/bootstrap renders for guests when no admin exists', async ({ client }) => {
+    const response = await client.get('/setup/bootstrap')
+    response.assertStatus(200)
+  })
+
+  test('POST /setup/bootstrap creates first admin and redirects to /shop', async ({
+    client,
+    assert,
+  }) => {
+    const response = await client
+      .post('/setup/bootstrap')
+      .form({
+        displayName: 'Bootstrap Admin',
+        email: 'bootstrap@local.test',
+        password: 'supersecret123',
+        passwordConfirmation: 'supersecret123',
+      })
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    response.assertHeader('location', '/shop')
+
+    const created = await User.findBy('email', 'bootstrap@local.test')
+    assert.exists(created)
+    assert.equal(created!.role, 'admin')
+  })
+
+  test('POST /setup/bootstrap rejects invalid payload', async ({ client, assert }) => {
+    const response = await client
+      .post('/setup/bootstrap')
+      .form({
+        displayName: '',
+        email: 'invalid-email',
+        password: 'short',
+        passwordConfirmation: 'short',
+      })
+      .withCsrfToken()
+      .redirects(0)
+
+    assert.include([302, 422], response.status())
+
+    const users = await User.query().where('role', 'admin')
+    assert.lengthOf(users, 0)
+  })
+
+  test('GET /setup/bootstrap redirects to /login when admin already exists', async ({ client }) => {
+    await UserFactory.apply('admin').create()
+
+    const response = await client.get('/setup/bootstrap').redirects(0)
+    response.assertStatus(302)
+    response.assertHeader('location', '/login')
+  })
+
+  test('POST /setup/bootstrap does not create another admin when one exists', async ({
+    client,
+    assert,
+  }) => {
+    await UserFactory.merge({ email: 'existing-admin@local.test' }).apply('admin').create()
+
+    const response = await client
+      .post('/setup/bootstrap')
+      .form({
+        displayName: 'Second Admin',
+        email: 'second-admin@local.test',
+        password: 'supersecret123',
+        passwordConfirmation: 'supersecret123',
+      })
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    response.assertHeader('location', '/login')
+
+    const users = await User.query().where('role', 'admin')
+    assert.lengthOf(users, 1)
+    assert.equal(users[0].email, 'existing-admin@local.test')
+  })
+})
+
 test.group('Web Auth - Remember Me', (group) => {
   const cleanAll = async () => {
     throttleStore.clear()
     await db.from('remember_me_tokens').delete()
     await db.from('users').delete()
   }
-  group.each.setup(cleanAll)
+  group.each.setup(async () => {
+    await cleanAll()
+    await User.create({
+      password: 'secret123',
+      displayName: 'Bootstrap Admin',
+      email: 'bootstrap-admin@test.local',
+      keypadId: 9900,
+      role: 'admin',
+    })
+  })
   group.each.teardown(cleanAll)
 
   test('POST /login with rememberMe=true creates a remember_me_token in DB', async ({
@@ -81,7 +195,6 @@ test.group('Web Auth - Remember Me', (group) => {
     assert,
   }) => {
     const user = await User.create({
-      username: 'remtest',
       password: 'secret123',
       displayName: 'Remember Test',
       email: 'remtest@test.local',
@@ -91,7 +204,7 @@ test.group('Web Auth - Remember Me', (group) => {
 
     const response = await client
       .post('/login')
-      .form({ username: 'remtest', password: 'secret123', rememberMe: true })
+      .form({ email: 'remtest@test.local', password: 'secret123', rememberMe: true })
       .withCsrfToken()
       .redirects(0)
 
@@ -106,7 +219,6 @@ test.group('Web Auth - Remember Me', (group) => {
     assert,
   }) => {
     await User.create({
-      username: 'noremtest',
       password: 'secret123',
       displayName: 'No Remember Test',
       email: 'noremtest@test.local',
@@ -116,11 +228,35 @@ test.group('Web Auth - Remember Me', (group) => {
 
     const response = await client
       .post('/login')
-      .form({ username: 'noremtest', password: 'secret123' })
+      .form({ email: 'noremtest@test.local', password: 'secret123' })
       .withCsrfToken()
       .redirects(0)
 
     response.assertStatus(302)
+
+    const tokens = await db.from('remember_me_tokens')
+    assert.lengthOf(tokens, 0)
+  })
+
+  test('POST /login rejects non-email login payload without authenticating', async ({
+    client,
+    assert,
+  }) => {
+    await User.create({
+      password: 'admin123',
+      displayName: 'Admin',
+      email: 'admin@localhost',
+      keypadId: 9903,
+      role: 'admin',
+    })
+
+    const response = await client
+      .post('/login')
+      .form({ email: 'admin', password: 'admin123' })
+      .withCsrfToken()
+      .redirects(0)
+
+    assert.include([302, 422], response.status())
 
     const tokens = await db.from('remember_me_tokens')
     assert.lengthOf(tokens, 0)

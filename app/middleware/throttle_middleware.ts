@@ -2,7 +2,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import type { NextFn } from '@adonisjs/core/types/http'
 
 /**
- * Simple in-memory rate limiter middleware for API routes.
+ * Simple in-memory rate limiter middleware.
  *
  * Configuration:
  *   maxRequests: max requests per window (default: 60)
@@ -12,6 +12,7 @@ import type { NextFn } from '@adonisjs/core/types/http'
  *   middleware.throttle({ maxRequests: 60, windowMs: 60_000 })
  *
  * Returns 429 Too Many Requests with Retry-After header when limit is exceeded.
+ * For Inertia web requests, it redirects back with a flash alert instead of JSON.
  */
 
 interface ThrottleOptions {
@@ -59,6 +60,15 @@ export default class ThrottleMiddleware {
     if (bucket.count > maxRequests) {
       const retryAfter = Math.ceil((bucket.resetAt - now) / 1000)
       ctx.response.header('Retry-After', String(retryAfter))
+
+      if (this.shouldUseInertiaFlashResponse(ctx)) {
+        const message =
+          ctx.i18n?.t('messages.too_many_requests', { retryAfter }) ??
+          `Too many requests. Please try again in ${retryAfter} seconds.`
+        ctx.session?.flash('alert', { type: 'warn', message })
+        return ctx.response.redirect().back()
+      }
+
       return ctx.response.tooManyRequests({
         error: 'Too many requests',
         retryAfter,
@@ -76,5 +86,12 @@ export default class ThrottleMiddleware {
     const ip = ctx.request.header('x-forwarded-for')?.split(',')[0]?.trim() ?? ctx.request.ip()
 
     return `throttle:ip:${ip}`
+  }
+
+  private shouldUseInertiaFlashResponse(ctx: HttpContext): boolean {
+    const isInertiaRequest = ctx.request.header('x-inertia') === 'true'
+    const isApiRequest = ctx.request.url().startsWith('/api/')
+
+    return isInertiaRequest && !isApiRequest
   }
 }

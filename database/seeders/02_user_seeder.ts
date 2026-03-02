@@ -11,7 +11,6 @@ export default class extends BaseSeeder {
       {
         displayName: 'Admin User',
         email: 'admin@localhost',
-        username: 'admin',
         password: 'admin123',
         keypadId: 89990,
         role: 'admin',
@@ -27,7 +26,6 @@ export default class extends BaseSeeder {
       {
         displayName: 'Supplier User',
         email: 'supplier@localhost',
-        username: 'supplier',
         password: 'supplier123',
         keypadId: 89991,
         role: 'supplier',
@@ -43,7 +41,6 @@ export default class extends BaseSeeder {
       {
         displayName: 'Customer User',
         email: 'customer@localhost',
-        username: 'customer',
         password: 'customer123',
         keypadId: 89992,
         role: 'customer',
@@ -58,7 +55,6 @@ export default class extends BaseSeeder {
       {
         displayName: 'Kiosk Device',
         email: 'kiosk@localhost',
-        username: 'kiosk',
         password: 'kiosk123',
         keypadId: 89993,
         role: 'customer',

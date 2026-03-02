@@ -9,6 +9,7 @@ test.describe('App layout responsiveness', () => {
   test('app bar adapts across breakpoints without overlap or clipping', async ({ page }) => {
     await page.setViewportSize({ width: 1366, height: 900 })
     await loginAs(page, 'admin')
+    await page.waitForLoadState('load')
 
     const nav = page.locator('.sbf-nav')
     const main = page.locator('.sbf-main')

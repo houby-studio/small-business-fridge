@@ -13,6 +13,13 @@ type TestDbConfig = {
   database: string
 }
 
+export type ActiveDbConnection = {
+  pid: number
+  applicationName: string | null
+  clientAddress: string | null
+  state: string | null
+}
+
 let envLoaded = false
 
 export function loadTestEnvFile() {
@@ -67,7 +74,19 @@ export function getTestRuntimeEnv(overrides: Record<string, string> = {}): Recor
     SMTP_PASSWORD: process.env.SMTP_PASSWORD ?? '',
     SMTP_FROM_ADDRESS: process.env.SMTP_FROM_ADDRESS ?? 'noreply@test.local',
     SMTP_FROM_NAME: process.env.SMTP_FROM_NAME ?? 'Test',
-    OIDC_ENABLED: process.env.OIDC_ENABLED ?? 'false',
+    // Keep auth mode deterministic for tests, regardless of developer shell env.
+    AUTH_PROVIDERS: 'local',
+    AUTH_AUTO_REGISTER_PROVIDERS: '',
+    AUTH_REGISTRATION_MODE: '',
+    AUTH_REGISTRATION_ALLOWED_DOMAINS: '',
+    AUTH_PROVIDER_MICROSOFT_CLIENT_ID: '',
+    AUTH_PROVIDER_MICROSOFT_CLIENT_SECRET: '',
+    AUTH_PROVIDER_MICROSOFT_TENANT_ID: 'common',
+    AUTH_PROVIDER_MICROSOFT_REDIRECT_URI: '',
+    AUTH_PROVIDER_DISCORD_CLIENT_ID: '',
+    AUTH_PROVIDER_DISCORD_CLIENT_SECRET: '',
+    AUTH_PROVIDER_DISCORD_REDIRECT_URI: '',
+    AUTH_PROVIDER_DISCORD_SCOPES: 'identify,email',
     API_SECRET: process.env.API_SECRET ?? 'test-api-secret',
     APP_URL: process.env.APP_URL ?? 'http://localhost:3334',
     ...overrides,
@@ -106,6 +125,47 @@ export async function ensureTestDatabaseExists() {
         throw error
       }
     }
+  } finally {
+    await adminClient.end()
+  }
+}
+
+export async function listOtherDatabaseConnections(
+  databaseName = getTestDbConfigFromEnv().database
+): Promise<ActiveDbConnection[]> {
+  const config = getTestDbConfigFromEnv()
+  const adminClient = new Client({
+    host: config.host,
+    port: config.port,
+    user: config.user,
+    password: config.password,
+    database: 'postgres',
+  })
+
+  await adminClient.connect()
+
+  try {
+    const result = await adminClient.query<{
+      pid: number
+      application_name: string | null
+      client_addr: string | null
+      state: string | null
+    }>(
+      `SELECT pid, application_name, client_addr::text, state
+       FROM pg_stat_activity
+       WHERE datname = $1
+         AND backend_type = 'client backend'
+         AND pid <> pg_backend_pid()
+       ORDER BY pid ASC`,
+      [databaseName]
+    )
+
+    return result.rows.map((row) => ({
+      pid: row.pid,
+      applicationName: row.application_name,
+      clientAddress: row.client_addr,
+      state: row.state,
+    }))
   } finally {
     await adminClient.end()
   }

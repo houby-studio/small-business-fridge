@@ -42,7 +42,7 @@ const props = defineProps<{
 }>()
 
 const confirm = useConfirm()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 /** Sort order: recommended+favorite > recommended > favorite > rest, then alphabetical. */
 function productRank(p: ProductItem): number {
@@ -60,7 +60,7 @@ const sortedProducts = computed(() => {
     if (a.isRecommended && b.isRecommended) {
       return a.recommendationRank - b.recommendationRank
     }
-    return a.displayName.localeCompare(b.displayName, 'cs')
+    return a.displayName.localeCompare(b.displayName, locale.value)
   })
 })
 

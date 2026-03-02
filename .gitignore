@@ -39,3 +39,4 @@ playwright-artifacts/
 # Generated API docs
 swagger.json
 swagger.yml
+.tmp/playwright-e2e.lock

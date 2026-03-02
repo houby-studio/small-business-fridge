@@ -8,7 +8,7 @@ Colleagues browse available products, buy with one click, then pay later via QR 
 
 ## Stack
 
-- **Backend**: AdonisJS 6 (Node.js 22+), PostgreSQL 18, Lucid ORM
+- **Backend**: AdonisJS 7 (Node.js 22+), PostgreSQL 18, Lucid ORM
 - **Frontend**: Vue 3 + Inertia.js + PrimeVue
 - **Auth**: Session-based (web) + token-based (API), optional OIDC (Microsoft Entra ID)
 - **Language**: TypeScript throughout, Czech (cs) primary / English (en) secondary
@@ -16,12 +16,14 @@ Colleagues browse available products, buy with one click, then pay later via QR 
 ## Developer quickstart
 
 ```bash
-cp .env.example .env          # set APP_KEY (see comment in file) and adjust as needed
-docker compose -f compose.dev.yaml up -d   # postgres :5432, mailpit :8025/:1025
+cp .env.example .env
 npm install
+node ace generate:key
+docker compose -f compose.dev.yaml up -d
+export NODE_ENV=development                  # tracking bug https://github.com/adonisjs/env/issues/48
 node ace migration:run
-node ace db:seed              # creates admin / supplier / customer / kiosk seed users
-npm run dev                   # app at http://localhost:3333
+node ace db:seed                             # creates admin / supplier / customer / kiosk seed users
+npm run dev                                  # app at http://localhost:3333
 ```
 
 Seed credentials: `admin / admin123`, `supplier / supplier123`, `customer / customer123`, `kiosk / kiosk123`.
@@ -30,19 +32,15 @@ Mailpit web UI: <http://localhost:8025>
 ## Production quickstart (Docker)
 
 ```bash
-# 1. Prepare secrets
-mkdir secrets
-node -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex'))" > secrets/app_key
-printf 'strong-db-password' > secrets/db_password
-chmod 600 secrets/*
-
-# 2. Set required env vars (export in shell or create .env next to compose.yaml)
-#    APP_URL=https://your-domain.example.com
-#    SMTP_HOST=smtp.your-provider.com  SMTP_PORT=587  SMTP_USERNAME=...
+# 1. Download compose.yaml and .env.example as .env
+wget https://raw.githubusercontent.com/houby-studio/small-business-fridge/refs/heads/master/compose.yaml
+wget https://raw.githubusercontent.com/houby-studio/small-business-fridge/refs/heads/master/.env.example -O .env
+# 2. Set at least [REQUIRED] env vars in .env file (it is recommend to read through all configration options)
+#    APP_KEY=
+#    DB_PASSWORD=
 
 # 3. Start
 docker compose up -d
-docker compose exec app node ace migration:run
 ```
 
 ## Features

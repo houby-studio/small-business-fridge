@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test'
-import { fillLoginForm, loginAs } from './helpers/auth'
+import pg from 'pg'
+import { ensureLoginPage, fillLoginForm, loginAs } from './helpers/auth'
+
+const { Client } = pg
 
 /**
  * E2E: Authentication flows (login / logout)
@@ -7,7 +10,7 @@ import { fillLoginForm, loginAs } from './helpers/auth'
  * Requires dev users seeded in the test DB (see global-setup.ts).
  *
  * Selectors used:
- *   #username     — InputText component (id maps directly to input)
+ *   #email        — InputText component (id maps directly to input)
  *   #password     — Password component (inputId maps to inner input)
  *   button[type="submit"] — submit button
  *   button:has(.pi-sign-out) — logout icon button in the nav bar
@@ -15,11 +18,11 @@ import { fillLoginForm, loginAs } from './helpers/auth'
 
 test.describe('Login page', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login')
+    await ensureLoginPage(page)
   })
 
   test('shows login form with required fields', async ({ page }) => {
-    await expect(page.locator('#username')).toBeVisible()
+    await expect(page.locator('#email')).toBeVisible()
     await expect(page.locator('#password')).toBeVisible()
     await expect(page.locator('button[type="submit"]')).toBeVisible()
   })
@@ -35,25 +38,79 @@ test.describe('Login page', () => {
     await expect(page).toHaveURL(/\/login/)
   })
 
+  test('bootstrap route redirects to login when admin already exists', async ({ page }) => {
+    await page.goto('/setup/bootstrap')
+    await expect(page).toHaveURL(/\/login/)
+  })
+
+  test('bootstrap page renders local-first setup when no admin exists', async ({ page }) => {
+    const client = new Client({
+      host: process.env.DB_HOST ?? '127.0.0.1',
+      port: Number(process.env.DB_PORT ?? 5432),
+      user: process.env.DB_USER ?? 'sbf',
+      password: process.env.DB_PASSWORD ?? 'sbf',
+      database: process.env.DB_DATABASE ?? 'sbf_test',
+    })
+
+    await client.connect()
+    const result = await client.query<{ id: number }>(
+      `UPDATE users
+       SET role = 'customer'
+       WHERE role = 'admin'
+       RETURNING id`
+    )
+
+    try {
+      await page.goto('/setup/bootstrap')
+      await expect(page).toHaveURL(/\/setup\/bootstrap/)
+      await expect(page.locator('#bootstrapDisplayName')).toBeVisible()
+      await expect(
+        page.locator('a[href*="/auth/"][href*="/redirect?intent=bootstrap"]')
+      ).toHaveCount(0)
+
+      const submit = page.locator('button[type="submit"]')
+      await expect(submit).toBeDisabled()
+    } finally {
+      if (result.rows.length > 0) {
+        await client.query("UPDATE users SET role = 'admin' WHERE id = ANY($1::int[])", [
+          result.rows.map((row) => row.id),
+        ])
+      }
+      await client.end()
+    }
+  })
+
   test('invalid credentials stays on login and shows error', async ({ page }) => {
-    await fillLoginForm(page, 'nobody', 'wrongpassword')
+    await fillLoginForm(page, 'nobody@example.com', 'wrongpassword')
     await expect(page).toHaveURL(/\/login/)
     // Error displayed as a PrimeVue Toast (flash message via session.flash -> useFlash composable)
     await expect(page.locator('[role="alert"]')).toBeVisible()
   })
 
+  test('invalid email format keeps submit disabled and shows inline hint', async ({ page }) => {
+    const emailInput = page.locator('#email')
+    const passwordInput = page.locator('#password')
+    const submitButton = page.locator('button[type="submit"]')
+
+    await emailInput.fill('admin')
+    await passwordInput.fill('admin123')
+
+    await expect(submitButton).toBeDisabled()
+    await expect(page).toHaveURL(/\/login/)
+  })
+
   test('customer can log in and is redirected to shop', async ({ page }) => {
-    await fillLoginForm(page, 'customer', 'customer123')
+    await fillLoginForm(page, 'customer@localhost', 'customer123')
     await expect(page).toHaveURL(/\/shop/)
   })
 
   test('admin can log in', async ({ page }) => {
-    await fillLoginForm(page, 'admin', 'admin123')
+    await fillLoginForm(page, 'admin@localhost', 'admin123')
     await expect(page).not.toHaveURL(/\/login/)
   })
 
   test('supplier can log in', async ({ page }) => {
-    await fillLoginForm(page, 'supplier', 'supplier123')
+    await fillLoginForm(page, 'supplier@localhost', 'supplier123')
     await expect(page).not.toHaveURL(/\/login/)
   })
 })

@@ -17,7 +17,6 @@
   "keypad_disabled": "Zakázat přihlášení klávesnicí",
   "exclude_allergens": "V obchodě vyloučit alergeny",
   "exclude_allergens_hint": "Produkty obsahující vybrané alergeny se v obchodě nebudou zobrazovat.",
-  "username": "Uživatelské jméno",
   "keypad_id": "ID klávesnice",
   "card_id": "ID karty",
   "role": "Role",
@@ -39,5 +38,10 @@
   "tokens_new_value_heading": "Nový API token",
   "tokens_new_value_info": "Zkopírujte tuto hodnotu nyní. Po zavření ji nebude možné znovu zobrazit.",
   "tokens_copy": "Kopírovat",
-  "tokens_copied": "Zkopírováno!"
+  "tokens_copied": "Zkopírováno!",
+  "password_heading": "Heslo",
+  "password_current": "Aktuální heslo (volitelné při prvním nastavení)",
+  "password_new": "Nové heslo",
+  "password_new_confirm": "Potvrzení nového hesla",
+  "password_submit": "Změnit heslo"
 }

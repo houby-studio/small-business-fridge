@@ -197,6 +197,25 @@ export class PageViewSchema extends BaseModel {
   declare createdAt: DateTime
 }
 
+export class PasswordResetTokenSchema extends BaseModel {
+  static $columns = ['id', 'email', 'tokenHash', 'expiresAt', 'usedAt', 'createdAt', 'updatedAt'] as const
+  $columns = PasswordResetTokenSchema.$columns
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare email: string
+  @column()
+  declare tokenHash: string
+  @column.dateTime()
+  declare expiresAt: DateTime
+  @column.dateTime()
+  declare usedAt: DateTime | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
 export class ProductAllergenSchema extends BaseModel {
   static $columns = ['id', 'productId', 'allergenId'] as const
   $columns = ProductAllergenSchema.$columns
@@ -269,6 +288,27 @@ export class RememberMeTokenSchema extends BaseModel {
   declare expiresAt: DateTime
 }
 
+export class UserAuthIdentitySchema extends BaseModel {
+  static $columns = ['id', 'userId', 'provider', 'providerUserId', 'providerEmail', 'lastLoginAt', 'createdAt', 'updatedAt'] as const
+  $columns = UserAuthIdentitySchema.$columns
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare userId: number
+  @column()
+  declare provider: string
+  @column()
+  declare providerUserId: string
+  @column()
+  declare providerEmail: string | null
+  @column.dateTime()
+  declare lastLoginAt: DateTime | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
 export class UserExcludedAllergenSchema extends BaseModel {
   static $columns = ['userId', 'allergenId'] as const
   $columns = UserExcludedAllergenSchema.$columns
@@ -291,15 +331,38 @@ export class UserFavoriteSchema extends BaseModel {
   declare createdAt: DateTime
 }
 
-export class UserSchema extends BaseModel {
-  static $columns = ['id', 'oid', 'username', 'password', 'displayName', 'email', 'phone', 'iban', 'keypadId', 'cardId', 'role', 'isKiosk', 'isDisabled', 'showAllProducts', 'sendMailOnPurchase', 'sendDailyReport', 'colorMode', 'keypadDisabled', 'createdAt', 'updatedAt', 'isPremium'] as const
-  $columns = UserSchema.$columns
+export class UserInvitationSchema extends BaseModel {
+  static $columns = ['id', 'email', 'role', 'tokenHash', 'invitedByUserId', 'acceptedUserId', 'expiresAt', 'acceptedAt', 'revokedAt', 'createdAt', 'updatedAt'] as const
+  $columns = UserInvitationSchema.$columns
   @column({ isPrimary: true })
   declare id: number
   @column()
-  declare oid: string | null
+  declare email: string
   @column()
-  declare username: string | null
+  declare role: string
+  @column()
+  declare tokenHash: string
+  @column()
+  declare invitedByUserId: number | null
+  @column()
+  declare acceptedUserId: number | null
+  @column.dateTime()
+  declare expiresAt: DateTime
+  @column.dateTime()
+  declare acceptedAt: DateTime | null
+  @column.dateTime()
+  declare revokedAt: DateTime | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
+export class UserSchema extends BaseModel {
+  static $columns = ['id', 'password', 'displayName', 'email', 'phone', 'iban', 'keypadId', 'cardId', 'role', 'isKiosk', 'isDisabled', 'showAllProducts', 'sendMailOnPurchase', 'sendDailyReport', 'colorMode', 'keypadDisabled', 'createdAt', 'updatedAt', 'isPremium'] as const
+  $columns = UserSchema.$columns
+  @column({ isPrimary: true })
+  declare id: number
   @column({ serializeAs: null })
   declare password: string | null
   @column()

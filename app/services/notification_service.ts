@@ -1,6 +1,7 @@
 import mail from '@adonisjs/mail/services/main'
 import i18nManager from '@adonisjs/i18n/services/main'
 import env from '#start/env'
+import type { DateTime } from 'luxon'
 import User from '#models/user'
 import Order from '#models/order'
 import Invoice from '#models/invoice'
@@ -419,6 +420,47 @@ export default class NotificationService {
           keypadId: user.keypadId,
           appUrl: this.appUrl,
           appName: this.appName,
+        })
+    })
+  }
+
+  /**
+   * Send registration invitation email.
+   */
+  async sendRegistrationInvite(params: {
+    email: string
+    inviteUrl: string
+    role: 'customer' | 'supplier' | 'admin'
+    expiresAt: DateTime
+  }) {
+    await mail.send((message) => {
+      message
+        .to(params.email)
+        .subject(this.i18n.t('emails.registration_invite_subject', { app_name: this.appName }))
+        .htmlView('emails/registration_invite', {
+          i18n: this.i18n,
+          appName: this.appName,
+          appUrl: this.appUrl,
+          inviteUrl: params.inviteUrl,
+          role: params.role,
+          expiresAt: params.expiresAt.toFormat('dd.MM.yyyy HH:mm'),
+        })
+    })
+  }
+
+  /**
+   * Send password reset email.
+   */
+  async sendPasswordResetEmail(params: { email: string; resetUrl: string }) {
+    await mail.send((message) => {
+      message
+        .to(params.email)
+        .subject(this.i18n.t('emails.password_reset_subject', { app_name: this.appName }))
+        .htmlView('emails/password_reset', {
+          i18n: this.i18n,
+          appName: this.appName,
+          appUrl: this.appUrl,
+          resetUrl: params.resetUrl,
         })
     })
   }

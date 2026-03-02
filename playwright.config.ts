@@ -3,7 +3,6 @@ import { getTestRuntimeEnv } from './tests/utils/test_db.js'
 
 const E2E_PORT = '3345'
 const E2E_BASE_URL = `http://localhost:${E2E_PORT}`
-const isCI = !!process.env.CI
 const testEnv = getTestRuntimeEnv({
   PORT: E2E_PORT,
   APP_URL: E2E_BASE_URL,
@@ -15,12 +14,13 @@ const testEnv = getTestRuntimeEnv({
  * Runs against the app started in test mode (NODE_ENV=test, test DB).
  * The app is started automatically before tests and stopped after.
  *
- * To run: npx playwright test
- * To run with UI: npx playwright test --ui
- * To run specific file: npx playwright test tests/e2e/auth.spec.ts
+ * To run: npm run test:e2e
+ * To run with UI: npm run test:e2e -- --ui
+ * To run specific file: npm run test:e2e -- tests/e2e/auth.spec.ts
  */
 export default defineConfig({
   testDir: './tests/e2e',
+  testIgnore: ['auth_env_matrix.spec.ts'],
   globalSetup: './tests/e2e/global_setup.ts',
   fullyParallel: false, // Avoid DB conflicts between parallel tests
   forbidOnly: !!process.env.CI,
@@ -40,16 +40,13 @@ export default defineConfig({
 
   /* Start the AdonisJS server in test mode before running E2E tests */
   webServer: {
-    command: 'node ace serve --no-hmr',
+    command: 'cd build && node bin/server.js',
     url: E2E_BASE_URL,
     // Always use a Playwright-managed server to avoid attaching to a stale local process.
     reuseExistingServer: false,
     env: testEnv,
+    timeout: 120 * 1000,
   },
 
-  projects: [
-    isCI
-      ? { name: 'chromium', use: { ...devices['Desktop Chrome'] } }
-      : { name: 'msedge', use: { ...devices['Desktop Edge'], channel: 'msedge' } },
-  ],
+  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 })

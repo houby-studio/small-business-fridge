@@ -146,6 +146,23 @@ export default class AdminService {
     }
   ) {
     const user = await User.findOrFail(userId)
+    const nextRole = data.role ?? user.role
+    const nextIsDisabled = data.isDisabled ?? user.isDisabled
+
+    const isCurrentlyActiveAdmin = user.role === 'admin' && user.isDisabled === false
+    const willRemainActiveAdmin = nextRole === 'admin' && nextIsDisabled === false
+
+    if (isCurrentlyActiveAdmin && !willRemainActiveAdmin) {
+      const anotherActiveAdmin = await User.query()
+        .where('role', 'admin')
+        .where('isDisabled', false)
+        .whereNot('id', user.id)
+        .first()
+
+      if (!anotherActiveAdmin) {
+        throw new Error('LAST_ACTIVE_ADMIN_REQUIRED')
+      }
+    }
 
     if (data.isDisabled === true) {
       const invoiceService = new InvoiceService()

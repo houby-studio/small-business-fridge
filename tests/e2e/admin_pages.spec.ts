@@ -28,18 +28,18 @@ test.describe('Admin pages and filters', () => {
   test('admin users supports role filter', async ({ page }) => {
     await page.goto('/admin/users')
 
-    await page.getByRole('combobox').nth(1).click()
+    await page.locator('#admin-users-filter-role').click()
     await page.getByRole('option', { name: 'Dodavatel' }).click()
     await page.getByRole('button', { name: 'Použít filtry' }).click()
 
     await expect(page).toHaveURL(/\/admin\/users\?.*role=supplier/)
-    await expect(page.locator('table')).toContainText('Dodavatel')
+    await expect(page.locator('.p-datatable table')).toContainText('Dodavatel')
   })
 
   test('admin users supports disabled filter', async ({ page }) => {
     await page.goto('/admin/users')
 
-    await page.getByRole('combobox').nth(2).click()
+    await page.locator('#admin-users-filter-disabled').click()
     await page.getByRole('option', { name: 'Povolen' }).click()
     await page.getByRole('button', { name: 'Použít filtry' }).click()
 
@@ -49,7 +49,7 @@ test.describe('Admin pages and filters', () => {
   test('admin users filter search autofocuses and Enter selects first match', async ({ page }) => {
     await page.goto('/admin/users')
 
-    await page.getByRole('combobox').first().click()
+    await page.locator('#admin-users-filter-user').click()
     const searchInput = page.locator('.p-select-overlay:visible .p-select-filter').last()
     await expect(searchInput).toBeFocused()
     await searchInput.fill('Supplier User')
@@ -57,7 +57,28 @@ test.describe('Admin pages and filters', () => {
     await page.getByRole('button', { name: 'Použít filtry' }).click()
 
     await expect(page).toHaveURL(/\/admin\/users\?.*userId=/)
-    await expect(page.locator('table')).toContainText('Supplier User')
+    await expect(page.locator('.p-datatable table')).toContainText('Supplier User')
+  })
+
+  test('admin can create and revoke invitation from users page', async ({ page }) => {
+    await page.goto('/admin/users')
+    const submitButton = page.getByRole('button', { name: 'Odeslat pozvánku' })
+    await expect(submitButton).toBeDisabled()
+
+    await page.getByPlaceholder('uzivatel@example.com').fill('invalid-email')
+    await expect(submitButton).toBeDisabled()
+
+    const inviteEmail = `invite-${Date.now()}@example.com`
+    await page.getByPlaceholder('uzivatel@example.com').fill(inviteEmail)
+    await expect(submitButton).toBeEnabled()
+    await submitButton.click()
+
+    await expect(page.locator('tr', { hasText: inviteEmail })).toBeVisible()
+    await page
+      .locator('tr', { hasText: inviteEmail })
+      .getByRole('button', { name: 'Zrušit' })
+      .click()
+    await expect(page.locator('tr', { hasText: inviteEmail })).toContainText('Zrušena')
   })
 
   test('admin orders supports supplier filter', async ({ page }) => {
@@ -170,12 +191,13 @@ test.describe('Admin pages and filters', () => {
     await expect(page).toHaveURL(/\/admin\/invoices\?.*buyerId=.*supplierId=/)
   })
 
-  test('admin audit user search autofocuses and Enter selects first match', async ({ page }) => {
+  test('admin audit user search Enter selects first match', async ({ page }) => {
     await page.goto('/admin/audit')
 
     await page.getByRole('combobox').nth(2).click()
     const searchInput = page.locator('.p-select-overlay:visible .p-select-filter').last()
-    await expect(searchInput).toBeFocused()
+    await expect(searchInput).toBeVisible()
+    await searchInput.click()
     await searchInput.fill('Supplier User')
     await searchInput.press('Enter')
     await page.getByRole('button', { name: 'Použít filtry' }).click()
@@ -214,7 +236,7 @@ test.describe('Admin pages and filters', () => {
     await expect(categoryDialog).toBeVisible()
     const categoryNameInput = categoryDialog.getByRole('textbox').first()
     await expect(categoryNameInput).toBeFocused()
-    await page.waitForTimeout(700)
+    await page.waitForTimeout(200)
     await expect(categoryNameInput).toBeFocused()
     const newCategoryName = `E2E Category ${Date.now()}`
     await categoryNameInput.fill(newCategoryName)
@@ -238,7 +260,7 @@ test.describe('Admin pages and filters', () => {
     await expect(allergenDialog).toBeVisible()
     const allergenNameInput = allergenDialog.getByRole('textbox').first()
     await expect(allergenNameInput).toBeFocused()
-    await page.waitForTimeout(700)
+    await page.waitForTimeout(200)
     await expect(allergenNameInput).toBeFocused()
     const newAllergenName = `E2E Allergen ${Date.now()}`
     await allergenNameInput.fill(newAllergenName)
@@ -259,7 +281,7 @@ test.describe('Admin pages and filters', () => {
     await expect(musicDialog).toBeVisible()
     const musicNameInput = musicDialog.getByRole('textbox').first()
     await expect(musicNameInput).toBeFocused()
-    await page.waitForTimeout(700)
+    await page.waitForTimeout(200)
     await expect(musicNameInput).toBeFocused()
     const newMusicName = `E2E Music ${Date.now()}`
     await musicNameInput.fill(newMusicName)

@@ -38,7 +38,7 @@ const props = defineProps<{
 
 const page = usePage()
 const confirm = useConfirm()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const ALL = '__all__'
 
 const INITIAL_COUNT = 48
@@ -94,7 +94,7 @@ const sortedProducts = computed(() => {
     if (a.isRecommended && b.isRecommended) {
       return a.recommendationRank - b.recommendationRank
     }
-    return a.displayName.localeCompare(b.displayName, 'cs')
+    return a.displayName.localeCompare(b.displayName, locale.value)
   })
 })
 

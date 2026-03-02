@@ -7,6 +7,7 @@ import InputNumber from 'primevue/inputnumber'
 import ToggleSwitch from 'primevue/toggleswitch'
 import SelectButton from 'primevue/selectbutton'
 import MultiSelect from 'primevue/multiselect'
+import Password from 'primevue/password'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import DataTable from 'primevue/datatable'
@@ -18,7 +19,6 @@ import type { SharedProps } from '~/types'
 
 interface UserData {
   id: number
-  username: string | null
   displayName: string
   email: string
   phone: string | null
@@ -48,7 +48,13 @@ interface ApiToken {
   expires_at: string | null
 }
 
-const props = defineProps<{ user: UserData; tokens: ApiToken[]; allergens: AllergenOption[] }>()
+const props = defineProps<{
+  user: UserData
+  tokens: ApiToken[]
+  allergens: AllergenOption[]
+  externalProviders: Array<'microsoft' | 'discord'>
+  linkedProviders: Array<'microsoft' | 'discord'>
+}>()
 const { t } = useI18n()
 const page = usePage<SharedProps>()
 
@@ -73,9 +79,59 @@ const colorModeOptions = [
 ]
 
 const submitting = ref(false)
+const changingPassword = ref(false)
+const passwordForm = ref({
+  currentPassword: '',
+  newPassword: '',
+  newPasswordConfirmation: '',
+})
+const profileEmailInvalid = computed(() => {
+  if (form.value.email.length === 0) return false
+  return !/.+@.+/.test(form.value.email.trim())
+})
+const canSubmitProfile = computed(
+  () => !!form.value.displayName.trim() && !!form.value.email.trim() && !profileEmailInvalid.value
+)
+const newPasswordTooShort = computed(
+  () => passwordForm.value.newPassword.length > 0 && passwordForm.value.newPassword.length < 8
+)
+const newPasswordConfirmationTooShort = computed(
+  () =>
+    passwordForm.value.newPasswordConfirmation.length > 0 &&
+    passwordForm.value.newPasswordConfirmation.length < 8
+)
+const newPasswordsMismatch = computed(
+  () =>
+    passwordForm.value.newPasswordConfirmation.length > 0 &&
+    passwordForm.value.newPassword !== passwordForm.value.newPasswordConfirmation
+)
+const canSubmitPassword = computed(
+  () =>
+    !!passwordForm.value.newPassword &&
+    !!passwordForm.value.newPasswordConfirmation &&
+    passwordForm.value.newPassword.length >= 8 &&
+    passwordForm.value.newPasswordConfirmation.length >= 8 &&
+    passwordForm.value.newPassword === passwordForm.value.newPasswordConfirmation
+)
+
+function providerLabel(provider: 'microsoft' | 'discord'): string {
+  return provider === 'microsoft' ? 'Microsoft' : 'Discord'
+}
+
+function providerIcon(provider: 'microsoft' | 'discord'): string {
+  return provider === 'microsoft' ? 'pi pi-microsoft' : 'pi pi-discord'
+}
+
+function isLinked(provider: 'microsoft' | 'discord'): boolean {
+  return props.linkedProviders.includes(provider)
+}
+
+function linkProvider(provider: 'microsoft' | 'discord') {
+  window.location.href = `/auth/${provider}/redirect?intent=link&userId=${props.user.id}`
+}
 
 function submit() {
-  if (!form.value.displayName || !form.value.email) return
+  if (!form.value.displayName || !form.value.email || profileEmailInvalid.value) return
   submitting.value = true
 
   router.put(
@@ -94,6 +150,26 @@ function submit() {
     },
     {
       onFinish: () => (submitting.value = false),
+    }
+  )
+}
+
+function changePassword() {
+  changingPassword.value = true
+  router.put(
+    '/profile/password',
+    {
+      currentPassword: passwordForm.value.currentPassword || undefined,
+      newPassword: passwordForm.value.newPassword,
+      newPasswordConfirmation: passwordForm.value.newPasswordConfirmation,
+    },
+    {
+      onFinish: () => {
+        changingPassword.value = false
+        passwordForm.value.currentPassword = ''
+        passwordForm.value.newPassword = ''
+        passwordForm.value.newPasswordConfirmation = ''
+      },
     }
   )
 }
@@ -156,159 +232,327 @@ function copyToken() {
   <AppLayout>
     <Head :title="t('profile.title')" />
 
-    <h1 class="mb-6 text-2xl font-bold text-gray-900 dark:text-zinc-100">
-      {{ t('profile.heading') }}
-    </h1>
+    <section
+      class="mb-6 rounded-2xl border border-gray-200/80 bg-white/80 p-5 shadow-sm backdrop-blur-sm dark:border-zinc-700/70 dark:bg-zinc-900/80"
+    >
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-zinc-100">
+            {{ t('profile.heading') }}
+          </h1>
+          <p class="mt-1 text-sm text-gray-600 dark:text-zinc-400">
+            {{ user.email }}
+          </p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <span
+            class="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+          >
+            {{ t('profile.keypad_id') }}: {{ user.keypadId }}
+          </span>
+          <span
+            class="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+          >
+            {{ t('profile.role') }}: {{ user.role }}
+          </span>
+        </div>
+      </div>
+      <div v-if="props.externalProviders.length > 0" class="mt-4 flex flex-wrap gap-2">
+        <Button
+          v-for="provider in props.externalProviders"
+          :key="provider"
+          size="small"
+          severity="secondary"
+          outlined
+          :disabled="isLinked(provider)"
+          :icon="providerIcon(provider)"
+          :label="
+            isLinked(provider)
+              ? t('auth.provider_linked', { provider: providerLabel(provider) })
+              : t('auth.link_provider', { provider: providerLabel(provider) })
+          "
+          @click="linkProvider(provider)"
+        />
+      </div>
+    </section>
 
-    <div class="grid max-w-4xl gap-6 lg:grid-cols-2">
-      <!-- Editable form -->
-      <Card>
-        <template #title>{{ t('profile.personal_info') }}</template>
+    <div class="grid gap-6 xl:grid-cols-12">
+      <Card class="xl:col-span-7">
+        <template #title>
+          <div class="flex items-center gap-2">
+            <span
+              class="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-300"
+            >
+              <i class="pi pi-user text-sm" />
+            </span>
+            <span>{{ t('profile.personal_info') }}</span>
+          </div>
+        </template>
         <template #content>
           <form @submit.prevent="submit" class="flex flex-col gap-5">
-            <div>
-              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
-                t('profile.display_name')
-              }}</label>
-              <InputText v-model="form.displayName" class="w-full" />
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
+                  t('profile.display_name')
+                }}</label>
+                <InputText v-model="form.displayName" class="w-full" />
+              </div>
+
+              <div>
+                <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
+                  t('profile.email')
+                }}</label>
+                <InputText v-model="form.email" type="email" class="w-full" />
+                <small v-if="profileEmailInvalid" class="text-red-500 dark:text-red-300">
+                  {{ t('auth.email_invalid') }}
+                </small>
+              </div>
+
+              <div>
+                <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
+                  t('profile.phone')
+                }}</label>
+                <InputText v-model="form.phone" class="w-full" />
+              </div>
+
+              <div>
+                <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
+                  t('profile.iban')
+                }}</label>
+                <InputText v-model="form.iban" class="w-full" maxlength="24" />
+              </div>
             </div>
 
-            <div>
-              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
-                t('profile.email')
-              }}</label>
-              <InputText v-model="form.email" type="email" class="w-full" />
+            <div
+              class="rounded-xl border border-gray-200 bg-gray-50/70 p-4 dark:border-zinc-700 dark:bg-zinc-800/40"
+            >
+              <h3
+                class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-zinc-300"
+              >
+                {{ t('profile.preferences') }}
+              </h3>
+              <div class="grid gap-3">
+                <div class="flex items-center justify-between">
+                  <label class="text-sm text-gray-700 dark:text-zinc-300">{{
+                    t('profile.show_all_products')
+                  }}</label>
+                  <ToggleSwitch v-model="form.showAllProducts" />
+                </div>
+
+                <div class="flex items-center justify-between">
+                  <label class="text-sm text-gray-700 dark:text-zinc-300">{{
+                    t('profile.send_mail_on_purchase')
+                  }}</label>
+                  <ToggleSwitch v-model="form.sendMailOnPurchase" />
+                </div>
+
+                <div class="flex items-center justify-between">
+                  <label class="text-sm text-gray-700 dark:text-zinc-300">{{
+                    t('profile.send_daily_report')
+                  }}</label>
+                  <ToggleSwitch v-model="form.sendDailyReport" />
+                </div>
+
+                <div class="flex items-center justify-between">
+                  <label class="text-sm text-gray-700 dark:text-zinc-300">{{
+                    t('profile.keypad_disabled')
+                  }}</label>
+                  <ToggleSwitch v-model="form.keypadDisabled" />
+                </div>
+              </div>
             </div>
 
-            <div>
-              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
-                t('profile.phone')
-              }}</label>
-              <InputText v-model="form.phone" class="w-full" />
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
+                  t('profile.color_mode')
+                }}</label>
+                <SelectButton
+                  v-model="form.colorMode"
+                  :options="colorModeOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                />
+              </div>
+
+              <div v-if="allergens.length">
+                <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
+                  t('profile.exclude_allergens')
+                }}</label>
+                <MultiSelect
+                  v-model="form.excludedAllergenIds"
+                  :options="allergens"
+                  optionLabel="name"
+                  optionValue="id"
+                  :placeholder="t('shop.allergens_filter_placeholder')"
+                  class="w-full"
+                />
+                <p class="mt-1 text-xs text-gray-500 dark:text-zinc-400">
+                  {{ t('profile.exclude_allergens_hint') }}
+                </p>
+              </div>
             </div>
 
-            <div>
-              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
-                t('profile.iban')
-              }}</label>
-              <InputText v-model="form.iban" class="w-full" maxlength="24" />
-            </div>
-
-            <h3 class="mt-2 text-lg font-semibold text-gray-800 dark:text-zinc-200">
-              {{ t('profile.preferences') }}
-            </h3>
-
-            <div class="flex items-center justify-between">
-              <label class="text-sm text-gray-700 dark:text-zinc-300">{{
-                t('profile.show_all_products')
-              }}</label>
-              <ToggleSwitch v-model="form.showAllProducts" />
-            </div>
-
-            <div class="flex items-center justify-between">
-              <label class="text-sm text-gray-700 dark:text-zinc-300">{{
-                t('profile.send_mail_on_purchase')
-              }}</label>
-              <ToggleSwitch v-model="form.sendMailOnPurchase" />
-            </div>
-
-            <div class="flex items-center justify-between">
-              <label class="text-sm text-gray-700 dark:text-zinc-300">{{
-                t('profile.send_daily_report')
-              }}</label>
-              <ToggleSwitch v-model="form.sendDailyReport" />
-            </div>
-
-            <div class="flex items-center justify-between">
-              <label class="text-sm text-gray-700 dark:text-zinc-300">{{
-                t('profile.keypad_disabled')
-              }}</label>
-              <ToggleSwitch v-model="form.keypadDisabled" />
-            </div>
-
-            <div>
-              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
-                t('profile.color_mode')
-              }}</label>
-              <SelectButton
-                v-model="form.colorMode"
-                :options="colorModeOptions"
-                optionLabel="label"
-                optionValue="value"
-              />
-            </div>
-
-            <div v-if="allergens.length">
-              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
-                t('profile.exclude_allergens')
-              }}</label>
-              <MultiSelect
-                v-model="form.excludedAllergenIds"
-                :options="allergens"
-                optionLabel="name"
-                optionValue="id"
-                :placeholder="t('shop.allergens_filter_placeholder')"
-                class="w-full"
-              />
-              <p class="mt-1 text-xs text-gray-500 dark:text-zinc-400">
-                {{ t('profile.exclude_allergens_hint') }}
-              </p>
-            </div>
-
-            <div class="pt-2">
+            <div class="pt-1">
               <Button
                 type="submit"
                 :label="t('profile.save')"
                 icon="pi pi-check"
                 :loading="submitting"
-                :disabled="!form.displayName || !form.email"
+                :disabled="!canSubmitProfile"
               />
             </div>
           </form>
         </template>
       </Card>
 
-      <!-- Read-only account info -->
-      <Card>
-        <template #title>{{ t('profile.account_info') }}</template>
-        <template #content>
-          <div class="flex flex-col gap-4">
-            <div>
-              <span class="text-sm font-medium text-gray-500 dark:text-zinc-400">{{
-                t('profile.username')
-              }}</span>
-              <p class="text-gray-900 dark:text-zinc-100">{{ user.username ?? '—' }}</p>
+      <div class="space-y-6 xl:col-span-5">
+        <Card>
+          <template #title>
+            <div class="flex items-center gap-2">
+              <span
+                class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-300"
+              >
+                <i class="pi pi-id-card text-sm" />
+              </span>
+              <span>{{ t('profile.account_info') }}</span>
             </div>
-            <div>
-              <span class="text-sm font-medium text-gray-500 dark:text-zinc-400">{{
-                t('profile.keypad_id')
-              }}</span>
-              <p class="text-gray-900 dark:text-zinc-100">{{ user.keypadId }}</p>
+          </template>
+          <template #content>
+            <div class="grid grid-cols-2 gap-3">
+              <div
+                class="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-zinc-700 dark:bg-zinc-800/60"
+              >
+                <span
+                  class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-zinc-400"
+                  >{{ t('profile.keypad_id') }}</span
+                >
+                <p class="mt-1 text-base font-semibold text-gray-900 dark:text-zinc-100">
+                  {{ user.keypadId }}
+                </p>
+              </div>
+              <div
+                class="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-zinc-700 dark:bg-zinc-800/60"
+              >
+                <span
+                  class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-zinc-400"
+                  >{{ t('profile.card_id') }}</span
+                >
+                <p class="mt-1 text-base font-semibold text-gray-900 dark:text-zinc-100">
+                  {{ user.cardId ?? '—' }}
+                </p>
+              </div>
+              <div
+                class="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-zinc-700 dark:bg-zinc-800/60"
+              >
+                <span
+                  class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-zinc-400"
+                  >{{ t('profile.role') }}</span
+                >
+                <p class="mt-1 text-base font-semibold capitalize text-gray-900 dark:text-zinc-100">
+                  {{ user.role }}
+                </p>
+              </div>
+              <div
+                class="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-zinc-700 dark:bg-zinc-800/60"
+              >
+                <span
+                  class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-zinc-400"
+                  >{{ t('profile.created_at') }}</span
+                >
+                <p class="mt-1 text-base font-semibold text-gray-900 dark:text-zinc-100">
+                  {{ formatDate(user.createdAt) }}
+                </p>
+              </div>
             </div>
-            <div>
-              <span class="text-sm font-medium text-gray-500 dark:text-zinc-400">{{
-                t('profile.card_id')
-              }}</span>
-              <p class="text-gray-900 dark:text-zinc-100">{{ user.cardId ?? '—' }}</p>
-            </div>
-            <div>
-              <span class="text-sm font-medium text-gray-500 dark:text-zinc-400">{{
-                t('profile.role')
-              }}</span>
-              <p class="text-gray-900 dark:text-zinc-100">{{ user.role }}</p>
-            </div>
-            <div>
-              <span class="text-sm font-medium text-gray-500 dark:text-zinc-400">{{
-                t('profile.created_at')
-              }}</span>
-              <p class="text-gray-900 dark:text-zinc-100">{{ formatDate(user.createdAt) }}</p>
-            </div>
-          </div>
-        </template>
-      </Card>
+          </template>
+        </Card>
 
-      <!-- API tokens — full width -->
-      <Card class="lg:col-span-2">
+        <Card>
+          <template #title>
+            <div class="flex items-center gap-2">
+              <span
+                class="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
+              >
+                <i class="pi pi-key text-sm" />
+              </span>
+              <span>{{ t('profile.password_heading') }}</span>
+            </div>
+          </template>
+          <template #content>
+            <form @submit.prevent="changePassword" class="flex flex-col gap-4">
+              <div>
+                <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                  {{ t('profile.password_current') }}
+                </label>
+                <Password
+                  inputId="profileCurrentPassword"
+                  v-model="passwordForm.currentPassword"
+                  :feedback="false"
+                  toggleMask
+                  autocomplete="current-password"
+                  inputClass="w-full"
+                  class="w-full"
+                />
+              </div>
+
+              <div>
+                <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                  {{ t('profile.password_new') }}
+                </label>
+                <Password
+                  inputId="profileNewPassword"
+                  v-model="passwordForm.newPassword"
+                  :feedback="false"
+                  toggleMask
+                  autocomplete="new-password"
+                  inputClass="w-full"
+                  class="w-full"
+                />
+                <small v-if="newPasswordTooShort" class="text-red-500 dark:text-red-300">
+                  {{ t('auth.password_min_length') }}
+                </small>
+              </div>
+
+              <div>
+                <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                  {{ t('profile.password_new_confirm') }}
+                </label>
+                <Password
+                  inputId="profileNewPasswordConfirmation"
+                  v-model="passwordForm.newPasswordConfirmation"
+                  :feedback="false"
+                  toggleMask
+                  autocomplete="new-password"
+                  inputClass="w-full"
+                  class="w-full"
+                />
+                <small
+                  v-if="newPasswordConfirmationTooShort"
+                  class="block text-red-500 dark:text-red-300"
+                >
+                  {{ t('auth.password_min_length') }}
+                </small>
+                <small v-if="newPasswordsMismatch" class="block text-red-500 dark:text-red-300">
+                  {{ t('auth.bootstrap_password_mismatch') }}
+                </small>
+              </div>
+
+              <div>
+                <Button
+                  type="submit"
+                  :label="t('profile.password_submit')"
+                  icon="pi pi-key"
+                  :loading="changingPassword"
+                  :disabled="!canSubmitPassword"
+                />
+              </div>
+            </form>
+          </template>
+        </Card>
+      </div>
+
+      <Card class="xl:col-span-12">
         <template #title>{{ t('profile.tokens_heading') }}</template>
         <template #content>
           <div class="flex flex-col gap-6">
@@ -374,7 +618,14 @@ function copyToken() {
               </template>
             </DataTable>
 
-            <!-- Create new token -->
+            <div class="border-t border-gray-200 pt-4 dark:border-zinc-700">
+              <h3
+                class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-zinc-300"
+              >
+                {{ t('profile.tokens_create') }}
+              </h3>
+            </div>
+
             <div class="grid grid-cols-1 items-end gap-2 lg:grid-cols-12">
               <div class="min-w-0 lg:col-span-6">
                 <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">

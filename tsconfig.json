@@ -8,8 +8,8 @@
     "./inertia/**/*",
     "./bin/test.ts",
     "./tests/**/*",
-    "./playwright.config.ts",
-    "./scripts/ensure_test_db.ts",
+    "./scripts/**/*",
+    "./playwright*.config.ts",
     "node_modules",
     "build"
   ]

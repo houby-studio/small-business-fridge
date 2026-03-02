@@ -11,21 +11,16 @@ import Order from '#models/order'
 import Invoice from '#models/invoice'
 import Product from '#models/product'
 import Allergen from '#models/allergen'
+import UserAuthIdentity from '#models/user_auth_identity'
 
 const AuthFinder = withAuthFinder(() => hash.use('scrypt'), {
-  uids: ['email', 'username'],
+  uids: ['email'],
   passwordColumnName: 'password',
 })
 
 export default class User extends compose(BaseModel, AuthFinder) {
   @column({ isPrimary: true })
   declare id: number
-
-  @column()
-  declare oid: string | null
-
-  @column()
-  declare username: string | null
 
   @column({ serializeAs: null })
   declare password: string | null
@@ -107,6 +102,9 @@ export default class User extends compose(BaseModel, AuthFinder) {
     pivotRelatedForeignKey: 'allergen_id',
   })
   declare excludedAllergens: ManyToMany<typeof Allergen>
+
+  @hasMany(() => UserAuthIdentity)
+  declare authIdentities: HasMany<typeof UserAuthIdentity>
 
   // Computed helpers
 

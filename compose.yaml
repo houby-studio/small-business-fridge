@@ -16,8 +16,10 @@ x-app-env: &app-env
   # ---------------------------------------------------------------------------
   # Core — networking & identity
   # ---------------------------------------------------------------------------
-  HOST: 0.0.0.0 # bind to all interfaces inside the container (don't change)
-  PORT: 3000 # listen port inside the container (don't change)
+  NODE_ENV: production
+  HOST: ${HOST:-0.0.0.0} # bind to all interfaces inside the container (don't change)
+  PORT: ${PORT:-3000} # listen port inside the container (don't change)
+
   LOG_LEVEL: ${LOG_LEVEL:-info} # trace | debug | info | warn | error | fatal
   TZ: ${TZ:-UTC} # e.g. Europe/Prague
   APP_NAME: ${APP_NAME:-Small Business Fridge}
@@ -38,6 +40,7 @@ x-app-env: &app-env
   DB_USER: ${DB_USER:-sbf}
   DB_DATABASE: ${DB_DATABASE:-sbf}
   DB_PASSWORD: ${DB_PASSWORD:?Missing DB_PASSWORD value in .env file!} # [REQUIRED] set a strong password
+  DB_MIGRATE: ${DB_MIGRATE:-true} # run DB migrations on app container startup
 
   # ---------------------------------------------------------------------------
   # Mail (SMTP)
@@ -53,18 +56,23 @@ x-app-env: &app-env
   # ---------------------------------------------------------------------------
   # Session
   # ---------------------------------------------------------------------------
-  SESSION_DRIVER: cookie # cookie is the only option for single-node deployments
+  SESSION_DRIVER: ${SESSION_DRIVER:-cookie}
 
   # ---------------------------------------------------------------------------
-  # OIDC / Microsoft Entra ID (optional — only needed when OIDC_ENABLED=true)
+  # Authentication providers (optional)
   # ---------------------------------------------------------------------------
-  OIDC_ENABLED: ${OIDC_ENABLED:-false}
-  OIDC_AUTO_REGISTER: ${OIDC_AUTO_REGISTER:-false} # auto-create account on first OIDC login
-  LOCAL_LOGIN_DISABLED: ${LOCAL_LOGIN_DISABLED:-false} # set true for OIDC-only mode
-  OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
-  OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
-  OIDC_TENANT_ID: ${OIDC_TENANT_ID:-}
-  OIDC_REDIRECT_URI: ${OIDC_REDIRECT_URI:-} # e.g. https://yourdomain.com/auth/oidc/callback
+  AUTH_PROVIDERS: ${AUTH_PROVIDERS:-local} # comma list: local,microsoft,discord
+  AUTH_AUTO_REGISTER_PROVIDERS: ${AUTH_AUTO_REGISTER_PROVIDERS:-} # e.g. microsoft,discord
+  AUTH_REGISTRATION_MODE: ${AUTH_REGISTRATION_MODE:-open} # open | invite_only | domain_auto_approve | closed
+  AUTH_REGISTRATION_ALLOWED_DOMAINS: ${AUTH_REGISTRATION_ALLOWED_DOMAINS:-}
+  AUTH_PROVIDER_MICROSOFT_CLIENT_ID: ${AUTH_PROVIDER_MICROSOFT_CLIENT_ID:-}
+  AUTH_PROVIDER_MICROSOFT_CLIENT_SECRET: ${AUTH_PROVIDER_MICROSOFT_CLIENT_SECRET:-}
+  AUTH_PROVIDER_MICROSOFT_TENANT_ID: ${AUTH_PROVIDER_MICROSOFT_TENANT_ID:-common}
+  AUTH_PROVIDER_MICROSOFT_REDIRECT_URI: ${AUTH_PROVIDER_MICROSOFT_REDIRECT_URI:-}
+  AUTH_PROVIDER_DISCORD_CLIENT_ID: ${AUTH_PROVIDER_DISCORD_CLIENT_ID:-}
+  AUTH_PROVIDER_DISCORD_CLIENT_SECRET: ${AUTH_PROVIDER_DISCORD_CLIENT_SECRET:-}
+  AUTH_PROVIDER_DISCORD_REDIRECT_URI: ${AUTH_PROVIDER_DISCORD_REDIRECT_URI:-}
+  AUTH_PROVIDER_DISCORD_SCOPES: ${AUTH_PROVIDER_DISCORD_SCOPES:-identify,email}
 
   # ---------------------------------------------------------------------------
   # API authentication (optional)

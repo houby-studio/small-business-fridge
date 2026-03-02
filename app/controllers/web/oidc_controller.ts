@@ -3,89 +3,264 @@ import logger from '@adonisjs/core/services/logger'
 import User from '#models/user'
 import AuditService from '#services/audit_service'
 import NotificationService from '#services/notification_service'
-import OidcIdentityService from '#services/oidc_identity_service'
-import env from '#start/env'
+import RegistrationPolicyService from '#services/registration_policy_service'
+import InvitationService from '#services/invitation_service'
+import AuthModeService, { type ExternalAuthProvider } from '#services/auth_mode_service'
+import AuthIdentityService from '#services/auth_identity_service'
+import ExternalProfileSyncService from '#services/external_profile_sync_service'
 
 export default class OidcController {
-  private oidcIdentity = new OidcIdentityService()
+  private static readonly BOOTSTRAP_INTENT_KEY = 'oauthBootstrapFirstAdminIntent'
+  private static readonly INVITE_INTENT_TOKEN_KEY = 'oauthInviteIntentToken'
+  private static readonly LINK_INTENT_KEY = 'oauthLinkIntent'
 
-  async redirect({ ally }: HttpContext) {
-    return ally.use('microsoft').redirect()
+  private authIdentity = new AuthIdentityService()
+  private registrationPolicy = new RegistrationPolicyService()
+  private invitations = new InvitationService()
+  private authModes = new AuthModeService()
+  private externalProfileSync = new ExternalProfileSyncService()
+
+  private resolveProvider(input: unknown): ExternalAuthProvider | null {
+    const provider = String(input ?? '')
+      .trim()
+      .toLowerCase()
+    if (provider !== 'microsoft' && provider !== 'discord') return null
+    return provider
+  }
+
+  private providerLabel(provider: ExternalAuthProvider): string {
+    return provider === 'microsoft' ? 'Microsoft' : 'Discord'
+  }
+
+  private getProviderProfile(
+    provider: ExternalAuthProvider,
+    providerUser: any
+  ): {
+    providerUserId: string | null
+    email: string | null
+    displayName: string | null
+    phone: string | null
+  } {
+    if (provider === 'microsoft') {
+      const email = (
+        (providerUser.mail as string | null) ||
+        (providerUser.userPrincipalName as string | null) ||
+        ''
+      )
+        ?.trim()
+        .toLowerCase()
+      return {
+        providerUserId: (providerUser.id as string | null) ?? null,
+        email: email || null,
+        displayName: (providerUser.displayName as string | null) ?? null,
+        phone: (providerUser.mobilePhone as string | null) ?? null,
+      }
+    }
+
+    const email = ((providerUser.email as string | null) || '').trim().toLowerCase()
+    return {
+      providerUserId: (providerUser.id as string | null) ?? null,
+      email: email || null,
+      displayName:
+        (providerUser.global_name as string | null) ||
+        (providerUser.username as string | null) ||
+        null,
+      phone: null,
+    }
+  }
+
+  private async hasAnyAdmin(): Promise<boolean> {
+    const admin = await User.query().where('role', 'admin').first()
+    return !!admin
+  }
+
+  async redirect({ ally, request, response, session }: HttpContext) {
+    const provider = this.resolveProvider(request.param('provider'))
+    if (!provider || !this.authModes.isProviderEnabled(provider)) {
+      return response.redirect('/login')
+    }
+
+    if (request.input('intent') === 'bootstrap' && !(await this.hasAnyAdmin())) {
+      session.put(OidcController.BOOTSTRAP_INTENT_KEY, true)
+    }
+
+    if (request.input('intent') === 'invite') {
+      const token = String(request.input('token') ?? '')
+      const status = await this.invitations.validateToken(token)
+      if (!status.valid) {
+        return response.redirect('/login')
+      }
+
+      session.put(OidcController.INVITE_INTENT_TOKEN_KEY, token)
+    }
+
+    if (request.input('intent') === 'link') {
+      const userId = Number(request.input('userId') ?? 0)
+      if (Number.isInteger(userId) && userId > 0) {
+        session.put(OidcController.LINK_INTENT_KEY, { userId, provider })
+      }
+    }
+
+    return ally.use(provider).redirect()
   }
 
   async callback({ ally, auth, request, response, session, i18n }: HttpContext) {
-    const microsoft = ally.use('microsoft')
+    const provider = this.resolveProvider(request.param('provider'))
+    if (!provider || !this.authModes.isProviderEnabled(provider)) {
+      return response.redirect('/login')
+    }
 
-    // Handle user cancelling or errors from Microsoft
-    if (microsoft.accessDenied()) {
-      logger.warn('OIDC login cancelled by user')
+    const hasAnyAdmin = await this.hasAnyAdmin()
+    const bootstrapIntent = session.pull(OidcController.BOOTSTRAP_INTENT_KEY, false) === true
+    const allowBootstrapRegistration = bootstrapIntent && !hasAnyAdmin
+    const inviteIntentToken = session.pull(OidcController.INVITE_INTENT_TOKEN_KEY, null)
+    const inviteIntentStatus =
+      typeof inviteIntentToken === 'string' && inviteIntentToken.length > 0
+        ? await this.invitations.validateToken(inviteIntentToken)
+        : null
+    const inviteIntentInvitation = inviteIntentStatus?.valid ? inviteIntentStatus.invitation : null
+    const linkIntent = session.pull(OidcController.LINK_INTENT_KEY, null)
+    const hasLinkIntent =
+      !!linkIntent &&
+      typeof linkIntent === 'object' &&
+      Number(linkIntent.userId) > 0 &&
+      linkIntent.provider === provider
+
+    const externalProvider = ally.use(provider)
+
+    if (externalProvider.accessDenied()) {
+      logger.warn({ provider }, 'External login cancelled by user')
       session.flash('alert', { type: 'warning', message: i18n.t('messages.login_cancelled') })
       return response.redirect('/login')
     }
 
-    if (microsoft.stateMisMatch()) {
-      logger.warn('OIDC state mismatch')
+    if (externalProvider.stateMisMatch()) {
+      logger.warn({ provider }, 'External login state mismatch')
       session.flash('alert', { type: 'danger', message: i18n.t('messages.login_state_mismatch') })
       return response.redirect('/login')
     }
 
-    if (microsoft.hasError()) {
-      logger.error('OIDC provider error')
+    if (externalProvider.hasError()) {
+      logger.error({ provider }, 'External provider error')
       session.flash('alert', { type: 'danger', message: i18n.t('messages.login_failed') })
       return response.redirect('/login')
     }
 
-    // Get user info from Microsoft Graph (/me response — raw fields, no Ally normalization)
-    const msUser: any = await microsoft.user()
-    const oid = msUser.id as string // Azure AD object ID (unique, stable)
-    const email =
-      (msUser.mail as string | null) || (msUser.userPrincipalName as string | null) || ''
-    const displayName = (msUser.displayName as string | null) || email.split('@')[0]
-    const phone = (msUser.mobilePhone as string | null) || null
+    let providerUser: any
+    try {
+      providerUser = await externalProvider.user()
+    } catch (error) {
+      logger.error({ err: error, provider }, 'External provider user info request failed')
+      session.flash('alert', {
+        type: 'danger',
+        message: i18n.t('messages.login_provider_unavailable'),
+      })
+      return response.redirect('/login')
+    }
+    const profile = this.getProviderProfile(provider, providerUser)
+    const providerUserId = profile.providerUserId?.trim() || null
+    const email = profile.email?.trim().toLowerCase() || null
+    const displayName = profile.displayName || (email ? email.split('@')[0] : null)
+    const phone = profile.phone ?? null
 
-    // Resolve identity safely and reject ambiguous mappings.
-    const identityMatch = await this.oidcIdentity.resolve({ oid, email })
+    if (!providerUserId) {
+      logger.warn({ provider }, 'External login denied: provider payload missing identity id')
+      session.flash('alert', { type: 'danger', message: i18n.t('messages.login_failed') })
+      return response.redirect('/login')
+    }
+
+    if (hasLinkIntent) {
+      const currentUser = auth.user
+      if (!currentUser || currentUser.id !== Number(linkIntent.userId)) {
+        session.flash('alert', { type: 'danger', message: i18n.t('messages.forbidden') })
+        return response.redirect('/profile')
+      }
+
+      try {
+        await this.authIdentity.ensureLinkedIdentity({
+          userId: currentUser.id,
+          provider,
+          providerUserId,
+          providerEmail: email,
+        })
+
+        await AuditService.log(
+          currentUser.id,
+          'user.identity.linked',
+          'user',
+          currentUser.id,
+          null,
+          {
+            via: provider,
+            provider,
+            providerUserId,
+            ip: request.ip(),
+            ua: request.header('user-agent') ?? null,
+          }
+        )
+        session.flash('alert', {
+          type: 'success',
+          message: i18n.t('messages.profile_updated'),
+        })
+      } catch (error) {
+        logger.warn(
+          { err: error, provider, userId: currentUser.id },
+          'External identity link failed'
+        )
+        const isAlreadyLinked =
+          error instanceof Error && error.message === 'PROVIDER_IDENTITY_ALREADY_LINKED'
+        session.flash('alert', {
+          type: 'danger',
+          message: i18n.t(
+            isAlreadyLinked ? 'messages.oidc_already_linked' : 'messages.login_failed'
+          ),
+        })
+      }
+
+      return response.redirect('/profile')
+    }
+
+    const identityMatch = await this.authIdentity.resolveForLogin({
+      provider,
+      providerUserId,
+      email,
+    })
     let user = identityMatch.kind === 'matched' ? identityMatch.user : null
 
     if (identityMatch.kind === 'ambiguous_email') {
       logger.warn(
-        { email: identityMatch.email, userIds: identityMatch.userIds },
-        'OIDC login denied: multiple local users share the same email'
+        { provider, email: identityMatch.email, userIds: identityMatch.userIds },
+        'External login denied: multiple local users share the same email'
       )
       session.flash('alert', { type: 'danger', message: i18n.t('messages.login_failed') })
       return response.redirect('/login')
     }
 
-    if (identityMatch.kind === 'oid_conflict') {
+    if (identityMatch.kind === 'provider_conflict') {
       logger.warn(
-        { email: identityMatch.email, userId: identityMatch.userId, oid },
-        'OIDC login denied: OID conflicts with existing user mapping'
-      )
-      session.flash('alert', { type: 'danger', message: i18n.t('messages.login_failed') })
-      return response.redirect('/login')
-    }
-
-    if (identityMatch.kind === 'missing_oid') {
-      logger.warn(
-        { email: identityMatch.email },
-        'OIDC login denied: provider did not return OID for email fallback'
+        { provider, userId: identityMatch.userId },
+        'External login denied: provider identity conflicts with existing mapping'
       )
       session.flash('alert', { type: 'danger', message: i18n.t('messages.login_failed') })
       return response.redirect('/login')
     }
 
     if (!user) {
-      if (!oid || !email) {
+      if (!email) {
         logger.warn(
-          { oidPresent: !!oid, emailPresent: !!email },
-          'OIDC login denied: provider payload missing required identity fields'
+          { provider, emailPresent: !!email },
+          'External login denied: provider payload missing required email for first login'
         )
         session.flash('alert', { type: 'danger', message: i18n.t('messages.login_failed') })
         return response.redirect('/login')
       }
 
-      if (!env.get('OIDC_AUTO_REGISTER', false)) {
-        logger.warn({ email }, 'OIDC login denied: user not found in app')
+      if (
+        !this.authModes.isProviderAutoRegisterEnabled(provider) &&
+        !allowBootstrapRegistration &&
+        !inviteIntentInvitation
+      ) {
+        logger.warn({ provider, email }, 'External login denied: user not found in app')
         session.flash('alert', {
           type: 'danger',
           message: i18n.t('messages.login_not_registered'),
@@ -93,26 +268,81 @@ export default class OidcController {
         return response.redirect('/login')
       }
 
+      let invitation = null
+      if (inviteIntentInvitation) {
+        if (inviteIntentInvitation.email !== email) {
+          logger.warn(
+            { provider, email, inviteEmail: inviteIntentInvitation.email },
+            'External login denied: invite token email does not match provider identity'
+          )
+          session.flash('alert', {
+            type: 'danger',
+            message: i18n.t('messages.login_not_registered'),
+          })
+          return response.redirect('/login')
+        }
+
+        invitation = inviteIntentInvitation
+      } else if (!allowBootstrapRegistration) {
+        const registration = this.registrationPolicy.canSelfRegister({
+          provider: 'social',
+          email,
+        })
+        if (!registration.allowed && registration.reason === 'invite_required') {
+          invitation = await this.invitations.findActiveByEmail(email)
+        }
+        if (!registration.allowed && !invitation) {
+          logger.warn(
+            {
+              provider,
+              email,
+              reason: registration.reason,
+              mode: this.registrationPolicy.getMode(),
+            },
+            'External login denied: self-registration policy rejected user'
+          )
+          session.flash('alert', {
+            type: 'danger',
+            message: i18n.t('messages.login_not_registered'),
+          })
+          return response.redirect('/login')
+        }
+      }
+
       // Auto-register new user
       const maxKeypad = await User.query().max('keypad_id as max').first()
       const nextKeypadId = (maxKeypad?.$extras.max ?? 0) + 1
 
       user = await User.create({
-        oid,
         email,
-        displayName,
+        displayName: displayName || email.split('@')[0],
         phone,
-        role: 'customer',
+        role: allowBootstrapRegistration
+          ? 'admin'
+          : (invitation?.role ?? (hasAnyAdmin ? 'customer' : 'admin')),
         keypadId: nextKeypadId,
       })
 
-      // First user on a fresh deployment becomes admin
-      if (user.id === 1) {
-        user.role = 'admin'
-        await user.save()
+      if (invitation) {
+        await this.invitations.acceptInviteForUser(invitation.id, user.id)
+        await AuditService.log(
+          user.id,
+          'invitation.accepted',
+          'user_invitation',
+          invitation.id,
+          user.id,
+          {
+            via: provider,
+            ip: request.ip(),
+            ua: request.header('user-agent') ?? null,
+          }
+        )
       }
 
-      logger.info({ userId: user.id, email, role: user.role }, 'OIDC auto-registered new user')
+      logger.info(
+        { provider, userId: user.id, email, role: user.role },
+        'External provider auto-registered new user'
+      )
 
       // Send welcome email (fire-and-forget)
       const notificationService = new NotificationService()
@@ -121,56 +351,39 @@ export default class OidcController {
       })
 
       await AuditService.log(user.id, 'user.registered', 'user', user.id, null, {
-        via: 'oidc',
+        via: provider,
         ip: request.ip(),
         ua: request.header('user-agent') ?? null,
       })
-      session.flash('alert', { type: 'success', message: i18n.t('messages.login_auto_registered') })
+      session.flash('alert', {
+        type: 'success',
+        message: allowBootstrapRegistration
+          ? i18n.t('messages.bootstrap_admin_created')
+          : i18n.t('messages.login_auto_registered'),
+      })
     }
 
+    await this.authIdentity.ensureLinkedIdentity({
+      userId: user.id,
+      provider,
+      providerUserId,
+      providerEmail: email,
+    })
+
     if (user.isDisabled) {
-      logger.warn({ oid, email }, 'OIDC login denied: account disabled')
+      logger.warn({ provider, providerUserId, email }, 'External login denied: account disabled')
       session.flash('alert', { type: 'danger', message: i18n.t('messages.account_disabled') })
       return response.redirect('/login')
     }
 
-    // Sync fields from Microsoft if missing or changed
-    let dirty = false
-    if (!user.oid) {
-      user.oid = oid
-      dirty = true
-    }
-    if (displayName && user.displayName !== displayName) {
-      user.displayName = displayName
-      dirty = true
-    }
-    if (email && user.email !== email) {
-      const emailTaken = await User.query()
-        .whereRaw('LOWER(email) = ?', [email.toLowerCase()])
-        .whereNot('id', user.id)
-        .first()
+    await this.externalProfileSync.syncAfterExternalLogin(user, { phone })
 
-      if (emailTaken) {
-        logger.warn(
-          { userId: user.id, email, emailTakenBy: emailTaken.id },
-          'OIDC email sync skipped: target email is already used by another user'
-        )
-      } else {
-        user.email = email
-        dirty = true
-      }
-    }
-    if (phone && !user.phone) {
-      user.phone = phone
-      dirty = true
-    }
-    if (dirty) await user.save()
-
-    // Always remember for OIDC — user already authenticated with Microsoft, no reason to expire session
+    // Always remember for external providers.
     await auth.use('web').login(user, true)
-    logger.info({ userId: user.id, email }, 'OIDC login success')
+    logger.info({ provider, userId: user.id, email }, 'External login success')
     await AuditService.log(user.id, 'user.login', 'user', user.id, null, {
-      via: 'oidc',
+      via: provider,
+      provider: this.providerLabel(provider),
       ip: request.ip(),
       ua: request.header('user-agent') ?? null,
     })

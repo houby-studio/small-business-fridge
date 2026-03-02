@@ -48,7 +48,7 @@
   "invoice_customers": "Zákazníků",
   "invoice_orders": "Objednávek",
   "invoice_generate_for_buyer": "Vygenerovat fakturu",
-  "invoice_confirm_buyer": "Vygenerovat fakturu pro zákazníka {name}? ({count} objednávek, {amount} Kč) Tato akce je nevratná.",
+  "invoice_confirm_buyer": "Vygenerovat fakturu pro zákazníka {name}? ({count} objednávek, {amount} {currency}) Tato akce je nevratná.",
   "invoice_generated_for_buyer": "Faktura pro zákazníka {name} byla vygenerována.",
   "payments_title": "Platby",
   "payments_heading": "Správa plateb",
@@ -63,7 +63,7 @@
   "stock_filter_product": "Filtrovat produkt",
   "stock_filter_in_stock": "Pouze skladem",
   "review_payment_header": "Potvrdit platbu",
-  "review_payment_message": "Zákazník {buyer} označil fakturu #{id} ({amount} Kč) jako zaplacenou. Schválit platbu?",
+  "review_payment_message": "Zákazník {buyer} označil fakturu #{id} ({amount} {currency}) jako zaplacenou. Schválit platbu?",
   "stock_scope": "Rozsah",
   "stock_scope_store": "Celý sklad",
   "stock_scope_mine": "Moje naskladnění",
@@ -91,5 +91,6 @@
   "stock_full_table": "Plná tabulka skladu",
   "stock_show_table": "Zobrazit plnou tabulku",
   "stock_hide_table": "Skrýt plnou tabulku",
-  "deliveries_open_inventory": "Otevřít skladový workspace"
+  "deliveries_open_inventory": "Otevřít skladový workspace",
+  "products_keypad_id": "ID klávesnice"
 }
