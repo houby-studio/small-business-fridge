@@ -307,3 +307,122 @@ test.group('Web Profile - API tokens', (group) => {
     response.assertStatus(200)
   })
 })
+
+test.group('Web Profile - update preferences', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('PUT /profile/preferences saves boolean preferences and redirects', async ({
+    client,
+    assert,
+  }) => {
+    const user = await UserFactory.merge({
+      showAllProducts: false,
+      sendMailOnPurchase: true,
+      sendDailyReport: true,
+      colorMode: 'light',
+      keypadDisabled: false,
+    }).create()
+
+    const response = await client
+      .put('/profile/preferences')
+      .json({
+        showAllProducts: true,
+        sendMailOnPurchase: false,
+        sendDailyReport: false,
+        colorMode: 'dark',
+        keypadDisabled: true,
+        excludedAllergenIds: [],
+      })
+      .loginAs(user)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    const updated = await User.findOrFail(user.id)
+    assert.isTrue(updated.showAllProducts)
+    assert.isFalse(updated.sendMailOnPurchase)
+    assert.isFalse(updated.sendDailyReport)
+    assert.equal(updated.colorMode, 'dark')
+    assert.isTrue(updated.keypadDisabled)
+  })
+
+  test('PUT /profile/preferences audit logs changed fields', async ({ client, assert }) => {
+    const user = await UserFactory.merge({
+      showAllProducts: false,
+      sendMailOnPurchase: true,
+      sendDailyReport: false,
+      colorMode: 'light',
+      keypadDisabled: false,
+    }).create()
+
+    await client
+      .put('/profile/preferences')
+      .json({
+        showAllProducts: true,
+        sendMailOnPurchase: true,
+        sendDailyReport: false,
+        colorMode: 'dark',
+        keypadDisabled: false,
+        excludedAllergenIds: [],
+      })
+      .loginAs(user)
+      .withCsrfToken()
+      .redirects(0)
+
+    const log = await db
+      .from('audit_logs')
+      .where('action', 'profile.updated')
+      .where('user_id', user.id)
+      .orderBy('id', 'desc')
+      .first()
+
+    assert.isDefined(log)
+    const metadata = log.metadata as Record<string, { from: unknown; to: unknown }> | null
+    assert.deepEqual(metadata?.showAllProducts, { from: false, to: true })
+    assert.deepEqual(metadata?.colorMode, { from: 'light', to: 'dark' })
+    assert.isUndefined(metadata?.sendMailOnPurchase)
+    assert.isUndefined(metadata?.sendDailyReport)
+    assert.isUndefined(metadata?.keypadDisabled)
+  })
+
+  test('PUT /profile/preferences rejects invalid colorMode', async ({ client, assert }) => {
+    const user = await UserFactory.merge({ colorMode: 'light' }).create()
+
+    const response = await client
+      .put('/profile/preferences')
+      .json({
+        showAllProducts: false,
+        sendMailOnPurchase: false,
+        sendDailyReport: false,
+        colorMode: 'auto',
+        keypadDisabled: false,
+        excludedAllergenIds: [],
+      })
+      .loginAs(user)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    const updated = await User.findOrFail(user.id)
+    assert.equal(updated.colorMode, 'light')
+  })
+
+  test('PUT /profile/preferences requires authentication', async ({ client }) => {
+    const response = await client
+      .put('/profile/preferences')
+      .json({
+        showAllProducts: false,
+        sendMailOnPurchase: false,
+        sendDailyReport: false,
+        colorMode: 'light',
+        keypadDisabled: false,
+        excludedAllergenIds: [],
+      })
+      .redirects(0)
+
+    response.assertStatus(302)
+  })
+})

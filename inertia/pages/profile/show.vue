@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { Head, router, usePage } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import InputText from 'primevue/inputtext'
@@ -125,6 +125,52 @@ const canSubmitPassword = computed(
 const emailVerified = computed(() => !!props.user.emailVerifiedAt)
 const hasPendingEmail = computed(() => !!props.user.pendingEmail)
 const hasPendingIban = computed(() => !!props.user.pendingIban)
+const savingPreferences = ref(false)
+let preferenceWatchEnabled = false
+let preferencesSaveTimer: ReturnType<typeof setTimeout> | null = null
+
+function schedulePreferencesSave() {
+  if (preferencesSaveTimer) clearTimeout(preferencesSaveTimer)
+  preferencesSaveTimer = setTimeout(() => {
+    savingPreferences.value = true
+    router.put(
+      '/profile/preferences',
+      {
+        showAllProducts: form.value.showAllProducts,
+        sendMailOnPurchase: form.value.sendMailOnPurchase,
+        sendDailyReport: form.value.sendDailyReport,
+        colorMode: form.value.colorMode,
+        keypadDisabled: form.value.keypadDisabled,
+        excludedAllergenIds: form.value.excludedAllergenIds,
+      },
+      {
+        preserveState: true,
+        preserveScroll: true,
+        only: ['user'],
+        onFinish: () => {
+          savingPreferences.value = false
+        },
+      }
+    )
+  }, 600)
+}
+
+watch(
+  () => ({
+    showAllProducts: form.value.showAllProducts,
+    sendMailOnPurchase: form.value.sendMailOnPurchase,
+    sendDailyReport: form.value.sendDailyReport,
+    colorMode: form.value.colorMode,
+    keypadDisabled: form.value.keypadDisabled,
+    excludedAllergenIds: [...form.value.excludedAllergenIds],
+  }),
+  () => {
+    if (!preferenceWatchEnabled) return
+    schedulePreferencesSave()
+  },
+  { deep: true }
+)
+
 const resendingVerification = ref(false)
 const resendingIbanVerification = ref(false)
 const reauthenticating = ref(false)
@@ -503,6 +549,11 @@ function copyToken() {
 }
 
 onMounted(() => {
+  // Always enable auto-save after initial render, regardless of draft
+  nextTick(() => {
+    preferenceWatchEnabled = true
+  })
+
   const draft = takeSensitiveDraft()
   if (!draft) return
 
@@ -682,6 +733,7 @@ onMounted(() => {
             <div class="pt-1">
               <Button
                 type="submit"
+                class="w-full sm:w-auto"
                 :label="t('profile.save')"
                 icon="pi pi-check"
                 :loading="submitting"
@@ -702,6 +754,7 @@ onMounted(() => {
               <i class="pi pi-sliders-h text-sm" />
             </span>
             <span>{{ t('profile.preferences') }}</span>
+            <i v-if="savingPreferences" class="pi pi-spin pi-spinner ml-1 text-sm text-gray-400" />
           </div>
         </template>
         <template #content>
@@ -759,6 +812,9 @@ onMounted(() => {
                 optionValue="id"
                 :placeholder="t('shop.allergens_filter_placeholder')"
                 :maxSelectedLabels="3"
+                :selectedItemsLabel="
+                  t('profile.allergens_selected', { count: form.excludedAllergenIds.length })
+                "
                 :pt="{ label: { class: 'truncate' } }"
                 class="w-full min-w-0"
               />
@@ -792,6 +848,7 @@ onMounted(() => {
               <Button
                 v-for="provider in props.externalProviders"
                 :key="provider"
+                class="w-full sm:w-auto"
                 size="small"
                 severity="secondary"
                 outlined

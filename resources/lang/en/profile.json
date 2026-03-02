@@ -27,6 +27,7 @@
   "keypad_disabled": "Disable keypad login",
   "exclude_allergens": "Exclude allergens in shop",
   "exclude_allergens_hint": "Products containing selected allergens will be hidden in the shop.",
+  "allergens_selected": "{count} selected",
   "keypad_id": "Keypad ID",
   "card_id": "Card ID",
   "role": "Role",

@@ -190,6 +190,7 @@ router
     // Profile
     router.get('/profile', [ProfileController, 'show'])
     router.put('/profile', [ProfileController, 'update'])
+    router.put('/profile/preferences', [ProfileController, 'updatePreferences'])
     router.put('/profile/excluded-allergens', [ProfileController, 'updateExcludedAllergens'])
     router.post('/profile/color-mode', [ProfileController, 'toggleColorMode'])
     router.post('/profile/favorites/:id', [ProfileController, 'toggleFavorite'])

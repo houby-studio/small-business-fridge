@@ -33,6 +33,7 @@ export type ScannedRoutes = {
     'invoices.qrcode': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'profile.show': { paramsTuple?: []; params?: {} }
     'profile.update': { paramsTuple?: []; params?: {} }
+    'profile.update_preferences': { paramsTuple?: []; params?: {} }
     'profile.update_excluded_allergens': { paramsTuple?: []; params?: {} }
     'profile.toggle_color_mode': { paramsTuple?: []; params?: {} }
     'profile.toggle_favorite': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -224,6 +225,7 @@ export type ScannedRoutes = {
   }
   PUT: {
     'profile.update': { paramsTuple?: []; params?: {} }
+    'profile.update_preferences': { paramsTuple?: []; params?: {} }
     'profile.update_excluded_allergens': { paramsTuple?: []; params?: {} }
     'password_reset.change_authenticated': { paramsTuple?: []; params?: {} }
     'supplier_products.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }

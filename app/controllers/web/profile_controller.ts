@@ -6,6 +6,7 @@ import {
   updateProfileValidator,
   toggleColorModeValidator,
   updateExcludedAllergensValidator,
+  updatePreferencesValidator,
 } from '#validators/user'
 import {
   createApiTokenValidator,
@@ -402,6 +403,61 @@ export default class ProfileController {
       }
       await AuditService.log(user.id, 'profile.updated', 'user', user.id, null, metadata)
     }
+    return response.redirect().back()
+  }
+
+  async updatePreferences({ request, auth, response }: HttpContext) {
+    const user = auth.user!
+    const before = {
+      showAllProducts: user.showAllProducts,
+      sendMailOnPurchase: user.sendMailOnPurchase,
+      sendDailyReport: user.sendDailyReport,
+      colorMode: user.colorMode,
+      keypadDisabled: user.keypadDisabled,
+      excludedAllergenIds: await this.getExcludedAllergenIds(user.id),
+    }
+
+    const data = await request.validateUsing(updatePreferencesValidator)
+    user.showAllProducts = data.showAllProducts
+    user.sendMailOnPurchase = data.sendMailOnPurchase
+    user.sendDailyReport = data.sendDailyReport
+    user.colorMode = data.colorMode
+    user.keypadDisabled = data.keypadDisabled
+    await user.save()
+    await this.syncExcludedAllergenIds(user, data.excludedAllergenIds)
+
+    const changes: Record<string, { from: unknown; to: unknown }> = {}
+    for (const key of [
+      'showAllProducts',
+      'sendMailOnPurchase',
+      'sendDailyReport',
+      'colorMode',
+      'keypadDisabled',
+    ] as const) {
+      if (before[key] !== user[key]) {
+        changes[key] = { from: before[key], to: user[key] }
+      }
+    }
+    const after = await this.getExcludedAllergenIds(user.id)
+    if (
+      before.excludedAllergenIds.length !== after.length ||
+      before.excludedAllergenIds.some((id, index) => id !== after[index])
+    ) {
+      const allergenIds = [...new Set([...before.excludedAllergenIds, ...after])]
+      const allergenRows =
+        allergenIds.length > 0
+          ? await Allergen.query().whereIn('id', allergenIds).select('id', 'name')
+          : []
+      const namesById = new Map(allergenRows.map((a) => [a.id, a.name]))
+      const toLabel = (ids: number[]) =>
+        ids.map((id) => namesById.get(id) ?? `#${id}`).join(', ') || '—'
+      changes.excludedAllergens = { from: toLabel(before.excludedAllergenIds), to: toLabel(after) }
+    }
+
+    if (Object.keys(changes).length) {
+      await AuditService.log(user.id, 'profile.updated', 'user', user.id, null, changes)
+    }
+
     return response.redirect().back()
   }
 

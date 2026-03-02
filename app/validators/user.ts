@@ -35,3 +35,14 @@ export const updateExcludedAllergensValidator = vine.compile(
     excludedAllergenIds: vine.array(vine.number().positive()),
   })
 )
+
+export const updatePreferencesValidator = vine.compile(
+  vine.object({
+    showAllProducts: vine.boolean(),
+    sendMailOnPurchase: vine.boolean(),
+    sendDailyReport: vine.boolean(),
+    colorMode: vine.enum(['light', 'dark'] as const),
+    keypadDisabled: vine.boolean(),
+    excludedAllergenIds: vine.array(vine.number().positive()),
+  })
+)
