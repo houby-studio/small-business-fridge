@@ -40,6 +40,7 @@ x-app-env: &app-env
   DB_USER: ${DB_USER:-sbf}
   DB_DATABASE: ${DB_DATABASE:-sbf}
   DB_PASSWORD: ${DB_PASSWORD:?Missing DB_PASSWORD value in .env file!} # [REQUIRED] set a strong password
+  DB_MIGRATE: ${DB_MIGRATE:-true} # run DB migrations on app container startup
 
   # ---------------------------------------------------------------------------
   # Mail (SMTP)
