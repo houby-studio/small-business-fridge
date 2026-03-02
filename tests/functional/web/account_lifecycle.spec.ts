@@ -1,5 +1,6 @@
 import '#tests/test_context'
 import { test } from '@japa/runner'
+import hash from '@adonisjs/core/services/hash'
 import db from '@adonisjs/lucid/services/db'
 import User from '#models/user'
 import PasswordResetService from '#services/password_reset_service'
@@ -8,6 +9,7 @@ import { store as throttleStore } from '#middleware/throttle_middleware'
 
 test.group('Web Auth - Registration and Password Lifecycle', (group) => {
   const previousMode = process.env.AUTH_REGISTRATION_MODE
+  const previousProviders = process.env.AUTH_PROVIDERS
 
   group.setup(() => {
     process.env.AUTH_REGISTRATION_MODE = 'open'
@@ -16,9 +18,15 @@ test.group('Web Auth - Registration and Password Lifecycle', (group) => {
   group.teardown(() => {
     if (previousMode === undefined) {
       delete process.env.AUTH_REGISTRATION_MODE
-      return
+    } else {
+      process.env.AUTH_REGISTRATION_MODE = previousMode
     }
-    process.env.AUTH_REGISTRATION_MODE = previousMode
+
+    if (previousProviders === undefined) {
+      delete process.env.AUTH_PROVIDERS
+    } else {
+      process.env.AUTH_PROVIDERS = previousProviders
+    }
   })
 
   group.each.setup(async () => {
@@ -214,6 +222,93 @@ test.group('Web Auth - Registration and Password Lifecycle', (group) => {
 
     loginNewPassword.assertStatus(302)
     assert.notEqual(loginNewPassword.header('location'), '/shop')
+  })
+
+  test('authenticated user can change password using one-time sensitive grant when TTL is zero', async ({
+    client,
+  }) => {
+    const previousTtl = process.env.SENSITIVE_ACTION_REAUTH_TTL_MINUTES
+    process.env.SENSITIVE_ACTION_REAUTH_TTL_MINUTES = '0'
+    await UserFactory.apply('admin').create()
+    const user = await UserFactory.merge({ email: 'profile-pass-grant@example.com' }).create()
+
+    try {
+      const response = await client
+        .put('/profile/password')
+        .loginAs(user)
+        .form({
+          newPassword: 'changed-pass-456',
+          newPasswordConfirmation: 'changed-pass-456',
+        })
+        .withSession({
+          __sensitive_stepup_grant: {
+            userId: user.id,
+            issuedAt: new Date().toISOString(),
+          },
+        })
+        .withCsrfToken()
+        .redirects(0)
+
+      response.assertStatus(302)
+      response.assertHeader('location', '/profile')
+
+      const loginResponse = await client
+        .post('/login')
+        .form({
+          email: 'profile-pass-grant@example.com',
+          password: 'changed-pass-456',
+        })
+        .withCsrfToken()
+        .redirects(0)
+
+      loginResponse.assertStatus(302)
+      loginResponse.assertHeader('location', '/shop')
+    } finally {
+      if (previousTtl === undefined) {
+        delete process.env.SENSITIVE_ACTION_REAUTH_TTL_MINUTES
+      } else {
+        process.env.SENSITIVE_ACTION_REAUTH_TTL_MINUTES = previousTtl
+      }
+    }
+  })
+
+  test('profile password change is blocked when local auth is disabled', async ({
+    client,
+    assert,
+  }) => {
+    const prevProviders = process.env.AUTH_PROVIDERS
+    process.env.AUTH_PROVIDERS = 'microsoft'
+    await UserFactory.apply('admin').create()
+    const user = await UserFactory.merge({ email: 'profile-pass-disabled@example.com' }).create()
+
+    try {
+      const response = await client
+        .put('/profile/password')
+        .loginAs(user)
+        .form({
+          newPassword: 'changed-pass-789',
+          newPasswordConfirmation: 'changed-pass-789',
+        })
+        .withCsrfToken()
+        .redirects(0)
+
+      response.assertStatus(302)
+      response.assertHeader('location', '/profile')
+
+      const refreshed = await User.findOrFail(user.id)
+      if (!refreshed.password) {
+        throw new Error('Expected persisted password hash to exist')
+      }
+      const persistedPasswordHash = refreshed.password
+      assert.isTrue(await hash.verify(persistedPasswordHash, 'password123'))
+      assert.isFalse(await hash.verify(persistedPasswordHash, 'changed-pass-789'))
+    } finally {
+      if (prevProviders === undefined) {
+        delete process.env.AUTH_PROVIDERS
+      } else {
+        process.env.AUTH_PROVIDERS = prevProviders
+      }
+    }
   })
 
   test('admin can trigger password reset for another user', async ({ client, assert }) => {

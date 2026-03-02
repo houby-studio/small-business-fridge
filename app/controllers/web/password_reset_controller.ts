@@ -103,6 +103,14 @@ export default class PasswordResetController {
   }
 
   async changeAuthenticated({ auth, request, response, session, i18n }: HttpContext) {
+    if (this.authModes.isLocalLoginDisabled()) {
+      session.flash('alert', {
+        type: 'danger',
+        message: i18n.t('messages.forbidden'),
+      })
+      return response.redirect('/profile')
+    }
+
     const user = auth.user!
     const data = await request.validateUsing(changePasswordValidator)
 
@@ -122,25 +130,29 @@ export default class PasswordResetController {
       return response.redirect('/profile')
     }
 
-    if (user.password && !this.stepup.isRecent(session)) {
-      const currentPassword = data.currentPassword ?? null
-      const matches = await this.stepup.verifyLocalPasswordStepup(user, currentPassword)
-      if (!matches) {
+    const hasRecentStepup = this.stepup.isRecent(session)
+    const hasOneTimeGrant = this.stepup.consumeOneTimeGrant(session, user.id)
+
+    if (!hasRecentStepup && !hasOneTimeGrant) {
+      if (user.password) {
+        const currentPassword = data.currentPassword ?? null
+        const matches = await this.stepup.verifyLocalPasswordStepup(user, currentPassword)
+        if (!matches) {
+          session.flash('alert', {
+            type: 'danger',
+            message: i18n.t('messages.password_current_invalid'),
+          })
+          return response.redirect('/profile')
+        }
+        this.stepup.markNow(session)
+        this.stepup.markOneTimeGrant(session, user.id)
+      } else {
         session.flash('alert', {
           type: 'danger',
-          message: i18n.t('messages.password_current_invalid'),
+          message: i18n.t('messages.sensitive_action_reauth_required'),
         })
         return response.redirect('/profile')
       }
-      this.stepup.markNow(session)
-    }
-
-    if (!user.password && !this.stepup.isRecent(session)) {
-      session.flash('alert', {
-        type: 'danger',
-        message: i18n.t('messages.sensitive_action_reauth_required'),
-      })
-      return response.redirect('/profile')
     }
 
     user.password = data.newPassword

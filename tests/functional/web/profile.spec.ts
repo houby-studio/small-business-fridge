@@ -157,6 +157,58 @@ test.group('Web Profile - update audit details', (group) => {
     assert.deepEqual(metadata?.colorMode, { from: 'dark', to: 'light' })
     assert.deepEqual(metadata?.keypadDisabled, { from: false, to: true })
   })
+
+  test('PUT /profile accepts one-time sensitive stepup grant when TTL is zero', async ({
+    client,
+    assert,
+  }) => {
+    const previousTtl = process.env.SENSITIVE_ACTION_REAUTH_TTL_MINUTES
+    process.env.SENSITIVE_ACTION_REAUTH_TTL_MINUTES = '0'
+
+    try {
+      const user = await UserFactory.merge({
+        displayName: 'Grant User',
+        email: 'grant@example.com',
+        iban: 'CZ6508000000192000145399',
+      }).create()
+
+      const response = await client
+        .put('/profile')
+        .json({
+          displayName: user.displayName,
+          email: user.email,
+          phone: user.phone,
+          iban: 'CZ6508000000192000145400',
+          showAllProducts: user.showAllProducts,
+          sendMailOnPurchase: user.sendMailOnPurchase,
+          sendDailyReport: user.sendDailyReport,
+          colorMode: user.colorMode,
+          keypadDisabled: user.keypadDisabled,
+          excludedAllergenIds: [],
+        })
+        .loginAs(user)
+        .withSession({
+          __sensitive_stepup_grant: {
+            userId: user.id,
+            issuedAt: new Date().toISOString(),
+          },
+        })
+        .withCsrfToken()
+        .redirects(0)
+
+      response.assertStatus(302)
+
+      await user.refresh()
+      assert.equal(user.iban, 'CZ6508000000192000145399')
+      assert.equal(user.pendingIban, 'CZ6508000000192000145400')
+    } finally {
+      if (previousTtl === undefined) {
+        delete process.env.SENSITIVE_ACTION_REAUTH_TTL_MINUTES
+      } else {
+        process.env.SENSITIVE_ACTION_REAUTH_TTL_MINUTES = previousTtl
+      }
+    }
+  })
 })
 
 test.group('Web Profile - API tokens', (group) => {

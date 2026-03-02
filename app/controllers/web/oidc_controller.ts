@@ -263,7 +263,9 @@ export default class OidcController {
       }
 
       this.stepup.markNow(session)
+      this.stepup.markOneTimeGrant(session, Number(reauthIntent.userId))
       session.flash('alert', { type: 'success', message: i18n.t('messages.reauth_success') })
+      session.flash('sensitiveReauthCompleted', true)
       const returnTo =
         typeof reauthIntent.returnTo === 'string' && reauthIntent.returnTo.length > 0
           ? reauthIntent.returnTo

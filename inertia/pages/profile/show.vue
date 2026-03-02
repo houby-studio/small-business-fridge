@@ -61,6 +61,7 @@ const props = defineProps<{
   sensitiveReauthActive: boolean
   sensitiveReauthValidUntil: string | null
   sensitiveReauthTtlMinutes: number
+  localAuthEnabled: boolean
   hasLocalPassword: boolean
 }>()
 const { t } = useI18n()
@@ -90,7 +91,6 @@ const colorModeOptions = [
 const submitting = ref(false)
 const changingPassword = ref(false)
 const passwordForm = ref({
-  currentPassword: '',
   newPassword: '',
   newPasswordConfirmation: '',
 })
@@ -207,6 +207,10 @@ function persistSensitiveDraft(action: NonNullable<typeof pendingSensitiveAction
       keypadDisabled: form.value.keypadDisabled,
       excludedAllergenIds: [...form.value.excludedAllergenIds],
     },
+    password: {
+      newPassword: passwordForm.value.newPassword,
+      newPasswordConfirmation: passwordForm.value.newPasswordConfirmation,
+    },
   }
 
   window.sessionStorage.setItem(sensitiveDraftStorageKey, JSON.stringify(payload))
@@ -225,6 +229,10 @@ function takeSensitiveDraft(): {
     colorMode: 'light' | 'dark'
     keypadDisabled: boolean
     excludedAllergenIds: number[]
+  }
+  password: {
+    newPassword: string
+    newPasswordConfirmation: string
   }
 } | null {
   if (typeof window === 'undefined') return null
@@ -249,6 +257,10 @@ function takeSensitiveDraft(): {
         keypadDisabled?: boolean
         excludedAllergenIds?: number[]
       }
+      password?: {
+        newPassword?: string
+        newPasswordConfirmation?: string
+      }
     }
     if (!parsed?.action || !parsed?.form) return null
     if (parsed.createdAt && Date.now() - parsed.createdAt > 30 * 60 * 1000) return null
@@ -268,7 +280,14 @@ function takeSensitiveDraft(): {
         : form.value.excludedAllergenIds,
     }
 
-    return { action: parsed.action, form: restoredForm }
+    return {
+      action: parsed.action,
+      form: restoredForm,
+      password: {
+        newPassword: parsed.password?.newPassword ?? '',
+        newPasswordConfirmation: parsed.password?.newPasswordConfirmation ?? '',
+      },
+    }
   } catch {
     return null
   }
@@ -388,7 +407,6 @@ function reauthSensitive() {
             ttlMinutes > 0 ? Date.now() + ttlMinutes * 60 * 1000 : null
           reauthDialogVisible.value = false
           form.value.currentPassword = reauthPassword.value
-          passwordForm.value.currentPassword = reauthPassword.value
           const action = pendingSensitiveAction.value
           pendingSensitiveAction.value = null
           if (action) {
@@ -419,14 +437,12 @@ function changePasswordRequest() {
   router.put(
     '/profile/password',
     {
-      currentPassword: passwordForm.value.currentPassword || undefined,
       newPassword: passwordForm.value.newPassword,
       newPasswordConfirmation: passwordForm.value.newPasswordConfirmation,
     },
     {
       onFinish: () => {
         changingPassword.value = false
-        passwordForm.value.currentPassword = ''
         passwordForm.value.newPassword = ''
         passwordForm.value.newPasswordConfirmation = ''
       },
@@ -500,8 +516,12 @@ onMounted(() => {
   form.value.colorMode = draft.form.colorMode
   form.value.keypadDisabled = draft.form.keypadDisabled
   form.value.excludedAllergenIds = [...draft.form.excludedAllergenIds]
+  passwordForm.value.newPassword = draft.password.newPassword
+  passwordForm.value.newPasswordConfirmation = draft.password.newPasswordConfirmation
 
-  if (hasActiveSensitiveStepup()) {
+  const justCompletedReauth = (page.props.flash as any)?.sensitiveReauthCompleted === true
+
+  if (hasActiveSensitiveStepup() || justCompletedReauth) {
     runSensitiveAction(draft.action)
     return
   }
@@ -793,7 +813,7 @@ onMounted(() => {
           </template>
         </Card>
 
-        <Card>
+        <Card v-if="props.localAuthEnabled">
           <template #title>
             <div class="flex items-center gap-2">
               <span
@@ -806,21 +826,6 @@ onMounted(() => {
           </template>
           <template #content>
             <form @submit.prevent="changePassword" class="flex flex-col gap-4">
-              <div>
-                <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">
-                  {{ t('profile.password_current') }}
-                </label>
-                <Password
-                  inputId="profileCurrentPassword"
-                  v-model="passwordForm.currentPassword"
-                  :feedback="false"
-                  toggleMask
-                  autocomplete="current-password"
-                  inputClass="w-full"
-                  class="w-full"
-                />
-              </div>
-
               <div>
                 <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">
                   {{ t('profile.password_new') }}

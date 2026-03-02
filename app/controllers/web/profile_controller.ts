@@ -69,6 +69,10 @@ export default class ProfileController {
       return true
     }
 
+    if (this.stepup.consumeOneTimeGrant(ctx.session, user.id)) {
+      return true
+    }
+
     if (user.password) {
       const verified = await this.stepup.verifyLocalPasswordStepup(user, currentPassword ?? null)
       if (!verified) {
@@ -117,6 +121,7 @@ export default class ProfileController {
       sensitiveReauthActive: this.stepup.isRecent(session),
       sensitiveReauthValidUntil: this.stepup.recentValidUntilIso(session),
       sensitiveReauthTtlMinutes: this.stepup.ttlMinutes(),
+      localAuthEnabled: this.authModes.isLocalEnabled(),
       hasLocalPassword: !!user.password,
     })
   }
@@ -356,6 +361,7 @@ export default class ProfileController {
     }
 
     this.stepup.markNow(ctx.session)
+    this.stepup.markOneTimeGrant(ctx.session, user.id)
     ctx.session.flash('alert', { type: 'success', message: ctx.i18n.t('messages.reauth_success') })
     return ctx.response.redirect('/profile')
   }
