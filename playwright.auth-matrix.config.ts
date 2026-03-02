@@ -50,14 +50,17 @@ export default defineConfig({
     {
       name: 'auth-single-microsoft',
       use: { ...devices['Desktop Chrome'], baseURL: singleMicrosoft.baseURL },
+      grep: /@single-provider-microsoft/,
     },
     {
       name: 'auth-multi-providers',
       use: { ...devices['Desktop Chrome'], baseURL: multiProviders.baseURL },
+      grep: /@multi-providers/,
     },
     {
       name: 'auth-hybrid-local-microsoft',
       use: { ...devices['Desktop Chrome'], baseURL: hybridMicrosoft.baseURL },
+      grep: /@hybrid-local-microsoft/,
     },
   ],
 })

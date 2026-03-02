@@ -7,11 +7,9 @@ function responseLocation(response: { headers(): Record<string, string> }): stri
 }
 
 test.describe('Auth ENV matrix smoke', () => {
-  test('single provider (microsoft) redirects and blocks local-only pages', async ({
+  test('single provider (microsoft) redirects and blocks local-only pages @single-provider-microsoft', async ({
     request,
-  }, testInfo) => {
-    test.skip(testInfo.project.name !== 'auth-single-microsoft')
-
+  }) => {
     const login = await request.get('/login', { maxRedirects: 0 })
     expect(login.status()).toBe(302)
     expect(responseLocation(login)).toBe('/auth/microsoft/redirect')
@@ -31,12 +29,10 @@ test.describe('Auth ENV matrix smoke', () => {
     )
   })
 
-  test('multi provider mode renders provider choices and invite provider actions', async ({
+  test('multi provider mode renders provider choices and invite provider actions @multi-providers', async ({
     page,
     request,
-  }, testInfo) => {
-    test.skip(testInfo.project.name !== 'auth-multi-providers')
-
+  }) => {
     const loginResp = await request.get('/login', { maxRedirects: 0 })
     expect(loginResp.status()).toBe(200)
 
@@ -63,12 +59,10 @@ test.describe('Auth ENV matrix smoke', () => {
     await expect(page.locator('#invitePassword')).toHaveCount(0)
   })
 
-  test('hybrid mode keeps local forms and includes provider actions', async ({
+  test('hybrid mode keeps local forms and includes provider actions @hybrid-local-microsoft', async ({
     page,
     request,
-  }, testInfo) => {
-    test.skip(testInfo.project.name !== 'auth-hybrid-local-microsoft')
-
+  }) => {
     const loginResp = await request.get('/login', { maxRedirects: 0 })
     expect(loginResp.status()).toBe(200)
 
