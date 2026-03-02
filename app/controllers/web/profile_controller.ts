@@ -7,7 +7,11 @@ import {
   toggleColorModeValidator,
   updateExcludedAllergensValidator,
 } from '#validators/user'
-import { createApiTokenValidator } from '#validators/auth'
+import {
+  createApiTokenValidator,
+  oidcLinkStartValidator,
+  sensitiveReauthValidator,
+} from '#validators/auth'
 import AuditService from '#services/audit_service'
 import User from '#models/user'
 import Allergen from '#models/allergen'
@@ -16,11 +20,15 @@ import AuthModeService from '#services/auth_mode_service'
 import AuthIdentityService from '#services/auth_identity_service'
 import EmailVerificationService from '#services/email_verification_service'
 import NotificationService from '#services/notification_service'
+import IbanChangeService from '#services/iban_change_service'
+import ReauthStepupService from '#services/reauth_stepup_service'
 
 export default class ProfileController {
   private authModes = new AuthModeService()
   private authIdentity = new AuthIdentityService()
   private verifications = new EmailVerificationService()
+  private ibans = new IbanChangeService()
+  private stepup = new ReauthStepupService()
 
   private async getExcludedAllergenIds(userId: number): Promise<number[]> {
     const rows = await db
@@ -38,7 +46,50 @@ export default class ProfileController {
     await user.related('excludedAllergens').sync(sanitized)
   }
 
-  async show({ inertia, auth }: HttpContext) {
+  private isImpersonating(session: HttpContext['session']) {
+    return !!session?.get('__impersonation')
+  }
+
+  private async ensureSensitiveStepup(
+    ctx: HttpContext,
+    currentPassword: string | null | undefined
+  ) {
+    const user = ctx.auth.user!
+
+    if (this.isImpersonating(ctx.session)) {
+      ctx.session.flash('alert', {
+        type: 'danger',
+        message: ctx.i18n.t('messages.sensitive_action_blocked_while_impersonating'),
+      })
+      return false
+    }
+
+    if (this.stepup.isRecent(ctx.session)) {
+      return true
+    }
+
+    if (user.password) {
+      const verified = await this.stepup.verifyLocalPasswordStepup(user, currentPassword ?? null)
+      if (!verified) {
+        ctx.session.flash('alert', {
+          type: 'danger',
+          message: ctx.i18n.t('messages.password_current_invalid'),
+        })
+        return false
+      }
+
+      this.stepup.markNow(ctx.session)
+      return true
+    }
+
+    ctx.session.flash('alert', {
+      type: 'danger',
+      message: ctx.i18n.t('messages.sensitive_action_reauth_required'),
+    })
+    return false
+  }
+
+  async show({ inertia, auth, session }: HttpContext) {
     const user = auth.user!
     await user.load((loader) => loader.load('favoriteProducts').load('authIdentities'))
     const excludedAllergenIds = await this.getExcludedAllergenIds(user.id)
@@ -62,10 +113,13 @@ export default class ProfileController {
       allergens: allergens.map((a) => ({ id: a.id, name: a.name })),
       externalProviders: this.authModes.getEnabledExternalProviders(),
       linkedProviders: user.authIdentities.map((identity) => identity.provider),
+      sensitiveReauthActive: this.stepup.isRecent(session),
+      hasLocalPassword: !!user.password,
     })
   }
 
-  async update({ request, auth, response, session, i18n }: HttpContext) {
+  async update(ctx: HttpContext) {
+    const { request, auth, response, session, i18n } = ctx
     const user = auth.user!
     const data = await request.validateUsing(updateProfileValidator)
     const before = {
@@ -75,6 +129,8 @@ export default class ProfileController {
       emailVerifiedAt: user.emailVerifiedAt?.toISO() ?? null,
       phone: user.phone,
       iban: user.iban,
+      pendingIban: user.pendingIban,
+      ibanVerifiedAt: user.ibanVerifiedAt?.toISO() ?? null,
       showAllProducts: user.showAllProducts,
       sendMailOnPurchase: user.sendMailOnPurchase,
       sendDailyReport: user.sendDailyReport,
@@ -85,10 +141,23 @@ export default class ProfileController {
 
     const requestedEmail = data.email.trim().toLowerCase()
     const currentEmail = user.email.trim().toLowerCase()
+    const requestedIban = data.iban?.trim().toUpperCase() || null
+    const currentIban = user.iban?.trim().toUpperCase() || null
+    const emailChanged = requestedEmail !== currentEmail
+    const ibanChanged = requestedIban !== currentIban
     let emailPendingVerificationPayload: { verificationUrl: string; email: string } | null = null
+    let ibanPendingVerificationPayload: { verificationUrl: string; iban: string } | null = null
     let emailUpdateMessageKey: string | null = null
+    let ibanUpdateMessageKey: string | null = null
 
-    if (requestedEmail !== currentEmail) {
+    if (
+      (emailChanged || ibanChanged) &&
+      !(await this.ensureSensitiveStepup(ctx, data.currentPassword))
+    ) {
+      return response.redirect('/profile')
+    }
+
+    if (emailChanged) {
       const existing = await User.query()
         .whereNot('id', user.id)
         .whereRaw('LOWER(email) = ?', [requestedEmail])
@@ -123,9 +192,26 @@ export default class ProfileController {
       user.pendingEmail = null
     }
 
+    if (ibanChanged) {
+      if (!requestedIban) {
+        user.iban = null
+        user.pendingIban = null
+        user.ibanVerifiedAt = null
+      } else {
+        user.pendingIban = requestedIban
+        const verification = await this.ibans.createToken(user, requestedIban)
+        ibanPendingVerificationPayload = {
+          verificationUrl: verification.verificationUrl,
+          iban: verification.token.iban,
+        }
+        ibanUpdateMessageKey = 'messages.iban_change_pending_verification'
+      }
+    } else if (user.pendingIban) {
+      user.pendingIban = null
+    }
+
     user.displayName = data.displayName
     user.phone = data.phone ?? null
-    user.iban = data.iban ?? null
     user.showAllProducts = data.showAllProducts
     user.sendMailOnPurchase = data.sendMailOnPurchase
     user.sendDailyReport = data.sendDailyReport
@@ -146,6 +232,20 @@ export default class ProfileController {
             { err, userId: user.id, email: emailPendingVerificationPayload?.email },
             'Failed to send profile email verification'
           )
+        })
+    }
+
+    if (ibanPendingVerificationPayload) {
+      const notifications = new NotificationService()
+      notifications
+        .sendIbanChangeVerificationEmail({
+          email: user.email,
+          displayName: user.displayName,
+          iban: ibanPendingVerificationPayload.iban,
+          verificationUrl: ibanPendingVerificationPayload.verificationUrl,
+        })
+        .catch((err) => {
+          logger.error({ err, userId: user.id }, 'Failed to send IBAN change verification')
         })
     }
 
@@ -172,10 +272,19 @@ export default class ProfileController {
     if (before.pendingEmail !== user.pendingEmail) {
       changes.pendingEmail = { from: before.pendingEmail, to: user.pendingEmail }
     }
+    if (before.pendingIban !== user.pendingIban) {
+      changes.pendingIban = { from: before.pendingIban, to: user.pendingIban }
+    }
     if (before.emailVerifiedAt !== (user.emailVerifiedAt?.toISO() ?? null)) {
       changes.emailVerifiedAt = {
         from: before.emailVerifiedAt,
         to: user.emailVerifiedAt?.toISO() ?? null,
+      }
+    }
+    if (before.ibanVerifiedAt !== (user.ibanVerifiedAt?.toISO() ?? null)) {
+      changes.ibanVerifiedAt = {
+        from: before.ibanVerifiedAt,
+        to: user.ibanVerifiedAt?.toISO() ?? null,
       }
     }
 
@@ -203,12 +312,64 @@ export default class ProfileController {
 
     await AuditService.log(user.id, 'profile.updated', 'user', user.id, null, metadata)
 
+    const infoMessages = [emailUpdateMessageKey, ibanUpdateMessageKey]
+      .filter((key): key is string => !!key)
+      .map((key) => i18n.t(key))
     session.flash('alert', {
-      type:
-        emailUpdateMessageKey === 'messages.email_change_pending_verification' ? 'info' : 'success',
-      message: i18n.t(emailUpdateMessageKey ?? 'messages.profile_updated'),
+      type: infoMessages.length > 0 ? 'info' : 'success',
+      message:
+        infoMessages.length > 0 ? infoMessages.join(' ') : i18n.t('messages.profile_updated'),
     })
     return response.redirect('/profile')
+  }
+
+  async reauthSensitive(ctx: HttpContext) {
+    const user = ctx.auth.user!
+    const data = await ctx.request.validateUsing(sensitiveReauthValidator)
+
+    if (this.isImpersonating(ctx.session)) {
+      ctx.session.flash('alert', {
+        type: 'danger',
+        message: ctx.i18n.t('messages.sensitive_action_blocked_while_impersonating'),
+      })
+      return ctx.response.redirect('/profile')
+    }
+
+    if (!user.password) {
+      ctx.session.flash('alert', {
+        type: 'danger',
+        message: ctx.i18n.t('messages.sensitive_action_reauth_required'),
+      })
+      return ctx.response.redirect('/profile')
+    }
+
+    const verified = await this.stepup.verifyLocalPasswordStepup(user, data.currentPassword ?? null)
+    if (!verified) {
+      ctx.session.flash('alert', {
+        type: 'danger',
+        message: ctx.i18n.t('messages.password_current_invalid'),
+      })
+      return ctx.response.redirect('/profile')
+    }
+
+    this.stepup.markNow(ctx.session)
+    ctx.session.flash('alert', { type: 'success', message: ctx.i18n.t('messages.reauth_success') })
+    return ctx.response.redirect('/profile')
+  }
+
+  async startOidcLink(ctx: HttpContext) {
+    const user = ctx.auth.user!
+    const data = await ctx.request.validateUsing(oidcLinkStartValidator)
+
+    if (!this.authModes.isProviderEnabled(data.provider)) {
+      return ctx.response.redirect('/profile')
+    }
+
+    if (!(await this.ensureSensitiveStepup(ctx, data.currentPassword))) {
+      return ctx.response.redirect('/profile')
+    }
+
+    return ctx.response.redirect(`/auth/${data.provider}/redirect?intent=link&userId=${user.id}`)
   }
 
   async toggleColorMode({ request, auth, response }: HttpContext) {

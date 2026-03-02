@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { Head, router, usePage } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import InputText from 'primevue/inputtext'
@@ -23,6 +23,8 @@ interface UserData {
   email: string
   pendingEmail: string | null
   emailVerifiedAt: string | null
+  pendingIban: string | null
+  ibanVerifiedAt: string | null
   phone: string | null
   iban: string | null
   keypadId: number
@@ -56,6 +58,8 @@ const props = defineProps<{
   allergens: AllergenOption[]
   externalProviders: Array<'microsoft' | 'discord'>
   linkedProviders: Array<'microsoft' | 'discord'>
+  sensitiveReauthActive: boolean
+  hasLocalPassword: boolean
 }>()
 const { t } = useI18n()
 const page = usePage<SharedProps>()
@@ -67,6 +71,7 @@ const form = ref({
   email: props.user.email,
   phone: props.user.phone ?? '',
   iban: props.user.iban ?? '',
+  currentPassword: '',
   showAllProducts: props.user.showAllProducts,
   sendMailOnPurchase: props.user.sendMailOnPurchase,
   sendDailyReport: props.user.sendDailyReport,
@@ -117,7 +122,20 @@ const canSubmitPassword = computed(
 )
 const emailVerified = computed(() => !!props.user.emailVerifiedAt)
 const hasPendingEmail = computed(() => !!props.user.pendingEmail)
+const hasPendingIban = computed(() => !!props.user.pendingIban)
 const resendingVerification = ref(false)
+const resendingIbanVerification = ref(false)
+const reauthenticating = ref(false)
+const reauthDialogVisible = ref(false)
+const reauthPassword = ref('')
+const reauthStepupActive = ref(!!props.sensitiveReauthActive)
+const pendingSensitiveAction = ref<
+  | null
+  | { type: 'profile-submit' }
+  | { type: 'password-change' }
+  | { type: 'oidc-link'; provider: 'microsoft' | 'discord' }
+>(null)
+const sensitiveDraftStorageKey = 'profile_sensitive_action_draft_v1'
 
 function providerLabel(provider: 'microsoft' | 'discord'): string {
   return provider === 'microsoft' ? 'Microsoft' : 'Discord'
@@ -131,14 +149,135 @@ function isLinked(provider: 'microsoft' | 'discord'): boolean {
   return props.linkedProviders.includes(provider)
 }
 
-function linkProvider(provider: 'microsoft' | 'discord') {
-  window.location.href = `/auth/${provider}/redirect?intent=link&userId=${props.user.id}`
+function normalizeEmail(value: string | null | undefined) {
+  return (value ?? '').trim().toLowerCase()
 }
 
-function submit() {
-  if (!form.value.displayName || !form.value.email || profileEmailInvalid.value) return
-  submitting.value = true
+function normalizeIban(value: string | null | undefined) {
+  return (value ?? '').trim().toUpperCase()
+}
 
+function profileHasSensitiveChanges() {
+  return (
+    normalizeEmail(form.value.email) !== normalizeEmail(props.user.email) ||
+    normalizeIban(form.value.iban) !== normalizeIban(props.user.iban)
+  )
+}
+
+function runSensitiveAction(action: NonNullable<typeof pendingSensitiveAction.value>) {
+  if (action.type === 'profile-submit') {
+    submitProfileRequest()
+    return
+  }
+  if (action.type === 'password-change') {
+    changePasswordRequest()
+    return
+  }
+  if (action.type === 'oidc-link') {
+    linkProviderRequest(action.provider)
+  }
+}
+
+function persistSensitiveDraft(action: NonNullable<typeof pendingSensitiveAction.value>) {
+  if (typeof window === 'undefined') return
+
+  const payload = {
+    createdAt: Date.now(),
+    action,
+    form: {
+      displayName: form.value.displayName,
+      email: form.value.email,
+      phone: form.value.phone,
+      iban: form.value.iban,
+      showAllProducts: form.value.showAllProducts,
+      sendMailOnPurchase: form.value.sendMailOnPurchase,
+      sendDailyReport: form.value.sendDailyReport,
+      colorMode: form.value.colorMode,
+      keypadDisabled: form.value.keypadDisabled,
+      excludedAllergenIds: [...form.value.excludedAllergenIds],
+    },
+  }
+
+  window.sessionStorage.setItem(sensitiveDraftStorageKey, JSON.stringify(payload))
+}
+
+function takeSensitiveDraft(): {
+  action: NonNullable<typeof pendingSensitiveAction.value>
+  form: {
+    displayName: string
+    email: string
+    phone: string
+    iban: string
+    showAllProducts: boolean
+    sendMailOnPurchase: boolean
+    sendDailyReport: boolean
+    colorMode: 'light' | 'dark'
+    keypadDisabled: boolean
+    excludedAllergenIds: number[]
+  }
+} | null {
+  if (typeof window === 'undefined') return null
+
+  const raw = window.sessionStorage.getItem(sensitiveDraftStorageKey)
+  if (!raw) return null
+  window.sessionStorage.removeItem(sensitiveDraftStorageKey)
+
+  try {
+    const parsed = JSON.parse(raw) as {
+      createdAt?: number
+      action?: NonNullable<typeof pendingSensitiveAction.value>
+      form?: {
+        displayName?: string
+        email?: string
+        phone?: string
+        iban?: string
+        showAllProducts?: boolean
+        sendMailOnPurchase?: boolean
+        sendDailyReport?: boolean
+        colorMode?: 'light' | 'dark'
+        keypadDisabled?: boolean
+        excludedAllergenIds?: number[]
+      }
+    }
+    if (!parsed?.action || !parsed?.form) return null
+    if (parsed.createdAt && Date.now() - parsed.createdAt > 30 * 60 * 1000) return null
+
+    const restoredForm = {
+      displayName: parsed.form.displayName ?? form.value.displayName,
+      email: parsed.form.email ?? form.value.email,
+      phone: parsed.form.phone ?? form.value.phone,
+      iban: parsed.form.iban ?? form.value.iban,
+      showAllProducts: parsed.form.showAllProducts ?? form.value.showAllProducts,
+      sendMailOnPurchase: parsed.form.sendMailOnPurchase ?? form.value.sendMailOnPurchase,
+      sendDailyReport: parsed.form.sendDailyReport ?? form.value.sendDailyReport,
+      colorMode: parsed.form.colorMode ?? form.value.colorMode,
+      keypadDisabled: parsed.form.keypadDisabled ?? form.value.keypadDisabled,
+      excludedAllergenIds: Array.isArray(parsed.form.excludedAllergenIds)
+        ? parsed.form.excludedAllergenIds
+        : form.value.excludedAllergenIds,
+    }
+
+    return { action: parsed.action, form: restoredForm }
+  } catch {
+    return null
+  }
+}
+
+function requestSensitiveAction(
+  action: NonNullable<typeof pendingSensitiveAction.value>,
+  alwaysRequire = true
+) {
+  if (!alwaysRequire || reauthStepupActive.value) {
+    runSensitiveAction(action)
+    return
+  }
+
+  pendingSensitiveAction.value = action
+  reauthDialogVisible.value = true
+}
+
+function submitProfileRequest() {
+  submitting.value = true
   router.put(
     '/profile',
     {
@@ -146,6 +285,7 @@ function submit() {
       email: form.value.email,
       phone: form.value.phone || null,
       iban: form.value.iban || null,
+      currentPassword: form.value.currentPassword || null,
       showAllProducts: form.value.showAllProducts,
       sendMailOnPurchase: form.value.sendMailOnPurchase,
       sendDailyReport: form.value.sendDailyReport,
@@ -157,6 +297,30 @@ function submit() {
       onFinish: () => (submitting.value = false),
     }
   )
+}
+
+function linkProviderRequest(provider: 'microsoft' | 'discord') {
+  window.location.assign(`/auth/${provider}/redirect?intent=link&userId=${props.user.id}`)
+}
+
+function linkProvider(provider: 'microsoft' | 'discord') {
+  requestSensitiveAction({ type: 'oidc-link', provider }, true)
+}
+
+function oidcReauthHref(provider: 'microsoft' | 'discord') {
+  return `/auth/${provider}/redirect?intent=reauth&returnTo=${encodeURIComponent('/profile')}`
+}
+
+function startOidcReauth(provider: 'microsoft' | 'discord') {
+  if (pendingSensitiveAction.value) {
+    persistSensitiveDraft(pendingSensitiveAction.value)
+  }
+  window.location.assign(oidcReauthHref(provider))
+}
+
+function submit() {
+  if (!form.value.displayName || !form.value.email || profileEmailInvalid.value) return
+  requestSensitiveAction({ type: 'profile-submit' }, profileHasSensitiveChanges())
 }
 
 function resendEmailVerification() {
@@ -172,7 +336,57 @@ function resendEmailVerification() {
   )
 }
 
+function resendIbanVerification() {
+  resendingIbanVerification.value = true
+  router.post(
+    '/profile/iban-verification/resend',
+    {},
+    {
+      onFinish: () => {
+        resendingIbanVerification.value = false
+      },
+    }
+  )
+}
+
+function reauthSensitive() {
+  reauthenticating.value = true
+  router.post(
+    '/profile/reauth',
+    { currentPassword: reauthPassword.value || null },
+    {
+      onSuccess: (page) => {
+        const alert = (page.props as any)?.flash?.alert
+        if (alert?.type === 'success') {
+          reauthStepupActive.value = true
+          reauthDialogVisible.value = false
+          form.value.currentPassword = reauthPassword.value
+          const action = pendingSensitiveAction.value
+          pendingSensitiveAction.value = null
+          if (action) {
+            runSensitiveAction(action)
+          }
+        }
+      },
+      onFinish: () => {
+        reauthenticating.value = false
+        reauthPassword.value = ''
+      },
+    }
+  )
+}
+
+function closeReauthDialog() {
+  reauthDialogVisible.value = false
+  pendingSensitiveAction.value = null
+  reauthPassword.value = ''
+}
+
 function changePassword() {
+  requestSensitiveAction({ type: 'password-change' }, true)
+}
+
+function changePasswordRequest() {
   changingPassword.value = true
   router.put(
     '/profile/password',
@@ -226,7 +440,6 @@ const showNewTokenDialog = ref(false)
 const copiedToken = ref(false)
 
 // Watch for new token in flash and open dialog
-import { watch } from 'vue'
 watch(
   newTokenFlash,
   (val) => {
@@ -244,6 +457,30 @@ function copyToken() {
     copiedToken.value = true
   })
 }
+
+onMounted(() => {
+  const draft = takeSensitiveDraft()
+  if (!draft) return
+
+  form.value.displayName = draft.form.displayName
+  form.value.email = draft.form.email
+  form.value.phone = draft.form.phone
+  form.value.iban = draft.form.iban
+  form.value.showAllProducts = draft.form.showAllProducts
+  form.value.sendMailOnPurchase = draft.form.sendMailOnPurchase
+  form.value.sendDailyReport = draft.form.sendDailyReport
+  form.value.colorMode = draft.form.colorMode
+  form.value.keypadDisabled = draft.form.keypadDisabled
+  form.value.excludedAllergenIds = [...draft.form.excludedAllergenIds]
+
+  if (reauthStepupActive.value) {
+    runSensitiveAction(draft.action)
+    return
+  }
+
+  pendingSensitiveAction.value = draft.action
+  reauthDialogVisible.value = true
+})
 </script>
 
 <template>
@@ -277,6 +514,9 @@ function copyToken() {
           </p>
           <p v-if="hasPendingEmail" class="mt-2 text-xs text-amber-700 dark:text-amber-300">
             {{ t('profile.pending_email_notice', { email: user.pendingEmail ?? '' }) }}
+          </p>
+          <p v-if="hasPendingIban" class="mt-1 text-xs text-amber-700 dark:text-amber-300">
+            {{ t('profile.pending_iban_notice', { iban: user.pendingIban ?? '' }) }}
           </p>
         </div>
         <div class="flex flex-wrap gap-2">
@@ -366,6 +606,17 @@ function copyToken() {
                   t('profile.iban')
                 }}</label>
                 <InputText v-model="form.iban" class="w-full" maxlength="24" />
+                <div v-if="hasPendingIban" class="mt-2">
+                  <Button
+                    type="button"
+                    size="small"
+                    severity="secondary"
+                    outlined
+                    :label="t('profile.iban_resend_verification')"
+                    :loading="resendingIbanVerification"
+                    @click="resendIbanVerification"
+                  />
+                </div>
               </div>
             </div>
 
@@ -706,6 +957,66 @@ function copyToken() {
         </template>
       </Card>
     </div>
+
+    <!-- On-demand re-auth dialog for sensitive actions -->
+    <Dialog
+      v-model:visible="reauthDialogVisible"
+      :header="t('profile.sensitive_reauth_heading')"
+      :closable="true"
+      :modal="true"
+      style="width: 560px; max-width: calc(100vw - 2rem)"
+      @hide="closeReauthDialog"
+    >
+      <p class="mb-4 text-sm text-gray-600 dark:text-zinc-400">
+        {{ t('profile.sensitive_reauth_hint') }}
+      </p>
+      <div class="flex flex-col gap-4">
+        <div v-if="hasLocalPassword">
+          <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">
+            {{ t('profile.sensitive_reauth_password') }}
+          </label>
+          <Password
+            inputId="profileSensitivePasswordModal"
+            v-model="reauthPassword"
+            :feedback="false"
+            toggleMask
+            autocomplete="current-password"
+            inputClass="w-full"
+            class="w-full"
+          />
+        </div>
+        <Button
+          v-if="hasLocalPassword"
+          type="button"
+          :label="t('profile.sensitive_reauth_submit')"
+          icon="pi pi-shield"
+          :loading="reauthenticating"
+          @click="reauthSensitive"
+        />
+        <div v-if="linkedProviders.length > 0" class="flex flex-wrap gap-2">
+          <Button
+            v-for="provider in linkedProviders"
+            :key="`reauth-dialog-${provider}`"
+            type="button"
+            size="small"
+            severity="secondary"
+            outlined
+            :icon="providerIcon(provider)"
+            :label="providerLabel(provider)"
+            @click="startOidcReauth(provider)"
+          />
+        </div>
+      </div>
+      <template #footer>
+        <Button
+          type="button"
+          severity="secondary"
+          outlined
+          :label="t('common.cancel')"
+          @click="closeReauthDialog"
+        />
+      </template>
+    </Dialog>
 
     <!-- Show-once new token dialog -->
     <Dialog

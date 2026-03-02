@@ -68,6 +68,11 @@
   "email_verification_intro": "Hi {name}, confirm your email address by clicking the button below.",
   "email_verification_action": "Confirm email address",
   "email_verification_note": "If you did not request this change, you can ignore this message.",
+  "iban_change_subject": "Confirm your IBAN change in {app_name}",
+  "iban_change_heading": "Confirm IBAN change for {app_name}",
+  "iban_change_intro": "Hi {name}, confirm updating your IBAN to {iban}.",
+  "iban_change_action": "Confirm IBAN change",
+  "iban_change_note": "If you did not request this, ignore this message and secure your account.",
 
   "restock_subject": "Product {productName} is back in stock!",
   "restock_heading": "Favourite Product Back in Stock",

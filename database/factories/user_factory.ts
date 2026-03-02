@@ -11,6 +11,8 @@ export const UserFactory = factory
       email: faker.internet.email(),
       pendingEmail: null,
       emailVerifiedAt: DateTime.utc(),
+      pendingIban: null,
+      ibanVerifiedAt: null,
       password: 'password123',
       keypadId: keypadCounter++,
       role: 'customer' as const,

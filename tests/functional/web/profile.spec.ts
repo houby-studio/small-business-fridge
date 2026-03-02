@@ -113,6 +113,7 @@ test.group('Web Profile - update audit details', (group) => {
       .json({
         displayName: 'Alice New',
         email: 'alice.new@example.com',
+        currentPassword: 'password123',
         phone: '222',
         iban: 'CZ6508000000192000145400',
         showAllProducts: true,
@@ -146,8 +147,8 @@ test.group('Web Profile - update audit details', (group) => {
       to: 'alice.new@example.com',
     })
     assert.deepEqual(metadata?.phone, { from: '111', to: '222' })
-    assert.deepEqual(metadata?.iban, {
-      from: 'CZ6508000000192000145399',
+    assert.deepEqual(metadata?.pendingIban, {
+      from: null,
       to: 'CZ6508000000192000145400',
     })
     assert.deepEqual(metadata?.showAllProducts, { from: false, to: true })

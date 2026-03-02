@@ -28,6 +28,7 @@ const PasswordResetController = () => import('#controllers/web/password_reset_co
 const InviteRegistrationController = () => import('#controllers/web/invite_registration_controller')
 const OidcController = () => import('#controllers/web/oidc_controller')
 const EmailVerificationController = () => import('#controllers/web/email_verification_controller')
+const IbanChangeController = () => import('#controllers/web/iban_change_controller')
 const ShopController = () => import('#controllers/web/shop_controller')
 const OrdersController = () => import('#controllers/web/orders_controller')
 const InvoicesController = () => import('#controllers/web/invoices_controller')
@@ -157,6 +158,7 @@ router.group(() => {
 router.get('/auth/:provider/redirect', [OidcController, 'redirect'])
 router.get('/auth/:provider/callback', [OidcController, 'callback'])
 router.get('/email/verify/:token', [EmailVerificationController, 'verify'])
+router.get('/profile/iban/verify/:token', [IbanChangeController, 'verify'])
 
 router.get('/logout', [LoginController, 'destroy']).use(middleware.auth()).as('logout.get')
 router.post('/logout', [LoginController, 'destroy']).use(middleware.auth()).as('logout.post')
@@ -196,7 +198,10 @@ router
     router.post('/profile/tokens', [ProfileController, 'createToken'])
     router.delete('/profile/tokens/:id', [ProfileController, 'revokeToken'])
     router.put('/profile/password', [PasswordResetController, 'changeAuthenticated'])
+    router.post('/profile/reauth', [ProfileController, 'reauthSensitive'])
+    router.post('/profile/oidc-link', [ProfileController, 'startOidcLink'])
     router.post('/profile/email-verification/resend', [EmailVerificationController, 'resend'])
+    router.post('/profile/iban-verification/resend', [IbanChangeController, 'resend'])
 
     // Audit log (customer view)
     router.get('/audit', [AuditController, 'index'])

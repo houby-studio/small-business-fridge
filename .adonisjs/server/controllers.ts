@@ -29,6 +29,7 @@ export const controllers = {
     Bootstrap: () => import('#controllers/web/bootstrap_controller'),
     EmailVerification: () => import('#controllers/web/email_verification_controller'),
     Home: () => import('#controllers/web/home_controller'),
+    IbanChange: () => import('#controllers/web/iban_change_controller'),
     InviteRegistration: () => import('#controllers/web/invite_registration_controller'),
     Invoices: () => import('#controllers/web/invoices_controller'),
     Kiosk: () => import('#controllers/web/kiosk_controller'),

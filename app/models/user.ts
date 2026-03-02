@@ -44,6 +44,12 @@ export default class User extends compose(BaseModel, AuthFinder) {
   declare iban: string | null
 
   @column()
+  declare pendingIban: string | null
+
+  @column.dateTime()
+  declare ibanVerifiedAt: DateTime | null
+
+  @column()
   declare keypadId: number
 
   @column()

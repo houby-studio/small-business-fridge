@@ -88,3 +88,16 @@ export const changePasswordValidator = vine.compile(
     newPasswordConfirmation: vine.string().minLength(8),
   })
 )
+
+export const sensitiveReauthValidator = vine.compile(
+  vine.object({
+    currentPassword: vine.string().minLength(1).optional().nullable(),
+  })
+)
+
+export const oidcLinkStartValidator = vine.compile(
+  vine.object({
+    provider: vine.enum(['microsoft', 'discord'] as const),
+    currentPassword: vine.string().minLength(1).optional().nullable(),
+  })
+)

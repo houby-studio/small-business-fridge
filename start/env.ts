@@ -84,6 +84,8 @@ export default await Env.create(new URL('../', import.meta.url), {
   AUTH_REGISTRATION_ALLOWED_DOMAINS: Env.schema.string.optional(),
   AUTH_EMAIL_VERIFICATION_REQUIRED: Env.schema.boolean.optional(),
   EMAIL_VERIFICATION_TTL_MINUTES: Env.schema.number.optional(),
+  IBAN_CHANGE_TTL_MINUTES: Env.schema.number.optional(),
+  SENSITIVE_ACTION_REAUTH_TTL_MINUTES: Env.schema.number.optional(),
   INVITE_EXPIRY_HOURS: Env.schema.number.optional(),
   PASSWORD_RESET_TTL_MINUTES: Env.schema.number.optional(),
 

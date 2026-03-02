@@ -444,6 +444,27 @@ export default class NotificationService {
     })
   }
 
+  async sendIbanChangeVerificationEmail(params: {
+    email: string
+    displayName: string
+    iban: string
+    verificationUrl: string
+  }) {
+    await mail.send((message) => {
+      message
+        .to(params.email)
+        .subject(this.i18n.t('emails.iban_change_subject', { app_name: this.appName }))
+        .htmlView('emails/iban_change_verification', {
+          i18n: this.i18n,
+          appName: this.appName,
+          appUrl: this.appUrl,
+          name: params.displayName,
+          iban: params.iban,
+          verificationUrl: params.verificationUrl,
+        })
+    })
+  }
+
   /**
    * Send registration invitation email.
    */

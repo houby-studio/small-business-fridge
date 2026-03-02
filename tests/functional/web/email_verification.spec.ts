@@ -3,11 +3,13 @@ import { test } from '@japa/runner'
 import db from '@adonisjs/lucid/services/db'
 import User from '#models/user'
 import { UserFactory } from '#database/factories/user_factory'
+import IbanChangeService from '#services/iban_change_service'
 
 const previousRequired = process.env.AUTH_EMAIL_VERIFICATION_REQUIRED
 const previousProviders = process.env.AUTH_PROVIDERS
 
 const cleanAll = async () => {
+  await db.from('iban_change_tokens').delete()
   await db.from('email_verification_tokens').delete()
   await db.from('user_auth_identities').delete()
   await db.from('remember_me_tokens').delete()
@@ -105,6 +107,7 @@ test.group('Web Email Verification', (group) => {
       .json({
         displayName: user.displayName,
         email: 'pending@example.com',
+        currentPassword: 'password123',
         phone: user.phone,
         iban: user.iban,
         showAllProducts: user.showAllProducts,
@@ -130,6 +133,44 @@ test.group('Web Email Verification', (group) => {
       .where('email', 'pending@example.com')
       .first()
     assert.isNotNull(token)
+  })
+
+  test('profile email update is denied without step-up reauth', async ({ client, assert }) => {
+    const user = await UserFactory.merge({
+      displayName: 'Email Stepup User',
+      email: 'stepup@example.com',
+      phone: null,
+      iban: null,
+      showAllProducts: false,
+      sendMailOnPurchase: true,
+      sendDailyReport: true,
+      colorMode: 'dark',
+      keypadDisabled: false,
+    }).create()
+
+    const response = await client
+      .put('/profile')
+      .json({
+        displayName: user.displayName,
+        email: 'stepup-new@example.com',
+        phone: user.phone,
+        iban: user.iban,
+        showAllProducts: user.showAllProducts,
+        sendMailOnPurchase: user.sendMailOnPurchase,
+        sendDailyReport: user.sendDailyReport,
+        colorMode: user.colorMode,
+        keypadDisabled: user.keypadDisabled,
+        excludedAllergenIds: [],
+      })
+      .loginAs(user)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    await user.refresh()
+    assert.equal(user.email, 'stepup@example.com')
+    assert.isNull(user.pendingEmail)
   })
 
   test('profile email update immediately applies trusted linked provider email', async ({
@@ -164,6 +205,7 @@ test.group('Web Email Verification', (group) => {
       .json({
         displayName: user.displayName,
         email: 'trusted@example.com',
+        currentPassword: 'password123',
         phone: user.phone,
         iban: user.iban,
         showAllProducts: user.showAllProducts,
@@ -183,5 +225,24 @@ test.group('Web Email Verification', (group) => {
     assert.equal(user.email, 'trusted@example.com')
     assert.isNull(user.pendingEmail)
     assert.isNotNull(user.emailVerifiedAt)
+  })
+
+  test('IBAN change confirmation link applies pending IBAN', async ({ client, assert }) => {
+    const user = await UserFactory.merge({ iban: 'CZ6508000000192000145399' }).create()
+    user.pendingIban = 'CZ6508000000192000145400'
+    await user.save()
+
+    const ibans = new IbanChangeService()
+    const payload = await ibans.createToken(user, user.pendingIban)
+    const token = payload.verificationUrl.split('/').pop()!
+
+    const response = await client.get(`/profile/iban/verify/${token}`).loginAs(user).redirects(0)
+    response.assertStatus(302)
+    response.assertHeader('location', '/profile')
+
+    await user.refresh()
+    assert.equal(user.iban, 'CZ6508000000192000145400')
+    assert.isNull(user.pendingIban)
+    assert.isNotNull(user.ibanVerifiedAt)
   })
 })

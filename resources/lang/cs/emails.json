@@ -68,6 +68,11 @@
   "email_verification_intro": "Ahoj {name}, potvrď prosím svou e-mailovou adresu kliknutím na tlačítko níže.",
   "email_verification_action": "Potvrdit e-mailovou adresu",
   "email_verification_note": "Pokud jste tuto změnu nepožadovali, zprávu můžete ignorovat.",
+  "iban_change_subject": "Potvrďte změnu IBAN v {app_name}",
+  "iban_change_heading": "Potvrzení změny IBAN pro {app_name}",
+  "iban_change_intro": "Ahoj {name}, potvrď změnu svého IBAN na {iban}.",
+  "iban_change_action": "Potvrdit změnu IBAN",
+  "iban_change_note": "Pokud jste tuto změnu nepožadovali, zprávu ignorujte a zabezpečte svůj účet.",
 
   "restock_subject": "Produkt {productName} je opět skladem!",
   "restock_heading": "Oblíbený produkt je opět skladem",

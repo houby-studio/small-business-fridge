@@ -10,11 +10,13 @@ import AuthModeService, { type ExternalAuthProvider } from '#services/auth_mode_
 import AuthIdentityService from '#services/auth_identity_service'
 import ExternalProfileSyncService from '#services/external_profile_sync_service'
 import EmailVerificationService from '#services/email_verification_service'
+import ReauthStepupService from '#services/reauth_stepup_service'
 
 export default class OidcController {
   private static readonly BOOTSTRAP_INTENT_KEY = 'oauthBootstrapFirstAdminIntent'
   private static readonly INVITE_INTENT_TOKEN_KEY = 'oauthInviteIntentToken'
   private static readonly LINK_INTENT_KEY = 'oauthLinkIntent'
+  private static readonly REAUTH_INTENT_KEY = 'oauthReauthIntent'
 
   private authIdentity = new AuthIdentityService()
   private registrationPolicy = new RegistrationPolicyService()
@@ -22,6 +24,7 @@ export default class OidcController {
   private authModes = new AuthModeService()
   private externalProfileSync = new ExternalProfileSyncService()
   private verifications = new EmailVerificationService()
+  private stepup = new ReauthStepupService()
 
   private resolveProvider(input: unknown): ExternalAuthProvider | null {
     const provider = String(input ?? '')
@@ -80,7 +83,7 @@ export default class OidcController {
     return !!admin
   }
 
-  async redirect({ ally, request, response, session }: HttpContext) {
+  async redirect({ ally, auth, request, response, session, i18n }: HttpContext) {
     const provider = this.resolveProvider(request.param('provider'))
     if (!provider || !this.authModes.isProviderEnabled(provider)) {
       return response.redirect('/login')
@@ -101,10 +104,39 @@ export default class OidcController {
     }
 
     if (request.input('intent') === 'link') {
+      if (session.get('__impersonation')) {
+        session.flash('alert', {
+          type: 'danger',
+          message: i18n.t('messages.sensitive_action_blocked_while_impersonating'),
+        })
+        return response.redirect('/profile')
+      }
+
+      if (!this.stepup.isRecent(session)) {
+        session.flash('alert', {
+          type: 'danger',
+          message: i18n.t('messages.sensitive_action_reauth_required'),
+        })
+        return response.redirect('/profile')
+      }
+
       const userId = Number(request.input('userId') ?? 0)
       if (Number.isInteger(userId) && userId > 0) {
         session.put(OidcController.LINK_INTENT_KEY, { userId, provider })
       }
+    }
+
+    if (request.input('intent') === 'reauth') {
+      const currentUser = auth.user
+      if (!currentUser) {
+        return response.redirect('/login')
+      }
+      const returnTo = String(request.input('returnTo') ?? '/profile')
+      session.put(OidcController.REAUTH_INTENT_KEY, {
+        userId: currentUser.id,
+        provider,
+        returnTo,
+      })
     }
 
     return ally.use(provider).redirect()
@@ -126,11 +158,17 @@ export default class OidcController {
         : null
     const inviteIntentInvitation = inviteIntentStatus?.valid ? inviteIntentStatus.invitation : null
     const linkIntent = session.pull(OidcController.LINK_INTENT_KEY, null)
+    const reauthIntent = session.pull(OidcController.REAUTH_INTENT_KEY, null)
     const hasLinkIntent =
       !!linkIntent &&
       typeof linkIntent === 'object' &&
       Number(linkIntent.userId) > 0 &&
       linkIntent.provider === provider
+    const hasReauthIntent =
+      !!reauthIntent &&
+      typeof reauthIntent === 'object' &&
+      Number(reauthIntent.userId) > 0 &&
+      reauthIntent.provider === provider
 
     const externalProvider = ally.use(provider)
 
@@ -179,7 +217,38 @@ export default class OidcController {
       return response.redirect('/login')
     }
 
+    if (hasReauthIntent) {
+      const identityMatch = await this.authIdentity.resolveForLogin({
+        provider,
+        providerUserId,
+        email,
+      })
+      if (
+        identityMatch.kind !== 'matched' ||
+        identityMatch.user.id !== Number(reauthIntent.userId)
+      ) {
+        session.flash('alert', { type: 'danger', message: i18n.t('messages.login_failed') })
+        return response.redirect('/profile')
+      }
+
+      this.stepup.markNow(session)
+      session.flash('alert', { type: 'success', message: i18n.t('messages.reauth_success') })
+      const returnTo =
+        typeof reauthIntent.returnTo === 'string' && reauthIntent.returnTo.length > 0
+          ? reauthIntent.returnTo
+          : '/profile'
+      return response.redirect(returnTo)
+    }
+
     if (hasLinkIntent) {
+      if (session.get('__impersonation')) {
+        session.flash('alert', {
+          type: 'danger',
+          message: i18n.t('messages.sensitive_action_blocked_while_impersonating'),
+        })
+        return response.redirect('/profile')
+      }
+
       const currentUser = auth.user
       if (!currentUser || currentUser.id !== Number(linkIntent.userId)) {
         session.flash('alert', { type: 'danger', message: i18n.t('messages.forbidden') })
