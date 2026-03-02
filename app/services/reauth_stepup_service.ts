@@ -11,8 +11,15 @@ type SessionLike = {
 export default class ReauthStepupService {
   private static readonly SESSION_KEY = '__sensitive_reauth_at'
 
-  private ttlMinutes() {
-    return Math.max(1, env.get('SENSITIVE_ACTION_REAUTH_TTL_MINUTES') ?? 10)
+  ttlMinutes() {
+    return Math.max(0, env.get('SENSITIVE_ACTION_REAUTH_TTL_MINUTES') ?? 10)
+  }
+
+  private getMarkedAt(session: SessionLike) {
+    const raw = session.get(ReauthStepupService.SESSION_KEY)
+    if (typeof raw !== 'string' || raw.length === 0) return null
+    const at = DateTime.fromISO(raw, { zone: 'utc' })
+    return at.isValid ? at : null
   }
 
   markNow(session: SessionLike) {
@@ -20,14 +27,19 @@ export default class ReauthStepupService {
   }
 
   isRecent(session: SessionLike) {
-    const raw = session.get(ReauthStepupService.SESSION_KEY)
-    if (typeof raw !== 'string' || raw.length === 0) return false
-
-    const at = DateTime.fromISO(raw, { zone: 'utc' })
-    if (!at.isValid) return false
+    if (this.ttlMinutes() <= 0) return false
+    const at = this.getMarkedAt(session)
+    if (!at) return false
 
     const maxAge = DateTime.utc().minus({ minutes: this.ttlMinutes() })
     return at >= maxAge
+  }
+
+  recentValidUntilIso(session: SessionLike) {
+    if (!this.isRecent(session)) return null
+    const at = this.getMarkedAt(session)
+    if (!at) return null
+    return at.plus({ minutes: this.ttlMinutes() }).toISO()
   }
 
   async verifyLocalPasswordStepup(user: Pick<User, 'password'>, currentPassword: string | null) {

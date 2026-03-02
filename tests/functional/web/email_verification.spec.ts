@@ -4,6 +4,7 @@ import db from '@adonisjs/lucid/services/db'
 import User from '#models/user'
 import { UserFactory } from '#database/factories/user_factory'
 import IbanChangeService from '#services/iban_change_service'
+import EmailVerificationService from '#services/email_verification_service'
 
 const previousRequired = process.env.AUTH_EMAIL_VERIFICATION_REQUIRED
 const previousProviders = process.env.AUTH_PROVIDERS
@@ -244,5 +245,51 @@ test.group('Web Email Verification', (group) => {
     assert.equal(user.iban, 'CZ6508000000192000145400')
     assert.isNull(user.pendingIban)
     assert.isNotNull(user.ibanVerifiedAt)
+  })
+
+  test('email verification token cannot be consumed by a different logged-in user', async ({
+    client,
+    assert,
+  }) => {
+    const owner = await UserFactory.merge({
+      email: 'owner@example.com',
+      pendingEmail: 'owner.new@example.com',
+      emailVerifiedAt: null,
+    }).create()
+    const other = await UserFactory.merge({ email: 'other@example.com' }).create()
+    const service = new EmailVerificationService()
+    const payload = await service.createToken(owner, owner.pendingEmail!)
+    const token = payload.verificationUrl.split('/').pop()!
+
+    const response = await client.get(`/email/verify/${token}`).loginAs(other).redirects(0)
+    response.assertStatus(302)
+    response.assertHeader('location', '/profile')
+
+    await owner.refresh()
+    assert.equal(owner.email, 'owner@example.com')
+    assert.equal(owner.pendingEmail, 'owner.new@example.com')
+    assert.isNull(owner.emailVerifiedAt)
+  })
+
+  test('IBAN verification token cannot be consumed by a different logged-in user', async ({
+    client,
+    assert,
+  }) => {
+    const owner = await UserFactory.merge({ iban: 'CZ6508000000192000145399' }).create()
+    owner.pendingIban = 'CZ6508000000192000145400'
+    await owner.save()
+    const other = await UserFactory.merge({ email: 'other2@example.com' }).create()
+
+    const payload = await new IbanChangeService().createToken(owner, owner.pendingIban)
+    const token = payload.verificationUrl.split('/').pop()!
+
+    const response = await client.get(`/profile/iban/verify/${token}`).loginAs(other).redirects(0)
+    response.assertStatus(302)
+    response.assertHeader('location', '/profile')
+
+    await owner.refresh()
+    assert.equal(owner.iban, 'CZ6508000000192000145399')
+    assert.equal(owner.pendingIban, 'CZ6508000000192000145400')
+    assert.isNull(owner.ibanVerifiedAt)
   })
 })

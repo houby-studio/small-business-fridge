@@ -117,6 +117,15 @@ export default class EmailVerificationService {
     return { ok: false, reason: 'invalid' }
   }
 
+  async inspectTokenOwner(rawToken: string): Promise<number | null> {
+    const tokenHash = this.tokenHash(rawToken)
+    const token = await EmailVerificationToken.query().where('tokenHash', tokenHash).first()
+    if (!token) return null
+    if (token.usedAt) return null
+    if (token.expiresAt <= DateTime.utc()) return null
+    return token.userId
+  }
+
   async createForCurrentOrPendingEmail(user: User) {
     const targetEmail = (user.pendingEmail ?? user.email ?? '').trim().toLowerCase()
     if (!targetEmail) return null

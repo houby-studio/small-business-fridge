@@ -59,6 +59,8 @@ const props = defineProps<{
   externalProviders: Array<'microsoft' | 'discord'>
   linkedProviders: Array<'microsoft' | 'discord'>
   sensitiveReauthActive: boolean
+  sensitiveReauthValidUntil: string | null
+  sensitiveReauthTtlMinutes: number
   hasLocalPassword: boolean
 }>()
 const { t } = useI18n()
@@ -128,7 +130,11 @@ const resendingIbanVerification = ref(false)
 const reauthenticating = ref(false)
 const reauthDialogVisible = ref(false)
 const reauthPassword = ref('')
-const reauthStepupActive = ref(!!props.sensitiveReauthActive)
+const reauthStepupValidUntilTs = ref<number | null>(
+  props.sensitiveReauthActive && props.sensitiveReauthValidUntil
+    ? Date.parse(props.sensitiveReauthValidUntil)
+    : null
+)
 const pendingSensitiveAction = ref<
   | null
   | { type: 'profile-submit' }
@@ -136,6 +142,11 @@ const pendingSensitiveAction = ref<
   | { type: 'oidc-link'; provider: 'microsoft' | 'discord' }
 >(null)
 const sensitiveDraftStorageKey = 'profile_sensitive_action_draft_v1'
+
+function hasActiveSensitiveStepup() {
+  if (!Number.isFinite(reauthStepupValidUntilTs.value)) return false
+  return Date.now() < Number(reauthStepupValidUntilTs.value)
+}
 
 function providerLabel(provider: 'microsoft' | 'discord'): string {
   return provider === 'microsoft' ? 'Microsoft' : 'Discord'
@@ -267,7 +278,7 @@ function requestSensitiveAction(
   action: NonNullable<typeof pendingSensitiveAction.value>,
   alwaysRequire = true
 ) {
-  if (!alwaysRequire || reauthStepupActive.value) {
+  if (!alwaysRequire || hasActiveSensitiveStepup()) {
     runSensitiveAction(action)
     return
   }
@@ -300,7 +311,21 @@ function submitProfileRequest() {
 }
 
 function linkProviderRequest(provider: 'microsoft' | 'discord') {
-  window.location.assign(`/auth/${provider}/redirect?intent=link&userId=${props.user.id}`)
+  router.post(
+    '/profile/oidc-link',
+    {
+      provider,
+      currentPassword: form.value.currentPassword || null,
+    },
+    {
+      onSuccess: (page) => {
+        const redirectTo = (page.props as any)?.flash?.oidcLinkRedirect
+        if (typeof redirectTo === 'string' && redirectTo.length > 0) {
+          window.location.assign(redirectTo)
+        }
+      },
+    }
+  )
 }
 
 function linkProvider(provider: 'microsoft' | 'discord') {
@@ -358,9 +383,12 @@ function reauthSensitive() {
       onSuccess: (page) => {
         const alert = (page.props as any)?.flash?.alert
         if (alert?.type === 'success') {
-          reauthStepupActive.value = true
+          const ttlMinutes = Math.max(0, Number(props.sensitiveReauthTtlMinutes ?? 0))
+          reauthStepupValidUntilTs.value =
+            ttlMinutes > 0 ? Date.now() + ttlMinutes * 60 * 1000 : null
           reauthDialogVisible.value = false
           form.value.currentPassword = reauthPassword.value
+          passwordForm.value.currentPassword = reauthPassword.value
           const action = pendingSensitiveAction.value
           pendingSensitiveAction.value = null
           if (action) {
@@ -473,7 +501,7 @@ onMounted(() => {
   form.value.keypadDisabled = draft.form.keypadDisabled
   form.value.excludedAllergenIds = [...draft.form.excludedAllergenIds]
 
-  if (reauthStepupActive.value) {
+  if (hasActiveSensitiveStepup()) {
     runSensitiveAction(draft.action)
     return
   }

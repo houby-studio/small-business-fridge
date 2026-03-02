@@ -13,6 +13,14 @@ export default class IbanChangeController {
       return response.redirect('/login')
     }
 
+    if (auth.user) {
+      const ownerId = await this.ibans.inspectTokenOwner(token)
+      if (ownerId && ownerId !== auth.user.id) {
+        session.flash('alert', { type: 'danger', message: i18n.t('messages.forbidden') })
+        return response.redirect('/profile')
+      }
+    }
+
     const result = await this.ibans.consumeToken(token)
     if (!result.ok) {
       session.flash('alert', { type: 'danger', message: i18n.t('messages.iban_change_invalid') })

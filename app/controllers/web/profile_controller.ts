@@ -24,6 +24,7 @@ import IbanChangeService from '#services/iban_change_service'
 import ReauthStepupService from '#services/reauth_stepup_service'
 
 export default class ProfileController {
+  private static readonly LINK_STEPUP_GRANT_KEY = '__oidc_link_stepup_grant'
   private authModes = new AuthModeService()
   private authIdentity = new AuthIdentityService()
   private verifications = new EmailVerificationService()
@@ -114,6 +115,8 @@ export default class ProfileController {
       externalProviders: this.authModes.getEnabledExternalProviders(),
       linkedProviders: user.authIdentities.map((identity) => identity.provider),
       sensitiveReauthActive: this.stepup.isRecent(session),
+      sensitiveReauthValidUntil: this.stepup.recentValidUntilIso(session),
+      sensitiveReauthTtlMinutes: this.stepup.ttlMinutes(),
       hasLocalPassword: !!user.password,
     })
   }
@@ -369,7 +372,16 @@ export default class ProfileController {
       return ctx.response.redirect('/profile')
     }
 
-    return ctx.response.redirect(`/auth/${data.provider}/redirect?intent=link&userId=${user.id}`)
+    ctx.session.put(ProfileController.LINK_STEPUP_GRANT_KEY, {
+      userId: user.id,
+      provider: data.provider,
+      issuedAt: DateTime.utc().toISO(),
+    })
+    ctx.session.flash(
+      'oidcLinkRedirect',
+      `/auth/${data.provider}/redirect?intent=link&userId=${user.id}`
+    )
+    return ctx.response.redirect('/profile')
   }
 
   async toggleColorMode({ request, auth, response }: HttpContext) {

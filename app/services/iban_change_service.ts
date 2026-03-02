@@ -85,4 +85,13 @@ export default class IbanChangeService {
 
     return { ok: true, user }
   }
+
+  async inspectTokenOwner(rawToken: string): Promise<number | null> {
+    const tokenHash = this.tokenHash(rawToken)
+    const token = await IbanChangeToken.query().where('tokenHash', tokenHash).first()
+    if (!token) return null
+    if (token.usedAt) return null
+    if (token.expiresAt <= DateTime.utc()) return null
+    return token.userId
+  }
 }

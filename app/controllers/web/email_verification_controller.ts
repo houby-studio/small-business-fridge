@@ -16,6 +16,14 @@ export default class EmailVerificationController {
       return response.redirect('/login')
     }
 
+    if (auth.user) {
+      const ownerId = await this.verifications.inspectTokenOwner(token)
+      if (ownerId && ownerId !== auth.user.id) {
+        session.flash('alert', { type: 'danger', message: i18n.t('messages.forbidden') })
+        return response.redirect('/profile')
+      }
+    }
+
     const result = await this.verifications.consumeToken(token)
 
     if (!result.ok) {

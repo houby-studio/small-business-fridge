@@ -17,6 +17,7 @@ export default class OidcController {
   private static readonly INVITE_INTENT_TOKEN_KEY = 'oauthInviteIntentToken'
   private static readonly LINK_INTENT_KEY = 'oauthLinkIntent'
   private static readonly REAUTH_INTENT_KEY = 'oauthReauthIntent'
+  private static readonly LINK_STEPUP_GRANT_KEY = '__oidc_link_stepup_grant'
 
   private authIdentity = new AuthIdentityService()
   private registrationPolicy = new RegistrationPolicyService()
@@ -25,6 +26,25 @@ export default class OidcController {
   private externalProfileSync = new ExternalProfileSyncService()
   private verifications = new EmailVerificationService()
   private stepup = new ReauthStepupService()
+
+  private readLinkStepupGrant(session: HttpContext['session']) {
+    const raw = session.pull(OidcController.LINK_STEPUP_GRANT_KEY, null)
+    if (!raw || typeof raw !== 'object') return null
+
+    const grant = raw as { userId?: unknown; provider?: unknown; issuedAt?: unknown }
+    if (typeof grant.userId !== 'number') return null
+    if (grant.provider !== 'microsoft' && grant.provider !== 'discord') return null
+    if (typeof grant.issuedAt !== 'string' || grant.issuedAt.length === 0) return null
+
+    const issuedAt = DateTime.fromISO(grant.issuedAt, { zone: 'utc' })
+    if (!issuedAt.isValid) return null
+
+    return {
+      userId: grant.userId,
+      provider: grant.provider,
+      issuedAt,
+    }
+  }
 
   private resolveProvider(input: unknown): ExternalAuthProvider | null {
     const provider = String(input ?? '')
@@ -112,7 +132,16 @@ export default class OidcController {
         return response.redirect('/profile')
       }
 
-      if (!this.stepup.isRecent(session)) {
+      const currentUser = auth.user
+      const grant = this.readLinkStepupGrant(session)
+      const hasFreshGrant =
+        !!currentUser &&
+        !!grant &&
+        grant.userId === currentUser.id &&
+        grant.provider === provider &&
+        DateTime.utc().diff(grant.issuedAt, 'minutes').minutes <= 5
+
+      if (!hasFreshGrant && !this.stepup.isRecent(session)) {
         session.flash('alert', {
           type: 'danger',
           message: i18n.t('messages.sensitive_action_reauth_required'),
@@ -120,10 +149,12 @@ export default class OidcController {
         return response.redirect('/profile')
       }
 
-      const userId = Number(request.input('userId') ?? 0)
-      if (Number.isInteger(userId) && userId > 0) {
-        session.put(OidcController.LINK_INTENT_KEY, { userId, provider })
+      if (!currentUser) {
+        session.flash('alert', { type: 'danger', message: i18n.t('messages.forbidden') })
+        return response.redirect('/login')
       }
+
+      session.put(OidcController.LINK_INTENT_KEY, { userId: currentUser.id, provider })
     }
 
     if (request.input('intent') === 'reauth') {
