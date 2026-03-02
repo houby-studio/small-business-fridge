@@ -55,9 +55,11 @@ export default class AuthIdentityService {
     provider: ExternalAuthProvider
     providerUserId: string
     providerEmail: string | null
+    providerEmailVerified: boolean
   }): Promise<'linked' | 'already_linked'> {
     const providerUserId = params.providerUserId.trim()
     const providerEmail = params.providerEmail?.trim().toLowerCase() || null
+    const providerEmailVerified = params.providerEmailVerified === true
 
     const conflict = await UserAuthIdentity.query()
       .where('provider', params.provider)
@@ -81,6 +83,9 @@ export default class AuthIdentityService {
       if (existingForUser.providerEmail !== providerEmail) {
         update.providerEmail = providerEmail
       }
+      if (existingForUser.providerEmailVerified !== providerEmailVerified) {
+        update.providerEmailVerified = providerEmailVerified
+      }
       update.lastLoginAt = DateTime.utc()
 
       if (Object.keys(update).length > 0) {
@@ -96,11 +101,22 @@ export default class AuthIdentityService {
       provider: params.provider,
       providerUserId,
       providerEmail,
+      providerEmailVerified,
       lastLoginAt: DateTime.utc(),
     })
 
     await db.from('users').where('id', params.userId).update({ updated_at: DateTime.utc().toSQL() })
 
     return 'linked'
+  }
+
+  async hasTrustedLinkedEmail(userId: number, emailInput: string): Promise<boolean> {
+    const email = emailInput.trim().toLowerCase()
+    const identity = await UserAuthIdentity.query()
+      .where('userId', userId)
+      .whereRaw('LOWER(provider_email) = ?', [email])
+      .where('providerEmailVerified', true)
+      .first()
+    return !!identity
   }
 }

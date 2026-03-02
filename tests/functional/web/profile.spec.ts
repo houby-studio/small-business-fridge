@@ -127,6 +127,10 @@ test.group('Web Profile - update audit details', (group) => {
 
     response.assertStatus(302)
 
+    await user.refresh()
+    assert.equal(user.email, 'alice.old@example.com')
+    assert.equal(user.pendingEmail, 'alice.new@example.com')
+
     const log = await db
       .from('audit_logs')
       .where('action', 'profile.updated')
@@ -137,8 +141,8 @@ test.group('Web Profile - update audit details', (group) => {
 
     const metadata = log.metadata as Record<string, { from: unknown; to: unknown }> | null
     assert.deepEqual(metadata?.displayName, { from: 'Alice Old', to: 'Alice New' })
-    assert.deepEqual(metadata?.email, {
-      from: 'alice.old@example.com',
+    assert.deepEqual(metadata?.pendingEmail, {
+      from: null,
       to: 'alice.new@example.com',
     })
     assert.deepEqual(metadata?.phone, { from: '111', to: '222' })

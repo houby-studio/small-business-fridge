@@ -21,6 +21,8 @@ interface UserData {
   id: number
   displayName: string
   email: string
+  pendingEmail: string | null
+  emailVerifiedAt: string | null
   phone: string | null
   iban: string | null
   keypadId: number
@@ -113,6 +115,9 @@ const canSubmitPassword = computed(
     passwordForm.value.newPasswordConfirmation.length >= 8 &&
     passwordForm.value.newPassword === passwordForm.value.newPasswordConfirmation
 )
+const emailVerified = computed(() => !!props.user.emailVerifiedAt)
+const hasPendingEmail = computed(() => !!props.user.pendingEmail)
+const resendingVerification = ref(false)
 
 function providerLabel(provider: 'microsoft' | 'discord'): string {
   return provider === 'microsoft' ? 'Microsoft' : 'Discord'
@@ -150,6 +155,19 @@ function submit() {
     },
     {
       onFinish: () => (submitting.value = false),
+    }
+  )
+}
+
+function resendEmailVerification() {
+  resendingVerification.value = true
+  router.post(
+    '/profile/email-verification/resend',
+    {},
+    {
+      onFinish: () => {
+        resendingVerification.value = false
+      },
     }
   )
 }
@@ -243,6 +261,23 @@ function copyToken() {
           <p class="mt-1 text-sm text-gray-600 dark:text-zinc-400">
             {{ user.email }}
           </p>
+          <p class="mt-2 text-sm">
+            <span
+              v-if="emailVerified"
+              class="rounded-full bg-emerald-100 px-2 py-1 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200"
+            >
+              {{ t('profile.email_verified') }}
+            </span>
+            <span
+              v-else
+              class="rounded-full bg-amber-100 px-2 py-1 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200"
+            >
+              {{ t('profile.email_unverified') }}
+            </span>
+          </p>
+          <p v-if="hasPendingEmail" class="mt-2 text-xs text-amber-700 dark:text-amber-300">
+            {{ t('profile.pending_email_notice', { email: user.pendingEmail ?? '' }) }}
+          </p>
         </div>
         <div class="flex flex-wrap gap-2">
           <span
@@ -306,6 +341,17 @@ function copyToken() {
                 <small v-if="profileEmailInvalid" class="text-red-500 dark:text-red-300">
                   {{ t('auth.email_invalid') }}
                 </small>
+                <div v-if="!emailVerified || hasPendingEmail" class="mt-2">
+                  <Button
+                    type="button"
+                    size="small"
+                    severity="secondary"
+                    outlined
+                    :label="t('profile.email_resend_verification')"
+                    :loading="resendingVerification"
+                    @click="resendEmailVerification"
+                  />
+                </div>
               </div>
 
               <div>

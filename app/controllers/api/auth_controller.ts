@@ -2,8 +2,10 @@ import type { HttpContext } from '@adonisjs/core/http'
 import User from '#models/user'
 import { apiTokenLoginValidator, apiKeypadLoginValidator } from '#validators/auth'
 import env from '#start/env'
+import EmailVerificationService from '#services/email_verification_service'
 
 export default class AuthController {
+  private verifications = new EmailVerificationService()
   /**
    * @login
    * @summary Kiosk login (keypad/card ID)
@@ -72,6 +74,9 @@ export default class AuthController {
 
       if (user.isDisabled) {
         return response.unauthorized({ error: 'User account is disabled.' })
+      }
+      if (this.verifications.shouldBlockAppAccess(user)) {
+        return response.unauthorized({ error: 'Email address is not verified yet.' })
       }
 
       const token = await User.accessTokens.create(user, ['*'], {

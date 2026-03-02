@@ -69,6 +69,8 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
               id: user.id,
               displayName: user.displayName,
               email: user.email,
+              pendingEmail: user.pendingEmail,
+              emailVerifiedAt: user.emailVerifiedAt?.toISO() ?? null,
               role: user.role,
               isKiosk: user.isKiosk,
               colorMode: user.colorMode,

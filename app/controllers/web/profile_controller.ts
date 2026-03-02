@@ -1,5 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import logger from '@adonisjs/core/services/logger'
 import db from '@adonisjs/lucid/services/db'
+import { DateTime } from 'luxon'
 import {
   updateProfileValidator,
   toggleColorModeValidator,
@@ -11,9 +13,14 @@ import User from '#models/user'
 import Allergen from '#models/allergen'
 import Product from '#models/product'
 import AuthModeService from '#services/auth_mode_service'
+import AuthIdentityService from '#services/auth_identity_service'
+import EmailVerificationService from '#services/email_verification_service'
+import NotificationService from '#services/notification_service'
 
 export default class ProfileController {
   private authModes = new AuthModeService()
+  private authIdentity = new AuthIdentityService()
+  private verifications = new EmailVerificationService()
 
   private async getExcludedAllergenIds(userId: number): Promise<number[]> {
     const rows = await db
@@ -64,6 +71,8 @@ export default class ProfileController {
     const before = {
       displayName: user.displayName,
       email: user.email,
+      pendingEmail: user.pendingEmail,
+      emailVerifiedAt: user.emailVerifiedAt?.toISO() ?? null,
       phone: user.phone,
       iban: user.iban,
       showAllProducts: user.showAllProducts,
@@ -74,8 +83,47 @@ export default class ProfileController {
       excludedAllergenIds: await this.getExcludedAllergenIds(user.id),
     }
 
+    const requestedEmail = data.email.trim().toLowerCase()
+    const currentEmail = user.email.trim().toLowerCase()
+    let emailPendingVerificationPayload: { verificationUrl: string; email: string } | null = null
+    let emailUpdateMessageKey: string | null = null
+
+    if (requestedEmail !== currentEmail) {
+      const existing = await User.query()
+        .whereNot('id', user.id)
+        .whereRaw('LOWER(email) = ?', [requestedEmail])
+        .first()
+      if (existing) {
+        session.flash('alert', {
+          type: 'danger',
+          message: i18n.t('messages.invite_email_already_registered'),
+        })
+        return response.redirect('/profile')
+      }
+
+      const isTrustedLinkedEmail = await this.authIdentity.hasTrustedLinkedEmail(
+        user.id,
+        requestedEmail
+      )
+      if (isTrustedLinkedEmail) {
+        user.email = requestedEmail
+        user.pendingEmail = null
+        user.emailVerifiedAt = DateTime.utc()
+        emailUpdateMessageKey = 'messages.email_changed_via_linked_identity'
+      } else {
+        user.pendingEmail = requestedEmail
+        const verification = await this.verifications.createToken(user, requestedEmail)
+        emailPendingVerificationPayload = {
+          verificationUrl: verification.verificationUrl,
+          email: verification.token.email,
+        }
+        emailUpdateMessageKey = 'messages.email_change_pending_verification'
+      }
+    } else if (user.pendingEmail) {
+      user.pendingEmail = null
+    }
+
     user.displayName = data.displayName
-    user.email = data.email.trim().toLowerCase()
     user.phone = data.phone ?? null
     user.iban = data.iban ?? null
     user.showAllProducts = data.showAllProducts
@@ -84,6 +132,23 @@ export default class ProfileController {
     user.colorMode = data.colorMode
     user.keypadDisabled = data.keypadDisabled
     await user.save()
+
+    if (emailPendingVerificationPayload) {
+      const notifications = new NotificationService()
+      notifications
+        .sendEmailVerificationEmail({
+          email: emailPendingVerificationPayload.email,
+          displayName: user.displayName,
+          verificationUrl: emailPendingVerificationPayload.verificationUrl,
+        })
+        .catch((err) => {
+          logger.error(
+            { err, userId: user.id, email: emailPendingVerificationPayload?.email },
+            'Failed to send profile email verification'
+          )
+        })
+    }
+
     if (data.excludedAllergenIds !== undefined) {
       await this.syncExcludedAllergenIds(user, data.excludedAllergenIds)
     }
@@ -102,6 +167,15 @@ export default class ProfileController {
     ] as const) {
       if (before[key] !== user[key]) {
         changes[key] = { from: before[key], to: user[key] }
+      }
+    }
+    if (before.pendingEmail !== user.pendingEmail) {
+      changes.pendingEmail = { from: before.pendingEmail, to: user.pendingEmail }
+    }
+    if (before.emailVerifiedAt !== (user.emailVerifiedAt?.toISO() ?? null)) {
+      changes.emailVerifiedAt = {
+        from: before.emailVerifiedAt,
+        to: user.emailVerifiedAt?.toISO() ?? null,
       }
     }
 
@@ -129,7 +203,11 @@ export default class ProfileController {
 
     await AuditService.log(user.id, 'profile.updated', 'user', user.id, null, metadata)
 
-    session.flash('alert', { type: 'success', message: i18n.t('messages.profile_updated') })
+    session.flash('alert', {
+      type:
+        emailUpdateMessageKey === 'messages.email_change_pending_verification' ? 'info' : 'success',
+      message: i18n.t(emailUpdateMessageKey ?? 'messages.profile_updated'),
+    })
     return response.redirect('/profile')
   }
 

@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test'
-import { ensureLoginPage, fillLoginForm } from './helpers/auth'
+import pg from 'pg'
+import { ensureLoginPage, fillLoginForm, loginAs } from './helpers/auth'
+
+const { Client } = pg
 
 test.describe('Authentication lifecycle', () => {
   test('guest can register local account', async ({ page }) => {
@@ -75,5 +78,44 @@ test.describe('Authentication lifecycle', () => {
 
     await page.locator('#forgotEmail').fill('valid-user@example.com')
     await expect(submitButton).toBeEnabled()
+  })
+
+  test('profile shows unverified status and resend action when email is not verified', async ({
+    page,
+  }) => {
+    const client = new Client({
+      host: process.env.DB_HOST ?? '127.0.0.1',
+      port: Number(process.env.DB_PORT ?? 5432),
+      user: process.env.DB_USER ?? 'sbf',
+      password: process.env.DB_PASSWORD ?? 'sbf',
+      database: process.env.DB_DATABASE ?? 'sbf_test',
+    })
+
+    await client.connect()
+    await client.query(
+      `UPDATE users
+       SET email_verified_at = NULL,
+           pending_email = 'customer-new@localhost'
+       WHERE email = 'customer@localhost'`
+    )
+
+    try {
+      await loginAs(page, 'customer')
+      await page.goto('/profile')
+
+      await expect(page.getByText('E-mail není ověřen')).toBeVisible()
+      await expect(page.getByText('Čekající změna e-mailu: customer-new@localhost')).toBeVisible()
+      await expect(
+        page.getByRole('button', { name: 'Znovu odeslat ověřovací e-mail' })
+      ).toBeVisible()
+    } finally {
+      await client.query(
+        `UPDATE users
+         SET email_verified_at = NOW(),
+             pending_email = NULL
+         WHERE email = 'customer@localhost'`
+      )
+      await client.end()
+    }
   })
 })

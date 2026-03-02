@@ -407,7 +407,7 @@ export default class NotificationService {
   /**
    * Send welcome email to a newly auto-registered user.
    */
-  async sendWelcomeEmail(user: User) {
+  async sendWelcomeEmail(user: User, options?: { emailVerificationUrl?: string | null }) {
     if (!user.email) return
 
     await mail.send((message) => {
@@ -418,8 +418,28 @@ export default class NotificationService {
           i18n: this.i18n,
           name: user.displayName,
           keypadId: user.keypadId,
+          emailVerificationUrl: options?.emailVerificationUrl ?? null,
           appUrl: this.appUrl,
           appName: this.appName,
+        })
+    })
+  }
+
+  async sendEmailVerificationEmail(params: {
+    email: string
+    displayName: string
+    verificationUrl: string
+  }) {
+    await mail.send((message) => {
+      message
+        .to(params.email)
+        .subject(this.i18n.t('emails.email_verification_subject', { app_name: this.appName }))
+        .htmlView('emails/email_verification', {
+          i18n: this.i18n,
+          appName: this.appName,
+          appUrl: this.appUrl,
+          name: params.displayName,
+          verificationUrl: params.verificationUrl,
         })
     })
   }

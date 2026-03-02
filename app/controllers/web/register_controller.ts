@@ -5,11 +5,13 @@ import AuditService from '#services/audit_service'
 import NotificationService from '#services/notification_service'
 import RegistrationPolicyService from '#services/registration_policy_service'
 import AuthModeService from '#services/auth_mode_service'
+import EmailVerificationService from '#services/email_verification_service'
 import { registerValidator } from '#validators/auth'
 
 export default class RegisterController {
   private registrationPolicy = new RegistrationPolicyService()
   private authModes = new AuthModeService()
+  private verifications = new EmailVerificationService()
 
   async show({ inertia, response }: HttpContext) {
     if (this.authModes.isLocalLoginDisabled()) {
@@ -74,6 +76,8 @@ export default class RegisterController {
       password: data.password,
       keypadId: nextKeypadId,
       role: 'customer',
+      emailVerifiedAt: null,
+      pendingEmail: null,
     })
 
     await auth.use('web').login(user, true)
@@ -89,11 +93,19 @@ export default class RegisterController {
     })
 
     const notificationService = new NotificationService()
-    notificationService.sendWelcomeEmail(user).catch((err) => {
-      logger.error({ err }, `Failed to send welcome email to ${user.email}`)
-    })
+    const verificationPayload = await this.verifications.createToken(user, user.email)
+    notificationService
+      .sendWelcomeEmail(user, { emailVerificationUrl: verificationPayload.verificationUrl })
+      .catch((err) => {
+        logger.error({ err }, `Failed to send welcome email to ${user.email}`)
+      })
 
-    session.flash('alert', { type: 'success', message: i18n.t('messages.registration_success') })
-    return response.redirect('/shop')
+    session.flash('alert', {
+      type: 'success',
+      message: this.verifications.isVerificationRequired()
+        ? i18n.t('messages.email_verification_required')
+        : i18n.t('messages.registration_success'),
+    })
+    return response.redirect(this.verifications.isVerificationRequired() ? '/profile' : '/shop')
   }
 }

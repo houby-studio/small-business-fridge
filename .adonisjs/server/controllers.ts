@@ -27,6 +27,7 @@ export const controllers = {
     },
     Audit: () => import('#controllers/web/audit_controller'),
     Bootstrap: () => import('#controllers/web/bootstrap_controller'),
+    EmailVerification: () => import('#controllers/web/email_verification_controller'),
     Home: () => import('#controllers/web/home_controller'),
     InviteRegistration: () => import('#controllers/web/invite_registration_controller'),
     Invoices: () => import('#controllers/web/invoices_controller'),

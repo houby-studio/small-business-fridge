@@ -60,6 +60,14 @@
   "welcome_intro": "Hi {name}, your account has been automatically created. You can now order products from the fridge.",
   "welcome_keypad_label": "Your keypad code: {keypadId}",
   "welcome_note": "If you have any questions or issues, please contact the system administrator.",
+  "welcome_verify_intro": "Before you start, please verify your email address.",
+  "welcome_verify_action": "Verify email address",
+
+  "email_verification_subject": "Verify your email in {app_name}",
+  "email_verification_heading": "Verify your email for {app_name}",
+  "email_verification_intro": "Hi {name}, confirm your email address by clicking the button below.",
+  "email_verification_action": "Confirm email address",
+  "email_verification_note": "If you did not request this change, you can ignore this message.",
 
   "restock_subject": "Product {productName} is back in stock!",
   "restock_heading": "Favourite Product Back in Stock",

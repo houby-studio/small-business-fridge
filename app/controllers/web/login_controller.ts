@@ -5,10 +5,12 @@ import { loginValidator } from '#validators/auth'
 import AuditService from '#services/audit_service'
 import RegistrationPolicyService from '#services/registration_policy_service'
 import AuthModeService from '#services/auth_mode_service'
+import EmailVerificationService from '#services/email_verification_service'
 
 export default class LoginController {
   private registrationPolicy = new RegistrationPolicyService()
   private authModes = new AuthModeService()
+  private verifications = new EmailVerificationService()
   private async hasAnyAdmin(): Promise<boolean> {
     const admin = await User.query().where('role', 'admin').first()
     return !!admin
@@ -65,6 +67,13 @@ export default class LoginController {
         ip: request.ip(),
         ua: request.header('user-agent') ?? null,
       })
+      if (this.verifications.shouldBlockAppAccess(user)) {
+        session.flash('alert', {
+          type: 'warning',
+          message: i18n.t('messages.email_verification_required'),
+        })
+        return response.redirect('/profile')
+      }
       return response.redirect('/shop')
     } catch {
       logger.warn({ email }, 'Password login failed: invalid credentials')

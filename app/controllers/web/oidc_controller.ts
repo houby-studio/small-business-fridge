@@ -1,5 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import logger from '@adonisjs/core/services/logger'
+import { DateTime } from 'luxon'
 import User from '#models/user'
 import AuditService from '#services/audit_service'
 import NotificationService from '#services/notification_service'
@@ -8,6 +9,7 @@ import InvitationService from '#services/invitation_service'
 import AuthModeService, { type ExternalAuthProvider } from '#services/auth_mode_service'
 import AuthIdentityService from '#services/auth_identity_service'
 import ExternalProfileSyncService from '#services/external_profile_sync_service'
+import EmailVerificationService from '#services/email_verification_service'
 
 export default class OidcController {
   private static readonly BOOTSTRAP_INTENT_KEY = 'oauthBootstrapFirstAdminIntent'
@@ -19,6 +21,7 @@ export default class OidcController {
   private invitations = new InvitationService()
   private authModes = new AuthModeService()
   private externalProfileSync = new ExternalProfileSyncService()
+  private verifications = new EmailVerificationService()
 
   private resolveProvider(input: unknown): ExternalAuthProvider | null {
     const provider = String(input ?? '')
@@ -40,6 +43,7 @@ export default class OidcController {
     email: string | null
     displayName: string | null
     phone: string | null
+    emailVerifiedClaim: boolean | null
   } {
     if (provider === 'microsoft') {
       const email = (
@@ -54,6 +58,7 @@ export default class OidcController {
         email: email || null,
         displayName: (providerUser.displayName as string | null) ?? null,
         phone: (providerUser.mobilePhone as string | null) ?? null,
+        emailVerifiedClaim: null,
       }
     }
 
@@ -66,6 +71,7 @@ export default class OidcController {
         (providerUser.username as string | null) ||
         null,
       phone: null,
+      emailVerifiedClaim: providerUser.verified === true,
     }
   }
 
@@ -162,6 +168,10 @@ export default class OidcController {
     const email = profile.email?.trim().toLowerCase() || null
     const displayName = profile.displayName || (email ? email.split('@')[0] : null)
     const phone = profile.phone ?? null
+    const providerEmailTrusted = this.authModes.isProviderEmailTrusted(
+      provider,
+      profile.emailVerifiedClaim
+    )
 
     if (!providerUserId) {
       logger.warn({ provider }, 'External login denied: provider payload missing identity id')
@@ -182,7 +192,18 @@ export default class OidcController {
           provider,
           providerUserId,
           providerEmail: email,
+          providerEmailVerified: providerEmailTrusted,
         })
+
+        if (
+          providerEmailTrusted &&
+          email &&
+          currentUser.email.toLowerCase() === email &&
+          !currentUser.emailVerifiedAt
+        ) {
+          currentUser.emailVerifiedAt = DateTime.utc()
+          await currentUser.save()
+        }
 
         await AuditService.log(
           currentUser.id,
@@ -321,6 +342,8 @@ export default class OidcController {
           ? 'admin'
           : (invitation?.role ?? (hasAnyAdmin ? 'customer' : 'admin')),
         keypadId: nextKeypadId,
+        emailVerifiedAt: DateTime.utc(),
+        pendingEmail: null,
       })
 
       if (invitation) {
@@ -368,7 +391,18 @@ export default class OidcController {
       provider,
       providerUserId,
       providerEmail: email,
+      providerEmailVerified: providerEmailTrusted,
     })
+
+    if (
+      providerEmailTrusted &&
+      email &&
+      user.email.toLowerCase() === email &&
+      !user.emailVerifiedAt
+    ) {
+      user.emailVerifiedAt = DateTime.utc()
+      await user.save()
+    }
 
     if (user.isDisabled) {
       logger.warn({ provider, providerUserId, email }, 'External login denied: account disabled')
@@ -387,6 +421,13 @@ export default class OidcController {
       ip: request.ip(),
       ua: request.header('user-agent') ?? null,
     })
+    if (this.verifications.shouldBlockAppAccess(user)) {
+      session.flash('alert', {
+        type: 'warning',
+        message: i18n.t('messages.email_verification_required'),
+      })
+      return response.redirect('/profile')
+    }
     return response.redirect('/shop')
   }
 }
