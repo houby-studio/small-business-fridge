@@ -40,3 +40,6 @@ playwright-artifacts/
 swagger.json
 swagger.yml
 .tmp/playwright-e2e.lock
+
+# Playwright MCP
+.playwright-mcp/

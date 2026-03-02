@@ -10,7 +10,7 @@ const allyConfig = defineConfig({
     clientSecret: env.get('AUTH_PROVIDER_MICROSOFT_CLIENT_SECRET', ''),
     callbackUrl: env.get(
       'AUTH_PROVIDER_MICROSOFT_REDIRECT_URI',
-      'http://localhost:3333/auth/microsoft/callback'
+      'http://localhost:3000/auth/microsoft/callback'
     ),
     scopes: ['openid', 'profile', 'email', 'User.Read'],
     tenantId: env.get('AUTH_PROVIDER_MICROSOFT_TENANT_ID', 'common'),
@@ -20,7 +20,7 @@ const allyConfig = defineConfig({
     clientSecret: env.get('AUTH_PROVIDER_DISCORD_CLIENT_SECRET', ''),
     callbackUrl: env.get(
       'AUTH_PROVIDER_DISCORD_REDIRECT_URI',
-      'http://localhost:3333/auth/discord/callback'
+      'http://localhost:3000/auth/discord/callback'
     ),
     scopes: env
       .get('AUTH_PROVIDER_DISCORD_SCOPES', 'identify,email')

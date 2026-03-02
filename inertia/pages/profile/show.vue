@@ -542,24 +542,24 @@ onMounted(() => {
         </h1>
         <div class="flex flex-wrap gap-2">
           <span
-            class="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+            class="rounded-full border border-gray-200 bg-white px-3 py-1 text-sm font-medium text-gray-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
           >
             {{ t('profile.role') }}: {{ user.role }}
           </span>
           <span
-            class="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+            class="rounded-full border border-gray-200 bg-white px-3 py-1 text-sm font-medium text-gray-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
           >
             {{ t('profile.keypad_id') }}: {{ user.keypadId }}
           </span>
           <span
             v-if="user.cardId"
-            class="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+            class="rounded-full border border-gray-200 bg-white px-3 py-1 text-sm font-medium text-gray-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
           >
             {{ t('profile.card_id') }}: {{ user.cardId }}
           </span>
           <span
             v-if="hasActiveSensitiveStepup()"
-            class="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-200"
+            class="rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-200"
           >
             {{ t('profile.sensitive_reauth_active') }}
           </span>
@@ -567,7 +567,7 @@ onMounted(() => {
       </div>
     </section>
 
-    <div class="grid gap-6 xl:grid-cols-12">
+    <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
       <Card class="xl:col-span-12" data-testid="profile-contact-card">
         <template #title>
           <div class="flex items-center gap-2">
@@ -634,25 +634,27 @@ onMounted(() => {
             >
               <div
                 v-if="hasPendingEmail || (!emailVerified && !hasPendingEmail)"
-                class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-600/40 dark:bg-amber-900/20 dark:text-amber-200"
+                class="flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 sm:flex-row sm:items-center sm:justify-between dark:border-amber-600/40 dark:bg-amber-900/20 dark:text-amber-200"
                 data-testid="profile-pending-email"
               >
-                <p v-if="hasPendingEmail" class="font-semibold">
-                  {{ t('profile.email_active') }}: {{ user.email }}
-                </p>
-                <p :class="hasPendingEmail ? 'mt-1' : ''">
-                  {{
-                    hasPendingEmail
-                      ? t('profile.pending_email_notice', { email: user.pendingEmail ?? '' })
-                      : t('profile.email_unverified')
-                  }}
-                </p>
+                <div>
+                  <p v-if="hasPendingEmail" class="font-semibold">
+                    {{ t('profile.email_active') }}: {{ user.email }}
+                  </p>
+                  <p :class="hasPendingEmail ? 'mt-1' : ''">
+                    {{
+                      hasPendingEmail
+                        ? t('profile.pending_email_notice', { email: user.pendingEmail ?? '' })
+                        : t('profile.email_unverified')
+                    }}
+                  </p>
+                </div>
                 <Button
                   type="button"
                   size="small"
                   severity="secondary"
                   outlined
-                  class="mt-2"
+                  class="shrink-0"
                   :label="t('profile.email_resend_verification')"
                   :loading="resendingVerification"
                   @click="resendEmailVerification"
@@ -660,7 +662,7 @@ onMounted(() => {
               </div>
               <div
                 v-if="hasPendingIban"
-                class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-600/40 dark:bg-amber-900/20 dark:text-amber-200"
+                class="flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 sm:flex-row sm:items-center sm:justify-between dark:border-amber-600/40 dark:bg-amber-900/20 dark:text-amber-200"
                 data-testid="profile-pending-iban"
               >
                 <p>{{ t('profile.pending_iban_notice', { iban: user.pendingIban ?? '' }) }}</p>
@@ -669,7 +671,7 @@ onMounted(() => {
                   size="small"
                   severity="secondary"
                   outlined
-                  class="mt-2"
+                  class="shrink-0"
                   :label="t('profile.iban_resend_verification')"
                   :loading="resendingIbanVerification"
                   @click="resendIbanVerification"
@@ -734,35 +736,35 @@ onMounted(() => {
               </div>
             </div>
 
-            <div class="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
-                  t('profile.color_mode')
-                }}</label>
-                <SelectButton
-                  v-model="form.colorMode"
-                  :options="colorModeOptions"
-                  optionLabel="label"
-                  optionValue="value"
-                />
-              </div>
+            <div>
+              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
+                t('profile.color_mode')
+              }}</label>
+              <SelectButton
+                v-model="form.colorMode"
+                :options="colorModeOptions"
+                optionLabel="label"
+                optionValue="value"
+              />
+            </div>
 
-              <div v-if="allergens.length">
-                <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
-                  t('profile.exclude_allergens')
-                }}</label>
-                <MultiSelect
-                  v-model="form.excludedAllergenIds"
-                  :options="allergens"
-                  optionLabel="name"
-                  optionValue="id"
-                  :placeholder="t('shop.allergens_filter_placeholder')"
-                  class="w-full"
-                />
-                <p class="mt-1 text-xs text-gray-500 dark:text-zinc-400">
-                  {{ t('profile.exclude_allergens_hint') }}
-                </p>
-              </div>
+            <div v-if="allergens.length" class="min-w-0">
+              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
+                t('profile.exclude_allergens')
+              }}</label>
+              <MultiSelect
+                v-model="form.excludedAllergenIds"
+                :options="allergens"
+                optionLabel="name"
+                optionValue="id"
+                :placeholder="t('shop.allergens_filter_placeholder')"
+                :maxSelectedLabels="3"
+                :pt="{ label: { class: 'truncate' } }"
+                class="w-full min-w-0"
+              />
+              <p class="mt-1 text-xs text-gray-500 dark:text-zinc-400">
+                {{ t('profile.exclude_allergens_hint') }}
+              </p>
             </div>
           </div>
         </template>
@@ -869,7 +871,16 @@ onMounted(() => {
       </Card>
 
       <Card class="xl:col-span-12" data-testid="profile-api-tokens-card">
-        <template #title>{{ t('profile.tokens_heading') }}</template>
+        <template #title>
+          <div class="flex items-center gap-2">
+            <span
+              class="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-50 text-sky-600 dark:bg-sky-500/10 dark:text-sky-300"
+            >
+              <i class="pi pi-key text-sm" />
+            </span>
+            <span>{{ t('profile.tokens_heading') }}</span>
+          </div>
+        </template>
         <template #content>
           <div class="flex flex-col gap-6">
             <DataTable :value="tokens" stripedRows class="rounded-lg border">
@@ -935,40 +946,39 @@ onMounted(() => {
 
             <div class="border-t border-gray-200 pt-4 dark:border-zinc-700">
               <h3
-                class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-zinc-300"
+                class="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-zinc-300"
               >
                 {{ t('profile.tokens_create') }}
               </h3>
-            </div>
-
-            <div class="grid grid-cols-1 items-end gap-2 lg:grid-cols-12">
-              <div class="min-w-0 lg:col-span-6">
-                <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">
-                  {{ t('profile.tokens_new_name') }}
-                </label>
-                <InputText v-model="newTokenName" fluid />
-              </div>
-              <div class="min-w-0 lg:col-span-3">
-                <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">
-                  {{ t('profile.tokens_new_expires') }}
-                </label>
-                <InputNumber
-                  v-model="newTokenExpiresDays"
-                  fluid
-                  :min="1"
-                  :max="3650"
-                  :placeholder="t('profile.tokens_never_expires')"
-                />
-              </div>
-              <div class="lg:col-span-3 lg:flex lg:justify-end">
-                <Button
-                  :label="t('profile.tokens_create')"
-                  fluid
-                  icon="pi pi-plus"
-                  :loading="creatingToken"
-                  :disabled="!newTokenName.trim()"
-                  @click="createToken"
-                />
+              <div class="grid grid-cols-1 items-end gap-2 lg:grid-cols-12">
+                <div class="min-w-0 lg:col-span-6">
+                  <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                    {{ t('profile.tokens_new_name') }}
+                  </label>
+                  <InputText v-model="newTokenName" fluid />
+                </div>
+                <div class="min-w-0 lg:col-span-3">
+                  <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                    {{ t('profile.tokens_new_expires') }}
+                  </label>
+                  <InputNumber
+                    v-model="newTokenExpiresDays"
+                    fluid
+                    :min="1"
+                    :max="3650"
+                    :placeholder="t('profile.tokens_never_expires')"
+                  />
+                </div>
+                <div class="lg:col-span-3 lg:flex lg:justify-end">
+                  <Button
+                    :label="t('profile.tokens_create')"
+                    fluid
+                    icon="pi pi-plus"
+                    :loading="creatingToken"
+                    :disabled="!newTokenName.trim()"
+                    @click="createToken"
+                  />
+                </div>
               </div>
             </div>
           </div>

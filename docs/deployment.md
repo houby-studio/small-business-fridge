@@ -110,7 +110,7 @@ cp .env.example .env
 npm install
 node ace migration:run
 node ace db:seed          # optional — creates dev users
-npm run dev               # starts on http://localhost:3333
+npm run dev               # starts on http://localhost:3000
 ```
 
 ---
