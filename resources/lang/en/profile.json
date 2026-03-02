@@ -9,8 +9,8 @@
   "email_verified": "Email verified",
   "email_unverified": "Email not verified",
   "email_resend_verification": "Resend verification email",
-  "pending_email_notice": "Pending email change: {email}. Confirm this address from your inbox to finish the change.",
-  "pending_iban_notice": "Pending IBAN change: {iban}. Confirm this value from your inbox to finish the change.",
+  "pending_email_notice": "Pending email change: {email}",
+  "pending_iban_notice": "Pending IBAN change: {iban}",
   "iban_resend_verification": "Resend IBAN confirmation email",
   "sensitive_reauth_heading": "Sensitive Actions Re-Authentication",
   "sensitive_reauth_hint": "Required for changing email, IBAN, password, or linking providers.",
@@ -53,5 +53,10 @@
   "password_current": "Current password (optional for first setup)",
   "password_new": "New password",
   "password_new_confirm": "Confirm new password",
-  "password_submit": "Change password"
+  "password_submit": "Change password",
+  "profile_intro": "Manage personal data, security, and app preferences from one place.",
+  "sensitive_reauth_active": "Sensitive access active",
+  "security_heading": "Security & Sign-in",
+  "linked_accounts_heading": "Connected Providers",
+  "email_active": "Active email"
 }

@@ -535,72 +535,40 @@ onMounted(() => {
   <AppLayout>
     <Head :title="t('profile.title')" />
 
-    <section
-      class="mb-6 rounded-2xl border border-gray-200/80 bg-white/80 p-5 shadow-sm backdrop-blur-sm dark:border-zinc-700/70 dark:bg-zinc-900/80"
-    >
+    <section class="mb-6" data-testid="profile-overview">
       <div class="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-zinc-100">
-            {{ t('profile.heading') }}
-          </h1>
-          <p class="mt-1 text-sm text-gray-600 dark:text-zinc-400">
-            {{ user.email }}
-          </p>
-          <p class="mt-2 text-sm">
-            <span
-              v-if="emailVerified"
-              class="rounded-full bg-emerald-100 px-2 py-1 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200"
-            >
-              {{ t('profile.email_verified') }}
-            </span>
-            <span
-              v-else
-              class="rounded-full bg-amber-100 px-2 py-1 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200"
-            >
-              {{ t('profile.email_unverified') }}
-            </span>
-          </p>
-          <p v-if="hasPendingEmail" class="mt-2 text-xs text-amber-700 dark:text-amber-300">
-            {{ t('profile.pending_email_notice', { email: user.pendingEmail ?? '' }) }}
-          </p>
-          <p v-if="hasPendingIban" class="mt-1 text-xs text-amber-700 dark:text-amber-300">
-            {{ t('profile.pending_iban_notice', { iban: user.pendingIban ?? '' }) }}
-          </p>
-        </div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-zinc-100">
+          {{ t('profile.heading') }}
+        </h1>
         <div class="flex flex-wrap gap-2">
           <span
-            class="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+            class="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+          >
+            {{ t('profile.role') }}: {{ user.role }}
+          </span>
+          <span
+            class="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
           >
             {{ t('profile.keypad_id') }}: {{ user.keypadId }}
           </span>
           <span
-            class="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+            v-if="user.cardId"
+            class="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
           >
-            {{ t('profile.role') }}: {{ user.role }}
+            {{ t('profile.card_id') }}: {{ user.cardId }}
+          </span>
+          <span
+            v-if="hasActiveSensitiveStepup()"
+            class="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-200"
+          >
+            {{ t('profile.sensitive_reauth_active') }}
           </span>
         </div>
-      </div>
-      <div v-if="props.externalProviders.length > 0" class="mt-4 flex flex-wrap gap-2">
-        <Button
-          v-for="provider in props.externalProviders"
-          :key="provider"
-          size="small"
-          severity="secondary"
-          outlined
-          :disabled="isLinked(provider)"
-          :icon="providerIcon(provider)"
-          :label="
-            isLinked(provider)
-              ? t('auth.provider_linked', { provider: providerLabel(provider) })
-              : t('auth.link_provider', { provider: providerLabel(provider) })
-          "
-          @click="linkProvider(provider)"
-        />
       </div>
     </section>
 
     <div class="grid gap-6 xl:grid-cols-12">
-      <Card class="xl:col-span-7">
+      <Card class="xl:col-span-12" data-testid="profile-contact-card">
         <template #title>
           <div class="flex items-center gap-2">
             <span
@@ -622,24 +590,27 @@ onMounted(() => {
               </div>
 
               <div>
-                <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
-                  t('profile.email')
-                }}</label>
+                <div class="mb-1 flex items-center justify-between gap-2">
+                  <label class="block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
+                    t('profile.email')
+                  }}</label>
+                  <span
+                    class="rounded-full px-2 py-0.5 text-[11px] font-medium"
+                    :class="
+                      emailVerified
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200'
+                        : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200'
+                    "
+                  >
+                    {{
+                      emailVerified ? t('profile.email_verified') : t('profile.email_unverified')
+                    }}
+                  </span>
+                </div>
                 <InputText v-model="form.email" type="email" class="w-full" />
                 <small v-if="profileEmailInvalid" class="text-red-500 dark:text-red-300">
                   {{ t('auth.email_invalid') }}
                 </small>
-                <div v-if="!emailVerified || hasPendingEmail" class="mt-2">
-                  <Button
-                    type="button"
-                    size="small"
-                    severity="secondary"
-                    outlined
-                    :label="t('profile.email_resend_verification')"
-                    :loading="resendingVerification"
-                    @click="resendEmailVerification"
-                  />
-                </div>
               </div>
 
               <div>
@@ -654,56 +625,112 @@ onMounted(() => {
                   t('profile.iban')
                 }}</label>
                 <InputText v-model="form.iban" class="w-full" maxlength="24" />
-                <div v-if="hasPendingIban" class="mt-2">
-                  <Button
-                    type="button"
-                    size="small"
-                    severity="secondary"
-                    outlined
-                    :label="t('profile.iban_resend_verification')"
-                    :loading="resendingIbanVerification"
-                    @click="resendIbanVerification"
-                  />
-                </div>
               </div>
             </div>
 
             <div
-              class="rounded-xl border border-gray-200 bg-gray-50/70 p-4 dark:border-zinc-700 dark:bg-zinc-800/40"
+              class="grid gap-2"
+              v-if="hasPendingEmail || hasPendingIban || (!emailVerified && !hasPendingEmail)"
             >
-              <h3
-                class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-zinc-300"
+              <div
+                v-if="hasPendingEmail || (!emailVerified && !hasPendingEmail)"
+                class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-600/40 dark:bg-amber-900/20 dark:text-amber-200"
+                data-testid="profile-pending-email"
               >
-                {{ t('profile.preferences') }}
-              </h3>
-              <div class="grid gap-3">
-                <div class="flex items-center justify-between">
-                  <label class="text-sm text-gray-700 dark:text-zinc-300">{{
-                    t('profile.show_all_products')
-                  }}</label>
-                  <ToggleSwitch v-model="form.showAllProducts" />
-                </div>
+                <p v-if="hasPendingEmail" class="font-semibold">
+                  {{ t('profile.email_active') }}: {{ user.email }}
+                </p>
+                <p :class="hasPendingEmail ? 'mt-1' : ''">
+                  {{
+                    hasPendingEmail
+                      ? t('profile.pending_email_notice', { email: user.pendingEmail ?? '' })
+                      : t('profile.email_unverified')
+                  }}
+                </p>
+                <Button
+                  type="button"
+                  size="small"
+                  severity="secondary"
+                  outlined
+                  class="mt-2"
+                  :label="t('profile.email_resend_verification')"
+                  :loading="resendingVerification"
+                  @click="resendEmailVerification"
+                />
+              </div>
+              <div
+                v-if="hasPendingIban"
+                class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-600/40 dark:bg-amber-900/20 dark:text-amber-200"
+                data-testid="profile-pending-iban"
+              >
+                <p>{{ t('profile.pending_iban_notice', { iban: user.pendingIban ?? '' }) }}</p>
+                <Button
+                  type="button"
+                  size="small"
+                  severity="secondary"
+                  outlined
+                  class="mt-2"
+                  :label="t('profile.iban_resend_verification')"
+                  :loading="resendingIbanVerification"
+                  @click="resendIbanVerification"
+                />
+              </div>
+            </div>
 
-                <div class="flex items-center justify-between">
-                  <label class="text-sm text-gray-700 dark:text-zinc-300">{{
-                    t('profile.send_mail_on_purchase')
-                  }}</label>
-                  <ToggleSwitch v-model="form.sendMailOnPurchase" />
-                </div>
+            <div class="pt-1">
+              <Button
+                type="submit"
+                :label="t('profile.save')"
+                icon="pi pi-check"
+                :loading="submitting"
+                :disabled="!canSubmitProfile"
+                data-testid="profile-save-button"
+              />
+            </div>
+          </form>
+        </template>
+      </Card>
 
-                <div class="flex items-center justify-between">
-                  <label class="text-sm text-gray-700 dark:text-zinc-300">{{
-                    t('profile.send_daily_report')
-                  }}</label>
-                  <ToggleSwitch v-model="form.sendDailyReport" />
-                </div>
+      <Card class="xl:col-span-6" data-testid="profile-preferences-card">
+        <template #title>
+          <div class="flex items-center gap-2">
+            <span
+              class="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-300"
+            >
+              <i class="pi pi-sliders-h text-sm" />
+            </span>
+            <span>{{ t('profile.preferences') }}</span>
+          </div>
+        </template>
+        <template #content>
+          <div class="grid gap-5">
+            <div class="grid gap-3">
+              <div class="flex items-center justify-between">
+                <label class="text-sm text-gray-700 dark:text-zinc-300">{{
+                  t('profile.show_all_products')
+                }}</label>
+                <ToggleSwitch v-model="form.showAllProducts" />
+              </div>
 
-                <div class="flex items-center justify-between">
-                  <label class="text-sm text-gray-700 dark:text-zinc-300">{{
-                    t('profile.keypad_disabled')
-                  }}</label>
-                  <ToggleSwitch v-model="form.keypadDisabled" />
-                </div>
+              <div class="flex items-center justify-between">
+                <label class="text-sm text-gray-700 dark:text-zinc-300">{{
+                  t('profile.send_mail_on_purchase')
+                }}</label>
+                <ToggleSwitch v-model="form.sendMailOnPurchase" />
+              </div>
+
+              <div class="flex items-center justify-between">
+                <label class="text-sm text-gray-700 dark:text-zinc-300">{{
+                  t('profile.send_daily_report')
+                }}</label>
+                <ToggleSwitch v-model="form.sendDailyReport" />
+              </div>
+
+              <div class="flex items-center justify-between">
+                <label class="text-sm text-gray-700 dark:text-zinc-300">{{
+                  t('profile.keypad_disabled')
+                }}</label>
+                <ToggleSwitch v-model="form.keypadDisabled" />
               </div>
             </div>
 
@@ -737,156 +764,114 @@ onMounted(() => {
                 </p>
               </div>
             </div>
+          </div>
+        </template>
+      </Card>
 
-            <div class="pt-1">
+      <Card class="xl:col-span-6" data-testid="profile-security-card">
+        <template #title>
+          <div class="flex items-center gap-2">
+            <span
+              class="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
+            >
+              <i class="pi pi-shield text-sm" />
+            </span>
+            <span>{{ t('profile.security_heading') }}</span>
+          </div>
+        </template>
+        <template #content>
+          <div v-if="props.externalProviders.length > 0" class="mb-5">
+            <h3
+              class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-zinc-400"
+            >
+              {{ t('profile.linked_accounts_heading') }}
+            </h3>
+            <div class="flex flex-wrap gap-2">
               <Button
-                type="submit"
-                :label="t('profile.save')"
-                icon="pi pi-check"
-                :loading="submitting"
-                :disabled="!canSubmitProfile"
+                v-for="provider in props.externalProviders"
+                :key="provider"
+                size="small"
+                severity="secondary"
+                outlined
+                :disabled="isLinked(provider)"
+                :icon="providerIcon(provider)"
+                :label="
+                  isLinked(provider)
+                    ? t('auth.provider_linked', { provider: providerLabel(provider) })
+                    : t('auth.link_provider', { provider: providerLabel(provider) })
+                "
+                @click="linkProvider(provider)"
               />
             </div>
+          </div>
+
+          <form
+            v-if="props.localAuthEnabled"
+            @submit.prevent="changePassword"
+            class="flex flex-col gap-4"
+          >
+            <h3
+              class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-zinc-400"
+            >
+              {{ t('profile.password_heading') }}
+            </h3>
+            <div>
+              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                {{ t('profile.password_new') }}
+              </label>
+              <Password
+                inputId="profileNewPassword"
+                v-model="passwordForm.newPassword"
+                :feedback="false"
+                toggleMask
+                autocomplete="new-password"
+                inputClass="w-full"
+                class="w-full"
+              />
+              <small v-if="newPasswordTooShort" class="text-red-500 dark:text-red-300">
+                {{ t('auth.password_min_length') }}
+              </small>
+            </div>
+
+            <div>
+              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                {{ t('profile.password_new_confirm') }}
+              </label>
+              <Password
+                inputId="profileNewPasswordConfirmation"
+                v-model="passwordForm.newPasswordConfirmation"
+                :feedback="false"
+                toggleMask
+                autocomplete="new-password"
+                inputClass="w-full"
+                class="w-full"
+              />
+              <small
+                v-if="newPasswordConfirmationTooShort"
+                class="block text-red-500 dark:text-red-300"
+              >
+                {{ t('auth.password_min_length') }}
+              </small>
+              <small v-if="newPasswordsMismatch" class="block text-red-500 dark:text-red-300">
+                {{ t('auth.bootstrap_password_mismatch') }}
+              </small>
+            </div>
+
+            <Button
+              type="submit"
+              :label="t('profile.password_submit')"
+              icon="pi pi-key"
+              :loading="changingPassword"
+              :disabled="!canSubmitPassword"
+            />
           </form>
         </template>
       </Card>
 
-      <div class="space-y-6 xl:col-span-5">
-        <Card>
-          <template #title>
-            <div class="flex items-center gap-2">
-              <span
-                class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-300"
-              >
-                <i class="pi pi-id-card text-sm" />
-              </span>
-              <span>{{ t('profile.account_info') }}</span>
-            </div>
-          </template>
-          <template #content>
-            <div class="grid grid-cols-2 gap-3">
-              <div
-                class="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-zinc-700 dark:bg-zinc-800/60"
-              >
-                <span
-                  class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-zinc-400"
-                  >{{ t('profile.keypad_id') }}</span
-                >
-                <p class="mt-1 text-base font-semibold text-gray-900 dark:text-zinc-100">
-                  {{ user.keypadId }}
-                </p>
-              </div>
-              <div
-                class="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-zinc-700 dark:bg-zinc-800/60"
-              >
-                <span
-                  class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-zinc-400"
-                  >{{ t('profile.card_id') }}</span
-                >
-                <p class="mt-1 text-base font-semibold text-gray-900 dark:text-zinc-100">
-                  {{ user.cardId ?? '—' }}
-                </p>
-              </div>
-              <div
-                class="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-zinc-700 dark:bg-zinc-800/60"
-              >
-                <span
-                  class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-zinc-400"
-                  >{{ t('profile.role') }}</span
-                >
-                <p class="mt-1 text-base font-semibold capitalize text-gray-900 dark:text-zinc-100">
-                  {{ user.role }}
-                </p>
-              </div>
-              <div
-                class="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-zinc-700 dark:bg-zinc-800/60"
-              >
-                <span
-                  class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-zinc-400"
-                  >{{ t('profile.created_at') }}</span
-                >
-                <p class="mt-1 text-base font-semibold text-gray-900 dark:text-zinc-100">
-                  {{ formatDate(user.createdAt) }}
-                </p>
-              </div>
-            </div>
-          </template>
-        </Card>
-
-        <Card v-if="props.localAuthEnabled">
-          <template #title>
-            <div class="flex items-center gap-2">
-              <span
-                class="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
-              >
-                <i class="pi pi-key text-sm" />
-              </span>
-              <span>{{ t('profile.password_heading') }}</span>
-            </div>
-          </template>
-          <template #content>
-            <form @submit.prevent="changePassword" class="flex flex-col gap-4">
-              <div>
-                <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">
-                  {{ t('profile.password_new') }}
-                </label>
-                <Password
-                  inputId="profileNewPassword"
-                  v-model="passwordForm.newPassword"
-                  :feedback="false"
-                  toggleMask
-                  autocomplete="new-password"
-                  inputClass="w-full"
-                  class="w-full"
-                />
-                <small v-if="newPasswordTooShort" class="text-red-500 dark:text-red-300">
-                  {{ t('auth.password_min_length') }}
-                </small>
-              </div>
-
-              <div>
-                <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">
-                  {{ t('profile.password_new_confirm') }}
-                </label>
-                <Password
-                  inputId="profileNewPasswordConfirmation"
-                  v-model="passwordForm.newPasswordConfirmation"
-                  :feedback="false"
-                  toggleMask
-                  autocomplete="new-password"
-                  inputClass="w-full"
-                  class="w-full"
-                />
-                <small
-                  v-if="newPasswordConfirmationTooShort"
-                  class="block text-red-500 dark:text-red-300"
-                >
-                  {{ t('auth.password_min_length') }}
-                </small>
-                <small v-if="newPasswordsMismatch" class="block text-red-500 dark:text-red-300">
-                  {{ t('auth.bootstrap_password_mismatch') }}
-                </small>
-              </div>
-
-              <div>
-                <Button
-                  type="submit"
-                  :label="t('profile.password_submit')"
-                  icon="pi pi-key"
-                  :loading="changingPassword"
-                  :disabled="!canSubmitPassword"
-                />
-              </div>
-            </form>
-          </template>
-        </Card>
-      </div>
-
-      <Card class="xl:col-span-12">
+      <Card class="xl:col-span-12" data-testid="profile-api-tokens-card">
         <template #title>{{ t('profile.tokens_heading') }}</template>
         <template #content>
           <div class="flex flex-col gap-6">
-            <!-- Existing tokens -->
             <DataTable :value="tokens" stripedRows class="rounded-lg border">
               <Column :header="t('profile.tokens_name')">
                 <template #body="{ data }">{{ data.name }}</template>
@@ -991,7 +976,6 @@ onMounted(() => {
       </Card>
     </div>
 
-    <!-- On-demand re-auth dialog for sensitive actions -->
     <Dialog
       v-model:visible="reauthDialogVisible"
       :header="t('profile.sensitive_reauth_heading')"
@@ -1000,9 +984,6 @@ onMounted(() => {
       style="width: 560px; max-width: calc(100vw - 2rem)"
       @hide="closeReauthDialog"
     >
-      <p class="mb-4 text-sm text-gray-600 dark:text-zinc-400">
-        {{ t('profile.sensitive_reauth_hint') }}
-      </p>
       <div class="flex flex-col gap-4">
         <div v-if="hasLocalPassword">
           <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">
@@ -1026,14 +1007,14 @@ onMounted(() => {
           :loading="reauthenticating"
           @click="reauthSensitive"
         />
-        <div v-if="linkedProviders.length > 0" class="flex flex-wrap gap-2">
+        <div v-if="linkedProviders.length > 0" class="grid gap-2">
           <Button
             v-for="provider in linkedProviders"
             :key="`reauth-dialog-${provider}`"
             type="button"
-            size="small"
             severity="secondary"
             outlined
+            class="w-full"
             :icon="providerIcon(provider)"
             :label="providerLabel(provider)"
             @click="startOidcReauth(provider)"
@@ -1051,7 +1032,6 @@ onMounted(() => {
       </template>
     </Dialog>
 
-    <!-- Show-once new token dialog -->
     <Dialog
       v-model:visible="showNewTokenDialog"
       :header="t('profile.tokens_new_value_heading')"

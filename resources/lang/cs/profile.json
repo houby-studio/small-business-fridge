@@ -9,8 +9,8 @@
   "email_verified": "E-mail ověřen",
   "email_unverified": "E-mail není ověřen",
   "email_resend_verification": "Znovu odeslat ověřovací e-mail",
-  "pending_email_notice": "Čekající změna e-mailu: {email}. Dokončete změnu potvrzením odkazu z e-mailu.",
-  "pending_iban_notice": "Čekající změna IBAN: {iban}. Dokončete změnu potvrzením odkazu z e-mailu.",
+  "pending_email_notice": "Čekající změna e-mailu: {email}",
+  "pending_iban_notice": "Čekající změna IBAN: {iban}",
   "iban_resend_verification": "Znovu odeslat potvrzení IBAN",
   "sensitive_reauth_heading": "Opětovné ověření pro citlivé akce",
   "sensitive_reauth_hint": "Vyžadováno pro změnu e-mailu, IBAN, hesla nebo propojení poskytovatele.",
@@ -53,5 +53,10 @@
   "password_current": "Aktuální heslo (volitelné při prvním nastavení)",
   "password_new": "Nové heslo",
   "password_new_confirm": "Potvrzení nového hesla",
-  "password_submit": "Změnit heslo"
+  "password_submit": "Změnit heslo",
+  "profile_intro": "Spravujte osobní údaje, zabezpečení a předvolby aplikace na jednom místě.",
+  "sensitive_reauth_active": "Citlivý přístup aktivní",
+  "security_heading": "Zabezpečení a přihlášení",
+  "linked_accounts_heading": "Propojené účty",
+  "email_active": "Aktivní e-mail"
 }

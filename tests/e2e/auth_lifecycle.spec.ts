@@ -103,8 +103,20 @@ test.describe('Authentication lifecycle', () => {
       await loginAs(page, 'customer')
       await page.goto('/profile')
 
-      await expect(page.getByText('E-mail není ověřen')).toBeVisible()
-      await expect(page.getByText('Čekající změna e-mailu: customer-new@localhost')).toBeVisible()
+      await expect(page.getByTestId('profile-overview')).toBeVisible()
+      await expect(page.getByTestId('profile-contact-card')).toBeVisible()
+      await expect(page.getByTestId('profile-preferences-card')).toBeVisible()
+      await expect(page.getByTestId('profile-security-card')).toBeVisible()
+      await expect(page.getByTestId('profile-api-tokens-card')).toBeVisible()
+
+      await expect(
+        page.getByTestId('profile-contact-card').getByText('E-mail není ověřen')
+      ).toBeVisible()
+      await expect(page.getByTestId('profile-pending-email')).toContainText(
+        'customer-new@localhost'
+      )
+      await expect(page.getByTestId('profile-pending-email')).toContainText('Aktivní e-mail')
+      await expect(page.getByTestId('profile-pending-email')).toContainText('customer@localhost')
       await expect(
         page.getByRole('button', { name: 'Znovu odeslat ověřovací e-mail' })
       ).toBeVisible()
