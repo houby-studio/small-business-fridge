@@ -1,0 +1,249 @@
+import { mkdir, writeFile } from 'node:fs/promises'
+import { resolve } from 'node:path'
+
+type DtmfSpec = {
+  key: string
+  lowHz: number
+  highHz: number
+}
+
+type CliOptions = {
+  outDir: string
+  durationMs: number
+  sampleRate: number
+  fadeMs: number
+  amplitude: number
+}
+
+const DEFAULT_OPTIONS: CliOptions = {
+  outDir: 'storage/uploads/keypad',
+  durationMs: 180,
+  sampleRate: 8000,
+  fadeMs: 8,
+  amplitude: 0.45,
+}
+
+const DTMF_SPECS: DtmfSpec[] = [
+  { key: '1', lowHz: 697, highHz: 1209 },
+  { key: '2', lowHz: 697, highHz: 1336 },
+  { key: '3', lowHz: 697, highHz: 1477 },
+  { key: '4', lowHz: 770, highHz: 1209 },
+  { key: '5', lowHz: 770, highHz: 1336 },
+  { key: '6', lowHz: 770, highHz: 1477 },
+  { key: '7', lowHz: 852, highHz: 1209 },
+  { key: '8', lowHz: 852, highHz: 1336 },
+  { key: '9', lowHz: 852, highHz: 1477 },
+  { key: '*', lowHz: 941, highHz: 1209 },
+  { key: '0', lowHz: 941, highHz: 1336 },
+  { key: '#', lowHz: 941, highHz: 1477 },
+]
+
+function parsePositiveNumber(input: string, optionName: string): number {
+  const value = Number(input)
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new Error(`${optionName} must be a positive number. Received: ${input}`)
+  }
+  return value
+}
+
+function parseArgs(argv: string[]): CliOptions {
+  const options: CliOptions = { ...DEFAULT_OPTIONS }
+
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i]
+    const next = argv[i + 1]
+
+    if (!arg.startsWith('--')) {
+      throw new Error(`Unknown argument: ${arg}`)
+    }
+
+    if (!next) {
+      throw new Error(`Missing value for ${arg}`)
+    }
+
+    switch (arg) {
+      case '--out':
+        options.outDir = next
+        i++
+        break
+      case '--duration-ms':
+        options.durationMs = parsePositiveNumber(next, '--duration-ms')
+        i++
+        break
+      case '--sample-rate':
+        options.sampleRate = parsePositiveNumber(next, '--sample-rate')
+        i++
+        break
+      case '--fade-ms':
+        options.fadeMs = parsePositiveNumber(next, '--fade-ms')
+        i++
+        break
+      case '--amplitude': {
+        const amplitude = parsePositiveNumber(next, '--amplitude')
+        if (amplitude > 1) {
+          throw new Error('--amplitude must be <= 1')
+        }
+        options.amplitude = amplitude
+        i++
+        break
+      }
+      default:
+        throw new Error(`Unknown option: ${arg}`)
+    }
+  }
+
+  return options
+}
+
+function toFileName(key: string): string {
+  if (key === '*') return 'star'
+  if (key === '#') return 'hash'
+  return key
+}
+
+function clampSample(sample: number): number {
+  if (sample > 1) return 1
+  if (sample < -1) return -1
+  return sample
+}
+
+function toPublicUrlPath(outDir: string, fileName: string): string {
+  const normalizedOutDir = outDir.replace(/\\/g, '/').replace(/^\/+/, '').replace(/\/+$/, '')
+
+  if (normalizedOutDir === 'storage/uploads') {
+    return `/uploads/${fileName}`
+  }
+
+  if (normalizedOutDir.startsWith('storage/uploads/')) {
+    return `/uploads/${normalizedOutDir.slice('storage/uploads/'.length)}/${fileName}`
+  }
+
+  if (normalizedOutDir.startsWith('storage/')) {
+    return `/${normalizedOutDir.slice('storage/'.length)}/${fileName}`
+  }
+
+  return `/${normalizedOutDir}/${fileName}`
+}
+
+function buildDtmfPcm(spec: DtmfSpec, options: CliOptions): Int16Array {
+  const totalSamples = Math.max(1, Math.round((options.sampleRate * options.durationMs) / 1000))
+  const fadeSamples = Math.max(
+    0,
+    Math.min(Math.round((options.sampleRate * options.fadeMs) / 1000), Math.floor(totalSamples / 2))
+  )
+
+  const pcm = new Int16Array(totalSamples)
+
+  for (let i = 0; i < totalSamples; i++) {
+    const t = i / options.sampleRate
+    const low = Math.sin(2 * Math.PI * spec.lowHz * t)
+    const high = Math.sin(2 * Math.PI * spec.highHz * t)
+
+    let envelope = 1
+    if (fadeSamples > 0) {
+      if (i < fadeSamples) {
+        envelope = i / fadeSamples
+      } else if (i >= totalSamples - fadeSamples) {
+        envelope = (totalSamples - 1 - i) / fadeSamples
+      }
+    }
+
+    const mixed = (low + high) * 0.5 * options.amplitude * envelope
+    const sample = clampSample(mixed)
+    pcm[i] = Math.round(sample * 32767)
+  }
+
+  return pcm
+}
+
+function pcmToWavBytes(pcm: Int16Array, sampleRate: number): Buffer {
+  const channelCount = 1
+  const bitsPerSample = 16
+  const blockAlign = (channelCount * bitsPerSample) / 8
+  const byteRate = sampleRate * blockAlign
+  const dataSize = pcm.length * blockAlign
+  const chunkSize = 36 + dataSize
+
+  const buffer = Buffer.allocUnsafe(44 + dataSize)
+  let offset = 0
+
+  offset += buffer.write('RIFF', offset)
+  buffer.writeUInt32LE(chunkSize, offset)
+  offset += 4
+  offset += buffer.write('WAVE', offset)
+
+  offset += buffer.write('fmt ', offset)
+  buffer.writeUInt32LE(16, offset)
+  offset += 4
+  buffer.writeUInt16LE(1, offset)
+  offset += 2
+  buffer.writeUInt16LE(channelCount, offset)
+  offset += 2
+  buffer.writeUInt32LE(sampleRate, offset)
+  offset += 4
+  buffer.writeUInt32LE(byteRate, offset)
+  offset += 4
+  buffer.writeUInt16LE(blockAlign, offset)
+  offset += 2
+  buffer.writeUInt16LE(bitsPerSample, offset)
+  offset += 2
+
+  offset += buffer.write('data', offset)
+  buffer.writeUInt32LE(dataSize, offset)
+  offset += 4
+
+  for (const sample of pcm) {
+    buffer.writeInt16LE(sample, offset)
+    offset += 2
+  }
+
+  return buffer
+}
+
+async function main() {
+  const options = parseArgs(process.argv.slice(2))
+  const outDir = resolve(process.cwd(), options.outDir)
+
+  await mkdir(outDir, { recursive: true })
+
+  const manifest = {
+    generatedAt: new Date().toISOString(),
+    format: 'wav/pcm16-mono',
+    options,
+    keys: [] as Array<{
+      key: string
+      lowHz: number
+      highHz: number
+      fileName: string
+      urlPath: string
+    }>,
+  }
+
+  for (const spec of DTMF_SPECS) {
+    const fileName = `${toFileName(spec.key)}.wav`
+    const filePath = resolve(outDir, fileName)
+    const pcm = buildDtmfPcm(spec, options)
+    const wav = pcmToWavBytes(pcm, options.sampleRate)
+
+    await writeFile(filePath, wav)
+
+    manifest.keys.push({
+      key: spec.key,
+      lowHz: spec.lowHz,
+      highHz: spec.highHz,
+      fileName,
+      urlPath: toPublicUrlPath(options.outDir, fileName),
+    })
+  }
+
+  await writeFile(
+    resolve(outDir, 'dtmf-manifest.json'),
+    `${JSON.stringify(manifest, null, 2)}\n`,
+    'utf8'
+  )
+
+  console.log(`Generated ${DTMF_SPECS.length} keypad tones in ${outDir}`)
+  console.log('Tip: files in storage/uploads are available under /uploads/...')
+}
+
+await main()

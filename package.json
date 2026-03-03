@@ -19,7 +19,8 @@
     "typecheck": "npm run typecheck:backend && npm run typecheck:frontend && npm run typecheck:tests",
     "typecheck:backend": "tsc --noEmit",
     "typecheck:frontend": "vue-tsc --noEmit -p tsconfig.frontend.json",
-    "typecheck:tests": "tsc --noEmit -p tsconfig.tests.json"
+    "typecheck:tests": "tsc --noEmit -p tsconfig.tests.json",
+    "generate:keypad-tones": "node --import=tsx scripts/generate_keypad_tones.ts"
   },
   "imports": {
     "#controllers/*": "./app/controllers/*.js",
