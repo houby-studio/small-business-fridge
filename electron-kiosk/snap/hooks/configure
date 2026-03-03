@@ -14,7 +14,7 @@ case "$daemon" in
         snapctl stop --disable "$SNAP_INSTANCE_NAME" 2>&1 || true
     ;;
   *)
-    echo "ERROR: Set 'daemon' to one of true|false"
+    snapctl set daemon="true"
     exit 1
     ;;
 esac
@@ -22,6 +22,6 @@ esac
 [ -n "$(snapctl get daemon)" ]                            || snapctl set daemon="true"
 [ -n "$(snapctl get lang)" ]                              || snapctl set lang="en"
 [ -n "$(snapctl get kiosk-url)" ]                         || snapctl set kiosk-url="http://localhost:3000/"
-[ -n "$(snapctl get pulseserver)" ]                       || snapctl set pulseserver="tcp:localhost:4713"
+[ -n "$(snapctl get pulse-server)" ]                      || snapctl set pulse-server="tcp:localhost:4713"
 
 snapctl restart $SNAP_INSTANCE_NAME

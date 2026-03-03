@@ -14,7 +14,6 @@ base: core24
 apps:
   sbf-kiosk:
     command-chain: &_command-chain
-      - bin/gpu-2404-wrapper
       - bin/wayland-launch
     command: &_command usr/bin/wrapper
     plugs: &_plugs
@@ -24,6 +23,8 @@ apps:
       - network
       - network-bind
       - audio-playback
+    extensions: &_extensions
+      - gnome
     environment: &_environment
       XDG_DATA_HOME: $SNAP_USER_DATA
       XDG_DATA_DIRS: $SNAP/usr/share
@@ -32,21 +33,13 @@ apps:
 
   daemon:
     daemon: simple
-    restart-delay: 3s
+    restart-delay: 2s
     restart-condition: always
     command-chain: *_command-chain
     command: *_command
     plugs: *_plugs
     environment: *_environment
-
-# gpu-2404 provides the userspace graphics stack (Mesa, DRM, Vulkan).
-# mesa-2404 is the default provider; ubuntu-frame also ships one.
-# See: https://mir-server.io/docs/the-gpu-2404-snap-interface
-plugs:
-  gpu-2404:
-    interface: content
-    target: $SNAP/gpu-2404
-    default-provider: mesa-2404
+    extensions: *_extensions
 
 environment:
   XDG_CACHE_HOME:  $SNAP_USER_COMMON/.cache
@@ -56,10 +49,6 @@ environment:
   XKB_CONFIG_ROOT: $SNAP/usr/share/X11/xkb
 
 layout:
-  /usr/share/libdrm:
-    bind: $SNAP/gpu-2404/libdrm
-  /usr/share/drirc.d:
-    symlink: $SNAP/gpu-2404/drirc.d
   /usr/share/fonts:
     bind: $SNAP/usr/share/fonts
   /usr/share/icons:
@@ -134,30 +123,12 @@ parts:
     plugin: dump
     source: wayland-launch
     override-build: |
-      PLUGS="opengl wayland gpu-2404 browser-support network network-bind audio-playback"
+      PLUGS="opengl wayland browser-support network network-bind audio-playback"
       sed --in-place "s/%PLUGS%/$PLUGS/g" $CRAFT_PART_BUILD/bin/wayland-launch
       sed --in-place "s/%PLUGS%/$PLUGS/g" $CRAFT_PART_BUILD/bin/setup.sh
       craftctl default
     stage-packages:
       - inotify-tools
-
-  gpu-2404:
-    after:
-      - sbf-kiosk
-      - wrapper
-      - gsettings+pixbuf+immodules
-      - setup
-    source: https://github.com/canonical/gpu-snap.git
-    plugin: dump
-    override-prime: |
-      craftctl default
-      ${CRAFT_PART_SRC}/bin/gpu-2404-cleanup mesa-2404
-      cd "$CRAFT_PRIME/usr/share/"
-      rm -rf bug drirc.d glvnd libdrm lintian man
-      rm -rf applications apport bash-completion dbus-1 doc-base doc gtk-doc \
-             help pkgconfig libthai metainfo themes thumbnailers xml
-    prime:
-      - bin/gpu-2404-wrapper
 
 platforms:
   amd64:
