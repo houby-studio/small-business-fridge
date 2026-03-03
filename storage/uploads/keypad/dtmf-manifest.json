@@ -103,9 +103,7 @@
       "parts": [
         {
           "durationMs": 70,
-          "frequenciesHz": [
-            523
-          ],
+          "frequenciesHz": [523],
           "amplitudeScale": 1
         },
         {
@@ -115,9 +113,7 @@
         },
         {
           "durationMs": 70,
-          "frequenciesHz": [
-            659
-          ],
+          "frequenciesHz": [659],
           "amplitudeScale": 1
         },
         {
@@ -127,9 +123,7 @@
         },
         {
           "durationMs": 90,
-          "frequenciesHz": [
-            784
-          ],
+          "frequenciesHz": [784],
           "amplitudeScale": 1
         }
       ]
@@ -142,9 +136,7 @@
       "parts": [
         {
           "durationMs": 130,
-          "frequenciesHz": [
-            330
-          ],
+          "frequenciesHz": [330],
           "amplitudeScale": 1
         },
         {
@@ -154,9 +146,7 @@
         },
         {
           "durationMs": 170,
-          "frequenciesHz": [
-            220
-          ],
+          "frequenciesHz": [220],
           "amplitudeScale": 1
         }
       ]
