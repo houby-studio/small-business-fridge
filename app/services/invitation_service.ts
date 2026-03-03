@@ -70,8 +70,8 @@ export default class InvitationService {
       .whereRaw('LOWER(email) = ?', [email])
       .whereNull('acceptedAt')
       .whereNull('revokedAt')
-      .where('expiresAt', '>', DateTime.now().toSQL()!)
-      .update({ revokedAt: DateTime.now() })
+      .where('expiresAt', '>', DateTime.utc().toSQL()!)
+      .update({ revokedAt: DateTime.utc() })
 
     const rawToken = randomBytes(32).toString('hex')
     const invitation = await UserInvitation.create({
@@ -79,7 +79,7 @@ export default class InvitationService {
       role: params.role,
       tokenHash: this.tokenHash(rawToken),
       invitedByUserId: params.invitedByUserId,
-      expiresAt: DateTime.now().plus({ hours: expiresInHours }),
+      expiresAt: DateTime.utc().plus({ hours: expiresInHours }),
     })
 
     return {
@@ -100,7 +100,7 @@ export default class InvitationService {
     }
     if (invitation.revokedAt) return { valid: false, reason: 'revoked' }
     if (invitation.acceptedAt) return { valid: false, reason: 'accepted' }
-    if (invitation.expiresAt <= DateTime.now()) return { valid: false, reason: 'expired' }
+    if (invitation.expiresAt <= DateTime.utc()) return { valid: false, reason: 'expired' }
 
     return { valid: true, invitation }
   }
@@ -111,7 +111,7 @@ export default class InvitationService {
       .whereRaw('LOWER(email) = ?', [email])
       .whereNull('acceptedAt')
       .whereNull('revokedAt')
-      .where('expiresAt', '>', DateTime.now().toSQL()!)
+      .where('expiresAt', '>', DateTime.utc().toSQL()!)
       .orderBy('createdAt', 'asc')
       .first()
   }
@@ -119,7 +119,7 @@ export default class InvitationService {
   async revokeInvite(inviteId: number) {
     const invite = await UserInvitation.findOrFail(inviteId)
     if (!invite.revokedAt && !invite.acceptedAt) {
-      invite.revokedAt = DateTime.now()
+      invite.revokedAt = DateTime.utc()
       await invite.save()
     }
     return invite
@@ -147,7 +147,7 @@ export default class InvitationService {
       }
       if (invite.revokedAt) throw new Error('INVITE_REVOKED')
       if (invite.acceptedAt) throw new Error('INVITE_ALREADY_ACCEPTED')
-      if (invite.expiresAt <= DateTime.now()) throw new Error('INVITE_EXPIRED')
+      if (invite.expiresAt <= DateTime.utc()) throw new Error('INVITE_EXPIRED')
 
       const existingEmail = await User.query({ client: trx })
         .whereRaw('LOWER(email) = ?', [invite.email.toLowerCase()])
@@ -166,7 +166,7 @@ export default class InvitationService {
       await user.save()
 
       invite.useTransaction(trx)
-      invite.acceptedAt = DateTime.now()
+      invite.acceptedAt = DateTime.utc()
       invite.acceptedUserId = user.id
       await invite.save()
 
@@ -176,11 +176,11 @@ export default class InvitationService {
 
   async acceptInviteForUser(inviteId: number, userId: number) {
     const invite = await UserInvitation.find(inviteId)
-    if (!invite || invite.revokedAt || invite.acceptedAt || invite.expiresAt <= DateTime.now()) {
+    if (!invite || invite.revokedAt || invite.acceptedAt || invite.expiresAt <= DateTime.utc()) {
       return false
     }
 
-    invite.acceptedAt = DateTime.now()
+    invite.acceptedAt = DateTime.utc()
     invite.acceptedUserId = userId
     await invite.save()
     return true

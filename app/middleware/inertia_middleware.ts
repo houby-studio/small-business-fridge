@@ -10,7 +10,14 @@ import { getCurrencyCode, getCurrencyDisplay } from '#services/currency_service'
 
 type ImpersonationSession = { byId: number; asId: number; asName: string }
 
+const translationsCache = new Map<string, Record<string, Record<string, string>>>()
+
 function loadTranslations(locale: string): Record<string, Record<string, string>> {
+  if (app.inProduction) {
+    const cached = translationsCache.get(locale)
+    if (cached) return cached
+  }
+
   const langDir = app.languageFilesPath(locale)
   const appName = env.get('APP_NAME', 'Small Business Fridge')
   const currencyDisplay = getCurrencyDisplay(locale)
@@ -31,6 +38,10 @@ function loadTranslations(locale: string): Record<string, Record<string, string>
           ? `{price} ${currencyDisplay}/${pieceUnit}`
           : `{price} ${currencyDisplay}`
       }
+    }
+
+    if (app.inProduction) {
+      translationsCache.set(locale, translations)
     }
 
     return translations

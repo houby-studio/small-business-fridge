@@ -310,7 +310,14 @@ export default class ProfileController {
     user.sendDailyReport = data.sendDailyReport
     user.colorMode = data.colorMode
     user.keypadDisabled = data.keypadDisabled
-    await user.save()
+    await db.transaction(async (trx) => {
+      user.useTransaction(trx)
+      await user.save()
+
+      if (data.excludedAllergenIds !== undefined) {
+        await this.syncExcludedAllergenIds(user, data.excludedAllergenIds)
+      }
+    })
 
     if (emailPendingVerificationPayload) {
       const notifications = new NotificationService()
@@ -340,10 +347,6 @@ export default class ProfileController {
         .catch((err) => {
           logger.error({ err, userId: user.id }, 'Failed to send IBAN change verification')
         })
-    }
-
-    if (data.excludedAllergenIds !== undefined) {
-      await this.syncExcludedAllergenIds(user, data.excludedAllergenIds)
     }
 
     const changes: Record<string, { from: unknown; to: unknown }> = {}
@@ -507,8 +510,11 @@ export default class ProfileController {
     user.sendDailyReport = data.sendDailyReport
     user.colorMode = data.colorMode
     user.keypadDisabled = data.keypadDisabled
-    await user.save()
-    await this.syncExcludedAllergenIds(user, data.excludedAllergenIds)
+    await db.transaction(async (trx) => {
+      user.useTransaction(trx)
+      await user.save()
+      await this.syncExcludedAllergenIds(user, data.excludedAllergenIds)
+    })
 
     const changes: Record<string, { from: unknown; to: unknown }> = {}
     for (const key of [

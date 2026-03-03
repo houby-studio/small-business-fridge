@@ -8,13 +8,17 @@ type SqlExecutor = {
 
 export default class KeypadIdService {
   private static readonly reservedMigrationPlaceholderKeypadId = 89999
+  private static readonly allocationLockKey = 8999901
 
   /**
    * Returns the lowest positive keypad ID not currently used by any user.
    * The migration placeholder keypad ID (89999) is excluded from range growth.
    */
-  async getNextAvailableUserKeypadId(executor?: SqlExecutor): Promise<number> {
-    const queryExecutor = executor ?? (db as unknown as SqlExecutor)
+  private async allocateWithExecutor(queryExecutor: SqlExecutor): Promise<number> {
+    await queryExecutor.rawQuery('SELECT pg_advisory_xact_lock(?)', [
+      KeypadIdService.allocationLockKey,
+    ])
+
     const result = (await queryExecutor.rawQuery(
       `SELECT series.keypad_id
        FROM generate_series(
@@ -38,5 +42,15 @@ export default class KeypadIdService {
     }
 
     return keypadId
+  }
+
+  async getNextAvailableUserKeypadId(executor?: SqlExecutor): Promise<number> {
+    if (executor) {
+      return this.allocateWithExecutor(executor)
+    }
+
+    return db.transaction(async (trx) => {
+      return this.allocateWithExecutor(trx as unknown as SqlExecutor)
+    })
   }
 }
