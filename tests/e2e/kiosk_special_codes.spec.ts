@@ -42,4 +42,27 @@ test.describe('Kiosk special codes', () => {
     await expect(page).toHaveURL(/\/kiosk/)
     await expect(page.getByText(/easter egg/i)).toBeVisible()
   })
+
+  test('plays keypad tones on click and keyboard press', async ({ page }) => {
+    await page.evaluate(() => {
+      const calls: string[] = []
+      ;(window as Window & { __keypadToneCalls?: string[] }).__keypadToneCalls = calls
+
+      HTMLMediaElement.prototype.play = function playStub() {
+        calls.push(this.currentSrc || this.getAttribute('src') || '')
+        return Promise.resolve()
+      }
+    })
+
+    await page.getByRole('button', { name: '1', exact: true }).click()
+    await page.keyboard.press('2')
+
+    const calls = await page.evaluate(
+      () => (window as Window & { __keypadToneCalls?: string[] }).__keypadToneCalls ?? []
+    )
+
+    expect(calls.length).toBeGreaterThanOrEqual(2)
+    expect(calls.some((src) => src.includes('/uploads/keypad/1.wav'))).toBeTruthy()
+    expect(calls.some((src) => src.includes('/uploads/keypad/2.wav'))).toBeTruthy()
+  })
 })

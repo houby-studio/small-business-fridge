@@ -12,8 +12,36 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const keypadInput = ref('')
+const tonePlayers = new Map<string, HTMLAudioElement>()
+
+function resolveToneFile(key: string): string | null {
+  if (key >= '0' && key <= '9') return `${key}.wav`
+  if (key === 'clear') return 'star.wav'
+  if (key === 'back') return 'hash.wav'
+  if (key === 'enter') return '0.wav'
+  return null
+}
+
+function playTone(key: string) {
+  const toneFile = resolveToneFile(key)
+  if (!toneFile) return
+
+  let player = tonePlayers.get(toneFile)
+  if (!player) {
+    player = new Audio(`/uploads/keypad/${toneFile}`)
+    player.preload = 'auto'
+    tonePlayers.set(toneFile, player)
+  }
+
+  player.currentTime = 0
+  void player.play().catch(() => {
+    // Ignore playback failures due to browser autoplay restrictions.
+  })
+}
 
 function pressKey(key: string) {
+  playTone(key)
+
   if (key === 'clear') {
     keypadInput.value = ''
   } else if (key === 'back') {
@@ -56,6 +84,10 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('keydown', onKeydown)
+  for (const player of tonePlayers.values()) {
+    player.pause()
+  }
+  tonePlayers.clear()
 })
 
 const keys = [
