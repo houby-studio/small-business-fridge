@@ -539,6 +539,76 @@ async function linkOrdersFromInvoices(mongo: Db, pgClient: pg.Client) {
   }
 }
 
+async function settlePlaceholderLinkedOrders(pgClient: pg.Client) {
+  /**
+   * Any order tied to the migration placeholder user should not require
+   * post-migration bookkeeping. We force these into paid invoices.
+   */
+  const groups = await pgClient.query(
+    `SELECT
+       o.buyer_id,
+       d.supplier_id,
+       COUNT(*)::int AS order_count,
+       COALESCE(SUM(d.price), 0)::int AS total_cost,
+       MAX(o.created_at) AS invoice_date
+     FROM orders o
+     INNER JOIN deliveries d ON d.id = o.delivery_id
+     WHERE o.invoice_id IS NULL
+       AND (o.buyer_id = $1 OR d.supplier_id = $1)
+     GROUP BY o.buyer_id, d.supplier_id
+     ORDER BY o.buyer_id, d.supplier_id`,
+    [placeholder.userId]
+  )
+
+  let createdInvoices = 0
+  let linkedOrders = 0
+
+  for (const group of groups.rows) {
+    const buyerId = Number(group.buyer_id)
+    const supplierId = Number(group.supplier_id)
+    const totalCost = Number(group.total_cost)
+    const invoiceDate = group.invoice_date ? new Date(group.invoice_date) : new Date()
+
+    const invoiceResult = await pgClient.query(
+      `INSERT INTO invoices (
+        buyer_id, supplier_id, total_cost, is_paid, is_payment_requested,
+        auto_reminder_count, manual_reminder_count, created_at, updated_at
+      ) VALUES ($1, $2, $3, true, false, 0, 0, $4, $4)
+      RETURNING id`,
+      [buyerId, supplierId, totalCost, invoiceDate]
+    )
+    const invoiceId = invoiceResult.rows[0].id
+    createdInvoices++
+
+    const updateResult = await pgClient.query(
+      `UPDATE orders o
+       SET invoice_id = $1, updated_at = GREATEST(o.updated_at, $2)
+       FROM deliveries d
+       WHERE o.delivery_id = d.id
+         AND o.invoice_id IS NULL
+         AND o.buyer_id = $3
+         AND d.supplier_id = $4`,
+      [invoiceId, invoiceDate, buyerId, supplierId]
+    )
+    linkedOrders += updateResult.rowCount ?? 0
+  }
+
+  const normalizedInvoices = await pgClient.query(
+    `UPDATE invoices
+     SET is_paid = true,
+         is_payment_requested = false,
+         updated_at = NOW()
+     WHERE (buyer_id = $1 OR supplier_id = $1)
+       AND (is_paid = false OR is_payment_requested = true)`,
+    [placeholder.userId]
+  )
+
+  log(
+    '✅',
+    `Settled placeholder-linked purchases: created ${createdInvoices} invoice(s), linked ${linkedOrders} order(s), normalized ${normalizedInvoices.rowCount ?? 0} existing invoice(s)`
+  )
+}
+
 // ── Verification ────────────────────────────────────────────────────────────
 
 async function verify(mongo: Db, pgClient: pg.Client) {
@@ -745,6 +815,7 @@ export async function runMongoToPostgresMigration(options: MigrationOptions) {
   await migrateInvoices(mongoDB, pgClient)
   await migrateOrders(mongoDB, pgClient)
   await linkOrdersFromInvoices(mongoDB, pgClient)
+  await settlePlaceholderLinkedOrders(pgClient)
 
   // Reset sequences to max ID + 1
   log('🔧', 'Resetting PostgreSQL sequences...')
