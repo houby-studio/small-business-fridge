@@ -292,6 +292,25 @@ export class ProductSchema extends BaseModel {
   declare updatedAt: DateTime
 }
 
+export class ProfilePendingDraftSchema extends BaseModel {
+  static $columns = ['id', 'userId', 'draftKey', 'payload', 'expiresAt', 'createdAt', 'updatedAt'] as const
+  $columns = ProfilePendingDraftSchema.$columns
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare userId: number
+  @column()
+  declare draftKey: string
+  @column()
+  declare payload: any
+  @column.dateTime()
+  declare expiresAt: DateTime
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
 export class RecommendationSchema extends BaseModel {
   static $columns = ['id', 'userId', 'productId', 'score', 'model', 'rank', 'generatedAt', 'createdAt'] as const
   $columns = RecommendationSchema.$columns

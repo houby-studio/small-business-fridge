@@ -5,6 +5,7 @@ import User from '#models/user'
 import db from '@adonisjs/lucid/services/db'
 
 const cleanAll = async () => {
+  await db.from('profile_pending_drafts').delete()
   await db.from('audit_logs').delete()
   await db.from('user_favorites').delete()
   await db.from('auth_access_tokens').delete()
@@ -208,6 +209,62 @@ test.group('Web Profile - update audit details', (group) => {
         process.env.SENSITIVE_ACTION_REAUTH_TTL_MINUTES = previousTtl
       }
     }
+  })
+})
+
+test.group('Web Profile - pending draft storage', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('POST /profile/pending-draft stores payload server-side without currentPassword fields', async ({
+    client,
+    assert,
+  }) => {
+    const user = await UserFactory.create()
+
+    const response = await client
+      .post('/profile/pending-draft')
+      .json({
+        action: { type: 'profile-submit' },
+        form: {
+          displayName: 'Draft User',
+          email: 'draft@example.com',
+          phone: '123',
+          iban: 'CZ6508000000192000145400',
+          showAllProducts: true,
+          sendMailOnPurchase: false,
+          sendDailyReport: false,
+          colorMode: 'light',
+          keypadDisabled: true,
+          excludedAllergenIds: [1, 2, 3],
+          currentPassword: 'must-not-be-stored',
+        },
+        password: {
+          newPassword: 'new-password-123',
+          newPasswordConfirmation: 'new-password-123',
+          currentPassword: 'must-not-be-stored',
+        },
+        currentPassword: 'must-not-be-stored',
+      })
+      .loginAs(user)
+      .withCsrfToken()
+
+    response.assertStatus(200)
+    assert.deepEqual(response.body(), { ok: true })
+
+    const rows = await db.from('profile_pending_drafts').where('user_id', user.id)
+    assert.lengthOf(rows, 1)
+
+    const payload = rows[0].payload as {
+      action?: { type?: string }
+      form?: Record<string, unknown>
+      password?: Record<string, unknown>
+      currentPassword?: string
+    }
+    assert.equal(payload.action?.type, 'profile-submit')
+    assert.isUndefined(payload.currentPassword)
+    assert.isUndefined(payload.form?.currentPassword)
+    assert.isUndefined(payload.password?.currentPassword)
   })
 })
 
