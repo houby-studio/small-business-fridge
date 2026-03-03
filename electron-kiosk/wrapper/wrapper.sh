@@ -6,19 +6,19 @@ if grep -q "Pi 4" /proc/cpuinfo; then
 fi
 
 export KIOSK_URL=$(snapctl get kiosk-url)
-export LOCALE=$(snapctl get locale)
-export SYSTEM_SOUND_PULSESERVER=$(snapctl get pulseserver)
+export LANG=$(snapctl get lang)
+export PULSESERVER=$(snapctl get pulseserver)
 
 echo "Launching Kiosk App with config:
 - KIOSK_URL                             = $KIOSK_URL
-- LOCALE                                = $LOCALE
-- SYSTEM_SOUND_PULSESERVER              = $SYSTEM_SOUND_PULSESERVER"
+- LANG                                  = $LANG
+- PULSESERVER                           = $PULSESERVER"
 
-# Optional runtime locale override from snap config:
-#   snap set sbf-kiosk locale=cs-CZ
-LOCALE=$(snapctl get locale 2>/dev/null || true)
-if [ -n "$LOCALE" ]; then
-  EXTRAOPTS="$EXTRAOPTS --lang=$LOCALE"
+# Optional runtime LANG override from snap config:
+#   snap set sbf-kiosk LANG=cs-CZ
+LANG=$(snapctl get lang 2>/dev/null || true)
+if [ -n "$LANG" ]; then
+  EXTRAOPTS="$EXTRAOPTS --lang=$LANG"
 fi
 
 exec "$SNAP/sbf-kiosk" \

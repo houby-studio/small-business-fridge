@@ -20,8 +20,8 @@ case "$daemon" in
 esac
 
 [ -n "$(snapctl get daemon)" ]                            || snapctl set daemon="true"
-[ -n "$(snapctl get locale)" ]                            || snapctl set app.locale="en"
-[ -n "$(snapctl get kiosk-url)" ]                         || snapctl set eshop.url="http://localhost:3000/"
+[ -n "$(snapctl get lang)" ]                              || snapctl set lang="en"
+[ -n "$(snapctl get kiosk-url)" ]                         || snapctl set kiosk-url="http://localhost:3000/"
 [ -n "$(snapctl get pulseserver)" ]                       || snapctl set pulseserver="tcp:localhost:4713"
 
 snapctl restart $SNAP_INSTANCE_NAME
