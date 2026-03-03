@@ -12,6 +12,7 @@ import { middleware } from '#start/kernel'
 import app from '@adonisjs/core/services/app'
 import env from '#start/env'
 import { extname } from 'node:path'
+import { access } from 'node:fs/promises'
 
 /*
 |--------------------------------------------------------------------------
@@ -86,13 +87,20 @@ router.get('/uploads/*', async ({ request, response }) => {
   ])
   const extension = extname(request.url().split('?')[0] ?? '').toLowerCase()
   const useImmutableCache = immutableExtensions.has(extension)
+  const filePath = app.makePath('storage', request.url())
+
+  try {
+    await access(filePath)
+  } catch {
+    response.status(404)
+    response.header('Cache-Control', 'no-store, no-cache, must-revalidate')
+    return response.send('Not found')
+  }
 
   response.header(
     'Cache-Control',
     useImmutableCache ? 'public, max-age=31536000, immutable' : 'public, max-age=3600'
   )
-
-  const filePath = app.makePath('storage', request.url())
   return response.download(filePath)
 })
 

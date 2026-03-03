@@ -44,4 +44,11 @@ test.group('Uploads caching', (group) => {
     response.assertStatus(200)
     response.assertHeader('cache-control', 'public, max-age=31536000, immutable')
   })
+
+  test('serves missing uploads with no-store cache policy', async ({ client }) => {
+    const response = await client.get('/uploads/products/does-not-exist.png')
+
+    response.assertStatus(404)
+    response.assertHeader('cache-control', 'no-store, no-cache, must-revalidate')
+  })
 })

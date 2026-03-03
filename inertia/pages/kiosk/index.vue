@@ -272,8 +272,6 @@ function addToBasket(product: ProductItem) {
   if (outOfStockDeliveryId.value === nextLot.deliveryId) {
     outOfStockDeliveryId.value = null
   }
-
-  toast.add({ severity: 'success', summary: product.displayName, life: 1200 })
 }
 
 function incrementProduct(productId: number) {
