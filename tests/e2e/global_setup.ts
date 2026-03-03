@@ -162,12 +162,12 @@ export default async function globalSetup() {
       INSERT INTO users (
         email, display_name, password, role, keypad_id, iban,
         is_kiosk, is_disabled, show_all_products, send_mail_on_purchase,
-        send_daily_report, color_mode, keypad_disabled,
+        send_daily_report, color_mode, keypad_disabled, pending_email, email_verified_at,
         created_at, updated_at
       ) VALUES (
         $1, $2, $3, $4, $5, $6,
         false, false, false, true,
-        true, 'dark', false,
+        true, 'dark', false, NULL, NOW(),
         NOW(), NOW()
       )
     `,

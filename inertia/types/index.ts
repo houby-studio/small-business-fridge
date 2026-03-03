@@ -2,6 +2,11 @@ export interface User {
   id: number
   displayName: string
   email: string
+  pendingEmail: string | null
+  emailVerifiedAt: string | null
+  iban: string | null
+  pendingIban: string | null
+  ibanVerifiedAt: string | null
   role: 'customer' | 'supplier' | 'admin'
   isKiosk: boolean
   colorMode: 'light' | 'dark'

@@ -27,6 +27,8 @@ const RegisterController = () => import('#controllers/web/register_controller')
 const PasswordResetController = () => import('#controllers/web/password_reset_controller')
 const InviteRegistrationController = () => import('#controllers/web/invite_registration_controller')
 const OidcController = () => import('#controllers/web/oidc_controller')
+const EmailVerificationController = () => import('#controllers/web/email_verification_controller')
+const IbanChangeController = () => import('#controllers/web/iban_change_controller')
 const ShopController = () => import('#controllers/web/shop_controller')
 const OrdersController = () => import('#controllers/web/orders_controller')
 const InvoicesController = () => import('#controllers/web/invoices_controller')
@@ -155,6 +157,8 @@ router.group(() => {
 
 router.get('/auth/:provider/redirect', [OidcController, 'redirect'])
 router.get('/auth/:provider/callback', [OidcController, 'callback'])
+router.get('/email/verify/:token', [EmailVerificationController, 'verify'])
+router.get('/profile/iban/verify/:token', [IbanChangeController, 'verify'])
 
 router.get('/logout', [LoginController, 'destroy']).use(middleware.auth()).as('logout.get')
 router.post('/logout', [LoginController, 'destroy']).use(middleware.auth()).as('logout.post')
@@ -186,6 +190,7 @@ router
     // Profile
     router.get('/profile', [ProfileController, 'show'])
     router.put('/profile', [ProfileController, 'update'])
+    router.put('/profile/preferences', [ProfileController, 'updatePreferences'])
     router.put('/profile/excluded-allergens', [ProfileController, 'updateExcludedAllergens'])
     router.post('/profile/color-mode', [ProfileController, 'toggleColorMode'])
     router.post('/profile/favorites/:id', [ProfileController, 'toggleFavorite'])
@@ -194,11 +199,16 @@ router
     router.post('/profile/tokens', [ProfileController, 'createToken'])
     router.delete('/profile/tokens/:id', [ProfileController, 'revokeToken'])
     router.put('/profile/password', [PasswordResetController, 'changeAuthenticated'])
+    router.post('/profile/reauth', [ProfileController, 'reauthSensitive'])
+    router.post('/profile/pending-draft', [ProfileController, 'storePendingDraft'])
+    router.post('/profile/oidc-link', [ProfileController, 'startOidcLink'])
+    router.post('/profile/email-verification/resend', [EmailVerificationController, 'resend'])
+    router.post('/profile/iban-verification/resend', [IbanChangeController, 'resend'])
 
     // Audit log (customer view)
     router.get('/audit', [AuditController, 'index'])
   })
-  .use([middleware.auth(), middleware.kiosk()])
+  .use([middleware.auth(), middleware.kiosk(), middleware.emailVerified()])
 
 /*
 |--------------------------------------------------------------------------
@@ -232,7 +242,12 @@ router
     router.put('/products/:id', [SupplierProductsController, 'update'])
   })
   .prefix('/supplier')
-  .use([middleware.auth(), middleware.kiosk(), middleware.role({ roles: ['supplier'] })])
+  .use([
+    middleware.auth(),
+    middleware.kiosk(),
+    middleware.emailVerified(),
+    middleware.role({ roles: ['supplier'] }),
+  ])
 
 /*
 |--------------------------------------------------------------------------
@@ -286,7 +301,7 @@ router
     router.post('/users/:id/send-password-reset', [AdminUsersController, 'sendPasswordReset'])
   })
   .prefix('/admin')
-  .use([middleware.auth(), middleware.role({ roles: ['admin'] })])
+  .use([middleware.auth(), middleware.emailVerified(), middleware.role({ roles: ['admin'] })])
 
 /*
 |--------------------------------------------------------------------------

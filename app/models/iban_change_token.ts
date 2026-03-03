@@ -3,9 +3,7 @@ import { BaseModel, belongsTo, column } from '@adonisjs/lucid/orm'
 import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 import User from '#models/user'
 
-export type ExternalAuthProvider = 'microsoft' | 'discord'
-
-export default class UserAuthIdentity extends BaseModel {
+export default class IbanChangeToken extends BaseModel {
   @column({ isPrimary: true })
   declare id: number
 
@@ -13,19 +11,16 @@ export default class UserAuthIdentity extends BaseModel {
   declare userId: number
 
   @column()
-  declare provider: ExternalAuthProvider
+  declare iban: string
 
-  @column()
-  declare providerUserId: string
-
-  @column()
-  declare providerEmail: string | null
-
-  @column()
-  declare providerEmailVerified: boolean
+  @column({ serializeAs: null })
+  declare tokenHash: string
 
   @column.dateTime()
-  declare lastLoginAt: DateTime | null
+  declare expiresAt: DateTime
+
+  @column.dateTime()
+  declare usedAt: DateTime | null
 
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime

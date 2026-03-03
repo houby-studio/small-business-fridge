@@ -1,5 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import logger from '@adonisjs/core/services/logger'
+import { DateTime } from 'luxon'
 import User from '#models/user'
 import { bootstrapAdminValidator } from '#validators/auth'
 import AuditService from '#services/audit_service'
@@ -55,6 +56,8 @@ export default class BootstrapController {
       password: data.password,
       keypadId: nextKeypadId,
       role: 'admin',
+      emailVerifiedAt: DateTime.utc(),
+      pendingEmail: null,
     })
 
     await auth.use('web').login(user, true)

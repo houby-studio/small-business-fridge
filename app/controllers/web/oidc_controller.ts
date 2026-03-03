@@ -1,5 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import logger from '@adonisjs/core/services/logger'
+import { DateTime } from 'luxon'
 import User from '#models/user'
 import AuditService from '#services/audit_service'
 import NotificationService from '#services/notification_service'
@@ -8,17 +9,42 @@ import InvitationService from '#services/invitation_service'
 import AuthModeService, { type ExternalAuthProvider } from '#services/auth_mode_service'
 import AuthIdentityService from '#services/auth_identity_service'
 import ExternalProfileSyncService from '#services/external_profile_sync_service'
+import EmailVerificationService from '#services/email_verification_service'
+import ReauthStepupService from '#services/reauth_stepup_service'
 
 export default class OidcController {
   private static readonly BOOTSTRAP_INTENT_KEY = 'oauthBootstrapFirstAdminIntent'
   private static readonly INVITE_INTENT_TOKEN_KEY = 'oauthInviteIntentToken'
   private static readonly LINK_INTENT_KEY = 'oauthLinkIntent'
+  private static readonly REAUTH_INTENT_KEY = 'oauthReauthIntent'
+  private static readonly LINK_STEPUP_GRANT_KEY = '__oidc_link_stepup_grant'
 
   private authIdentity = new AuthIdentityService()
   private registrationPolicy = new RegistrationPolicyService()
   private invitations = new InvitationService()
   private authModes = new AuthModeService()
   private externalProfileSync = new ExternalProfileSyncService()
+  private verifications = new EmailVerificationService()
+  private stepup = new ReauthStepupService()
+
+  private readLinkStepupGrant(session: HttpContext['session']) {
+    const raw = session.pull(OidcController.LINK_STEPUP_GRANT_KEY, null)
+    if (!raw || typeof raw !== 'object') return null
+
+    const grant = raw as { userId?: unknown; provider?: unknown; issuedAt?: unknown }
+    if (typeof grant.userId !== 'number') return null
+    if (grant.provider !== 'microsoft' && grant.provider !== 'discord') return null
+    if (typeof grant.issuedAt !== 'string' || grant.issuedAt.length === 0) return null
+
+    const issuedAt = DateTime.fromISO(grant.issuedAt, { zone: 'utc' })
+    if (!issuedAt.isValid) return null
+
+    return {
+      userId: grant.userId,
+      provider: grant.provider,
+      issuedAt,
+    }
+  }
 
   private resolveProvider(input: unknown): ExternalAuthProvider | null {
     const provider = String(input ?? '')
@@ -40,6 +66,7 @@ export default class OidcController {
     email: string | null
     displayName: string | null
     phone: string | null
+    emailVerifiedClaim: boolean | null
   } {
     if (provider === 'microsoft') {
       const email = (
@@ -54,6 +81,7 @@ export default class OidcController {
         email: email || null,
         displayName: (providerUser.displayName as string | null) ?? null,
         phone: (providerUser.mobilePhone as string | null) ?? null,
+        emailVerifiedClaim: null,
       }
     }
 
@@ -66,6 +94,7 @@ export default class OidcController {
         (providerUser.username as string | null) ||
         null,
       phone: null,
+      emailVerifiedClaim: providerUser.verified === true,
     }
   }
 
@@ -74,7 +103,7 @@ export default class OidcController {
     return !!admin
   }
 
-  async redirect({ ally, request, response, session }: HttpContext) {
+  async redirect({ ally, auth, request, response, session, i18n }: HttpContext) {
     const provider = this.resolveProvider(request.param('provider'))
     if (!provider || !this.authModes.isProviderEnabled(provider)) {
       return response.redirect('/login')
@@ -95,10 +124,50 @@ export default class OidcController {
     }
 
     if (request.input('intent') === 'link') {
-      const userId = Number(request.input('userId') ?? 0)
-      if (Number.isInteger(userId) && userId > 0) {
-        session.put(OidcController.LINK_INTENT_KEY, { userId, provider })
+      if (session.get('__impersonation')) {
+        session.flash('alert', {
+          type: 'danger',
+          message: i18n.t('messages.sensitive_action_blocked_while_impersonating'),
+        })
+        return response.redirect('/profile')
       }
+
+      const currentUser = auth.user
+      const grant = this.readLinkStepupGrant(session)
+      const hasFreshGrant =
+        !!currentUser &&
+        !!grant &&
+        grant.userId === currentUser.id &&
+        grant.provider === provider &&
+        DateTime.utc().diff(grant.issuedAt, 'minutes').minutes <= 5
+
+      if (!hasFreshGrant && !this.stepup.isRecent(session)) {
+        session.flash('alert', {
+          type: 'danger',
+          message: i18n.t('messages.sensitive_action_reauth_required'),
+        })
+        return response.redirect('/profile')
+      }
+
+      if (!currentUser) {
+        session.flash('alert', { type: 'danger', message: i18n.t('messages.forbidden') })
+        return response.redirect('/login')
+      }
+
+      session.put(OidcController.LINK_INTENT_KEY, { userId: currentUser.id, provider })
+    }
+
+    if (request.input('intent') === 'reauth') {
+      const currentUser = auth.user
+      if (!currentUser) {
+        return response.redirect('/login')
+      }
+      const returnTo = String(request.input('returnTo') ?? '/profile')
+      session.put(OidcController.REAUTH_INTENT_KEY, {
+        userId: currentUser.id,
+        provider,
+        returnTo,
+      })
     }
 
     return ally.use(provider).redirect()
@@ -120,11 +189,17 @@ export default class OidcController {
         : null
     const inviteIntentInvitation = inviteIntentStatus?.valid ? inviteIntentStatus.invitation : null
     const linkIntent = session.pull(OidcController.LINK_INTENT_KEY, null)
+    const reauthIntent = session.pull(OidcController.REAUTH_INTENT_KEY, null)
     const hasLinkIntent =
       !!linkIntent &&
       typeof linkIntent === 'object' &&
       Number(linkIntent.userId) > 0 &&
       linkIntent.provider === provider
+    const hasReauthIntent =
+      !!reauthIntent &&
+      typeof reauthIntent === 'object' &&
+      Number(reauthIntent.userId) > 0 &&
+      reauthIntent.provider === provider
 
     const externalProvider = ally.use(provider)
 
@@ -162,6 +237,10 @@ export default class OidcController {
     const email = profile.email?.trim().toLowerCase() || null
     const displayName = profile.displayName || (email ? email.split('@')[0] : null)
     const phone = profile.phone ?? null
+    const providerEmailTrusted = this.authModes.isProviderEmailTrusted(
+      provider,
+      profile.emailVerifiedClaim
+    )
 
     if (!providerUserId) {
       logger.warn({ provider }, 'External login denied: provider payload missing identity id')
@@ -169,7 +248,40 @@ export default class OidcController {
       return response.redirect('/login')
     }
 
+    if (hasReauthIntent) {
+      const identityMatch = await this.authIdentity.resolveForLogin({
+        provider,
+        providerUserId,
+        email,
+      })
+      if (
+        identityMatch.kind !== 'matched' ||
+        identityMatch.user.id !== Number(reauthIntent.userId)
+      ) {
+        session.flash('alert', { type: 'danger', message: i18n.t('messages.login_failed') })
+        return response.redirect('/profile')
+      }
+
+      this.stepup.markNow(session)
+      this.stepup.markOneTimeGrant(session, Number(reauthIntent.userId))
+      session.flash('alert', { type: 'success', message: i18n.t('messages.reauth_success') })
+      session.flash('sensitiveReauthCompleted', true)
+      const returnTo =
+        typeof reauthIntent.returnTo === 'string' && reauthIntent.returnTo.length > 0
+          ? reauthIntent.returnTo
+          : '/profile'
+      return response.redirect(returnTo)
+    }
+
     if (hasLinkIntent) {
+      if (session.get('__impersonation')) {
+        session.flash('alert', {
+          type: 'danger',
+          message: i18n.t('messages.sensitive_action_blocked_while_impersonating'),
+        })
+        return response.redirect('/profile')
+      }
+
       const currentUser = auth.user
       if (!currentUser || currentUser.id !== Number(linkIntent.userId)) {
         session.flash('alert', { type: 'danger', message: i18n.t('messages.forbidden') })
@@ -182,7 +294,18 @@ export default class OidcController {
           provider,
           providerUserId,
           providerEmail: email,
+          providerEmailVerified: providerEmailTrusted,
         })
+
+        if (
+          providerEmailTrusted &&
+          email &&
+          currentUser.email.toLowerCase() === email &&
+          !currentUser.emailVerifiedAt
+        ) {
+          currentUser.emailVerifiedAt = DateTime.utc()
+          await currentUser.save()
+        }
 
         await AuditService.log(
           currentUser.id,
@@ -321,6 +444,8 @@ export default class OidcController {
           ? 'admin'
           : (invitation?.role ?? (hasAnyAdmin ? 'customer' : 'admin')),
         keypadId: nextKeypadId,
+        emailVerifiedAt: DateTime.utc(),
+        pendingEmail: null,
       })
 
       if (invitation) {
@@ -368,7 +493,18 @@ export default class OidcController {
       provider,
       providerUserId,
       providerEmail: email,
+      providerEmailVerified: providerEmailTrusted,
     })
+
+    if (
+      providerEmailTrusted &&
+      email &&
+      user.email.toLowerCase() === email &&
+      !user.emailVerifiedAt
+    ) {
+      user.emailVerifiedAt = DateTime.utc()
+      await user.save()
+    }
 
     if (user.isDisabled) {
       logger.warn({ provider, providerUserId, email }, 'External login denied: account disabled')
@@ -387,6 +523,13 @@ export default class OidcController {
       ip: request.ip(),
       ua: request.header('user-agent') ?? null,
     })
+    if (this.verifications.shouldBlockAppAccess(user)) {
+      session.flash('alert', {
+        type: 'warning',
+        message: i18n.t('messages.email_verification_required'),
+      })
+      return response.redirect('/profile')
+    }
     return response.redirect('/shop')
   }
 }

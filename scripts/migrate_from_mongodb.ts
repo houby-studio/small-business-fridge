@@ -93,7 +93,7 @@ function migrateImagePath(imagePath: unknown): string | null {
     return `/uploads/products/${imagePath.slice('./images/'.length)}`
   }
   if (imagePath === '/images/default-product.png' || imagePath === 'preview.png') {
-    return null
+    return 'preview.png'
   }
   return imagePath
 }
@@ -108,11 +108,11 @@ async function createPlaceholders(pgDb: pg.Client) {
   // Placeholder user — disabled, will absorb orphaned deliveries/invoices/orders
   const userResult = await pgDb.query(
     `INSERT INTO users (
-      oid, password, display_name, email, phone, iban,
+      password, display_name, email, phone, iban,
       keypad_id, card_id, role, is_kiosk, is_disabled,
       show_all_products, send_mail_on_purchase, send_daily_report,
       color_mode, keypad_disabled, created_at, updated_at
-    ) VALUES (NULL, NULL, 'Deleted User', 'migration-deleted@placeholder.local',
+    ) VALUES (NULL, 'Deleted User', 'migration-deleted@placeholder.local',
       NULL, NULL, 89999, NULL, 'customer', false, true,
       false, false, false, 'dark', false, NOW(), NOW())
     RETURNING id`
@@ -172,9 +172,10 @@ async function migrateUsers(mongo: Db, pgDb: pg.Client) {
   // Track used unique values to handle duplicates gracefully
   const usedKeypadIds = new Set<number>()
   const usedCardIds = new Set<string>()
-  const usedOids = new Set<string>()
+  const usedMicrosoftIdentityIds = new Set<string>()
   let fallbackKeypadId = 90000 // High range for users missing/with duplicate keypadId
   let skipped = 0
+  let migratedAuthIdentities = 0
 
   for (const doc of docs) {
     const mongoId = oid(doc._id)!
@@ -211,28 +212,16 @@ async function migrateUsers(mongo: Db, pgDb: pg.Client) {
       }
     }
 
-    // Handle oid: UNIQUE — nullify if duplicate
-    let userOid: string | null = doc.oid ?? null
-    if (userOid) {
-      if (usedOids.has(userOid)) {
-        console.warn(`  ⚠️  Duplicate oid for "${displayName}", setting to null`)
-        userOid = null
-      } else {
-        usedOids.add(userOid)
-      }
-    }
-
     try {
       const result = await pgDb.query(
         `INSERT INTO users (
-          oid, password, display_name, email, phone, iban,
+          password, display_name, email, phone, iban,
           keypad_id, card_id, role, is_kiosk, is_disabled,
           show_all_products, send_mail_on_purchase, send_daily_report,
-          color_mode, keypad_disabled, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW(), NOW())
+          color_mode, keypad_disabled, is_premium, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW(), NOW())
          RETURNING id`,
         [
-          userOid, // oid
           null, // password (OIDC users don't have one)
           displayName, // display_name
           email, // email
@@ -248,9 +237,31 @@ async function migrateUsers(mongo: Db, pgDb: pg.Client) {
           doc.sendDailyReport ?? true, // send_daily_report
           doc.colorMode ?? 'dark', // color_mode
           doc.keypadDisabled ?? false, // keypad_disabled
+          doc.isPremium ?? false, // is_premium
         ]
       )
-      idMap.users.set(mongoId, result.rows[0].id)
+      const userId = result.rows[0].id
+      idMap.users.set(mongoId, userId)
+
+      const microsoftIdentity =
+        typeof doc.oid === 'string' && doc.oid.trim().length > 0 ? doc.oid.trim() : null
+      if (microsoftIdentity) {
+        if (usedMicrosoftIdentityIds.has(microsoftIdentity)) {
+          console.warn(
+            `  ⚠️  Duplicate Microsoft identity "${microsoftIdentity}" for "${displayName}", skipping identity row`
+          )
+        } else {
+          usedMicrosoftIdentityIds.add(microsoftIdentity)
+          await pgDb.query(
+            `INSERT INTO user_auth_identities (
+              user_id, provider, provider_user_id, provider_email, last_login_at, created_at, updated_at
+            ) VALUES ($1, 'microsoft', $2, $3, NOW(), NOW(), NOW())
+            ON CONFLICT (provider, provider_user_id) DO NOTHING`,
+            [userId, microsoftIdentity, email]
+          )
+          migratedAuthIdentities++
+        }
+      }
     } catch (err: any) {
       console.warn(`  ⚠️  Skipping user "${displayName}" (${email}): ${err.message}`)
       skipped++
@@ -259,7 +270,7 @@ async function migrateUsers(mongo: Db, pgDb: pg.Client) {
 
   log(
     '✅',
-    `Migrated ${idMap.users.size} users${skipped > 0 ? ` (${skipped} skipped, see warnings above)` : ''}`
+    `Migrated ${idMap.users.size} users and ${migratedAuthIdentities} auth identities${skipped > 0 ? ` (${skipped} skipped, see warnings above)` : ''}`
   )
 }
 
@@ -279,8 +290,8 @@ async function migrateProducts(mongo: Db, pgDb: pg.Client) {
       [
         doc.keypadId,
         doc.displayName,
-        doc.description ?? null,
-        migrateImagePath(doc.imagePath), // normalize from ./images/ to /uploads/products/
+        doc.description ?? '',
+        migrateImagePath(doc.imagePath) ?? 'preview.png', // normalize from ./images/ to /uploads/products/
         categoryId,
         doc.code ?? null, // old field "code" → new field "barcode"
       ]
@@ -488,6 +499,11 @@ async function verify(mongo: Db, pgClient: pg.Client) {
   const checks = [
     { collection: 'categories', table: 'categories' },
     { collection: 'users', table: 'users' },
+    {
+      collection: 'users',
+      table: 'user_auth_identities',
+      note: 'microsoft identities from users.oid',
+    },
     { collection: 'products', table: 'products' },
     { collection: 'deliveries', table: 'deliveries' },
     { collection: 'invoices', table: 'invoices' },
@@ -500,8 +516,13 @@ async function verify(mongo: Db, pgClient: pg.Client) {
   }
 
   let allMatch = true
-  for (const { collection, table } of checks) {
-    const mongoCount = await mongo.collection(collection).countDocuments()
+  for (const { collection, table, note } of checks) {
+    let mongoCount = await mongo.collection(collection).countDocuments()
+    if (table === 'user_auth_identities') {
+      mongoCount = await mongo.collection('users').countDocuments({
+        oid: { $exists: true, $ne: null, $type: 'string' },
+      })
+    }
     const pgResult = await pgClient.query(`SELECT count(*)::int AS count FROM ${table}`)
     const pgCount = pgResult.rows[0].count
     const placeholderRows = placeholderRowsByTable[table] ?? 0
@@ -510,8 +531,9 @@ async function verify(mongo: Db, pgClient: pg.Client) {
     if (mongoCount !== normalizedPgCount) allMatch = false
     const normalizedNote =
       placeholderRows > 0 ? ` (normalized, -${placeholderRows} placeholder)` : ''
+    const label = note ? `${table} (${note})` : collection
     console.log(
-      `   ${match} ${collection}: MongoDB=${mongoCount} → PostgreSQL=${normalizedPgCount}${normalizedNote}`
+      `   ${match} ${label}: MongoDB=${mongoCount} → PostgreSQL=${normalizedPgCount}${normalizedNote}`
     )
   }
 
@@ -643,7 +665,7 @@ async function main() {
 
   // Truncate in reverse dependency order
   await pgClient.query(`
-    TRUNCATE TABLE user_favorites, orders, invoices, deliveries, products, categories, users
+    TRUNCATE TABLE user_favorites, orders, invoices, deliveries, user_auth_identities, products, categories, users
     RESTART IDENTITY CASCADE
   `)
   log('✅', 'Tables truncated')

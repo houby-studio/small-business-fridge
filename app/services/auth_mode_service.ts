@@ -2,6 +2,7 @@ import env from '#start/env'
 
 export type ExternalAuthProvider = 'microsoft' | 'discord'
 export type AuthProvider = 'local' | ExternalAuthProvider
+export type ProviderEmailVerificationMode = 'always' | 'claim' | 'never'
 
 function parseCommaList(raw: string | undefined, fallback: string[] = []): Set<string> {
   if (raw === undefined) return new Set(fallback)
@@ -84,5 +85,28 @@ export default class AuthModeService {
 
   isOidcOnlyMode(): boolean {
     return this.getEnabledExternalProviders().length > 0 && !this.isLocalEnabled()
+  }
+
+  getProviderEmailVerificationMode(provider: ExternalAuthProvider): ProviderEmailVerificationMode {
+    const envValue =
+      provider === 'microsoft'
+        ? env.get('AUTH_PROVIDER_MICROSOFT_EMAIL_VERIFICATION_MODE')
+        : env.get('AUTH_PROVIDER_DISCORD_EMAIL_VERIFICATION_MODE')
+
+    if (envValue === 'always' || envValue === 'claim' || envValue === 'never') {
+      return envValue
+    }
+
+    return provider === 'discord' ? 'claim' : 'always'
+  }
+
+  isProviderEmailTrusted(
+    provider: ExternalAuthProvider,
+    claimValue: boolean | null | undefined
+  ): boolean {
+    const mode = this.getProviderEmailVerificationMode(provider)
+    if (mode === 'always') return true
+    if (mode === 'never') return false
+    return claimValue === true
   }
 }

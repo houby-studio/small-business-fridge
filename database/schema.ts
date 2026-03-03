@@ -106,6 +106,48 @@ export class DeliverySchema extends BaseModel {
   declare updatedAt: DateTime
 }
 
+export class EmailVerificationTokenSchema extends BaseModel {
+  static $columns = ['id', 'userId', 'email', 'tokenHash', 'expiresAt', 'usedAt', 'createdAt', 'updatedAt'] as const
+  $columns = EmailVerificationTokenSchema.$columns
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare userId: number
+  @column()
+  declare email: string
+  @column()
+  declare tokenHash: string
+  @column.dateTime()
+  declare expiresAt: DateTime
+  @column.dateTime()
+  declare usedAt: DateTime | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
+export class IbanChangeTokenSchema extends BaseModel {
+  static $columns = ['id', 'userId', 'iban', 'tokenHash', 'expiresAt', 'usedAt', 'createdAt', 'updatedAt'] as const
+  $columns = IbanChangeTokenSchema.$columns
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare userId: number
+  @column()
+  declare iban: string
+  @column()
+  declare tokenHash: string
+  @column.dateTime()
+  declare expiresAt: DateTime
+  @column.dateTime()
+  declare usedAt: DateTime | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
 export class InvoiceSchema extends BaseModel {
   static $columns = ['id', 'buyerId', 'supplierId', 'totalCost', 'isPaid', 'isPaymentRequested', 'autoReminderCount', 'manualReminderCount', 'createdAt', 'updatedAt'] as const
   $columns = InvoiceSchema.$columns
@@ -289,7 +331,7 @@ export class RememberMeTokenSchema extends BaseModel {
 }
 
 export class UserAuthIdentitySchema extends BaseModel {
-  static $columns = ['id', 'userId', 'provider', 'providerUserId', 'providerEmail', 'lastLoginAt', 'createdAt', 'updatedAt'] as const
+  static $columns = ['id', 'userId', 'provider', 'providerUserId', 'providerEmail', 'lastLoginAt', 'createdAt', 'updatedAt', 'providerEmailVerified'] as const
   $columns = UserAuthIdentitySchema.$columns
   @column({ isPrimary: true })
   declare id: number
@@ -307,6 +349,8 @@ export class UserAuthIdentitySchema extends BaseModel {
   declare createdAt: DateTime
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
+  @column()
+  declare providerEmailVerified: boolean
 }
 
 export class UserExcludedAllergenSchema extends BaseModel {
@@ -359,7 +403,7 @@ export class UserInvitationSchema extends BaseModel {
 }
 
 export class UserSchema extends BaseModel {
-  static $columns = ['id', 'password', 'displayName', 'email', 'phone', 'iban', 'keypadId', 'cardId', 'role', 'isKiosk', 'isDisabled', 'showAllProducts', 'sendMailOnPurchase', 'sendDailyReport', 'colorMode', 'keypadDisabled', 'createdAt', 'updatedAt', 'isPremium'] as const
+  static $columns = ['id', 'password', 'displayName', 'email', 'phone', 'iban', 'keypadId', 'cardId', 'role', 'isKiosk', 'isDisabled', 'showAllProducts', 'sendMailOnPurchase', 'sendDailyReport', 'colorMode', 'keypadDisabled', 'createdAt', 'updatedAt', 'isPremium', 'emailVerifiedAt', 'pendingEmail', 'pendingIban', 'ibanVerifiedAt'] as const
   $columns = UserSchema.$columns
   @column({ isPrimary: true })
   declare id: number
@@ -399,4 +443,12 @@ export class UserSchema extends BaseModel {
   declare updatedAt: DateTime
   @column()
   declare isPremium: boolean
+  @column.dateTime()
+  declare emailVerifiedAt: DateTime | null
+  @column()
+  declare pendingEmail: string | null
+  @column()
+  declare pendingIban: string | null
+  @column.dateTime()
+  declare ibanVerifiedAt: DateTime | null
 }

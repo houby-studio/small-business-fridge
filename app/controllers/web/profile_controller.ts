@@ -1,19 +1,36 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import logger from '@adonisjs/core/services/logger'
 import db from '@adonisjs/lucid/services/db'
+import { DateTime } from 'luxon'
 import {
   updateProfileValidator,
   toggleColorModeValidator,
   updateExcludedAllergensValidator,
+  updatePreferencesValidator,
 } from '#validators/user'
-import { createApiTokenValidator } from '#validators/auth'
+import {
+  createApiTokenValidator,
+  oidcLinkStartValidator,
+  sensitiveReauthValidator,
+} from '#validators/auth'
 import AuditService from '#services/audit_service'
 import User from '#models/user'
 import Allergen from '#models/allergen'
 import Product from '#models/product'
 import AuthModeService from '#services/auth_mode_service'
+import AuthIdentityService from '#services/auth_identity_service'
+import EmailVerificationService from '#services/email_verification_service'
+import NotificationService from '#services/notification_service'
+import IbanChangeService from '#services/iban_change_service'
+import ReauthStepupService from '#services/reauth_stepup_service'
 
 export default class ProfileController {
+  private static readonly LINK_STEPUP_GRANT_KEY = '__oidc_link_stepup_grant'
   private authModes = new AuthModeService()
+  private authIdentity = new AuthIdentityService()
+  private verifications = new EmailVerificationService()
+  private ibans = new IbanChangeService()
+  private stepup = new ReauthStepupService()
 
   private async getExcludedAllergenIds(userId: number): Promise<number[]> {
     const rows = await db
@@ -31,7 +48,57 @@ export default class ProfileController {
     await user.related('excludedAllergens').sync(sanitized)
   }
 
-  async show({ inertia, auth }: HttpContext) {
+  private isImpersonating(session: HttpContext['session']) {
+    return !!session?.get('__impersonation')
+  }
+
+  private async ensureSensitiveStepup(
+    ctx: HttpContext,
+    currentPassword: string | null | undefined
+  ) {
+    const user = ctx.auth.user!
+
+    if (this.isImpersonating(ctx.session)) {
+      ctx.session.flash('alert', {
+        type: 'danger',
+        message: ctx.i18n.t('messages.sensitive_action_blocked_while_impersonating'),
+      })
+      return false
+    }
+
+    if (this.stepup.isRecent(ctx.session)) {
+      return true
+    }
+
+    if (this.stepup.consumeOneTimeGrant(ctx.session, user.id)) {
+      return true
+    }
+
+    if (user.password) {
+      const verified = await this.stepup.verifyLocalPasswordStepup(user, currentPassword ?? null)
+      if (!verified) {
+        ctx.session.flash('alert', {
+          type: 'danger',
+          message: ctx.i18n.t('messages.password_current_invalid'),
+        })
+        return false
+      }
+
+      this.stepup.markNow(ctx.session)
+      return true
+    }
+
+    ctx.session.flash('alert', {
+      type: 'danger',
+      message: ctx.i18n.t('messages.sensitive_action_reauth_required'),
+    })
+    return false
+  }
+
+  private static readonly PENDING_DRAFT_KEY = 'profile_pending_draft'
+  private static readonly PENDING_DRAFT_TTL_MS = 30 * 60 * 1000
+
+  async show({ inertia, auth, session }: HttpContext) {
     const user = auth.user!
     await user.load((loader) => loader.load('favoriteProducts').load('authIdentities'))
     const excludedAllergenIds = await this.getExcludedAllergenIds(user.id)
@@ -49,23 +116,61 @@ export default class ProfileController {
       .orderBy('name', 'asc')
       .select('id', 'name')
 
+    // Only consume the pending draft when OIDC reauth just completed.
+    // This prevents accidental consumption on unrelated visits to /profile.
+    let pendingDraft: object | null = null
+    if (session.flashMessages.get('sensitiveReauthCompleted') === true) {
+      const raw = session.pull(ProfileController.PENDING_DRAFT_KEY, null)
+      if (raw && typeof raw === 'object') {
+        const draft = raw as { createdAt?: number }
+        if (
+          !draft.createdAt ||
+          Date.now() - draft.createdAt <= ProfileController.PENDING_DRAFT_TTL_MS
+        ) {
+          pendingDraft = raw
+        }
+      }
+    }
+
     return inertia.render('profile/show', {
       user: { ...user.serialize(), excludedAllergenIds },
       tokens,
       allergens: allergens.map((a) => ({ id: a.id, name: a.name })),
       externalProviders: this.authModes.getEnabledExternalProviders(),
       linkedProviders: user.authIdentities.map((identity) => identity.provider),
+      sensitiveReauthActive: this.stepup.isRecent(session),
+      sensitiveReauthValidUntil: this.stepup.recentValidUntilIso(session),
+      sensitiveReauthTtlMinutes: this.stepup.ttlMinutes(),
+      localAuthEnabled: this.authModes.isLocalEnabled(),
+      hasLocalPassword: !!user.password,
+      pendingDraft,
     })
   }
 
-  async update({ request, auth, response, session, i18n }: HttpContext) {
+  async storePendingDraft({ request, session, response }: HttpContext) {
+    const data = request.only(['action', 'form', 'password'])
+    const actionType = (data?.action as Record<string, unknown>)?.type
+    if (!['profile-submit', 'password-change', 'oidc-link'].includes(String(actionType))) {
+      return response.badRequest({ error: 'invalid_action' })
+    }
+
+    session.put(ProfileController.PENDING_DRAFT_KEY, { ...data, createdAt: Date.now() })
+    return response.ok({ ok: true })
+  }
+
+  async update(ctx: HttpContext) {
+    const { request, auth, response, session, i18n } = ctx
     const user = auth.user!
     const data = await request.validateUsing(updateProfileValidator)
     const before = {
       displayName: user.displayName,
       email: user.email,
+      pendingEmail: user.pendingEmail,
+      emailVerifiedAt: user.emailVerifiedAt?.toISO() ?? null,
       phone: user.phone,
       iban: user.iban,
+      pendingIban: user.pendingIban,
+      ibanVerifiedAt: user.ibanVerifiedAt?.toISO() ?? null,
       showAllProducts: user.showAllProducts,
       sendMailOnPurchase: user.sendMailOnPurchase,
       sendDailyReport: user.sendDailyReport,
@@ -74,16 +179,116 @@ export default class ProfileController {
       excludedAllergenIds: await this.getExcludedAllergenIds(user.id),
     }
 
+    const requestedEmail = data.email.trim().toLowerCase()
+    const currentEmail = user.email.trim().toLowerCase()
+    const requestedIban = data.iban?.trim().toUpperCase() || null
+    const currentIban = user.iban?.trim().toUpperCase() || null
+    const emailChanged = requestedEmail !== currentEmail
+    const ibanChanged = requestedIban !== currentIban
+    let emailPendingVerificationPayload: { verificationUrl: string; email: string } | null = null
+    let ibanPendingVerificationPayload: { verificationUrl: string; iban: string } | null = null
+    let emailUpdateMessageKey: string | null = null
+    let ibanUpdateMessageKey: string | null = null
+
+    if (
+      (emailChanged || ibanChanged) &&
+      !(await this.ensureSensitiveStepup(ctx, data.currentPassword))
+    ) {
+      return response.redirect('/profile')
+    }
+
+    if (emailChanged) {
+      const existing = await User.query()
+        .whereNot('id', user.id)
+        .whereRaw('LOWER(email) = ?', [requestedEmail])
+        .first()
+      if (existing) {
+        session.flash('alert', {
+          type: 'danger',
+          message: i18n.t('messages.invite_email_already_registered'),
+        })
+        return response.redirect('/profile')
+      }
+
+      const isTrustedLinkedEmail = await this.authIdentity.hasTrustedLinkedEmail(
+        user.id,
+        requestedEmail
+      )
+      if (isTrustedLinkedEmail) {
+        user.email = requestedEmail
+        user.pendingEmail = null
+        user.emailVerifiedAt = DateTime.utc()
+        emailUpdateMessageKey = 'messages.email_changed_via_linked_identity'
+      } else {
+        user.pendingEmail = requestedEmail
+        const verification = await this.verifications.createToken(user, requestedEmail)
+        emailPendingVerificationPayload = {
+          verificationUrl: verification.verificationUrl,
+          email: verification.token.email,
+        }
+        emailUpdateMessageKey = 'messages.email_change_pending_verification'
+      }
+    } else if (user.pendingEmail) {
+      user.pendingEmail = null
+    }
+
+    if (ibanChanged) {
+      if (!requestedIban) {
+        user.iban = null
+        user.pendingIban = null
+        user.ibanVerifiedAt = null
+      } else {
+        user.pendingIban = requestedIban
+        const verification = await this.ibans.createToken(user, requestedIban)
+        ibanPendingVerificationPayload = {
+          verificationUrl: verification.verificationUrl,
+          iban: verification.token.iban,
+        }
+        ibanUpdateMessageKey = 'messages.iban_change_pending_verification'
+      }
+    } else if (user.pendingIban) {
+      user.pendingIban = null
+    }
+
     user.displayName = data.displayName
-    user.email = data.email.trim().toLowerCase()
     user.phone = data.phone ?? null
-    user.iban = data.iban ?? null
     user.showAllProducts = data.showAllProducts
     user.sendMailOnPurchase = data.sendMailOnPurchase
     user.sendDailyReport = data.sendDailyReport
     user.colorMode = data.colorMode
     user.keypadDisabled = data.keypadDisabled
     await user.save()
+
+    if (emailPendingVerificationPayload) {
+      const notifications = new NotificationService()
+      notifications
+        .sendEmailVerificationEmail({
+          email: emailPendingVerificationPayload.email,
+          displayName: user.displayName,
+          verificationUrl: emailPendingVerificationPayload.verificationUrl,
+        })
+        .catch((err) => {
+          logger.error(
+            { err, userId: user.id, email: emailPendingVerificationPayload?.email },
+            'Failed to send profile email verification'
+          )
+        })
+    }
+
+    if (ibanPendingVerificationPayload) {
+      const notifications = new NotificationService()
+      notifications
+        .sendIbanChangeVerificationEmail({
+          email: user.email,
+          displayName: user.displayName,
+          iban: ibanPendingVerificationPayload.iban,
+          verificationUrl: ibanPendingVerificationPayload.verificationUrl,
+        })
+        .catch((err) => {
+          logger.error({ err, userId: user.id }, 'Failed to send IBAN change verification')
+        })
+    }
+
     if (data.excludedAllergenIds !== undefined) {
       await this.syncExcludedAllergenIds(user, data.excludedAllergenIds)
     }
@@ -102,6 +307,24 @@ export default class ProfileController {
     ] as const) {
       if (before[key] !== user[key]) {
         changes[key] = { from: before[key], to: user[key] }
+      }
+    }
+    if (before.pendingEmail !== user.pendingEmail) {
+      changes.pendingEmail = { from: before.pendingEmail, to: user.pendingEmail }
+    }
+    if (before.pendingIban !== user.pendingIban) {
+      changes.pendingIban = { from: before.pendingIban, to: user.pendingIban }
+    }
+    if (before.emailVerifiedAt !== (user.emailVerifiedAt?.toISO() ?? null)) {
+      changes.emailVerifiedAt = {
+        from: before.emailVerifiedAt,
+        to: user.emailVerifiedAt?.toISO() ?? null,
+      }
+    }
+    if (before.ibanVerifiedAt !== (user.ibanVerifiedAt?.toISO() ?? null)) {
+      changes.ibanVerifiedAt = {
+        from: before.ibanVerifiedAt,
+        to: user.ibanVerifiedAt?.toISO() ?? null,
       }
     }
 
@@ -129,8 +352,74 @@ export default class ProfileController {
 
     await AuditService.log(user.id, 'profile.updated', 'user', user.id, null, metadata)
 
-    session.flash('alert', { type: 'success', message: i18n.t('messages.profile_updated') })
+    const infoMessages = [emailUpdateMessageKey, ibanUpdateMessageKey]
+      .filter((key): key is string => !!key)
+      .map((key) => i18n.t(key))
+    session.flash('alert', {
+      type: infoMessages.length > 0 ? 'info' : 'success',
+      message:
+        infoMessages.length > 0 ? infoMessages.join(' ') : i18n.t('messages.profile_updated'),
+    })
     return response.redirect('/profile')
+  }
+
+  async reauthSensitive(ctx: HttpContext) {
+    const user = ctx.auth.user!
+    const data = await ctx.request.validateUsing(sensitiveReauthValidator)
+
+    if (this.isImpersonating(ctx.session)) {
+      ctx.session.flash('alert', {
+        type: 'danger',
+        message: ctx.i18n.t('messages.sensitive_action_blocked_while_impersonating'),
+      })
+      return ctx.response.redirect('/profile')
+    }
+
+    if (!user.password) {
+      ctx.session.flash('alert', {
+        type: 'danger',
+        message: ctx.i18n.t('messages.sensitive_action_reauth_required'),
+      })
+      return ctx.response.redirect('/profile')
+    }
+
+    const verified = await this.stepup.verifyLocalPasswordStepup(user, data.currentPassword ?? null)
+    if (!verified) {
+      ctx.session.flash('alert', {
+        type: 'danger',
+        message: ctx.i18n.t('messages.password_current_invalid'),
+      })
+      return ctx.response.redirect('/profile')
+    }
+
+    this.stepup.markNow(ctx.session)
+    this.stepup.markOneTimeGrant(ctx.session, user.id)
+    ctx.session.flash('alert', { type: 'success', message: ctx.i18n.t('messages.reauth_success') })
+    return ctx.response.redirect('/profile')
+  }
+
+  async startOidcLink(ctx: HttpContext) {
+    const user = ctx.auth.user!
+    const data = await ctx.request.validateUsing(oidcLinkStartValidator)
+
+    if (!this.authModes.isProviderEnabled(data.provider)) {
+      return ctx.response.redirect('/profile')
+    }
+
+    if (!(await this.ensureSensitiveStepup(ctx, data.currentPassword))) {
+      return ctx.response.redirect('/profile')
+    }
+
+    ctx.session.put(ProfileController.LINK_STEPUP_GRANT_KEY, {
+      userId: user.id,
+      provider: data.provider,
+      issuedAt: DateTime.utc().toISO(),
+    })
+    ctx.session.flash(
+      'oidcLinkRedirect',
+      `/auth/${data.provider}/redirect?intent=link&userId=${user.id}`
+    )
+    return ctx.response.redirect('/profile')
   }
 
   async toggleColorMode({ request, auth, response }: HttpContext) {
@@ -145,6 +434,61 @@ export default class ProfileController {
       }
       await AuditService.log(user.id, 'profile.updated', 'user', user.id, null, metadata)
     }
+    return response.redirect().back()
+  }
+
+  async updatePreferences({ request, auth, response }: HttpContext) {
+    const user = auth.user!
+    const before = {
+      showAllProducts: user.showAllProducts,
+      sendMailOnPurchase: user.sendMailOnPurchase,
+      sendDailyReport: user.sendDailyReport,
+      colorMode: user.colorMode,
+      keypadDisabled: user.keypadDisabled,
+      excludedAllergenIds: await this.getExcludedAllergenIds(user.id),
+    }
+
+    const data = await request.validateUsing(updatePreferencesValidator)
+    user.showAllProducts = data.showAllProducts
+    user.sendMailOnPurchase = data.sendMailOnPurchase
+    user.sendDailyReport = data.sendDailyReport
+    user.colorMode = data.colorMode
+    user.keypadDisabled = data.keypadDisabled
+    await user.save()
+    await this.syncExcludedAllergenIds(user, data.excludedAllergenIds)
+
+    const changes: Record<string, { from: unknown; to: unknown }> = {}
+    for (const key of [
+      'showAllProducts',
+      'sendMailOnPurchase',
+      'sendDailyReport',
+      'colorMode',
+      'keypadDisabled',
+    ] as const) {
+      if (before[key] !== user[key]) {
+        changes[key] = { from: before[key], to: user[key] }
+      }
+    }
+    const after = await this.getExcludedAllergenIds(user.id)
+    if (
+      before.excludedAllergenIds.length !== after.length ||
+      before.excludedAllergenIds.some((id, index) => id !== after[index])
+    ) {
+      const allergenIds = [...new Set([...before.excludedAllergenIds, ...after])]
+      const allergenRows =
+        allergenIds.length > 0
+          ? await Allergen.query().whereIn('id', allergenIds).select('id', 'name')
+          : []
+      const namesById = new Map(allergenRows.map((a) => [a.id, a.name]))
+      const toLabel = (ids: number[]) =>
+        ids.map((id) => namesById.get(id) ?? `#${id}`).join(', ') || '—'
+      changes.excludedAllergens = { from: toLabel(before.excludedAllergenIds), to: toLabel(after) }
+    }
+
+    if (Object.keys(changes).length) {
+      await AuditService.log(user.id, 'profile.updated', 'user', user.id, null, changes)
+    }
+
     return response.redirect().back()
   }
 

@@ -19,6 +19,8 @@ export type ScannedRoutes = {
     'invite_registration.store': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
     'oidc.redirect': { paramsTuple: [ParamValue]; params: {'provider': ParamValue} }
     'oidc.callback': { paramsTuple: [ParamValue]; params: {'provider': ParamValue} }
+    'email_verification.verify': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
+    'iban_change.verify': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
     'logout.get': { paramsTuple?: []; params?: {} }
     'logout.post': { paramsTuple?: []; params?: {} }
     'admin_impersonation.destroy': { paramsTuple?: []; params?: {} }
@@ -31,12 +33,18 @@ export type ScannedRoutes = {
     'invoices.qrcode': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'profile.show': { paramsTuple?: []; params?: {} }
     'profile.update': { paramsTuple?: []; params?: {} }
+    'profile.update_preferences': { paramsTuple?: []; params?: {} }
     'profile.update_excluded_allergens': { paramsTuple?: []; params?: {} }
     'profile.toggle_color_mode': { paramsTuple?: []; params?: {} }
     'profile.toggle_favorite': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'profile.create_token': { paramsTuple?: []; params?: {} }
     'profile.revoke_token': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'password_reset.change_authenticated': { paramsTuple?: []; params?: {} }
+    'profile.reauth_sensitive': { paramsTuple?: []; params?: {} }
+    'profile.store_pending_draft': { paramsTuple?: []; params?: {} }
+    'profile.start_oidc_link': { paramsTuple?: []; params?: {} }
+    'email_verification.resend': { paramsTuple?: []; params?: {} }
+    'iban_change.resend': { paramsTuple?: []; params?: {} }
     'audit.index': { paramsTuple?: []; params?: {} }
     'supplier_deliveries.index': { paramsTuple?: []; params?: {} }
     'supplier_deliveries.store': { paramsTuple?: []; params?: {} }
@@ -100,6 +108,8 @@ export type ScannedRoutes = {
     'invite_registration.show': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
     'oidc.redirect': { paramsTuple: [ParamValue]; params: {'provider': ParamValue} }
     'oidc.callback': { paramsTuple: [ParamValue]; params: {'provider': ParamValue} }
+    'email_verification.verify': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
+    'iban_change.verify': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
     'logout.get': { paramsTuple?: []; params?: {} }
     'shop.index': { paramsTuple?: []; params?: {} }
     'orders.index': { paramsTuple?: []; params?: {} }
@@ -141,6 +151,8 @@ export type ScannedRoutes = {
     'invite_registration.show': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
     'oidc.redirect': { paramsTuple: [ParamValue]; params: {'provider': ParamValue} }
     'oidc.callback': { paramsTuple: [ParamValue]; params: {'provider': ParamValue} }
+    'email_verification.verify': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
+    'iban_change.verify': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
     'logout.get': { paramsTuple?: []; params?: {} }
     'shop.index': { paramsTuple?: []; params?: {} }
     'orders.index': { paramsTuple?: []; params?: {} }
@@ -188,6 +200,11 @@ export type ScannedRoutes = {
     'profile.toggle_color_mode': { paramsTuple?: []; params?: {} }
     'profile.toggle_favorite': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'profile.create_token': { paramsTuple?: []; params?: {} }
+    'profile.reauth_sensitive': { paramsTuple?: []; params?: {} }
+    'profile.store_pending_draft': { paramsTuple?: []; params?: {} }
+    'profile.start_oidc_link': { paramsTuple?: []; params?: {} }
+    'email_verification.resend': { paramsTuple?: []; params?: {} }
+    'iban_change.resend': { paramsTuple?: []; params?: {} }
     'supplier_deliveries.store': { paramsTuple?: []; params?: {} }
     'supplier_invoice.generate': { paramsTuple?: []; params?: {} }
     'supplier_invoice.generate_for_buyer': { paramsTuple: [ParamValue]; params: {'buyerId': ParamValue} }
@@ -210,6 +227,7 @@ export type ScannedRoutes = {
   }
   PUT: {
     'profile.update': { paramsTuple?: []; params?: {} }
+    'profile.update_preferences': { paramsTuple?: []; params?: {} }
     'profile.update_excluded_allergens': { paramsTuple?: []; params?: {} }
     'password_reset.change_authenticated': { paramsTuple?: []; params?: {} }
     'supplier_products.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }

@@ -19,6 +19,7 @@ test.group('AuthIdentityService', (group) => {
       provider: 'microsoft',
       providerUserId: 'ms-1',
       providerEmail: 'linked@example.com',
+      providerEmailVerified: true,
     })
 
     const match = await service.resolveForLogin({
@@ -68,6 +69,7 @@ test.group('AuthIdentityService', (group) => {
       provider: 'microsoft',
       providerUserId: 'ms-shared',
       providerEmail: 'first@example.com',
+      providerEmailVerified: true,
     })
 
     await assert.rejects(
@@ -77,8 +79,30 @@ test.group('AuthIdentityService', (group) => {
           provider: 'microsoft',
           providerUserId: 'ms-shared',
           providerEmail: 'second@example.com',
+          providerEmailVerified: true,
         }),
       /PROVIDER_IDENTITY_ALREADY_LINKED/
     )
+  })
+
+  test('reports trusted linked email only when provider marked it verified', async ({ assert }) => {
+    const user = await UserFactory.create()
+    await service.ensureLinkedIdentity({
+      userId: user.id,
+      provider: 'discord',
+      providerUserId: 'dc-verified-1',
+      providerEmail: 'trusted@example.com',
+      providerEmailVerified: true,
+    })
+    await service.ensureLinkedIdentity({
+      userId: user.id,
+      provider: 'microsoft',
+      providerUserId: 'ms-unverified-1',
+      providerEmail: 'untrusted@example.com',
+      providerEmailVerified: false,
+    })
+
+    assert.isTrue(await service.hasTrustedLinkedEmail(user.id, 'trusted@example.com'))
+    assert.isFalse(await service.hasTrustedLinkedEmail(user.id, 'untrusted@example.com'))
   })
 })

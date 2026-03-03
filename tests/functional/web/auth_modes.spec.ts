@@ -63,6 +63,7 @@ test.group('Web Auth - Provider/Registration Matrix', (group) => {
     AUTH_AUTO_REGISTER_PROVIDERS: process.env.AUTH_AUTO_REGISTER_PROVIDERS,
     AUTH_REGISTRATION_MODE: process.env.AUTH_REGISTRATION_MODE,
     AUTH_REGISTRATION_ALLOWED_DOMAINS: process.env.AUTH_REGISTRATION_ALLOWED_DOMAINS,
+    SENSITIVE_ACTION_REAUTH_TTL_MINUTES: process.env.SENSITIVE_ACTION_REAUTH_TTL_MINUTES,
   }
 
   group.each.setup(async () => {
@@ -76,6 +77,7 @@ test.group('Web Auth - Provider/Registration Matrix', (group) => {
     process.env.AUTH_AUTO_REGISTER_PROVIDERS = ''
     process.env.AUTH_REGISTRATION_MODE = 'open'
     process.env.AUTH_REGISTRATION_ALLOWED_DOMAINS = ''
+    process.env.SENSITIVE_ACTION_REAUTH_TTL_MINUTES = '10'
   })
 
   group.teardown(() => {
@@ -258,6 +260,30 @@ test.group('Web Auth - Provider/Registration Matrix', (group) => {
     const response = await client
       .get(`/auth/microsoft/redirect?intent=invite&token=${encodeURIComponent(token)}`)
       .redirects(0)
+    response.assertStatus(302)
+    assert.include(response.header('location') ?? '', 'login.microsoftonline.com')
+  })
+
+  test('provider link intent accepts one-time stepup grant when TTL is zero', async ({
+    client,
+    assert,
+  }) => {
+    process.env.AUTH_PROVIDERS = 'local,microsoft'
+    process.env.SENSITIVE_ACTION_REAUTH_TTL_MINUTES = '0'
+    const user = await UserFactory.create()
+
+    const response = await client
+      .get(`/auth/microsoft/redirect?intent=link&userId=${user.id}`)
+      .loginAs(user)
+      .withSession({
+        __oidc_link_stepup_grant: {
+          userId: user.id,
+          provider: 'microsoft',
+          issuedAt: new Date().toISOString(),
+        },
+      })
+      .redirects(0)
+
     response.assertStatus(302)
     assert.include(response.header('location') ?? '', 'login.microsoftonline.com')
   })

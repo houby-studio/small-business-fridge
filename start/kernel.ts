@@ -52,6 +52,7 @@ router.use([
 export const middleware = router.named({
   guest: () => import('#middleware/guest_middleware'),
   auth: () => import('#middleware/auth_middleware'),
+  emailVerified: () => import('#middleware/email_verified_middleware'),
   role: () => import('#middleware/role_middleware'),
   kiosk: () => import('#middleware/kiosk_middleware'),
   throttle: () => import('#middleware/throttle_middleware'),

@@ -32,10 +32,22 @@ export default class User extends compose(BaseModel, AuthFinder) {
   declare email: string
 
   @column()
+  declare pendingEmail: string | null
+
+  @column.dateTime()
+  declare emailVerifiedAt: DateTime | null
+
+  @column()
   declare phone: string | null
 
   @column()
   declare iban: string | null
+
+  @column()
+  declare pendingIban: string | null
+
+  @column.dateTime()
+  declare ibanVerifiedAt: DateTime | null
 
   @column()
   declare keypadId: number

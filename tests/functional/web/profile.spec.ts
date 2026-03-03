@@ -113,6 +113,7 @@ test.group('Web Profile - update audit details', (group) => {
       .json({
         displayName: 'Alice New',
         email: 'alice.new@example.com',
+        currentPassword: 'password123',
         phone: '222',
         iban: 'CZ6508000000192000145400',
         showAllProducts: true,
@@ -127,6 +128,10 @@ test.group('Web Profile - update audit details', (group) => {
 
     response.assertStatus(302)
 
+    await user.refresh()
+    assert.equal(user.email, 'alice.old@example.com')
+    assert.equal(user.pendingEmail, 'alice.new@example.com')
+
     const log = await db
       .from('audit_logs')
       .where('action', 'profile.updated')
@@ -137,13 +142,13 @@ test.group('Web Profile - update audit details', (group) => {
 
     const metadata = log.metadata as Record<string, { from: unknown; to: unknown }> | null
     assert.deepEqual(metadata?.displayName, { from: 'Alice Old', to: 'Alice New' })
-    assert.deepEqual(metadata?.email, {
-      from: 'alice.old@example.com',
+    assert.deepEqual(metadata?.pendingEmail, {
+      from: null,
       to: 'alice.new@example.com',
     })
     assert.deepEqual(metadata?.phone, { from: '111', to: '222' })
-    assert.deepEqual(metadata?.iban, {
-      from: 'CZ6508000000192000145399',
+    assert.deepEqual(metadata?.pendingIban, {
+      from: null,
       to: 'CZ6508000000192000145400',
     })
     assert.deepEqual(metadata?.showAllProducts, { from: false, to: true })
@@ -151,6 +156,58 @@ test.group('Web Profile - update audit details', (group) => {
     assert.deepEqual(metadata?.sendDailyReport, { from: true, to: false })
     assert.deepEqual(metadata?.colorMode, { from: 'dark', to: 'light' })
     assert.deepEqual(metadata?.keypadDisabled, { from: false, to: true })
+  })
+
+  test('PUT /profile accepts one-time sensitive stepup grant when TTL is zero', async ({
+    client,
+    assert,
+  }) => {
+    const previousTtl = process.env.SENSITIVE_ACTION_REAUTH_TTL_MINUTES
+    process.env.SENSITIVE_ACTION_REAUTH_TTL_MINUTES = '0'
+
+    try {
+      const user = await UserFactory.merge({
+        displayName: 'Grant User',
+        email: 'grant@example.com',
+        iban: 'CZ6508000000192000145399',
+      }).create()
+
+      const response = await client
+        .put('/profile')
+        .json({
+          displayName: user.displayName,
+          email: user.email,
+          phone: user.phone,
+          iban: 'CZ6508000000192000145400',
+          showAllProducts: user.showAllProducts,
+          sendMailOnPurchase: user.sendMailOnPurchase,
+          sendDailyReport: user.sendDailyReport,
+          colorMode: user.colorMode,
+          keypadDisabled: user.keypadDisabled,
+          excludedAllergenIds: [],
+        })
+        .loginAs(user)
+        .withSession({
+          __sensitive_stepup_grant: {
+            userId: user.id,
+            issuedAt: new Date().toISOString(),
+          },
+        })
+        .withCsrfToken()
+        .redirects(0)
+
+      response.assertStatus(302)
+
+      await user.refresh()
+      assert.equal(user.iban, 'CZ6508000000192000145399')
+      assert.equal(user.pendingIban, 'CZ6508000000192000145400')
+    } finally {
+      if (previousTtl === undefined) {
+        delete process.env.SENSITIVE_ACTION_REAUTH_TTL_MINUTES
+      } else {
+        process.env.SENSITIVE_ACTION_REAUTH_TTL_MINUTES = previousTtl
+      }
+    }
   })
 })
 
@@ -248,5 +305,124 @@ test.group('Web Profile - API tokens', (group) => {
 
     const response = await client.get('/profile').loginAs(user)
     response.assertStatus(200)
+  })
+})
+
+test.group('Web Profile - update preferences', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('PUT /profile/preferences saves boolean preferences and redirects', async ({
+    client,
+    assert,
+  }) => {
+    const user = await UserFactory.merge({
+      showAllProducts: false,
+      sendMailOnPurchase: true,
+      sendDailyReport: true,
+      colorMode: 'light',
+      keypadDisabled: false,
+    }).create()
+
+    const response = await client
+      .put('/profile/preferences')
+      .json({
+        showAllProducts: true,
+        sendMailOnPurchase: false,
+        sendDailyReport: false,
+        colorMode: 'dark',
+        keypadDisabled: true,
+        excludedAllergenIds: [],
+      })
+      .loginAs(user)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    const updated = await User.findOrFail(user.id)
+    assert.isTrue(updated.showAllProducts)
+    assert.isFalse(updated.sendMailOnPurchase)
+    assert.isFalse(updated.sendDailyReport)
+    assert.equal(updated.colorMode, 'dark')
+    assert.isTrue(updated.keypadDisabled)
+  })
+
+  test('PUT /profile/preferences audit logs changed fields', async ({ client, assert }) => {
+    const user = await UserFactory.merge({
+      showAllProducts: false,
+      sendMailOnPurchase: true,
+      sendDailyReport: false,
+      colorMode: 'light',
+      keypadDisabled: false,
+    }).create()
+
+    await client
+      .put('/profile/preferences')
+      .json({
+        showAllProducts: true,
+        sendMailOnPurchase: true,
+        sendDailyReport: false,
+        colorMode: 'dark',
+        keypadDisabled: false,
+        excludedAllergenIds: [],
+      })
+      .loginAs(user)
+      .withCsrfToken()
+      .redirects(0)
+
+    const log = await db
+      .from('audit_logs')
+      .where('action', 'profile.updated')
+      .where('user_id', user.id)
+      .orderBy('id', 'desc')
+      .first()
+
+    assert.isDefined(log)
+    const metadata = log.metadata as Record<string, { from: unknown; to: unknown }> | null
+    assert.deepEqual(metadata?.showAllProducts, { from: false, to: true })
+    assert.deepEqual(metadata?.colorMode, { from: 'light', to: 'dark' })
+    assert.isUndefined(metadata?.sendMailOnPurchase)
+    assert.isUndefined(metadata?.sendDailyReport)
+    assert.isUndefined(metadata?.keypadDisabled)
+  })
+
+  test('PUT /profile/preferences rejects invalid colorMode', async ({ client, assert }) => {
+    const user = await UserFactory.merge({ colorMode: 'light' }).create()
+
+    const response = await client
+      .put('/profile/preferences')
+      .json({
+        showAllProducts: false,
+        sendMailOnPurchase: false,
+        sendDailyReport: false,
+        colorMode: 'auto',
+        keypadDisabled: false,
+        excludedAllergenIds: [],
+      })
+      .loginAs(user)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    const updated = await User.findOrFail(user.id)
+    assert.equal(updated.colorMode, 'light')
+  })
+
+  test('PUT /profile/preferences requires authentication', async ({ client }) => {
+    const response = await client
+      .put('/profile/preferences')
+      .json({
+        showAllProducts: false,
+        sendMailOnPurchase: false,
+        sendDailyReport: false,
+        colorMode: 'light',
+        keypadDisabled: false,
+        excludedAllergenIds: [],
+      })
+      .redirects(0)
+
+    response.assertStatus(302)
   })
 })

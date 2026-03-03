@@ -1,4 +1,5 @@
 import factory from '@adonisjs/lucid/factories'
+import { DateTime } from 'luxon'
 import User from '#models/user'
 
 let keypadCounter = 100
@@ -8,6 +9,10 @@ export const UserFactory = factory
     return {
       displayName: faker.person.fullName(),
       email: faker.internet.email(),
+      pendingEmail: null,
+      emailVerifiedAt: DateTime.utc(),
+      pendingIban: null,
+      ibanVerifiedAt: null,
       password: 'password123',
       keypadId: keypadCounter++,
       role: 'customer' as const,

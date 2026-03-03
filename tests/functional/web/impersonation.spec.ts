@@ -125,4 +125,107 @@ test.group('Admin Impersonation', (group) => {
     assert.isNotNull(log)
     assert.equal(log.target_user_id, customer.id)
   })
+
+  test('impersonating admin cannot change target email or IBAN', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const target = await UserFactory.merge({
+      email: 'target-impersonated@example.com',
+      iban: 'CZ6508000000192000145399',
+    }).create()
+
+    const response = await client
+      .put('/profile')
+      .loginAs(admin)
+      .withSession({
+        __impersonation: {
+          byId: admin.id,
+          asId: target.id,
+          asName: target.displayName,
+        },
+      })
+      .json({
+        displayName: target.displayName,
+        email: 'attacker@example.com',
+        currentPassword: 'password123',
+        phone: target.phone,
+        iban: 'CZ6508000000192000145400',
+        showAllProducts: target.showAllProducts,
+        sendMailOnPurchase: target.sendMailOnPurchase,
+        sendDailyReport: target.sendDailyReport,
+        colorMode: target.colorMode,
+        keypadDisabled: target.keypadDisabled,
+        excludedAllergenIds: [],
+      })
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    response.assertHeader('location', '/profile')
+
+    await target.refresh()
+    assert.equal(target.email, 'target-impersonated@example.com')
+    assert.equal(target.iban, 'CZ6508000000192000145399')
+  })
+
+  test('impersonating admin cannot change target password', async ({ client }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const target = await UserFactory.create()
+
+    const response = await client
+      .put('/profile/password')
+      .loginAs(admin)
+      .withSession({
+        __impersonation: {
+          byId: admin.id,
+          asId: target.id,
+          asName: target.displayName,
+        },
+      })
+      .form({
+        currentPassword: 'password123',
+        newPassword: 'new-secret-123',
+        newPasswordConfirmation: 'new-secret-123',
+      })
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    response.assertHeader('location', '/profile')
+  })
+
+  test('impersonating admin cannot start OIDC link flow', async ({ client }) => {
+    const previousProviders = process.env.AUTH_PROVIDERS
+    process.env.AUTH_PROVIDERS = 'local,microsoft'
+
+    try {
+      const admin = await UserFactory.apply('admin').create()
+      const target = await UserFactory.create()
+
+      const response = await client
+        .post('/profile/oidc-link')
+        .loginAs(admin)
+        .withSession({
+          __impersonation: {
+            byId: admin.id,
+            asId: target.id,
+            asName: target.displayName,
+          },
+        })
+        .json({
+          provider: 'microsoft',
+          currentPassword: 'password123',
+        })
+        .withCsrfToken()
+        .redirects(0)
+
+      response.assertStatus(302)
+      response.assertHeader('location', '/profile')
+    } finally {
+      if (previousProviders === undefined) {
+        delete process.env.AUTH_PROVIDERS
+      } else {
+        process.env.AUTH_PROVIDERS = previousProviders
+      }
+    }
+  })
 })

@@ -9,11 +9,12 @@ import AuditService from '#services/audit_service'
 import NotificationService from '#services/notification_service'
 import PasswordResetService from '#services/password_reset_service'
 import AuthModeService from '#services/auth_mode_service'
-import hash from '@adonisjs/core/services/hash'
+import ReauthStepupService from '#services/reauth_stepup_service'
 
 export default class PasswordResetController {
   private resets = new PasswordResetService()
   private authModes = new AuthModeService()
+  private stepup = new ReauthStepupService()
 
   async showForgot({ inertia, response }: HttpContext) {
     if (this.authModes.isLocalLoginDisabled()) {
@@ -102,8 +103,24 @@ export default class PasswordResetController {
   }
 
   async changeAuthenticated({ auth, request, response, session, i18n }: HttpContext) {
+    if (this.authModes.isLocalLoginDisabled()) {
+      session.flash('alert', {
+        type: 'danger',
+        message: i18n.t('messages.forbidden'),
+      })
+      return response.redirect('/profile')
+    }
+
     const user = auth.user!
     const data = await request.validateUsing(changePasswordValidator)
+
+    if (session.get('__impersonation')) {
+      session.flash('alert', {
+        type: 'danger',
+        message: i18n.t('messages.sensitive_action_blocked_while_impersonating'),
+      })
+      return response.redirect('/profile')
+    }
 
     if (data.newPassword !== data.newPasswordConfirmation) {
       session.flash('alert', {
@@ -113,13 +130,26 @@ export default class PasswordResetController {
       return response.redirect('/profile')
     }
 
-    if (user.password) {
-      const currentPassword = data.currentPassword ?? ''
-      const matches = await hash.verify(user.password, currentPassword)
-      if (!matches) {
+    const hasRecentStepup = this.stepup.isRecent(session)
+    const hasOneTimeGrant = this.stepup.consumeOneTimeGrant(session, user.id)
+
+    if (!hasRecentStepup && !hasOneTimeGrant) {
+      if (user.password) {
+        const currentPassword = data.currentPassword ?? null
+        const matches = await this.stepup.verifyLocalPasswordStepup(user, currentPassword)
+        if (!matches) {
+          session.flash('alert', {
+            type: 'danger',
+            message: i18n.t('messages.password_current_invalid'),
+          })
+          return response.redirect('/profile')
+        }
+        this.stepup.markNow(session)
+        this.stepup.markOneTimeGrant(session, user.id)
+      } else {
         session.flash('alert', {
           type: 'danger',
-          message: i18n.t('messages.password_current_invalid'),
+          message: i18n.t('messages.sensitive_action_reauth_required'),
         })
         return response.redirect('/profile')
       }
