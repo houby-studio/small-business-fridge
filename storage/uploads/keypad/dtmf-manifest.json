@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-03T12:31:44.675Z",
+  "generatedAt": "2026-03-03T14:51:24.778Z",
   "format": "wav/pcm16-mono",
   "options": {
     "outDir": "storage/uploads/keypad",
@@ -92,6 +92,74 @@
       "highHz": 1477,
       "fileName": "hash.wav",
       "urlPath": "/uploads/keypad/hash.wav"
+    }
+  ],
+  "events": [
+    {
+      "name": "loginSuccess",
+      "description": "Three ascending notes for successful keypad login",
+      "fileName": "login-success.wav",
+      "urlPath": "/uploads/keypad/login-success.wav",
+      "parts": [
+        {
+          "durationMs": 70,
+          "frequenciesHz": [
+            523
+          ],
+          "amplitudeScale": 1
+        },
+        {
+          "durationMs": 25,
+          "frequenciesHz": [],
+          "amplitudeScale": 0
+        },
+        {
+          "durationMs": 70,
+          "frequenciesHz": [
+            659
+          ],
+          "amplitudeScale": 1
+        },
+        {
+          "durationMs": 25,
+          "frequenciesHz": [],
+          "amplitudeScale": 0
+        },
+        {
+          "durationMs": 90,
+          "frequenciesHz": [
+            784
+          ],
+          "amplitudeScale": 1
+        }
+      ]
+    },
+    {
+      "name": "loginError",
+      "description": "Two descending notes for invalid or unavailable keypad login",
+      "fileName": "login-error.wav",
+      "urlPath": "/uploads/keypad/login-error.wav",
+      "parts": [
+        {
+          "durationMs": 130,
+          "frequenciesHz": [
+            330
+          ],
+          "amplitudeScale": 1
+        },
+        {
+          "durationMs": 35,
+          "frequenciesHz": [],
+          "amplitudeScale": 0
+        },
+        {
+          "durationMs": 170,
+          "frequenciesHz": [
+            220
+          ],
+          "amplitudeScale": 1
+        }
+      ]
     }
   ]
 }

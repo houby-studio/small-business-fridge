@@ -93,6 +93,7 @@ const recommendedIds = ref<number[]>([])
 const excludedAllergenIds = ref<number[]>([])
 const musicTracks = ref<MusicTrack[]>([])
 const backgroundAudio = ref<HTMLAudioElement | null>(null)
+const loginTonePlayers = new Map<string, HTMLAudioElement>()
 let remainingTrackIds: number[] = []
 
 function refillTrackQueue() {
@@ -138,6 +139,22 @@ function startBackgroundMusic(tracks: MusicTrack[]) {
   }
 
   playNextTrack()
+}
+
+function playLoginTone(type: 'success' | 'error') {
+  const fileName = type === 'success' ? 'login-success.wav' : 'login-error.wav'
+
+  let player = loginTonePlayers.get(fileName)
+  if (!player) {
+    player = new Audio(`/uploads/keypad/${fileName}`)
+    player.preload = 'auto'
+    loginTonePlayers.set(fileName, player)
+  }
+
+  player.currentTime = 0
+  void player.play().catch(() => {
+    // Ignore playback failures due to browser autoplay restrictions.
+  })
 }
 
 // ── Basket ────────────────────────────────────────────────────────────────────
@@ -431,6 +448,7 @@ async function onKeypadSubmit(keypadId: string) {
     }
 
     if (!res.ok) {
+      playLoginTone('error')
       toast.add({
         severity: 'error',
         summary: data.error ?? t('messages.kiosk_customer_not_found'),
@@ -444,10 +462,12 @@ async function onKeypadSubmit(keypadId: string) {
     recommendedIds.value = data.recommendedIds
     excludedAllergenIds.value = data.excludedAllergenIds ?? []
     startBackgroundMusic(data.musicTracks ?? [])
+    playLoginTone('success')
     appState.value = 'identified'
     startIdleTimer()
     refreshProducts() // fetch fresh stock data for this customer's session
   } catch {
+    playLoginTone('error')
     toast.add({ severity: 'error', summary: t('kiosk.purchase_retry'), life: 3000 })
   } finally {
     keypadLoading.value = false
@@ -574,6 +594,10 @@ onUnmounted(() => {
   document.removeEventListener('keydown', onGlobalKeydown)
   stopIdleTimer()
   stopBackgroundMusic()
+  for (const player of loginTonePlayers.values()) {
+    player.pause()
+  }
+  loginTonePlayers.clear()
   if (barcodeTimeout) clearTimeout(barcodeTimeout)
 })
 </script>

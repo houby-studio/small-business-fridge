@@ -7,6 +7,19 @@ type DtmfSpec = {
   highHz: number
 }
 
+type TonePartSpec = {
+  durationMs: number
+  frequenciesHz: number[]
+  amplitudeScale?: number
+}
+
+type EventToneSpec = {
+  name: 'loginSuccess' | 'loginError'
+  description: string
+  fileName: string
+  parts: TonePartSpec[]
+}
+
 type CliOptions = {
   outDir: string
   durationMs: number
@@ -36,6 +49,31 @@ const DTMF_SPECS: DtmfSpec[] = [
   { key: '*', lowHz: 941, highHz: 1209 },
   { key: '0', lowHz: 941, highHz: 1336 },
   { key: '#', lowHz: 941, highHz: 1477 },
+]
+
+const EVENT_TONE_SPECS: EventToneSpec[] = [
+  {
+    name: 'loginSuccess',
+    description: 'Three ascending notes for successful keypad login',
+    fileName: 'login-success.wav',
+    parts: [
+      { durationMs: 70, frequenciesHz: [523], amplitudeScale: 1 },
+      { durationMs: 25, frequenciesHz: [], amplitudeScale: 0 },
+      { durationMs: 70, frequenciesHz: [659], amplitudeScale: 1 },
+      { durationMs: 25, frequenciesHz: [], amplitudeScale: 0 },
+      { durationMs: 90, frequenciesHz: [784], amplitudeScale: 1 },
+    ],
+  },
+  {
+    name: 'loginError',
+    description: 'Two descending notes for invalid or unavailable keypad login',
+    fileName: 'login-error.wav',
+    parts: [
+      { durationMs: 130, frequenciesHz: [330], amplitudeScale: 1 },
+      { durationMs: 35, frequenciesHz: [], amplitudeScale: 0 },
+      { durationMs: 170, frequenciesHz: [220], amplitudeScale: 1 },
+    ],
+  },
 ]
 
 function parsePositiveNumber(input: string, optionName: string): number {
@@ -126,31 +164,66 @@ function toPublicUrlPath(outDir: string, fileName: string): string {
 }
 
 function buildDtmfPcm(spec: DtmfSpec, options: CliOptions): Int16Array {
-  const totalSamples = Math.max(1, Math.round((options.sampleRate * options.durationMs) / 1000))
-  const fadeSamples = Math.max(
-    0,
-    Math.min(Math.round((options.sampleRate * options.fadeMs) / 1000), Math.floor(totalSamples / 2))
+  return buildCompositePcm(
+    [
+      {
+        durationMs: options.durationMs,
+        frequenciesHz: [spec.lowHz, spec.highHz],
+        amplitudeScale: 1,
+      },
+    ],
+    options
   )
+}
 
-  const pcm = new Int16Array(totalSamples)
+function buildCompositePcm(parts: TonePartSpec[], options: CliOptions): Int16Array {
+  const sampleChunks: Int16Array[] = []
 
-  for (let i = 0; i < totalSamples; i++) {
-    const t = i / options.sampleRate
-    const low = Math.sin(2 * Math.PI * spec.lowHz * t)
-    const high = Math.sin(2 * Math.PI * spec.highHz * t)
+  for (const part of parts) {
+    const totalSamples = Math.max(1, Math.round((options.sampleRate * part.durationMs) / 1000))
+    const fadeSamples = Math.max(
+      0,
+      Math.min(
+        Math.round((options.sampleRate * options.fadeMs) / 1000),
+        Math.floor(totalSamples / 2)
+      )
+    )
 
-    let envelope = 1
-    if (fadeSamples > 0) {
-      if (i < fadeSamples) {
-        envelope = i / fadeSamples
-      } else if (i >= totalSamples - fadeSamples) {
-        envelope = (totalSamples - 1 - i) / fadeSamples
+    const chunk = new Int16Array(totalSamples)
+
+    for (let i = 0; i < totalSamples; i++) {
+      const t = i / options.sampleRate
+      const toneSum = part.frequenciesHz.reduce(
+        (sum, hz) => sum + Math.sin(2 * Math.PI * hz * t),
+        0
+      )
+      const normalizedTone = part.frequenciesHz.length > 0 ? toneSum / part.frequenciesHz.length : 0
+
+      let envelope = 1
+      if (fadeSamples > 0) {
+        if (i < fadeSamples) {
+          envelope = i / fadeSamples
+        } else if (i >= totalSamples - fadeSamples) {
+          envelope = (totalSamples - 1 - i) / fadeSamples
+        }
       }
+
+      const scaledAmplitude = options.amplitude * (part.amplitudeScale ?? 1)
+      const mixed = normalizedTone * scaledAmplitude * envelope
+      const sample = clampSample(mixed)
+      chunk[i] = Math.round(sample * 32767)
     }
 
-    const mixed = (low + high) * 0.5 * options.amplitude * envelope
-    const sample = clampSample(mixed)
-    pcm[i] = Math.round(sample * 32767)
+    sampleChunks.push(chunk)
+  }
+
+  const totalLength = sampleChunks.reduce((sum, chunk) => sum + chunk.length, 0)
+  const pcm = new Int16Array(totalLength)
+  let writeOffset = 0
+
+  for (const chunk of sampleChunks) {
+    pcm.set(chunk, writeOffset)
+    writeOffset += chunk.length
   }
 
   return pcm
@@ -217,6 +290,13 @@ async function main() {
       fileName: string
       urlPath: string
     }>,
+    events: [] as Array<{
+      name: EventToneSpec['name']
+      description: string
+      fileName: string
+      urlPath: string
+      parts: TonePartSpec[]
+    }>,
   }
 
   for (const spec of DTMF_SPECS) {
@@ -236,13 +316,31 @@ async function main() {
     })
   }
 
+  for (const spec of EVENT_TONE_SPECS) {
+    const filePath = resolve(outDir, spec.fileName)
+    const pcm = buildCompositePcm(spec.parts, options)
+    const wav = pcmToWavBytes(pcm, options.sampleRate)
+
+    await writeFile(filePath, wav)
+
+    manifest.events.push({
+      name: spec.name,
+      description: spec.description,
+      fileName: spec.fileName,
+      urlPath: toPublicUrlPath(options.outDir, spec.fileName),
+      parts: spec.parts,
+    })
+  }
+
   await writeFile(
     resolve(outDir, 'dtmf-manifest.json'),
     `${JSON.stringify(manifest, null, 2)}\n`,
     'utf8'
   )
 
-  console.log(`Generated ${DTMF_SPECS.length} keypad tones in ${outDir}`)
+  console.log(
+    `Generated ${DTMF_SPECS.length} keypad tones and ${EVENT_TONE_SPECS.length} event tones in ${outDir}`
+  )
   console.log('Tip: files in storage/uploads are available under /uploads/...')
 }
 
