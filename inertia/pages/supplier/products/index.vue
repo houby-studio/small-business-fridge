@@ -139,8 +139,8 @@ function formatAllergenList(allergens: ProductRow['allergens']) {
           <Tag
             v-if="data.category"
             :value="data.category.name"
-            :style="{ background: data.category.color }"
-            class="text-xs text-white"
+            :style="{ background: data.category.color, color: '#ffffff' }"
+            class="text-xs !text-white"
           />
           <span v-else class="text-gray-400 dark:text-zinc-500">—</span>
         </template>

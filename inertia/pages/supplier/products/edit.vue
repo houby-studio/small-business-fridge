@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
-import { Head, router } from '@inertiajs/vue3'
+import { Head, router, useForm } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
@@ -10,6 +10,7 @@ import FileUpload from 'primevue/fileupload'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import { useI18n } from '~/composables/use_i18n'
+import { useProductFormValidation } from '~/composables/use_product_form_validation'
 
 interface CategoryOption {
   id: number
@@ -40,22 +41,52 @@ const props = defineProps<{
 }>()
 const { t } = useI18n()
 
-const form = ref({
+const form = useForm({
   displayName: props.product.displayName,
   description: props.product.description ?? '',
   categoryId: props.product.categoryId,
   barcode: props.product.barcode ?? '',
   allergenIds: [...props.product.allergenIds],
+  image: null as File | null,
 })
-const imageFile = ref<File | null>(null)
-const submitting = ref(false)
 const imagePreviewUrl = ref<string | null>(null)
 const nameInput = ref<any>(null)
 const descriptionInput = ref<any>(null)
 const categorySelect = ref<any>(null)
 
 const displayedImageSrc = computed(() => imagePreviewUrl.value || props.product.imagePath || null)
-const previewTitle = computed(() => form.value.displayName || props.product.displayName)
+const previewTitle = computed(() => form.displayName || props.product.displayName)
+const validation = useProductFormValidation(
+  computed(() => ({
+    displayName: form.displayName,
+    description: form.description,
+    categoryId: form.categoryId,
+    barcode: form.barcode,
+    hasImage: true,
+  })),
+  { requireImage: false }
+)
+const clientErrors = computed(() => ({
+  displayName: validation.displayNameMissing.value
+    ? t('supplier.products_validation_name_required')
+    : validation.displayNameTooLong.value
+      ? t('supplier.products_validation_name_max')
+      : '',
+  description: validation.descriptionTooLong.value
+    ? t('supplier.products_validation_description_max')
+    : '',
+  categoryId: validation.categoryMissing.value
+    ? t('supplier.products_validation_category_required')
+    : '',
+  barcode: validation.barcodeTooLong.value ? t('supplier.products_validation_barcode_max') : '',
+}))
+const submitDisabled = computed(() => form.processing || validation.hasBlockingErrors.value)
+
+function fieldError(field: keyof typeof form.errors | keyof typeof clientErrors.value) {
+  const serverError = form.errors[field as keyof typeof form.errors]
+  if (serverError) return serverError
+  return clientErrors.value[field as keyof typeof clientErrors.value]
+}
 
 function resetPreviewUrl() {
   if (imagePreviewUrl.value) {
@@ -65,10 +96,10 @@ function resetPreviewUrl() {
 }
 
 function onImageSelect(event: any) {
-  imageFile.value = event.files[0] ?? null
+  form.image = event.files[0] ?? null
   resetPreviewUrl()
-  if (imageFile.value) {
-    imagePreviewUrl.value = URL.createObjectURL(imageFile.value)
+  if (form.image) {
+    imagePreviewUrl.value = URL.createObjectURL(form.image)
   }
 }
 
@@ -106,23 +137,21 @@ function onDescriptionEnter() {
 }
 
 function submit() {
-  if (!form.value.displayName || !form.value.categoryId) return
-  submitting.value = true
+  if (submitDisabled.value) return
 
-  const formData = new FormData()
-  formData.append('displayName', form.value.displayName)
-  formData.append('description', form.value.description)
-  formData.append('categoryId', String(form.value.categoryId))
-  if (form.value.barcode) {
-    formData.append('barcode', form.value.barcode)
-  }
-  if (imageFile.value) {
-    formData.append('image', imageFile.value)
-  }
-  formData.append('allergenIds', JSON.stringify(form.value.allergenIds))
-  router.post(`/supplier/products/${props.product.id}?_method=PUT`, formData, {
-    onFinish: () => (submitting.value = false),
-  })
+  form
+    .transform((data) => ({
+      ...data,
+      _method: 'PUT',
+      allergenIds: JSON.stringify(data.allergenIds),
+    }))
+    .post(`/supplier/products/${props.product.id}`, {
+      forceFormData: true,
+      preserveScroll: true,
+      onFinish: () => {
+        form.transform((data) => data)
+      },
+    })
 }
 
 function goBack() {
@@ -203,8 +232,13 @@ onMounted(() => {
                 v-model="form.displayName"
                 autofocus
                 class="w-full"
+                :placeholder="t('supplier.products_name_placeholder')"
+                :invalid="!!fieldError('displayName')"
                 @keydown.enter.prevent="onNameEnter"
               />
+              <small v-if="fieldError('displayName')" class="text-red-600 dark:text-red-400">{{
+                fieldError('displayName')
+              }}</small>
             </div>
 
             <div>
@@ -217,8 +251,13 @@ onMounted(() => {
                 v-model="form.description"
                 rows="3"
                 class="w-full"
+                :placeholder="t('supplier.products_description_placeholder')"
+                :invalid="!!fieldError('description')"
                 @keydown.enter.prevent="onDescriptionEnter"
               />
+              <small v-if="fieldError('description')" class="text-red-600 dark:text-red-400">{{
+                fieldError('description')
+              }}</small>
             </div>
 
             <div>
@@ -234,14 +273,27 @@ onMounted(() => {
                 optionValue="id"
                 :placeholder="t('supplier.products_category_label')"
                 class="w-full"
+                :invalid="!!fieldError('categoryId')"
               />
+              <small v-if="fieldError('categoryId')" class="text-red-600 dark:text-red-400">{{
+                fieldError('categoryId')
+              }}</small>
             </div>
 
             <div>
               <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
                 t('supplier.products_barcode_label')
               }}</label>
-              <InputText id="edit-product-barcode" v-model="form.barcode" class="w-full" />
+              <InputText
+                id="edit-product-barcode"
+                v-model="form.barcode"
+                class="w-full"
+                :placeholder="t('supplier.products_barcode_placeholder')"
+                :invalid="!!fieldError('barcode')"
+              />
+              <small v-if="fieldError('barcode')" class="text-red-600 dark:text-red-400">{{
+                fieldError('barcode')
+              }}</small>
             </div>
 
             <div>
@@ -255,6 +307,8 @@ onMounted(() => {
                 optionLabel="name"
                 optionValue="id"
                 :placeholder="t('supplier.products_allergens_label')"
+                :emptyMessage="t('supplier.products_no_available_options')"
+                :emptyFilterMessage="t('supplier.products_no_available_options')"
                 class="w-full"
               />
             </div>
@@ -278,8 +332,8 @@ onMounted(() => {
                 type="submit"
                 :label="t('supplier.products_edit_submit')"
                 icon="pi pi-check"
-                :loading="submitting"
-                :disabled="!form.displayName || !form.categoryId"
+                :loading="form.processing"
+                :disabled="submitDisabled"
               />
             </div>
           </form>

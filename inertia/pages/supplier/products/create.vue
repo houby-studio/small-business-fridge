@@ -10,6 +10,7 @@ import FileUpload from 'primevue/fileupload'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import { useI18n } from '~/composables/use_i18n'
+import { useProductFormValidation } from '~/composables/use_product_form_validation'
 
 interface CategoryOption {
   id: number
@@ -39,6 +40,39 @@ const descriptionInput = ref<any>(null)
 const categorySelect = ref<any>(null)
 
 const previewTitle = computed(() => form.displayName || t('supplier.products_name_label'))
+const validation = useProductFormValidation(
+  computed(() => ({
+    displayName: form.displayName,
+    description: form.description,
+    categoryId: form.categoryId,
+    barcode: form.barcode,
+    hasImage: !!form.image,
+  })),
+  { requireImage: true }
+)
+
+const clientErrors = computed(() => ({
+  displayName: validation.displayNameMissing.value
+    ? t('supplier.products_validation_name_required')
+    : validation.displayNameTooLong.value
+      ? t('supplier.products_validation_name_max')
+      : '',
+  description: validation.descriptionTooLong.value
+    ? t('supplier.products_validation_description_max')
+    : '',
+  categoryId: validation.categoryMissing.value
+    ? t('supplier.products_validation_category_required')
+    : '',
+  barcode: validation.barcodeTooLong.value ? t('supplier.products_validation_barcode_max') : '',
+  image: validation.imageMissing.value ? t('supplier.products_image_required') : '',
+}))
+const submitDisabled = computed(() => form.processing || validation.hasBlockingErrors.value)
+
+function fieldError(field: keyof typeof form.errors | keyof typeof clientErrors.value) {
+  const serverError = form.errors[field as keyof typeof form.errors]
+  if (serverError) return serverError
+  return clientErrors.value[field as keyof typeof clientErrors.value]
+}
 
 function resetPreviewUrl() {
   if (imagePreviewUrl.value) {
@@ -92,8 +126,7 @@ function onDescriptionEnter() {
 }
 
 function submit() {
-  if (!form.image) {
-    form.setError('image', t('supplier.products_image_required'))
+  if (submitDisabled.value) {
     return
   }
 
@@ -177,11 +210,11 @@ onMounted(() => {
                 autofocus
                 :placeholder="t('supplier.products_name_placeholder')"
                 class="w-full"
-                :invalid="!!form.errors.displayName"
+                :invalid="!!fieldError('displayName')"
                 @keydown.enter.prevent="onNameEnter"
               />
-              <small v-if="form.errors.displayName" class="text-red-600 dark:text-red-400">{{
-                form.errors.displayName
+              <small v-if="fieldError('displayName')" class="text-red-600 dark:text-red-400">{{
+                fieldError('displayName')
               }}</small>
             </div>
 
@@ -196,11 +229,11 @@ onMounted(() => {
                 rows="3"
                 :placeholder="t('supplier.products_description_placeholder')"
                 class="w-full"
-                :invalid="!!form.errors.description"
+                :invalid="!!fieldError('description')"
                 @keydown.enter.prevent="onDescriptionEnter"
               />
-              <small v-if="form.errors.description" class="text-red-600 dark:text-red-400">{{
-                form.errors.description
+              <small v-if="fieldError('description')" class="text-red-600 dark:text-red-400">{{
+                fieldError('description')
               }}</small>
             </div>
 
@@ -217,10 +250,10 @@ onMounted(() => {
                 optionValue="id"
                 :placeholder="t('supplier.products_category_label')"
                 class="w-full"
-                :invalid="!!form.errors.categoryId"
+                :invalid="!!fieldError('categoryId')"
               />
-              <small v-if="form.errors.categoryId" class="text-red-600 dark:text-red-400">{{
-                form.errors.categoryId
+              <small v-if="fieldError('categoryId')" class="text-red-600 dark:text-red-400">{{
+                fieldError('categoryId')
               }}</small>
             </div>
 
@@ -233,10 +266,10 @@ onMounted(() => {
                 v-model="form.barcode"
                 :placeholder="t('supplier.products_barcode_placeholder')"
                 class="w-full"
-                :invalid="!!form.errors.barcode"
+                :invalid="!!fieldError('barcode')"
               />
-              <small v-if="form.errors.barcode" class="text-red-600 dark:text-red-400">{{
-                form.errors.barcode
+              <small v-if="fieldError('barcode')" class="text-red-600 dark:text-red-400">{{
+                fieldError('barcode')
               }}</small>
             </div>
 
@@ -251,6 +284,8 @@ onMounted(() => {
                 optionLabel="name"
                 optionValue="id"
                 :placeholder="t('supplier.products_allergens_label')"
+                :emptyMessage="t('supplier.products_no_available_options')"
+                :emptyFilterMessage="t('supplier.products_no_available_options')"
                 class="w-full"
               />
             </div>
@@ -267,8 +302,8 @@ onMounted(() => {
                 @select="onImageSelect"
                 :auto="false"
               />
-              <small v-if="form.errors.image" class="text-red-600 dark:text-red-400">{{
-                form.errors.image
+              <small v-if="fieldError('image')" class="text-red-600 dark:text-red-400">{{
+                fieldError('image')
               }}</small>
             </div>
 
@@ -278,7 +313,7 @@ onMounted(() => {
                 :label="t('supplier.products_create_submit')"
                 icon="pi pi-check"
                 :loading="form.processing"
-                :disabled="!form.displayName || !form.categoryId || !form.image"
+                :disabled="submitDisabled"
               />
             </div>
           </form>
