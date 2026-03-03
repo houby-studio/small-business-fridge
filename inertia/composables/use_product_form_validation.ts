@@ -18,6 +18,7 @@ export function useProductFormValidation(
 ) {
   const displayNameMissing = computed(() => form.value.displayName.trim().length === 0)
   const displayNameTooLong = computed(() => form.value.displayName.trim().length > 255)
+  const descriptionMissing = computed(() => form.value.description.trim().length === 0)
   const descriptionTooLong = computed(() => form.value.description.trim().length > 1000)
   const categoryMissing = computed(() => form.value.categoryId === null)
   const barcodeTooLong = computed(() => form.value.barcode.trim().length > 100)
@@ -27,6 +28,7 @@ export function useProductFormValidation(
     () =>
       displayNameMissing.value ||
       displayNameTooLong.value ||
+      descriptionMissing.value ||
       descriptionTooLong.value ||
       categoryMissing.value ||
       barcodeTooLong.value ||
@@ -36,6 +38,7 @@ export function useProductFormValidation(
   return {
     displayNameMissing,
     displayNameTooLong,
+    descriptionMissing,
     descriptionTooLong,
     categoryMissing,
     barcodeTooLong,

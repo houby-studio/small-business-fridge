@@ -36,6 +36,7 @@
   "products_no_available_options": "Žádné dostupné možnosti",
   "products_validation_name_required": "Název produktu je povinný.",
   "products_validation_name_max": "Název produktu může mít maximálně 255 znaků.",
+  "products_validation_description_required": "Popis produktu je povinný.",
   "products_validation_description_max": "Popis může mít maximálně 1000 znaků.",
   "products_validation_category_required": "Kategorie je povinná.",
   "products_validation_barcode_max": "Čárový kód může mít maximálně 100 znaků.",

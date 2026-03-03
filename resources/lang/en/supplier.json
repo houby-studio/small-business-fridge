@@ -36,6 +36,7 @@
   "products_no_available_options": "No available options",
   "products_validation_name_required": "Product name is required.",
   "products_validation_name_max": "Product name can have at most 255 characters.",
+  "products_validation_description_required": "Product description is required.",
   "products_validation_description_max": "Description can have at most 1000 characters.",
   "products_validation_category_required": "Category is required.",
   "products_validation_barcode_max": "Barcode can have at most 100 characters.",

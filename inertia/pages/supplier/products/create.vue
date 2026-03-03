@@ -57,9 +57,11 @@ const clientErrors = computed(() => ({
     : validation.displayNameTooLong.value
       ? t('supplier.products_validation_name_max')
       : '',
-  description: validation.descriptionTooLong.value
-    ? t('supplier.products_validation_description_max')
-    : '',
+  description: validation.descriptionMissing.value
+    ? t('supplier.products_validation_description_required')
+    : validation.descriptionTooLong.value
+      ? t('supplier.products_validation_description_max')
+      : '',
   categoryId: validation.categoryMissing.value
     ? t('supplier.products_validation_category_required')
     : '',
