@@ -20,19 +20,11 @@ import pg from 'pg'
 import dotenv from 'dotenv'
 import { resolve } from 'node:path'
 import { randomInt } from 'node:crypto'
+import { pathToFileURL } from 'node:url'
 
 dotenv.config({ path: resolve(import.meta.dirname, '../.env') })
 
 // ── Config ──────────────────────────────────────────────────────────────────
-
-const MONGO_URI = process.env.MONGO_URI
-if (!MONGO_URI) {
-  console.error('❌ MONGO_URI environment variable is required.')
-  console.error(
-    '   Example: MONGO_URI=mongodb://sbf-app:password@localhost:27017/sbf-prod?authSource=admin'
-  )
-  process.exit(1)
-}
 
 const PG_CONFIG = {
   host: process.env.DB_HOST ?? 'localhost',
@@ -688,15 +680,26 @@ async function verify(mongo: Db, pgClient: pg.Client) {
 
 // ── Main ────────────────────────────────────────────────────────────────────
 
-async function main() {
+type MigrationOptions = {
+  mongoUri: string
+}
+
+export async function runMongoToPostgresMigration(options: MigrationOptions) {
+  for (const map of Object.values(idMap)) {
+    map.clear()
+  }
+  placeholder.userId = 0
+  placeholder.productId = 0
+  placeholder.deliveryId = 0
+
   console.log('═══════════════════════════════════════════════════════')
   console.log('  Small Business Fridge — MongoDB → PostgreSQL Migration')
   console.log('═══════════════════════════════════════════════════════')
   console.log()
 
   // Connect to MongoDB
-  log('🔌', `Connecting to MongoDB: ${MONGO_URI!.replace(/:([^@]+)@/, ':***@')}`)
-  const mongoClient = new MongoClient(MONGO_URI!)
+  log('🔌', `Connecting to MongoDB: ${options.mongoUri.replace(/:([^@]+)@/, ':***@')}`)
+  const mongoClient = new MongoClient(options.mongoUri)
   await mongoClient.connect()
   const mongoDB = mongoClient.db()
   log('✅', `Connected to MongoDB database: ${mongoDB.databaseName}`)
@@ -775,7 +778,26 @@ async function main() {
   await mongoClient.close()
 }
 
-main().catch((err) => {
-  console.error('❌ Migration failed:', err)
-  process.exit(1)
-})
+async function runFromCli() {
+  const mongoUri = process.env.MONGO_URI
+  if (!mongoUri) {
+    console.error('❌ MONGO_URI environment variable is required.')
+    console.error(
+      '   Example: MONGO_URI=mongodb://sbf-app:password@localhost:27017/sbf-prod?authSource=admin'
+    )
+    process.exit(1)
+  }
+
+  await runMongoToPostgresMigration({ mongoUri })
+}
+
+const isMainModule =
+  typeof process.argv[1] === 'string' &&
+  import.meta.url === pathToFileURL(resolve(process.argv[1])).href
+
+if (isMainModule) {
+  runFromCli().catch((err) => {
+    console.error('❌ Migration failed:', err)
+    process.exit(1)
+  })
+}
