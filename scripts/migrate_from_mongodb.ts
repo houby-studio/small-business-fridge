@@ -258,7 +258,7 @@ async function migrateUsers(mongo: Db, pgDb: pg.Client) {
           keypad_id, card_id, role, is_kiosk, is_disabled,
           show_all_products, send_mail_on_purchase, send_daily_report,
           color_mode, keypad_disabled, is_premium, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW(), NOW())
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW(), NOW())
          RETURNING id`,
         [
           null, // password (OIDC users don't have one)
@@ -577,23 +577,21 @@ async function verify(mongo: Db, pgClient: pg.Client) {
   }
 
   // Report how many rows needed placeholder references due to dangling Mongo refs.
-  const [pgPlaceholderDeliveries, pgPlaceholderInvoices, pgPlaceholderOrders] = await Promise.all([
-    pgClient.query(
-      `SELECT count(*)::int AS count FROM deliveries
-       WHERE supplier_id = $1 OR product_id = $2`,
-      [placeholder.userId, placeholder.productId]
-    ),
-    pgClient.query(
-      `SELECT count(*)::int AS count FROM invoices
-       WHERE buyer_id = $1 OR supplier_id = $1`,
-      [placeholder.userId]
-    ),
-    pgClient.query(
-      `SELECT count(*)::int AS count FROM orders
-       WHERE buyer_id = $1 OR delivery_id = $2`,
-      [placeholder.userId, placeholder.deliveryId]
-    ),
-  ])
+  const pgPlaceholderDeliveries = await pgClient.query(
+    `SELECT count(*)::int AS count FROM deliveries
+     WHERE supplier_id = $1 OR product_id = $2`,
+    [placeholder.userId, placeholder.productId]
+  )
+  const pgPlaceholderInvoices = await pgClient.query(
+    `SELECT count(*)::int AS count FROM invoices
+     WHERE buyer_id = $1 OR supplier_id = $1`,
+    [placeholder.userId]
+  )
+  const pgPlaceholderOrders = await pgClient.query(
+    `SELECT count(*)::int AS count FROM orders
+     WHERE buyer_id = $1 OR delivery_id = $2`,
+    [placeholder.userId, placeholder.deliveryId]
+  )
   console.log(
     `   ℹ️ placeholder refs: deliveries=${pgPlaceholderDeliveries.rows[0].count}, invoices=${pgPlaceholderInvoices.rows[0].count}, orders=${pgPlaceholderOrders.rows[0].count}`
   )
