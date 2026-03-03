@@ -19,19 +19,12 @@ import type { Db } from 'mongodb'
 import pg from 'pg'
 import dotenv from 'dotenv'
 import { resolve } from 'node:path'
+import { randomInt } from 'node:crypto'
+import { pathToFileURL } from 'node:url'
 
 dotenv.config({ path: resolve(import.meta.dirname, '../.env') })
 
 // ── Config ──────────────────────────────────────────────────────────────────
-
-const MONGO_URI = process.env.MONGO_URI
-if (!MONGO_URI) {
-  console.error('❌ MONGO_URI environment variable is required.')
-  console.error(
-    '   Example: MONGO_URI=mongodb://sbf-app:password@localhost:27017/sbf-prod?authSource=admin'
-  )
-  process.exit(1)
-}
 
 const PG_CONFIG = {
   host: process.env.DB_HOST ?? 'localhost',
@@ -102,6 +95,32 @@ function log(emoji: string, msg: string) {
   console.log(`${emoji}  ${msg}`)
 }
 
+function normalizeEmail(email: unknown): string | null {
+  if (typeof email !== 'string') return null
+  const normalized = email.trim().toLowerCase()
+  return normalized.length > 0 ? normalized : null
+}
+
+function generateRandomAlphanumeric(length: number): string {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
+  let output = ''
+  for (let i = 0; i < length; i++) {
+    output += chars[randomInt(chars.length)]
+  }
+  return output
+}
+
+function generateUniqueAnonEmail(usedNormalizedEmails: Set<string>): string {
+  while (true) {
+    const candidate = `${generateRandomAlphanumeric(8)}@anon`
+    const normalizedCandidate = candidate.toLowerCase()
+    if (!usedNormalizedEmails.has(normalizedCandidate)) {
+      usedNormalizedEmails.add(normalizedCandidate)
+      return candidate
+    }
+  }
+}
+
 // ── Migration Functions ─────────────────────────────────────────────────────
 
 async function createPlaceholders(pgDb: pg.Client) {
@@ -112,7 +131,7 @@ async function createPlaceholders(pgDb: pg.Client) {
       keypad_id, card_id, role, is_kiosk, is_disabled,
       show_all_products, send_mail_on_purchase, send_daily_report,
       color_mode, keypad_disabled, created_at, updated_at
-    ) VALUES (NULL, 'Deleted User', 'migration-deleted@placeholder.local',
+    ) VALUES (NULL, 'Deleted User', 'migration@anon',
       NULL, NULL, 89999, NULL, 'customer', false, true,
       false, false, false, 'dark', false, NOW(), NOW())
     RETURNING id`
@@ -126,7 +145,7 @@ async function createPlaceholders(pgDb: pg.Client) {
   // Placeholder product — represents a deleted/unknown product
   const productResult = await pgDb.query(
     `INSERT INTO products (keypad_id, display_name, description, image_path, category_id, barcode, created_at, updated_at)
-     VALUES (89999, 'Unknown Product (Deleted)', 'Placeholder created during migration for deleted products', 'preview.png', $1, NULL, NOW(), NOW())
+     VALUES (89999, 'Deleted Product', 'Placeholder created during migration for deleted products', 'preview.png', $1, NULL, NOW(), NOW())
      RETURNING id`,
     [categoryId]
   )
@@ -170,12 +189,23 @@ async function migrateUsers(mongo: Db, pgDb: pg.Client) {
   log('📦', `Found ${docs.length} users in MongoDB`)
 
   // Track used unique values to handle duplicates gracefully
-  const usedKeypadIds = new Set<number>()
+  const placeholderKeypadId = 0
+  const usedKeypadIds = new Set<number>([placeholderKeypadId])
   const usedCardIds = new Set<string>()
   const usedMicrosoftIdentityIds = new Set<string>()
-  let fallbackKeypadId = 90000 // High range for users missing/with duplicate keypadId
+  const usedNormalizedEmails = new Set<string>(['migration@anon'])
+  const legacyDeletedEmail = 'byvaly@uzivatel'
+  let fallbackKeypadId = 1
   let skipped = 0
   let migratedAuthIdentities = 0
+  let anonymizedEmails = 0
+
+  const allocateFallbackKeypadId = () => {
+    while (usedKeypadIds.has(fallbackKeypadId)) fallbackKeypadId++
+    const allocated = fallbackKeypadId
+    fallbackKeypadId++
+    return allocated
+  }
 
   for (const doc of docs) {
     const mongoId = oid(doc._id)!
@@ -185,19 +215,37 @@ async function migrateUsers(mongo: Db, pgDb: pg.Client) {
     const displayName =
       doc.displayName ?? doc.email?.split('@')[0] ?? `migrated-${mongoId.slice(-8)}`
 
-    // Ensure email is never null (required field)
-    const email = doc.email ?? `migrated-${mongoId.slice(-8)}@placeholder.local`
+    // Ensure email is non-empty, normalized and unique for LOWER(email) index.
+    const sourceEmail = doc.email ?? `migrated-${mongoId.slice(-8)}@placeholder.local`
+    let normalizedEmail = normalizeEmail(sourceEmail)
+    let email = normalizedEmail ?? ''
+    if (
+      !normalizedEmail ||
+      normalizedEmail === legacyDeletedEmail ||
+      usedNormalizedEmails.has(normalizedEmail)
+    ) {
+      email = generateUniqueAnonEmail(usedNormalizedEmails)
+      normalizedEmail = email
+      anonymizedEmails++
+      console.warn(
+        `  ⚠️  Replacing non-unique/legacy email "${sourceEmail}" for "${displayName}" with "${email}"`
+      )
+    } else {
+      usedNormalizedEmails.add(normalizedEmail)
+      email = normalizedEmail
+    }
 
-    // Handle keypad_id: NOT NULL + UNIQUE — auto-assign if missing or duplicate
-    let keypadId: number = doc.keypadId ? Number(doc.keypadId) : 0
-    if (!keypadId || usedKeypadIds.has(keypadId)) {
-      while (usedKeypadIds.has(fallbackKeypadId)) fallbackKeypadId++
-      if (keypadId && keypadId !== fallbackKeypadId) {
+    // Handle keypad_id: NOT NULL + UNIQUE — assign the lowest free positive keypad ID
+    let keypadId = Number(doc.keypadId ?? 0)
+    const hasValidSourceKeypadId = Number.isInteger(keypadId) && keypadId > 0
+    if (!hasValidSourceKeypadId || usedKeypadIds.has(keypadId)) {
+      const reassignedKeypadId = allocateFallbackKeypadId()
+      if (hasValidSourceKeypadId && keypadId !== reassignedKeypadId) {
         console.warn(
-          `  ⚠️  Duplicate keypad_id ${keypadId} for "${displayName}", reassigning to ${fallbackKeypadId}`
+          `  ⚠️  Duplicate keypad_id ${keypadId} for "${displayName}", reassigning to ${reassignedKeypadId}`
         )
       }
-      keypadId = fallbackKeypadId++
+      keypadId = reassignedKeypadId
     }
     usedKeypadIds.add(keypadId)
 
@@ -219,7 +267,7 @@ async function migrateUsers(mongo: Db, pgDb: pg.Client) {
           keypad_id, card_id, role, is_kiosk, is_disabled,
           show_all_products, send_mail_on_purchase, send_daily_report,
           color_mode, keypad_disabled, is_premium, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW(), NOW())
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW(), NOW())
          RETURNING id`,
         [
           null, // password (OIDC users don't have one)
@@ -270,7 +318,7 @@ async function migrateUsers(mongo: Db, pgDb: pg.Client) {
 
   log(
     '✅',
-    `Migrated ${idMap.users.size} users and ${migratedAuthIdentities} auth identities${skipped > 0 ? ` (${skipped} skipped, see warnings above)` : ''}`
+    `Migrated ${idMap.users.size} users and ${migratedAuthIdentities} auth identities${anonymizedEmails > 0 ? ` (${anonymizedEmails} anonymized emails)` : ''}${skipped > 0 ? ` (${skipped} skipped, see warnings above)` : ''}`
   )
 }
 
@@ -491,6 +539,76 @@ async function linkOrdersFromInvoices(mongo: Db, pgClient: pg.Client) {
   }
 }
 
+async function settlePlaceholderLinkedOrders(pgClient: pg.Client) {
+  /**
+   * Any order tied to the migration placeholder user should not require
+   * post-migration bookkeeping. We force these into paid invoices.
+   */
+  const groups = await pgClient.query(
+    `SELECT
+       o.buyer_id,
+       d.supplier_id,
+       COUNT(*)::int AS order_count,
+       COALESCE(SUM(d.price), 0)::int AS total_cost,
+       MAX(o.created_at) AS invoice_date
+     FROM orders o
+     INNER JOIN deliveries d ON d.id = o.delivery_id
+     WHERE o.invoice_id IS NULL
+       AND (o.buyer_id = $1 OR d.supplier_id = $1)
+     GROUP BY o.buyer_id, d.supplier_id
+     ORDER BY o.buyer_id, d.supplier_id`,
+    [placeholder.userId]
+  )
+
+  let createdInvoices = 0
+  let linkedOrders = 0
+
+  for (const group of groups.rows) {
+    const buyerId = Number(group.buyer_id)
+    const supplierId = Number(group.supplier_id)
+    const totalCost = Number(group.total_cost)
+    const invoiceDate = group.invoice_date ? new Date(group.invoice_date) : new Date()
+
+    const invoiceResult = await pgClient.query(
+      `INSERT INTO invoices (
+        buyer_id, supplier_id, total_cost, is_paid, is_payment_requested,
+        auto_reminder_count, manual_reminder_count, created_at, updated_at
+      ) VALUES ($1, $2, $3, true, false, 0, 0, $4, $4)
+      RETURNING id`,
+      [buyerId, supplierId, totalCost, invoiceDate]
+    )
+    const invoiceId = invoiceResult.rows[0].id
+    createdInvoices++
+
+    const updateResult = await pgClient.query(
+      `UPDATE orders o
+       SET invoice_id = $1, updated_at = GREATEST(o.updated_at, $2)
+       FROM deliveries d
+       WHERE o.delivery_id = d.id
+         AND o.invoice_id IS NULL
+         AND o.buyer_id = $3
+         AND d.supplier_id = $4`,
+      [invoiceId, invoiceDate, buyerId, supplierId]
+    )
+    linkedOrders += updateResult.rowCount ?? 0
+  }
+
+  const normalizedInvoices = await pgClient.query(
+    `UPDATE invoices
+     SET is_paid = true,
+         is_payment_requested = false,
+         updated_at = NOW()
+     WHERE (buyer_id = $1 OR supplier_id = $1)
+       AND (is_paid = false OR is_payment_requested = true)`,
+    [placeholder.userId]
+  )
+
+  log(
+    '✅',
+    `Settled placeholder-linked purchases: created ${createdInvoices} invoice(s), linked ${linkedOrders} order(s), normalized ${normalizedInvoices.rowCount ?? 0} existing invoice(s)`
+  )
+}
+
 // ── Verification ────────────────────────────────────────────────────────────
 
 async function verify(mongo: Db, pgClient: pg.Client) {
@@ -538,23 +656,21 @@ async function verify(mongo: Db, pgClient: pg.Client) {
   }
 
   // Report how many rows needed placeholder references due to dangling Mongo refs.
-  const [pgPlaceholderDeliveries, pgPlaceholderInvoices, pgPlaceholderOrders] = await Promise.all([
-    pgClient.query(
-      `SELECT count(*)::int AS count FROM deliveries
-       WHERE supplier_id = $1 OR product_id = $2`,
-      [placeholder.userId, placeholder.productId]
-    ),
-    pgClient.query(
-      `SELECT count(*)::int AS count FROM invoices
-       WHERE buyer_id = $1 OR supplier_id = $1`,
-      [placeholder.userId]
-    ),
-    pgClient.query(
-      `SELECT count(*)::int AS count FROM orders
-       WHERE buyer_id = $1 OR delivery_id = $2`,
-      [placeholder.userId, placeholder.deliveryId]
-    ),
-  ])
+  const pgPlaceholderDeliveries = await pgClient.query(
+    `SELECT count(*)::int AS count FROM deliveries
+     WHERE supplier_id = $1 OR product_id = $2`,
+    [placeholder.userId, placeholder.productId]
+  )
+  const pgPlaceholderInvoices = await pgClient.query(
+    `SELECT count(*)::int AS count FROM invoices
+     WHERE buyer_id = $1 OR supplier_id = $1`,
+    [placeholder.userId]
+  )
+  const pgPlaceholderOrders = await pgClient.query(
+    `SELECT count(*)::int AS count FROM orders
+     WHERE buyer_id = $1 OR delivery_id = $2`,
+    [placeholder.userId, placeholder.deliveryId]
+  )
   console.log(
     `   ℹ️ placeholder refs: deliveries=${pgPlaceholderDeliveries.rows[0].count}, invoices=${pgPlaceholderInvoices.rows[0].count}, orders=${pgPlaceholderOrders.rows[0].count}`
   )
@@ -641,15 +757,26 @@ async function verify(mongo: Db, pgClient: pg.Client) {
 
 // ── Main ────────────────────────────────────────────────────────────────────
 
-async function main() {
+type MigrationOptions = {
+  mongoUri: string
+}
+
+export async function runMongoToPostgresMigration(options: MigrationOptions) {
+  for (const map of Object.values(idMap)) {
+    map.clear()
+  }
+  placeholder.userId = 0
+  placeholder.productId = 0
+  placeholder.deliveryId = 0
+
   console.log('═══════════════════════════════════════════════════════')
   console.log('  Small Business Fridge — MongoDB → PostgreSQL Migration')
   console.log('═══════════════════════════════════════════════════════')
   console.log()
 
   // Connect to MongoDB
-  log('🔌', `Connecting to MongoDB: ${MONGO_URI!.replace(/:([^@]+)@/, ':***@')}`)
-  const mongoClient = new MongoClient(MONGO_URI!)
+  log('🔌', `Connecting to MongoDB: ${options.mongoUri.replace(/:([^@]+)@/, ':***@')}`)
+  const mongoClient = new MongoClient(options.mongoUri)
   await mongoClient.connect()
   const mongoDB = mongoClient.db()
   log('✅', `Connected to MongoDB database: ${mongoDB.databaseName}`)
@@ -688,6 +815,7 @@ async function main() {
   await migrateInvoices(mongoDB, pgClient)
   await migrateOrders(mongoDB, pgClient)
   await linkOrdersFromInvoices(mongoDB, pgClient)
+  await settlePlaceholderLinkedOrders(pgClient)
 
   // Reset sequences to max ID + 1
   log('🔧', 'Resetting PostgreSQL sequences...')
@@ -728,7 +856,26 @@ async function main() {
   await mongoClient.close()
 }
 
-main().catch((err) => {
-  console.error('❌ Migration failed:', err)
-  process.exit(1)
-})
+async function runFromCli() {
+  const mongoUri = process.env.MONGO_URI
+  if (!mongoUri) {
+    console.error('❌ MONGO_URI environment variable is required.')
+    console.error(
+      '   Example: MONGO_URI=mongodb://sbf-app:password@localhost:27017/sbf-prod?authSource=admin'
+    )
+    process.exit(1)
+  }
+
+  await runMongoToPostgresMigration({ mongoUri })
+}
+
+const isMainModule =
+  typeof process.argv[1] === 'string' &&
+  import.meta.url === pathToFileURL(resolve(process.argv[1])).href
+
+if (isMainModule) {
+  runFromCli().catch((err) => {
+    console.error('❌ Migration failed:', err)
+    process.exit(1)
+  })
+}

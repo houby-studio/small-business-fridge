@@ -6,12 +6,14 @@ import NotificationService from '#services/notification_service'
 import RegistrationPolicyService from '#services/registration_policy_service'
 import AuthModeService from '#services/auth_mode_service'
 import EmailVerificationService from '#services/email_verification_service'
+import KeypadIdService from '#services/keypad_id_service'
 import { registerValidator } from '#validators/auth'
 
 export default class RegisterController {
   private registrationPolicy = new RegistrationPolicyService()
   private authModes = new AuthModeService()
   private verifications = new EmailVerificationService()
+  private keypadIds = new KeypadIdService()
 
   async show({ inertia, response }: HttpContext) {
     if (this.authModes.isLocalLoginDisabled()) {
@@ -67,8 +69,7 @@ export default class RegisterController {
       return response.redirect('/register')
     }
 
-    const maxKeypad = await User.query().max('keypad_id as max').first()
-    const nextKeypadId = (maxKeypad?.$extras.max ?? 0) + 1
+    const nextKeypadId = await this.keypadIds.getNextAvailableUserKeypadId()
 
     const user = await User.create({
       displayName: data.displayName.trim(),
