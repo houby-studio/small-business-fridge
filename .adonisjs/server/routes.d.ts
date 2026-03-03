@@ -41,6 +41,7 @@ export type ScannedRoutes = {
     'profile.revoke_token': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'password_reset.change_authenticated': { paramsTuple?: []; params?: {} }
     'profile.reauth_sensitive': { paramsTuple?: []; params?: {} }
+    'profile.store_pending_draft': { paramsTuple?: []; params?: {} }
     'profile.start_oidc_link': { paramsTuple?: []; params?: {} }
     'email_verification.resend': { paramsTuple?: []; params?: {} }
     'iban_change.resend': { paramsTuple?: []; params?: {} }
@@ -200,6 +201,7 @@ export type ScannedRoutes = {
     'profile.toggle_favorite': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'profile.create_token': { paramsTuple?: []; params?: {} }
     'profile.reauth_sensitive': { paramsTuple?: []; params?: {} }
+    'profile.store_pending_draft': { paramsTuple?: []; params?: {} }
     'profile.start_oidc_link': { paramsTuple?: []; params?: {} }
     'email_verification.resend': { paramsTuple?: []; params?: {} }
     'iban_change.resend': { paramsTuple?: []; params?: {} }

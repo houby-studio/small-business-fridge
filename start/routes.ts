@@ -200,6 +200,7 @@ router
     router.delete('/profile/tokens/:id', [ProfileController, 'revokeToken'])
     router.put('/profile/password', [PasswordResetController, 'changeAuthenticated'])
     router.post('/profile/reauth', [ProfileController, 'reauthSensitive'])
+    router.post('/profile/pending-draft', [ProfileController, 'storePendingDraft'])
     router.post('/profile/oidc-link', [ProfileController, 'startOidcLink'])
     router.post('/profile/email-verification/resend', [EmailVerificationController, 'resend'])
     router.post('/profile/iban-verification/resend', [IbanChangeController, 'resend'])

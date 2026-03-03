@@ -95,6 +95,9 @@ export default class ProfileController {
     return false
   }
 
+  private static readonly PENDING_DRAFT_KEY = 'profile_pending_draft'
+  private static readonly PENDING_DRAFT_TTL_MS = 30 * 60 * 1000
+
   async show({ inertia, auth, session }: HttpContext) {
     const user = auth.user!
     await user.load((loader) => loader.load('favoriteProducts').load('authIdentities'))
@@ -113,6 +116,22 @@ export default class ProfileController {
       .orderBy('name', 'asc')
       .select('id', 'name')
 
+    // Only consume the pending draft when OIDC reauth just completed.
+    // This prevents accidental consumption on unrelated visits to /profile.
+    let pendingDraft: object | null = null
+    if (session.flashMessages.get('sensitiveReauthCompleted') === true) {
+      const raw = session.pull(ProfileController.PENDING_DRAFT_KEY, null)
+      if (raw && typeof raw === 'object') {
+        const draft = raw as { createdAt?: number }
+        if (
+          !draft.createdAt ||
+          Date.now() - draft.createdAt <= ProfileController.PENDING_DRAFT_TTL_MS
+        ) {
+          pendingDraft = raw
+        }
+      }
+    }
+
     return inertia.render('profile/show', {
       user: { ...user.serialize(), excludedAllergenIds },
       tokens,
@@ -124,7 +143,19 @@ export default class ProfileController {
       sensitiveReauthTtlMinutes: this.stepup.ttlMinutes(),
       localAuthEnabled: this.authModes.isLocalEnabled(),
       hasLocalPassword: !!user.password,
+      pendingDraft,
     })
+  }
+
+  async storePendingDraft({ request, session, response }: HttpContext) {
+    const data = request.only(['action', 'form', 'password'])
+    const actionType = (data?.action as Record<string, unknown>)?.type
+    if (!['profile-submit', 'password-change', 'oidc-link'].includes(String(actionType))) {
+      return response.badRequest({ error: 'invalid_action' })
+    }
+
+    session.put(ProfileController.PENDING_DRAFT_KEY, { ...data, createdAt: Date.now() })
+    return response.ok({ ok: true })
   }
 
   async update(ctx: HttpContext) {

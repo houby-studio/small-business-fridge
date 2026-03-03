@@ -52,6 +52,29 @@ interface ApiToken {
   expires_at: string | null
 }
 
+interface PendingDraft {
+  action:
+    | { type: 'profile-submit' }
+    | { type: 'password-change' }
+    | { type: 'oidc-link'; provider: 'microsoft' | 'discord' }
+  form: {
+    displayName: string
+    email: string
+    phone: string
+    iban: string
+    showAllProducts: boolean
+    sendMailOnPurchase: boolean
+    sendDailyReport: boolean
+    colorMode: 'light' | 'dark'
+    keypadDisabled: boolean
+    excludedAllergenIds: number[]
+  }
+  password: {
+    newPassword: string
+    newPasswordConfirmation: string
+  }
+}
+
 const props = defineProps<{
   user: UserData
   tokens: ApiToken[]
@@ -63,6 +86,7 @@ const props = defineProps<{
   sensitiveReauthTtlMinutes: number
   localAuthEnabled: boolean
   hasLocalPassword: boolean
+  pendingDraft: PendingDraft | null
 }>()
 const { t } = useI18n()
 const page = usePage<SharedProps>()
@@ -187,8 +211,6 @@ const pendingSensitiveAction = ref<
   | { type: 'password-change' }
   | { type: 'oidc-link'; provider: 'microsoft' | 'discord' }
 >(null)
-const sensitiveDraftStorageKey = 'profile_sensitive_action_draft_v1'
-
 function hasActiveSensitiveStepup() {
   if (!Number.isFinite(reauthStepupValidUntilTs.value)) return false
   return Date.now() < Number(reauthStepupValidUntilTs.value)
@@ -235,11 +257,10 @@ function runSensitiveAction(action: NonNullable<typeof pendingSensitiveAction.va
   }
 }
 
-function persistSensitiveDraft(action: NonNullable<typeof pendingSensitiveAction.value>) {
-  if (typeof window === 'undefined') return
-
+async function postPendingDraft(
+  action: NonNullable<typeof pendingSensitiveAction.value>
+): Promise<void> {
   const payload = {
-    createdAt: Date.now(),
     action,
     form: {
       displayName: form.value.displayName,
@@ -259,83 +280,19 @@ function persistSensitiveDraft(action: NonNullable<typeof pendingSensitiveAction
     },
   }
 
-  window.sessionStorage.setItem(sensitiveDraftStorageKey, JSON.stringify(payload))
-}
-
-function takeSensitiveDraft(): {
-  action: NonNullable<typeof pendingSensitiveAction.value>
-  form: {
-    displayName: string
-    email: string
-    phone: string
-    iban: string
-    showAllProducts: boolean
-    sendMailOnPurchase: boolean
-    sendDailyReport: boolean
-    colorMode: 'light' | 'dark'
-    keypadDisabled: boolean
-    excludedAllergenIds: number[]
-  }
-  password: {
-    newPassword: string
-    newPasswordConfirmation: string
-  }
-} | null {
-  if (typeof window === 'undefined') return null
-
-  const raw = window.sessionStorage.getItem(sensitiveDraftStorageKey)
-  if (!raw) return null
-  window.sessionStorage.removeItem(sensitiveDraftStorageKey)
-
+  const xsrfToken = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]*)/)?.[1] ?? ''
   try {
-    const parsed = JSON.parse(raw) as {
-      createdAt?: number
-      action?: NonNullable<typeof pendingSensitiveAction.value>
-      form?: {
-        displayName?: string
-        email?: string
-        phone?: string
-        iban?: string
-        showAllProducts?: boolean
-        sendMailOnPurchase?: boolean
-        sendDailyReport?: boolean
-        colorMode?: 'light' | 'dark'
-        keypadDisabled?: boolean
-        excludedAllergenIds?: number[]
-      }
-      password?: {
-        newPassword?: string
-        newPasswordConfirmation?: string
-      }
-    }
-    if (!parsed?.action || !parsed?.form) return null
-    if (parsed.createdAt && Date.now() - parsed.createdAt > 30 * 60 * 1000) return null
-
-    const restoredForm = {
-      displayName: parsed.form.displayName ?? form.value.displayName,
-      email: parsed.form.email ?? form.value.email,
-      phone: parsed.form.phone ?? form.value.phone,
-      iban: parsed.form.iban ?? form.value.iban,
-      showAllProducts: parsed.form.showAllProducts ?? form.value.showAllProducts,
-      sendMailOnPurchase: parsed.form.sendMailOnPurchase ?? form.value.sendMailOnPurchase,
-      sendDailyReport: parsed.form.sendDailyReport ?? form.value.sendDailyReport,
-      colorMode: parsed.form.colorMode ?? form.value.colorMode,
-      keypadDisabled: parsed.form.keypadDisabled ?? form.value.keypadDisabled,
-      excludedAllergenIds: Array.isArray(parsed.form.excludedAllergenIds)
-        ? parsed.form.excludedAllergenIds
-        : form.value.excludedAllergenIds,
-    }
-
-    return {
-      action: parsed.action,
-      form: restoredForm,
-      password: {
-        newPassword: parsed.password?.newPassword ?? '',
-        newPasswordConfirmation: parsed.password?.newPasswordConfirmation ?? '',
+    await fetch('/profile/pending-draft', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-XSRF-TOKEN': decodeURIComponent(xsrfToken),
       },
-    }
+      body: JSON.stringify(payload),
+    })
   } catch {
-    return null
+    // Proceed with redirect even if saving the draft fails.
+    // The user will need to re-enter sensitive fields after returning.
   }
 }
 
@@ -401,9 +358,9 @@ function oidcReauthHref(provider: 'microsoft' | 'discord') {
   return `/auth/${provider}/redirect?intent=reauth&returnTo=${encodeURIComponent('/profile')}`
 }
 
-function startOidcReauth(provider: 'microsoft' | 'discord') {
+async function startOidcReauth(provider: 'microsoft' | 'discord') {
   if (pendingSensitiveAction.value) {
-    persistSensitiveDraft(pendingSensitiveAction.value)
+    await postPendingDraft(pendingSensitiveAction.value)
   }
   window.location.assign(oidcReauthHref(provider))
 }
@@ -554,7 +511,7 @@ onMounted(() => {
     preferenceWatchEnabled = true
   })
 
-  const draft = takeSensitiveDraft()
+  const draft = props.pendingDraft
   if (!draft) return
 
   form.value.displayName = draft.form.displayName
