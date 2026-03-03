@@ -4,6 +4,7 @@ import db from '@adonisjs/lucid/services/db'
 import env from '#start/env'
 import User from '#models/user'
 import UserInvitation from '#models/user_invitation'
+import KeypadIdService from '#services/keypad_id_service'
 
 type InviteTokenStatus =
   | { valid: true; invitation: UserInvitation }
@@ -11,6 +12,7 @@ type InviteTokenStatus =
 
 export default class InvitationService {
   private signedTokenPrefix = 'sbfv2'
+  private keypadIds = new KeypadIdService()
 
   private normalizeEmail(email: string) {
     return email.trim().toLowerCase()
@@ -152,8 +154,7 @@ export default class InvitationService {
         .first()
       if (existingEmail) throw new Error('EMAIL_ALREADY_REGISTERED')
 
-      const maxKeypad = await User.query({ client: trx }).max('keypad_id as max').first()
-      const nextKeypadId = (maxKeypad?.$extras.max ?? 0) + 1
+      const nextKeypadId = await this.keypadIds.getNextAvailableUserKeypadId(trx)
 
       const user = new User()
       user.useTransaction(trx)

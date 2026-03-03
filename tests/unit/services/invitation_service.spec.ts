@@ -71,6 +71,42 @@ test.group('InvitationService', (group) => {
     assert.equal(invitation.acceptedUserId, user.id)
   })
 
+  test('acceptInvite fills keypad ID gaps and ignores migration placeholder 89999', async ({
+    assert,
+  }) => {
+    await User.create({
+      displayName: 'Existing Admin',
+      email: 'existing-admin@example.com',
+      password: 'secret12345',
+      keypadId: 1,
+      role: 'admin',
+    })
+    await User.create({
+      displayName: 'Migration Placeholder',
+      email: 'migration@anon',
+      password: null,
+      keypadId: 89999,
+      role: 'customer',
+      isDisabled: true,
+    })
+
+    const service = new InvitationService()
+    const { inviteUrl } = await service.createInvite({
+      email: 'gap-user@example.com',
+      role: 'customer',
+      invitedByUserId: null,
+    })
+
+    const token = inviteUrl.split('/').pop()!
+    const user = await service.acceptInvite({
+      token,
+      displayName: 'Gap User',
+      password: 'secret12345',
+    })
+
+    assert.equal(user.keypadId, 2)
+  })
+
   test('createInvite rejects email already registered by existing user', async ({ assert }) => {
     await User.create({
       displayName: 'Existing',

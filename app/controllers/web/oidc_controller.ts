@@ -11,6 +11,7 @@ import AuthIdentityService from '#services/auth_identity_service'
 import ExternalProfileSyncService from '#services/external_profile_sync_service'
 import EmailVerificationService from '#services/email_verification_service'
 import ReauthStepupService from '#services/reauth_stepup_service'
+import KeypadIdService from '#services/keypad_id_service'
 
 export default class OidcController {
   private static readonly BOOTSTRAP_INTENT_KEY = 'oauthBootstrapFirstAdminIntent'
@@ -26,6 +27,7 @@ export default class OidcController {
   private externalProfileSync = new ExternalProfileSyncService()
   private verifications = new EmailVerificationService()
   private stepup = new ReauthStepupService()
+  private keypadIds = new KeypadIdService()
 
   private readLinkStepupGrant(session: HttpContext['session']) {
     const raw = session.pull(OidcController.LINK_STEPUP_GRANT_KEY, null)
@@ -433,8 +435,7 @@ export default class OidcController {
       }
 
       // Auto-register new user
-      const maxKeypad = await User.query().max('keypad_id as max').first()
-      const nextKeypadId = (maxKeypad?.$extras.max ?? 0) + 1
+      const nextKeypadId = await this.keypadIds.getNextAvailableUserKeypadId()
 
       user = await User.create({
         email,

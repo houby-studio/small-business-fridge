@@ -131,7 +131,7 @@ async function createPlaceholders(pgDb: pg.Client) {
       keypad_id, card_id, role, is_kiosk, is_disabled,
       show_all_products, send_mail_on_purchase, send_daily_report,
       color_mode, keypad_disabled, created_at, updated_at
-    ) VALUES (NULL, 'Deleted User', 'migration-deleted@placeholder.local',
+    ) VALUES (NULL, 'Deleted User', 'migration@anon',
       NULL, NULL, 89999, NULL, 'customer', false, true,
       false, false, false, 'dark', false, NOW(), NOW())
     RETURNING id`
@@ -145,7 +145,7 @@ async function createPlaceholders(pgDb: pg.Client) {
   // Placeholder product — represents a deleted/unknown product
   const productResult = await pgDb.query(
     `INSERT INTO products (keypad_id, display_name, description, image_path, category_id, barcode, created_at, updated_at)
-     VALUES (89999, 'Unknown Product (Deleted)', 'Placeholder created during migration for deleted products', 'preview.png', $1, NULL, NOW(), NOW())
+     VALUES (89999, 'Deleted Product', 'Placeholder created during migration for deleted products', 'preview.png', $1, NULL, NOW(), NOW())
      RETURNING id`,
     [categoryId]
   )
@@ -189,15 +189,23 @@ async function migrateUsers(mongo: Db, pgDb: pg.Client) {
   log('📦', `Found ${docs.length} users in MongoDB`)
 
   // Track used unique values to handle duplicates gracefully
-  const usedKeypadIds = new Set<number>()
+  const placeholderKeypadId = 0
+  const usedKeypadIds = new Set<number>([placeholderKeypadId])
   const usedCardIds = new Set<string>()
   const usedMicrosoftIdentityIds = new Set<string>()
-  const usedNormalizedEmails = new Set<string>(['migration-deleted@placeholder.local'])
+  const usedNormalizedEmails = new Set<string>(['migration@anon'])
   const legacyDeletedEmail = 'byvaly@uzivatel'
-  let fallbackKeypadId = 90000 // High range for users missing/with duplicate keypadId
+  let fallbackKeypadId = 1
   let skipped = 0
   let migratedAuthIdentities = 0
   let anonymizedEmails = 0
+
+  const allocateFallbackKeypadId = () => {
+    while (usedKeypadIds.has(fallbackKeypadId)) fallbackKeypadId++
+    const allocated = fallbackKeypadId
+    fallbackKeypadId++
+    return allocated
+  }
 
   for (const doc of docs) {
     const mongoId = oid(doc._id)!
@@ -227,16 +235,17 @@ async function migrateUsers(mongo: Db, pgDb: pg.Client) {
       email = normalizedEmail
     }
 
-    // Handle keypad_id: NOT NULL + UNIQUE — auto-assign if missing or duplicate
-    let keypadId: number = doc.keypadId ? Number(doc.keypadId) : 0
-    if (!keypadId || usedKeypadIds.has(keypadId)) {
-      while (usedKeypadIds.has(fallbackKeypadId)) fallbackKeypadId++
-      if (keypadId && keypadId !== fallbackKeypadId) {
+    // Handle keypad_id: NOT NULL + UNIQUE — assign the lowest free positive keypad ID
+    let keypadId = Number(doc.keypadId ?? 0)
+    const hasValidSourceKeypadId = Number.isInteger(keypadId) && keypadId > 0
+    if (!hasValidSourceKeypadId || usedKeypadIds.has(keypadId)) {
+      const reassignedKeypadId = allocateFallbackKeypadId()
+      if (hasValidSourceKeypadId && keypadId !== reassignedKeypadId) {
         console.warn(
-          `  ⚠️  Duplicate keypad_id ${keypadId} for "${displayName}", reassigning to ${fallbackKeypadId}`
+          `  ⚠️  Duplicate keypad_id ${keypadId} for "${displayName}", reassigning to ${reassignedKeypadId}`
         )
       }
-      keypadId = fallbackKeypadId++
+      keypadId = reassignedKeypadId
     }
     usedKeypadIds.add(keypadId)
 

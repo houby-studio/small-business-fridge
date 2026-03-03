@@ -63,6 +63,45 @@ test.group('Web Auth - Registration and Password Lifecycle', (group) => {
     assert.equal(created!.email, 'new-open-user@example.com')
   })
 
+  test('register assigns lowest available keypad ID and does not jump above migration placeholder', async ({
+    client,
+    assert,
+  }) => {
+    await User.create({
+      displayName: 'Admin',
+      email: 'admin@example.com',
+      password: 'supersecret123',
+      keypadId: 1,
+      role: 'admin',
+    })
+    await User.create({
+      displayName: 'Migration Placeholder',
+      email: 'migration@anon',
+      password: null,
+      keypadId: 89999,
+      role: 'customer',
+      isDisabled: true,
+    })
+
+    const response = await client
+      .post('/register')
+      .form({
+        displayName: 'Keypad Gap User',
+        email: 'keypad-gap@example.com',
+        password: 'supersecret123',
+        passwordConfirmation: 'supersecret123',
+      })
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    response.assertHeader('location', '/shop')
+
+    const created = await User.findBy('email', 'keypad-gap@example.com')
+    assert.exists(created)
+    assert.equal(created!.keypadId, 2)
+  })
+
   test('register rejects invalid email/password payload', async ({ client, assert }) => {
     await UserFactory.apply('admin').create()
 

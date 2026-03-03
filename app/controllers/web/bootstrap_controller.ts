@@ -5,9 +5,11 @@ import User from '#models/user'
 import { bootstrapAdminValidator } from '#validators/auth'
 import AuditService from '#services/audit_service'
 import AuthModeService from '#services/auth_mode_service'
+import KeypadIdService from '#services/keypad_id_service'
 
 export default class BootstrapController {
   private authModes = new AuthModeService()
+  private keypadIds = new KeypadIdService()
 
   private async hasAnyAdmin(): Promise<boolean> {
     const admin = await User.query().where('role', 'admin').first()
@@ -47,8 +49,7 @@ export default class BootstrapController {
       return response.redirect('/setup/bootstrap')
     }
 
-    const maxKeypad = await User.query().max('keypad_id as max').first()
-    const nextKeypadId = (maxKeypad?.$extras.max ?? 0) + 1
+    const nextKeypadId = await this.keypadIds.getNextAvailableUserKeypadId()
 
     const user = await User.create({
       displayName: data.displayName,
