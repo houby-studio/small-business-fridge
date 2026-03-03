@@ -14,6 +14,7 @@ test.describe('Supplier products flow', () => {
     await expect(createButton).toBeDisabled()
 
     await page.locator('#product-name').fill(`E2E Validace ${Date.now()}`)
+    await page.locator('#product-description').fill('E2E popis produktu')
 
     await page.locator('#product-barcode').fill('1'.repeat(101))
     await expect(page.getByText('Čárový kód může mít maximálně 100 znaků.')).toBeVisible()

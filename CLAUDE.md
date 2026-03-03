@@ -1,5 +1,7 @@
 # Small Business Fridge — Claude Development Guide
 
+@AGENTS.md
+
 ## Mandatory Quality Gates
 
 **BEFORE starting any change, run once to confirm baseline:**
