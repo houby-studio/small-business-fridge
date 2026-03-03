@@ -19,6 +19,7 @@ import type { Db } from 'mongodb'
 import pg from 'pg'
 import dotenv from 'dotenv'
 import { resolve } from 'node:path'
+import { randomInt } from 'node:crypto'
 
 dotenv.config({ path: resolve(import.meta.dirname, '../.env') })
 
@@ -102,6 +103,32 @@ function log(emoji: string, msg: string) {
   console.log(`${emoji}  ${msg}`)
 }
 
+function normalizeEmail(email: unknown): string | null {
+  if (typeof email !== 'string') return null
+  const normalized = email.trim().toLowerCase()
+  return normalized.length > 0 ? normalized : null
+}
+
+function generateRandomAlphanumeric(length: number): string {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
+  let output = ''
+  for (let i = 0; i < length; i++) {
+    output += chars[randomInt(chars.length)]
+  }
+  return output
+}
+
+function generateUniqueAnonEmail(usedNormalizedEmails: Set<string>): string {
+  while (true) {
+    const candidate = `${generateRandomAlphanumeric(8)}@anon`
+    const normalizedCandidate = candidate.toLowerCase()
+    if (!usedNormalizedEmails.has(normalizedCandidate)) {
+      usedNormalizedEmails.add(normalizedCandidate)
+      return candidate
+    }
+  }
+}
+
 // ── Migration Functions ─────────────────────────────────────────────────────
 
 async function createPlaceholders(pgDb: pg.Client) {
@@ -173,9 +200,12 @@ async function migrateUsers(mongo: Db, pgDb: pg.Client) {
   const usedKeypadIds = new Set<number>()
   const usedCardIds = new Set<string>()
   const usedMicrosoftIdentityIds = new Set<string>()
+  const usedNormalizedEmails = new Set<string>(['migration-deleted@placeholder.local'])
+  const legacyDeletedEmail = 'byvaly@uzivatel'
   let fallbackKeypadId = 90000 // High range for users missing/with duplicate keypadId
   let skipped = 0
   let migratedAuthIdentities = 0
+  let anonymizedEmails = 0
 
   for (const doc of docs) {
     const mongoId = oid(doc._id)!
@@ -185,8 +215,25 @@ async function migrateUsers(mongo: Db, pgDb: pg.Client) {
     const displayName =
       doc.displayName ?? doc.email?.split('@')[0] ?? `migrated-${mongoId.slice(-8)}`
 
-    // Ensure email is never null (required field)
-    const email = doc.email ?? `migrated-${mongoId.slice(-8)}@placeholder.local`
+    // Ensure email is non-empty, normalized and unique for LOWER(email) index.
+    const sourceEmail = doc.email ?? `migrated-${mongoId.slice(-8)}@placeholder.local`
+    let normalizedEmail = normalizeEmail(sourceEmail)
+    let email = normalizedEmail ?? ''
+    if (
+      !normalizedEmail ||
+      normalizedEmail === legacyDeletedEmail ||
+      usedNormalizedEmails.has(normalizedEmail)
+    ) {
+      email = generateUniqueAnonEmail(usedNormalizedEmails)
+      normalizedEmail = email
+      anonymizedEmails++
+      console.warn(
+        `  ⚠️  Replacing non-unique/legacy email "${sourceEmail}" for "${displayName}" with "${email}"`
+      )
+    } else {
+      usedNormalizedEmails.add(normalizedEmail)
+      email = normalizedEmail
+    }
 
     // Handle keypad_id: NOT NULL + UNIQUE — auto-assign if missing or duplicate
     let keypadId: number = doc.keypadId ? Number(doc.keypadId) : 0
@@ -270,7 +317,7 @@ async function migrateUsers(mongo: Db, pgDb: pg.Client) {
 
   log(
     '✅',
-    `Migrated ${idMap.users.size} users and ${migratedAuthIdentities} auth identities${skipped > 0 ? ` (${skipped} skipped, see warnings above)` : ''}`
+    `Migrated ${idMap.users.size} users and ${migratedAuthIdentities} auth identities${anonymizedEmails > 0 ? ` (${anonymizedEmails} anonymized emails)` : ''}${skipped > 0 ? ` (${skipped} skipped, see warnings above)` : ''}`
   )
 }
 
