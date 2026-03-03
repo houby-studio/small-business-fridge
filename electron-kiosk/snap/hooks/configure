@@ -1,31 +1,27 @@
 #!/bin/bash
-# Snap configure hook — runs when the user calls:
-#   snap set sbf-kiosk kiosk-url=…
-#   snap set sbf-kiosk locale=…
-# Validates settings before the app tries to use them.
-set -e
+set -euo pipefail
 
-KIOSK_URL=$(snapctl get kiosk-url 2>/dev/null || true)
-LOCALE=$(snapctl get locale 2>/dev/null || true)
-
-if [ -z "$KIOSK_URL" ]; then
-  # Key not set yet — that's fine, the app will print guidance on first launch.
-  true
-else
-  # Must be a valid http or https URL
-  if ! echo "$KIOSK_URL" | grep -qE '^https?://[^[:space:]]+$'; then
-    echo "Error: kiosk-url must be a valid http:// or https:// URL" >&2
+daemon=$(snapctl get daemon)
+case "$daemon" in
+  true)
+    # start the daemon
+    if snapctl services "$SNAP_INSTANCE_NAME" | grep -q inactive; then
+      snapctl start --enable "$SNAP_INSTANCE_NAME" 2>&1 || true
+    fi
+    ;;
+  false)
+    # stop the daemon
+        snapctl stop --disable "$SNAP_INSTANCE_NAME" 2>&1 || true
+    ;;
+  *)
+    echo "ERROR: Set 'daemon' to one of true|false"
     exit 1
-  fi
+    ;;
+esac
 
-  echo "kiosk-url set to: $KIOSK_URL"
-fi
+[ -n "$(snapctl get daemon)" ]                            || snapctl set daemon="true"
+[ -n "$(snapctl get locale)" ]                            || snapctl set app.locale="en"
+[ -n "$(snapctl get kiosk-url)" ]                         || snapctl set eshop.url="http://localhost:3000/"
+[ -n "$(snapctl get pulseserver)" ]                       || snapctl set pulseserver="tcp:localhost:4713"
 
-if [ -n "$LOCALE" ]; then
-  # Basic BCP-47 locale tag check (e.g. cs, cs-CZ, en-US).
-  if ! echo "$LOCALE" | grep -qE '^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$'; then
-    echo "Error: locale must be a valid language tag (examples: cs, cs-CZ, en-US)" >&2
-    exit 1
-  fi
-  echo "locale set to: $LOCALE"
-fi
+snapctl restart $SNAP_INSTANCE_NAME
