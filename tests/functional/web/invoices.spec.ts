@@ -202,3 +202,45 @@ test.group('Web Invoices - cancelPaid', (group) => {
     assert.isTrue(invoice.isPaymentRequested)
   })
 })
+
+test.group('Web Invoices - qrcode', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('can generate QR for older invoice even with more than 1000 invoices', async ({
+    client,
+    assert,
+  }) => {
+    const buyer = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').apply('withIban').create()
+    const targetInvoice = await InvoiceFactory.merge({
+      buyerId: buyer.id,
+      supplierId: supplier.id,
+      totalCost: 123,
+    }).create()
+
+    const now = new Date()
+    const bulk = Array.from({ length: 1000 }, (_, index) => ({
+      buyer_id: buyer.id,
+      supplier_id: supplier.id,
+      total_cost: 10 + (index % 5),
+      is_paid: false,
+      is_payment_requested: false,
+      auto_reminder_count: 0,
+      manual_reminder_count: 0,
+      created_at: now,
+      updated_at: now,
+    }))
+    await db.table('invoices').multiInsert(bulk)
+
+    const response = await client
+      .post(`/invoices/${targetInvoice.id}/qrcode`)
+      .loginAs(buyer)
+      .withCsrfToken()
+
+    response.assertStatus(200)
+    assert.exists(response.body().code)
+    assert.exists(response.body().imageData)
+    assert.include(response.body().code as string, supplier.iban as string)
+  })
+})

@@ -11,7 +11,7 @@ import router from '@adonisjs/core/services/router'
 import { middleware } from '#start/kernel'
 import app from '@adonisjs/core/services/app'
 import env from '#start/env'
-import { extname } from 'node:path'
+import { extname, isAbsolute, relative, resolve } from 'node:path'
 import { access } from 'node:fs/promises'
 
 /*
@@ -85,9 +85,30 @@ router.get('/uploads/*', async ({ request, response }) => {
     '.wav',
     '.webp',
   ])
-  const extension = extname(request.url().split('?')[0] ?? '').toLowerCase()
+  const uploadsBasePath = app.makePath('storage/uploads')
+  const rawUrlPath = decodeURIComponent(request.url().split('?')[0] ?? '')
+  const uploadsPrefix = '/uploads/'
+
+  if (!rawUrlPath.startsWith(uploadsPrefix)) {
+    response.status(404)
+    response.header('Cache-Control', 'no-store, no-cache, must-revalidate')
+    return response.send('Not found')
+  }
+
+  const requestedPath = rawUrlPath.slice(uploadsPrefix.length)
+  const filePath = resolve(uploadsBasePath, requestedPath)
+  const relativePath = relative(uploadsBasePath, filePath)
+  const pathEscapesUploadsRoot =
+    relativePath.startsWith('..') || isAbsolute(relativePath) || requestedPath.includes('\0')
+
+  if (pathEscapesUploadsRoot) {
+    response.status(404)
+    response.header('Cache-Control', 'no-store, no-cache, must-revalidate')
+    return response.send('Not found')
+  }
+
+  const extension = extname(filePath).toLowerCase()
   const useImmutableCache = immutableExtensions.has(extension)
-  const filePath = app.makePath('storage', request.url())
 
   try {
     await access(filePath)

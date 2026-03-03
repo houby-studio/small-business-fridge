@@ -95,18 +95,22 @@ export default class InvoicesController {
   }
 
   async qrcode({ params, auth, response, i18n }: HttpContext) {
-    const invoiceService = new InvoiceService()
     const qrService = new QrPaymentService()
+    const invoiceId = Number(params.id)
+    if (!Number.isInteger(invoiceId) || invoiceId <= 0) {
+      return response.notFound({ error: i18n.t('messages.invoice_not_found') })
+    }
 
-    // Load invoice with supplier info
-    const invoices = await invoiceService.getInvoicesForBuyer(auth.user!.id, 1, 1000)
-    const invoice = invoices.all().find((i) => i.id === Number(params.id))
+    // Load invoice directly (buyer-scoped) to avoid pagination limits.
+    const invoice = await Invoice.query()
+      .where('id', invoiceId)
+      .where('buyerId', auth.user!.id)
+      .preload('supplier')
+      .first()
 
     if (!invoice) {
       return response.notFound({ error: i18n.t('messages.invoice_not_found') })
     }
-
-    await invoice.load('supplier')
 
     if (!invoice.supplier.iban) {
       return response.badRequest({ error: i18n.t('messages.supplier_no_iban') })

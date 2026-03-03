@@ -2,6 +2,7 @@ import '#tests/test_context'
 import { test } from '@japa/runner'
 import app from '@adonisjs/core/services/app'
 import { mkdir, rm, writeFile } from 'node:fs/promises'
+import { AssertionError } from 'node:assert'
 
 test.group('Uploads caching', (group) => {
   const productsDir = app.makePath('storage/uploads/products')
@@ -50,5 +51,15 @@ test.group('Uploads caching', (group) => {
 
     response.assertStatus(404)
     response.assertHeader('cache-control', 'no-store, no-cache, must-revalidate')
+  })
+
+  test('rejects directory traversal attempts', async ({ client }) => {
+    const response = await client.get('/uploads/%2e%2e/%2e%2e/.env')
+
+    if (![403, 404].includes(response.status())) {
+      throw new AssertionError({
+        message: `Expected traversal request to be blocked with 403/404, got ${response.status()}`,
+      })
+    }
   })
 })
