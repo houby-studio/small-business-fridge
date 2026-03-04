@@ -96,7 +96,7 @@ export default class UsersController {
           acceptedAt: invite.acceptedAt?.toISO() ?? null,
           revokedAt: invite.revokedAt?.toISO() ?? null,
           inviteUrl:
-            !invite.acceptedAt && !invite.revokedAt && invite.expiresAt > DateTime.now()
+            !invite.acceptedAt && !invite.revokedAt && invite.expiresAt > DateTime.utc()
               ? invitationService.getInviteUrl(invite)
               : null,
         })),

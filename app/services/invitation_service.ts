@@ -5,6 +5,7 @@ import env from '#start/env'
 import User from '#models/user'
 import UserInvitation from '#models/user_invitation'
 import KeypadIdService from '#services/keypad_id_service'
+import { DomainError } from '#services/domain_error'
 
 type InviteTokenStatus =
   | { valid: true; invitation: UserInvitation }
@@ -63,7 +64,7 @@ export default class InvitationService {
 
     const existingUser = await User.query().whereRaw('LOWER(email) = ?', [email]).first()
     if (existingUser) {
-      throw new Error('EMAIL_ALREADY_REGISTERED')
+      throw new DomainError('EMAIL_ALREADY_REGISTERED')
     }
 
     await UserInvitation.query()
@@ -138,21 +139,21 @@ export default class InvitationService {
             .forUpdate()
             .first()
 
-      if (!invite) throw new Error('INVITE_NOT_FOUND')
+      if (!invite) throw new DomainError('INVITE_NOT_FOUND')
       if (signed) {
         const expected = this.signPayload(`${invite.id}:${invite.tokenHash}`)
         if (expected !== signed.signature) {
-          throw new Error('INVITE_NOT_FOUND')
+          throw new DomainError('INVITE_NOT_FOUND')
         }
       }
-      if (invite.revokedAt) throw new Error('INVITE_REVOKED')
-      if (invite.acceptedAt) throw new Error('INVITE_ALREADY_ACCEPTED')
-      if (invite.expiresAt <= DateTime.utc()) throw new Error('INVITE_EXPIRED')
+      if (invite.revokedAt) throw new DomainError('INVITE_REVOKED')
+      if (invite.acceptedAt) throw new DomainError('INVITE_ALREADY_ACCEPTED')
+      if (invite.expiresAt <= DateTime.utc()) throw new DomainError('INVITE_EXPIRED')
 
       const existingEmail = await User.query({ client: trx })
         .whereRaw('LOWER(email) = ?', [invite.email.toLowerCase()])
         .first()
-      if (existingEmail) throw new Error('EMAIL_ALREADY_REGISTERED')
+      if (existingEmail) throw new DomainError('EMAIL_ALREADY_REGISTERED')
 
       const nextKeypadId = await this.keypadIds.getNextAvailableUserKeypadId(trx)
 

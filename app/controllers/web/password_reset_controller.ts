@@ -10,6 +10,7 @@ import NotificationService from '#services/notification_service'
 import PasswordResetService from '#services/password_reset_service'
 import AuthModeService from '#services/auth_mode_service'
 import ReauthStepupService from '#services/reauth_stepup_service'
+import { isDomainError } from '#services/domain_error'
 
 export default class PasswordResetController {
   private resets = new PasswordResetService()
@@ -93,12 +94,22 @@ export default class PasswordResetController {
         message: i18n.t('messages.password_reset_success'),
       })
       return response.redirect('/login')
-    } catch {
-      session.flash('alert', {
-        type: 'danger',
-        message: i18n.t('messages.password_reset_invalid'),
-      })
-      return response.redirect('/forgot-password')
+    } catch (error) {
+      if (
+        isDomainError(error, 'RESET_TOKEN_NOT_FOUND') ||
+        isDomainError(error, 'RESET_TOKEN_USED') ||
+        isDomainError(error, 'RESET_TOKEN_EXPIRED') ||
+        isDomainError(error, 'USER_NOT_FOUND') ||
+        isDomainError(error, 'USER_DISABLED')
+      ) {
+        session.flash('alert', {
+          type: 'danger',
+          message: i18n.t('messages.password_reset_invalid'),
+        })
+        return response.redirect('/forgot-password')
+      }
+
+      throw error
     }
   }
 

@@ -4,6 +4,7 @@ import { createInviteValidator } from '#validators/auth'
 import AuditService from '#services/audit_service'
 import InvitationService from '#services/invitation_service'
 import NotificationService from '#services/notification_service'
+import { isDomainError } from '#services/domain_error'
 
 function usersUrl(request: HttpContext['request']): string {
   const referer = request.header('referer') ?? ''
@@ -61,7 +62,7 @@ export default class InvitationsController {
       })
       return response.redirect(usersUrl(request))
     } catch (error) {
-      if (error instanceof Error && error.message === 'EMAIL_ALREADY_REGISTERED') {
+      if (isDomainError(error, 'EMAIL_ALREADY_REGISTERED')) {
         session.flash('alert', {
           type: 'danger',
           message: i18n.t('messages.invite_email_already_registered'),

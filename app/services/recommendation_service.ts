@@ -98,7 +98,7 @@ export default class RecommendationService {
       await Recommendation.query().where('userId', user.id).where('model', 'statistical').delete()
 
       if (scored.length > 0) {
-        const now = DateTime.now()
+        const now = DateTime.utc()
         await Recommendation.createMany(
           scored.map((s, idx) => ({
             userId: user.id,

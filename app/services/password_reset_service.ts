@@ -4,6 +4,7 @@ import db from '@adonisjs/lucid/services/db'
 import env from '#start/env'
 import User from '#models/user'
 import PasswordResetToken from '#models/password_reset_token'
+import { DomainError } from '#services/domain_error'
 
 export default class PasswordResetService {
   private normalizeEmail(email: string) {
@@ -64,15 +65,15 @@ export default class PasswordResetService {
         .forUpdate()
         .first()
 
-      if (!token) throw new Error('RESET_TOKEN_NOT_FOUND')
-      if (token.usedAt) throw new Error('RESET_TOKEN_USED')
-      if (token.expiresAt <= DateTime.utc()) throw new Error('RESET_TOKEN_EXPIRED')
+      if (!token) throw new DomainError('RESET_TOKEN_NOT_FOUND')
+      if (token.usedAt) throw new DomainError('RESET_TOKEN_USED')
+      if (token.expiresAt <= DateTime.utc()) throw new DomainError('RESET_TOKEN_EXPIRED')
 
       const user = await User.query({ client: trx })
         .whereRaw('LOWER(email) = ?', [token.email.toLowerCase()])
         .first()
-      if (!user) throw new Error('USER_NOT_FOUND')
-      if (user.isDisabled) throw new Error('USER_DISABLED')
+      if (!user) throw new DomainError('USER_NOT_FOUND')
+      if (user.isDisabled) throw new DomainError('USER_DISABLED')
 
       user.password = newPassword
       await user.save()

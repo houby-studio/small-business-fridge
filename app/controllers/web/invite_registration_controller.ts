@@ -6,6 +6,7 @@ import InvitationService from '#services/invitation_service'
 import NotificationService from '#services/notification_service'
 import AuthModeService from '#services/auth_mode_service'
 import EmailVerificationService from '#services/email_verification_service'
+import { isDomainError } from '#services/domain_error'
 
 export default class InviteRegistrationController {
   private invitations = new InvitationService()
@@ -102,13 +103,11 @@ export default class InviteRegistrationController {
       })
       return response.redirect(this.verifications.isVerificationRequired() ? '/profile' : '/shop')
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'UNKNOWN'
-
       if (
-        message === 'INVITE_NOT_FOUND' ||
-        message === 'INVITE_REVOKED' ||
-        message === 'INVITE_ALREADY_ACCEPTED' ||
-        message === 'INVITE_EXPIRED'
+        isDomainError(error, 'INVITE_NOT_FOUND') ||
+        isDomainError(error, 'INVITE_REVOKED') ||
+        isDomainError(error, 'INVITE_ALREADY_ACCEPTED') ||
+        isDomainError(error, 'INVITE_EXPIRED')
       ) {
         session.flash('alert', {
           type: 'danger',
@@ -117,7 +116,7 @@ export default class InviteRegistrationController {
         return response.redirect('/login')
       }
 
-      if (message === 'EMAIL_ALREADY_REGISTERED') {
+      if (isDomainError(error, 'EMAIL_ALREADY_REGISTERED')) {
         session.flash('alert', {
           type: 'danger',
           message: i18n.t('messages.invite_email_already_registered'),
