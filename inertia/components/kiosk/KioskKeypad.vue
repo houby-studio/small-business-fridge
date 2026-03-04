@@ -18,7 +18,6 @@ function resolveToneFile(key: string): string | null {
   if (key >= '0' && key <= '9') return `${key}.wav`
   if (key === 'clear') return 'star.wav'
   if (key === 'back') return 'hash.wav'
-  if (key === 'enter') return '0.wav'
   return null
 }
 
