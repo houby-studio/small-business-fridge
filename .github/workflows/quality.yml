@@ -31,6 +31,20 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+      mailpit:
+        image: axllent/mailpit
+        ports:
+          - 1025:1025
+          - 8025:8025
+        env:
+          MP_SMTP_AUTH_ACCEPT_ANY: 1
+          MP_SMTP_AUTH_ALLOW_INSECURE: 1
+        options: >-
+          --health-cmd "wget -qO- http://localhost:8025/api/v1/messages || exit 1"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
     steps:
       - uses: actions/checkout@v4
 
@@ -68,6 +82,7 @@ jobs:
           LOG_LEVEL: error
           SMTP_HOST: localhost
           SMTP_PORT: 1025
+          MAILPIT_API_URL: http://localhost:8025
           OIDC_ENABLED: 'false'
           API_SECRET: test-api-secret
           APP_URL: http://localhost:3334
@@ -83,6 +98,8 @@ jobs:
 
       - name: Run Playwright E2E tests
         run: npm run test:e2e
+        env:
+          MAILPIT_API_URL: http://localhost:8025
 
       - name: Verify Playwright JUnit report exists
         if: always()
@@ -93,6 +110,8 @@ jobs:
       - name: Run Playwright Auth Matrix smoke tests (PR only)
         if: github.event_name == 'pull_request'
         run: npm run test:e2e:auth-matrix
+        env:
+          MAILPIT_API_URL: http://localhost:8025
 
       - name: Verify Playwright Auth Matrix JUnit report exists (PR only)
         if: always() && github.event_name == 'pull_request'
