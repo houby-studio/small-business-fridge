@@ -53,18 +53,8 @@ layout:
     bind: $SNAP/usr/share/fonts
   /usr/share/icons:
     bind: $SNAP/usr/share/icons
-  /usr/share/sounds:
-    bind: $SNAP/usr/share/sounds
   /etc/fonts:
     bind: $SNAP/etc/fonts
-  /usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/gdk-pixbuf-2.0:
-    bind: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/gdk-pixbuf-2.0
-  /usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/gtk-3.0:
-    bind: $SNAP/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/gtk-3.0
-  /usr/share/mime:
-    bind: $SNAP/usr/share/mime
-  /etc/gtk-3.0:
-    bind: $SNAP/etc/gtk-3.0
 
 parts:
   sbf-kiosk:
@@ -73,19 +63,6 @@ parts:
     stage-packages:
       - libnspr4
       - libnss3
-      - libatk-bridge2.0-0
-      - libcups2
-      - libgtk-3-0
-      - libasound2
-      - xkb-data
-      - liboss4-salsa2
-    override-prime: |
-      craftctl default
-      # liboss4-salsa2 installs libOSSlib.so into oss4-libsalsa/ subdirectory,
-      # which is not in the dynamic linker's default search path.
-      # Create a symlink in the standard lib dir so it can be found at runtime.
-      ln -sf oss4-libsalsa/libOSSlib.so \
-        "$CRAFT_PRIME/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/libOSSlib.so" || true
 
   wrapper:
     plugin: dump
