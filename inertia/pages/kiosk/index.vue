@@ -588,6 +588,12 @@ watch(appState, (s) => {
 
 onMounted(() => {
   document.addEventListener('keydown', onGlobalKeydown)
+  // Pre-load login tone files so they are cached before the first identification attempt.
+  for (const fileName of ['login-success.wav', 'login-error.wav']) {
+    const player = new Audio(`/uploads/keypad/${fileName}`)
+    player.preload = 'auto'
+    loginTonePlayers.set(fileName, player)
+  }
 })
 
 onUnmounted(() => {
