@@ -29,7 +29,7 @@ type CliOptions = {
 }
 
 const DEFAULT_OPTIONS: CliOptions = {
-  outDir: 'storage/uploads/keypad',
+  outDir: 'public/keypad',
   durationMs: 180,
   sampleRate: 8000,
   fadeMs: 8,
@@ -147,6 +147,14 @@ function clampSample(sample: number): number {
 
 function toPublicUrlPath(outDir: string, fileName: string): string {
   const normalizedOutDir = outDir.replace(/\\/g, '/').replace(/^\/+/, '').replace(/\/+$/, '')
+
+  if (normalizedOutDir === 'public') {
+    return `/${fileName}`
+  }
+
+  if (normalizedOutDir.startsWith('public/')) {
+    return `/${normalizedOutDir.slice('public/'.length)}/${fileName}`
+  }
 
   if (normalizedOutDir === 'storage/uploads') {
     return `/uploads/${fileName}`
@@ -341,7 +349,7 @@ async function main() {
   console.log(
     `Generated ${DTMF_SPECS.length} keypad tones and ${EVENT_TONE_SPECS.length} event tones in ${outDir}`
   )
-  console.log('Tip: files in storage/uploads are available under /uploads/...')
+  console.log('Tip: files in public are available from the app root URL path.')
 }
 
 await main()

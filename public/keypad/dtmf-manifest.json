@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-03-03T14:51:24.778Z",
+  "generatedAt": "2026-03-04T11:53:00.455Z",
   "format": "wav/pcm16-mono",
   "options": {
-    "outDir": "storage/uploads/keypad",
+    "outDir": "public/keypad",
     "durationMs": 180,
     "sampleRate": 8000,
     "fadeMs": 8,
@@ -14,84 +14,84 @@
       "lowHz": 697,
       "highHz": 1209,
       "fileName": "1.wav",
-      "urlPath": "/uploads/keypad/1.wav"
+      "urlPath": "/keypad/1.wav"
     },
     {
       "key": "2",
       "lowHz": 697,
       "highHz": 1336,
       "fileName": "2.wav",
-      "urlPath": "/uploads/keypad/2.wav"
+      "urlPath": "/keypad/2.wav"
     },
     {
       "key": "3",
       "lowHz": 697,
       "highHz": 1477,
       "fileName": "3.wav",
-      "urlPath": "/uploads/keypad/3.wav"
+      "urlPath": "/keypad/3.wav"
     },
     {
       "key": "4",
       "lowHz": 770,
       "highHz": 1209,
       "fileName": "4.wav",
-      "urlPath": "/uploads/keypad/4.wav"
+      "urlPath": "/keypad/4.wav"
     },
     {
       "key": "5",
       "lowHz": 770,
       "highHz": 1336,
       "fileName": "5.wav",
-      "urlPath": "/uploads/keypad/5.wav"
+      "urlPath": "/keypad/5.wav"
     },
     {
       "key": "6",
       "lowHz": 770,
       "highHz": 1477,
       "fileName": "6.wav",
-      "urlPath": "/uploads/keypad/6.wav"
+      "urlPath": "/keypad/6.wav"
     },
     {
       "key": "7",
       "lowHz": 852,
       "highHz": 1209,
       "fileName": "7.wav",
-      "urlPath": "/uploads/keypad/7.wav"
+      "urlPath": "/keypad/7.wav"
     },
     {
       "key": "8",
       "lowHz": 852,
       "highHz": 1336,
       "fileName": "8.wav",
-      "urlPath": "/uploads/keypad/8.wav"
+      "urlPath": "/keypad/8.wav"
     },
     {
       "key": "9",
       "lowHz": 852,
       "highHz": 1477,
       "fileName": "9.wav",
-      "urlPath": "/uploads/keypad/9.wav"
+      "urlPath": "/keypad/9.wav"
     },
     {
       "key": "*",
       "lowHz": 941,
       "highHz": 1209,
       "fileName": "star.wav",
-      "urlPath": "/uploads/keypad/star.wav"
+      "urlPath": "/keypad/star.wav"
     },
     {
       "key": "0",
       "lowHz": 941,
       "highHz": 1336,
       "fileName": "0.wav",
-      "urlPath": "/uploads/keypad/0.wav"
+      "urlPath": "/keypad/0.wav"
     },
     {
       "key": "#",
       "lowHz": 941,
       "highHz": 1477,
       "fileName": "hash.wav",
-      "urlPath": "/uploads/keypad/hash.wav"
+      "urlPath": "/keypad/hash.wav"
     }
   ],
   "events": [
@@ -99,7 +99,7 @@
       "name": "loginSuccess",
       "description": "Three ascending notes for successful keypad login",
       "fileName": "login-success.wav",
-      "urlPath": "/uploads/keypad/login-success.wav",
+      "urlPath": "/keypad/login-success.wav",
       "parts": [
         {
           "durationMs": 70,
@@ -132,7 +132,7 @@
       "name": "loginError",
       "description": "Two descending notes for invalid or unavailable keypad login",
       "fileName": "login-error.wav",
-      "urlPath": "/uploads/keypad/login-error.wav",
+      "urlPath": "/keypad/login-error.wav",
       "parts": [
         {
           "durationMs": 130,

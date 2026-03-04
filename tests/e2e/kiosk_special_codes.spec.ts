@@ -70,8 +70,8 @@ test.describe('Kiosk special codes', () => {
     const calls = await getAudioCalls(page)
 
     expect(calls.length).toBeGreaterThanOrEqual(2)
-    expect(calls.some((src) => src.includes('/uploads/keypad/1.wav'))).toBeTruthy()
-    expect(calls.some((src) => src.includes('/uploads/keypad/2.wav'))).toBeTruthy()
+    expect(calls.some((src) => src.includes('/keypad/1.wav'))).toBeTruthy()
+    expect(calls.some((src) => src.includes('/keypad/2.wav'))).toBeTruthy()
   })
 
   test('plays login success tone when keypad ID is valid', async ({ page }) => {
@@ -81,7 +81,7 @@ test.describe('Kiosk special codes', () => {
     await expect
       .poll(async () => {
         const calls = await getAudioCalls(page)
-        return calls.some((src) => src.includes('/uploads/keypad/login-success.wav'))
+        return calls.some((src) => src.includes('/keypad/login-success.wav'))
       })
       .toBeTruthy()
   })
@@ -93,7 +93,7 @@ test.describe('Kiosk special codes', () => {
     await expect
       .poll(async () => {
         const calls = await getAudioCalls(page)
-        return calls.some((src) => src.includes('/uploads/keypad/login-error.wav'))
+        return calls.some((src) => src.includes('/keypad/login-error.wav'))
       })
       .toBeTruthy()
   })
