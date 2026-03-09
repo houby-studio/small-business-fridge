@@ -11,10 +11,6 @@ services:
     restart: always
     devices:
       - /dev/snd
-    volumes:
-      # Socket directory — used by the internal healthcheck (pactl via unix socket).
-      # The snap itself connects via TCP, so this is not required for audio playback.
-      - /run/user/1000/pulse:/run/user/1000/pulse
     ports:
       # Bind to loopback only — never expose PulseAudio on the network.
       - '127.0.0.1:4713:4713'
@@ -22,7 +18,7 @@ services:
       # Use the numeric GID of the host's audio group (getent group audio → 1005).
       # Do NOT use the name "audio" — Ubuntu container images define audio as GID 29
       # which does not match this host, so /dev/snd access would be silently denied.
-      - "1005"
+      - '1005'
     environment:
       - XDG_RUNTIME_DIR=/run/user/1000
       # Options: analog, hdmi, auto, or exact sink name
@@ -36,9 +32,8 @@ services:
       # ALSA card index used for mixer configuration (amixer -c N)
       - PULSE_ALSA_CARD=0
     healthcheck:
-      # pactl runs as root inside the container; auth-anonymous=1 on the unix socket allows it.
-      test:
-        ['CMD-SHELL', 'PULSE_SERVER=unix:/run/user/1000/pulse/native pactl info >/dev/null 2>&1']
+      # Check the TCP port — simpler and avoids any socket path conflicts with the host.
+      test: ['CMD-SHELL', 'nc -z localhost 4713']
       interval: 5s
       timeout: 3s
       retries: 12
