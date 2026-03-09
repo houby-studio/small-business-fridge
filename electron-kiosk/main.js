@@ -127,8 +127,8 @@ function registerIpcHandlers() {
         url: snapctlGetSilent('url'),
         allowedOrigins: snapctlGetSilent('allowed-origins'),
         lang: snapctlGetSilent('lang'),
-        pulseSink: snapctlGetSilent('pulse-sink'),
-        pulseVolume: snapctlGetSilent('pulse-volume'),
+        audioSink: snapctlGetSilent('audio-sink'),
+        audioVolume: snapctlGetSilent('audio-volume'),
         daemon: snapctlGetSilent('daemon'),
       }
     } catch {
@@ -159,8 +159,8 @@ function registerIpcHandlers() {
           `url=${parsedUrl.href}`,
           `allowed-origins=${config.allowedOrigins ?? ''}`,
           `lang=${config.lang ?? 'en'}`,
-          `pulse-sink=${config.pulseSink ?? 'auto'}`,
-          `pulse-volume=${config.pulseVolume ?? '100'}`,
+          `audio-sink=${config.audioSink ?? 'auto'}`,
+          `audio-volume=${config.audioVolume ?? '100'}`,
           `daemon=${config.daemon ?? 'true'}`,
         ])
       }

@@ -496,11 +496,11 @@
           <!-- Right column: audio & service -->
           <div class="col-right">
             <div class="field">
-              <label class="field-label" for="pulseSink">Audio Device</label>
+              <label class="field-label" for="audioSink">Audio Device</label>
               <input
                 type="text"
-                id="pulseSink"
-                name="pulseSink"
+                id="audioSink"
+                name="audioSink"
                 value="auto"
                 placeholder="auto"
                 autocomplete="off"
@@ -513,17 +513,17 @@
             </div>
 
             <div class="field">
-              <label class="field-label" for="pulseVolume">Startup Volume</label>
+              <label class="field-label" for="audioVolume">Startup Volume</label>
               <div class="range-row">
                 <input
                   type="range"
-                  id="pulseVolume"
-                  name="pulseVolume"
+                  id="audioVolume"
+                  name="audioVolume"
                   min="0"
                   max="100"
                   value="100"
                 />
-                <output class="range-value" id="volumeDisplay" for="pulseVolume">100%</output>
+                <output class="range-value" id="volumeDisplay" for="audioVolume">100%</output>
               </div>
             </div>
 
@@ -559,7 +559,7 @@
       const urlRow = document.getElementById('urlRow')
       const submitBtn = document.getElementById('submit-btn')
       const statusEl = document.getElementById('status')
-      const volumeSlider = document.getElementById('pulseVolume')
+      const volumeSlider = document.getElementById('audioVolume')
       const volumeDisplay = document.getElementById('volumeDisplay')
 
       function updateSlider(slider) {
@@ -586,9 +586,9 @@
             const sel = document.getElementById('lang')
             if ([...sel.options].some((o) => o.value === cfg.lang)) sel.value = cfg.lang
           }
-          if (cfg.pulseSink) document.getElementById('pulseSink').value = cfg.pulseSink
-          if (cfg.pulseVolume != null) {
-            volumeSlider.value = cfg.pulseVolume
+          if (cfg.audioSink) document.getElementById('audioSink').value = cfg.audioSink
+          if (cfg.audioVolume != null) {
+            volumeSlider.value = cfg.audioVolume
             updateSlider(volumeSlider)
           }
           if (cfg.daemon !== undefined) {
@@ -631,8 +631,8 @@
           url: buildUrl(),
           allowedOrigins: document.getElementById('allowedOrigins').value.trim(),
           lang: document.getElementById('lang').value,
-          pulseSink: document.getElementById('pulseSink').value.trim() || 'auto',
-          pulseVolume: String(volumeSlider.value),
+          audioSink: document.getElementById('audioSink').value.trim() || 'auto',
+          audioVolume: String(volumeSlider.value),
           daemon: document.getElementById('daemon').checked ? 'true' : 'false',
         }
 

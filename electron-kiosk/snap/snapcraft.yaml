@@ -30,9 +30,6 @@ apps:
       XDG_DATA_DIRS: $SNAP/usr/share
       GTK_USE_PORTAL: 0
       GDK_GL: gles
-      # libpulsecommon lives in an arch-specific subdir not on the default library path.
-      # Normalised to usr/lib/pulseaudio-private/ at build time (see sbf-kiosk override-prime).
-      LD_LIBRARY_PATH: $SNAP/usr/lib/pulseaudio-private:$LD_LIBRARY_PATH
 
   daemon:
     daemon: simple
@@ -70,20 +67,10 @@ parts:
     stage-packages:
       - libnspr4
       - libnss3
-      # libpulse0: PA client library — kept so Electron can use PA if available on the system.
-      - libpulse0
       - libasound2t64
       - libasound2-plugins
       # alsa-utils provides amixer for volume control.
       - alsa-utils
-    override-prime: |
-      craftctl default
-      # libpulsecommon-XX.so lives in usr/lib/<arch>/pulseaudio/ which is NOT on the
-      # snap's default LD_LIBRARY_PATH. Normalise it to a fixed arch-agnostic path.
-      mkdir -p usr/lib/pulseaudio-private
-      for dir in usr/lib/*/pulseaudio; do
-        [ -d "$dir" ] && cp -rn "$dir/." usr/lib/pulseaudio-private/ 2>/dev/null || true
-      done
 
   wrapper:
     plugin: dump
