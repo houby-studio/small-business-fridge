@@ -18,6 +18,8 @@ apps:
     command: &_command usr/bin/wrapper
     plugs: &_plugs
       - audio-playback
+      - hardware-observe
+      - process-control
       - opengl
       - wayland
       - browser-support
@@ -30,6 +32,9 @@ apps:
       XDG_DATA_DIRS: $SNAP/usr/share
       GTK_USE_PORTAL: 0
       GDK_GL: gles
+      # libpulsecommon lives in an arch-specific subdir not on the default library path.
+      # We normalise it to usr/lib/pulseaudio-private/ at build time (see sbf-kiosk part).
+      LD_LIBRARY_PATH: $SNAP/usr/lib/pulseaudio-private:$LD_LIBRARY_PATH
 
   daemon:
     daemon: simple
@@ -63,34 +68,27 @@ parts:
     stage-packages:
       - libnspr4
       - libnss3
+      # PulseAudio client library — lets Electron/Chromium connect to the system's
+      # PipeWire/PulseAudio without bundling a daemon inside the snap.
+      - libpulse0
+      - pulseaudio-utils
+      - libasound2t64
+      - libasound2-plugins
+    override-prime: |
+      craftctl default
+      # libpulsecommon-XX.so lives in usr/lib/<arch>/pulseaudio/ which is NOT on the
+      # snap's default LD_LIBRARY_PATH. Normalise it to a fixed arch-agnostic path that
+      # the LD_LIBRARY_PATH env var above can reference regardless of architecture.
+      mkdir -p usr/lib/pulseaudio-private
+      for dir in usr/lib/*/pulseaudio; do
+        [ -d "$dir" ] && cp -rn "$dir/." usr/lib/pulseaudio-private/ 2>/dev/null || true
+      done
 
   wrapper:
     plugin: dump
     source: wrapper
     organize:
       wrapper.sh: usr/bin/wrapper
-
-  pulseaudio:
-    plugin: nil
-    stage-packages:
-      - pulseaudio
-      - pulseaudio-utils
-    override-prime: |
-      craftctl default
-      # pulseaudio's private shared library (libpulsecore, libpulsecommon) lives in
-      # an arch-specific subdirectory. Add it to the snap's LD_LIBRARY_PATH by copying
-      # it up to usr/lib/pulseaudio/ — a fixed path that wrapper.sh can glob for at runtime.
-      mkdir -p usr/lib/pulseaudio
-      for dir in usr/lib/*/pulseaudio; do
-        [ "$dir" = "usr/lib/pulseaudio" ] && continue
-        [ -d "$dir" ] && cp -rn "$dir/." usr/lib/pulseaudio/ 2>/dev/null || true
-      done
-
-  pulseaudio-config:
-    plugin: dump
-    source: pulseaudio-config
-    organize:
-      pulse.pa: etc/sbf-kiosk/pulse.pa
 
   gsettings+pixbuf+immodules:
     plugin: nil
@@ -122,7 +120,7 @@ parts:
     plugin: dump
     source: wayland-launch
     override-build: |
-      PLUGS="audio-playback opengl wayland browser-support network network-bind"
+      PLUGS="audio-playback hardware-observe process-control opengl wayland browser-support network network-bind"
       sed --in-place "s/%PLUGS%/$PLUGS/g" $CRAFT_PART_BUILD/bin/wayland-launch
       sed --in-place "s/%PLUGS%/$PLUGS/g" $CRAFT_PART_BUILD/bin/setup.sh
       craftctl default
