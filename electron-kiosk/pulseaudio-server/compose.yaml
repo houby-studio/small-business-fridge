@@ -18,13 +18,11 @@ services:
     ports:
       # Bind to loopback only — never expose PulseAudio on the network.
       - '127.0.0.1:4713:4713'
-    cap_add:
-      # SYS_NICE allows PulseAudio to set real-time scheduling priority.
-      - SYS_NICE
     group_add:
-      # audio group gives access to /dev/snd devices without privileged mode.
-      # If your host audio GID differs from 29, replace with the numeric GID.
-      - audio
+      # Use the numeric GID of the host's audio group (getent group audio → 1005).
+      # Do NOT use the name "audio" — Ubuntu container images define audio as GID 29
+      # which does not match this host, so /dev/snd access would be silently denied.
+      - "1005"
     environment:
       - XDG_RUNTIME_DIR=/run/user/1000
       # Options: analog, hdmi, auto, or exact sink name
