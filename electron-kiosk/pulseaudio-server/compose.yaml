@@ -1,22 +1,45 @@
-# This compose file should be used on kiosk to pull PulseAudio server image
+# PulseAudio server for the SBF kiosk.
+#
+# The snap connects via a Unix socket at /run/user/1000/pulse/native.
+# On first run Docker will create the socket directory; the entrypoint
+# fixes ownership so PulseAudio (uid 1000) can write to it.
+#
+# If the kiosk runs as a different uid, adjust the volume path and the
+# uid inside the image accordingly (rebuild with a matching UBUNTU_VERSION).
+
 services:
   pulseaudio:
-    image: apptechdatasharedcr.azurecr.io/mtf-it-kiosky/pulseaudio-server:24.04
+    image: houbystudio/sbf-pulseaudio-server:24.04
     container_name: pulseaudio
     restart: always
     devices:
       - /dev/snd
     volumes:
-      - /dev/shm:/dev/shm
-    ports:
-      - '4713:4713'
-    privileged: true
+      # Shared Unix socket directory — the snap reads the socket from here.
+      - /run/user/1000/pulse:/run/user/1000/pulse
+    cap_add:
+      # SYS_NICE allows PulseAudio to set real-time scheduling priority.
+      - SYS_NICE
+    group_add:
+      # audio group gives access to /dev/snd devices without privileged mode.
+      # If your host audio GID differs from 29, replace with the numeric GID.
+      - audio
     environment:
+      - XDG_RUNTIME_DIR=/run/user/1000
       # Options: analog, hdmi, auto, or exact sink name
       - PULSE_SINK=hdmi
       # Volume percentage (0-150)
       - PULSE_VOLUME=100
       # Whether to unmute on startup
       - PULSE_UNMUTE=true
-      # Seconds to wait for PA to initialize
+      # Seconds to wait for PA to initialize before configuring sinks
       - PULSE_STARTUP_DELAY=2
+      # ALSA card index used for mixer configuration (amixer -c N)
+      - PULSE_ALSA_CARD=0
+    healthcheck:
+      # Socket presence is the cleanest signal that PA is ready to accept connections.
+      test: ['CMD-SHELL', '[ -S /run/user/1000/pulse/native ]']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s

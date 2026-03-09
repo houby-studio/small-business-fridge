@@ -4,7 +4,7 @@ summary: Small Business Fridge — kiosk client
 description: |
   Kiosk client for the Small Business Fridge office inventory system.
   Configure the server URL after installation:
-    snap set sbf-kiosk kiosk-url=https://your-server.example.com
+    snap set sbf-kiosk url=https://your-server.example.com
 
 confinement: strict
 compression: lzo

@@ -5,17 +5,18 @@ RUN apt-get update && \
   apt-get install -y pulseaudio pulseaudio-utils alsa-utils && \
   rm -rf /var/lib/apt/lists/*
 
-# Configure for non-system mode with network access
-RUN echo "load-module module-native-protocol-tcp auth-ip-acl=127.0.0.1;172.16.0.0/12;192.168.0.0/16;10.0.0.0/8 auth-anonymous=1"
+# Create a dedicated kiosk user (uid 1000) to match the host kiosk user.
+# PulseAudio will run as this user and own the Unix socket.
+RUN useradd -u 1000 -ms /bin/bash kiosk
 
-# Create a dummy home for root's PulseAudio
-RUN mkdir -p /root/.config/pulse
+ENV HOME=/home/kiosk \
+    XDG_RUNTIME_DIR=/run/user/1000
 
-# Add init script
+# Add init script and privilege-dropping entrypoint
 COPY init.sh /usr/local/bin/init.sh
-RUN chmod +x /usr/local/bin/init.sh
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/init.sh /usr/local/bin/entrypoint.sh
 
-EXPOSE 4713
-
+# Entrypoint runs as root to fix socket directory ownership, then drops to kiosk (uid 1000)
 USER root
-ENTRYPOINT ["/usr/local/bin/init.sh"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

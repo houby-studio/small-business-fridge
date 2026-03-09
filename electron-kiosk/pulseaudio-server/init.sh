@@ -41,6 +41,9 @@ configure_alsa_mixer() {
     fi
 }
 
+# Point pactl at the Unix socket PulseAudio will create.
+export PULSE_SERVER="unix:${XDG_RUNTIME_DIR}/pulse/native"
+
 # Start PulseAudio in background
 echo "Starting PulseAudio..."
 pulseaudio --exit-idle-time=-1 --log-target=stderr --daemonize=no &
@@ -50,14 +53,14 @@ PULSE_PID=$!
 echo "Waiting for PulseAudio to initialize..."
 sleep ${STARTUP_DELAY}
 
-# Wait for PulseAudio to be ready
-for i in {1..11}; do
+# Wait for PulseAudio to be ready (up to 10 attempts)
+for i in {1..10}; do
     if pactl info >/dev/null 2>&1; then
         echo "PulseAudio is ready!"
         break
     fi
     echo "Waiting for PulseAudio... ($i/10)"
-    if [ "$i" -eq 11 ]; then
+    if [ "$i" -eq 10 ]; then
       echo "ERROR: PulseAudio did not become ready after 10 attempts. Exiting."
       exit 1
     fi

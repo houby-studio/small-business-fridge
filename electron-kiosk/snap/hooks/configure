@@ -11,7 +11,7 @@ case "$daemon" in
     ;;
   false)
     # stop the daemon
-        snapctl stop --disable "$SNAP_INSTANCE_NAME" 2>&1 || true
+    snapctl stop --disable "$SNAP_INSTANCE_NAME" 2>&1 || true
     ;;
   *)
     snapctl set daemon="true"
@@ -19,9 +19,27 @@ case "$daemon" in
     ;;
 esac
 
-[ -n "$(snapctl get daemon)" ]                            || snapctl set daemon="true"
-[ -n "$(snapctl get lang)" ]                              || snapctl set lang="en"
-[ -n "$(snapctl get kiosk-url)" ]                         || snapctl set kiosk-url="http://localhost:3000/"
-[ -n "$(snapctl get pulse-server)" ]                      || snapctl set pulse-server="tcp:localhost:4713"
+# Set defaults for all configurable options.
+# Run `snap get sbf-kiosk` to inspect current values.
+# Run `snap set sbf-kiosk key=value` to change them.
+
+# daemon: run as a background system service (true) or launch manually (false)
+[ -n "$(snapctl get daemon)" ]          || snapctl set daemon="true"
+
+# url: address of the SBF web server the kiosk will load
+[ -n "$(snapctl get url)" ]             || snapctl set url="http://localhost:3000/"
+
+# allowed-origins: extra origins the kiosk may navigate to (space- or comma-separated)
+[ -n "$(snapctl get allowed-origins)" ] || snapctl set allowed-origins=""
+
+# lang: language code passed to Chromium (e.g. cs, en, de)
+[ -n "$(snapctl get lang)" ]            || snapctl set lang="en"
+
+# pulse-server: PulseAudio connection string for audio playback.
+# Unix socket (default, requires pulseaudio-server Docker container):
+#   unix:/run/user/1000/pulse/native
+# TCP fallback (bind to 127.0.0.1 in compose.yaml):
+#   tcp:localhost:4713
+[ -n "$(snapctl get pulse-server)" ]    || snapctl set pulse-server="unix:/run/user/1000/pulse/native"
 
 snapctl restart $SNAP_INSTANCE_NAME

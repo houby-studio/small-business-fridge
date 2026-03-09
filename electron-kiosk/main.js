@@ -66,13 +66,13 @@ if (!app.requestSingleInstanceLock()) {
  * Read the kiosk URL from snap configuration (when running as a snap) or from
  * the KIOSK_URL environment variable (dev/non-snap usage).
  *
- * Set in snap context:  sudo snap set sbf-kiosk kiosk-url=https://your-app.example.com
+ * Set in snap context:  sudo snap set sbf-kiosk url=https://your-app.example.com
  * Set in dev context:   KIOSK_URL=https://your-app.example.com npx electron .
  */
 function getKioskUrl() {
   if (process.env.SNAP) {
     try {
-      const url = execFileSync('snapctl', ['get', 'kiosk-url'], { encoding: 'utf8' }).trim()
+      const url = execFileSync('snapctl', ['get', 'url'], { encoding: 'utf8' }).trim()
       if (url) return url
     } catch {
       // snapctl unavailable or key not yet set — fall through to env var
@@ -83,7 +83,7 @@ function getKioskUrl() {
   if (!url) {
     console.error(
       'No kiosk URL configured.\n' +
-        '  Snap:  sudo snap set sbf-kiosk kiosk-url=https://your-app.example.com\n' +
+        '  Snap:  sudo snap set sbf-kiosk url=https://your-app.example.com\n' +
         '  Dev:   KIOSK_URL=https://your-app.example.com npx electron .'
     )
     return null
