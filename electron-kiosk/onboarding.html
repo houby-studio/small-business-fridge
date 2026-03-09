@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kiosk Setup — Small Business Fridge</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #0f172a;
+        --surface: #1e293b;
+        --surface2: #0f172a;
+        --border: #334155;
+        --text: #f1f5f9;
+        --text-muted: #94a3b8;
+        --accent: #3b82f6;
+        --accent-hover: #2563eb;
+        --success: #22c55e;
+        --error: #ef4444;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        line-height: 1.5;
+      }
+
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 1rem;
+        padding: 2.5rem;
+        width: 100%;
+        max-width: 620px;
+        box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+      }
+
+      .logo {
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--accent);
+        margin-bottom: 0.75rem;
+      }
+
+      h1 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+      }
+
+      .subtitle {
+        color: var(--text-muted);
+        margin-bottom: 2rem;
+        font-size: 0.9375rem;
+      }
+
+      .subtitle code {
+        font-family: ui-monospace, 'Cascadia Code', monospace;
+        font-size: 0.8125rem;
+        background: var(--surface2);
+        padding: 0.125rem 0.375rem;
+        border-radius: 0.25rem;
+        color: var(--text);
+      }
+
+      .section-label {
+        font-size: 0.6875rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: var(--text-muted);
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .field {
+        margin-bottom: 1.25rem;
+      }
+
+      label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin-bottom: 0.375rem;
+      }
+
+      .required {
+        color: var(--error);
+        margin-left: 0.125rem;
+      }
+
+      input[type='text'],
+      input[type='url'],
+      input[type='number'] {
+        width: 100%;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        color: var(--text);
+        padding: 0.625rem 0.75rem;
+        font-size: 0.9375rem;
+        font-family: inherit;
+        outline: none;
+        transition:
+          border-color 0.15s,
+          box-shadow 0.15s;
+      }
+
+      input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+      }
+
+      input.invalid {
+        border-color: var(--error);
+      }
+
+      .hint {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 0.375rem;
+      }
+
+      .hint code {
+        font-family: ui-monospace, 'Cascadia Code', monospace;
+        font-size: 0.7rem;
+        background: var(--surface2);
+        padding: 0.0625rem 0.25rem;
+        border-radius: 0.2rem;
+        color: var(--text);
+      }
+
+      /* Advanced section */
+      details {
+        margin-bottom: 0.5rem;
+      }
+
+      summary {
+        cursor: pointer;
+        color: var(--text-muted);
+        font-size: 0.875rem;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        list-style: none;
+        margin-bottom: 1.5rem;
+        user-select: none;
+        transition: color 0.15s;
+      }
+
+      summary::-webkit-details-marker {
+        display: none;
+      }
+
+      summary:hover {
+        color: var(--text);
+      }
+
+      .summary-arrow {
+        font-size: 0.625rem;
+        transition: transform 0.2s;
+        display: inline-block;
+      }
+
+      details[open] .summary-arrow {
+        transform: rotate(90deg);
+      }
+
+      /* Toggle switch */
+      .toggle-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.875rem;
+      }
+
+      .toggle {
+        position: relative;
+        width: 3rem;
+        height: 1.625rem;
+        flex-shrink: 0;
+        margin-top: 0.0625rem;
+      }
+
+      .toggle input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+        position: absolute;
+      }
+
+      .toggle-track {
+        position: absolute;
+        inset: 0;
+        background: var(--border);
+        border-radius: 999px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .toggle-thumb {
+        position: absolute;
+        width: 1.25rem;
+        height: 1.25rem;
+        left: 0.1875rem;
+        top: 0.1875rem;
+        background: white;
+        border-radius: 50%;
+        transition: transform 0.2s;
+        pointer-events: none;
+      }
+
+      .toggle input:checked ~ .toggle-track {
+        background: var(--accent);
+      }
+
+      .toggle input:checked ~ .toggle-thumb {
+        transform: translateX(1.375rem);
+      }
+
+      .toggle-labels label {
+        cursor: pointer;
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin-bottom: 0.125rem;
+      }
+
+      /* Actions */
+      .actions {
+        margin-top: 2rem;
+      }
+
+      .btn-submit {
+        width: 100%;
+        background: var(--accent);
+        color: white;
+        border: none;
+        border-radius: 0.5rem;
+        padding: 0.8125rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+        font-family: inherit;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          opacity 0.15s;
+      }
+
+      .btn-submit:hover:not(:disabled) {
+        background: var(--accent-hover);
+      }
+
+      .btn-submit:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
+      /* Status message */
+      .status {
+        margin-top: 1rem;
+        padding: 0.875rem 1rem;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        display: none;
+      }
+
+      .status.success {
+        display: block;
+        background: rgba(34, 197, 94, 0.12);
+        border: 1px solid rgba(34, 197, 94, 0.35);
+        color: var(--success);
+      }
+
+      .status.error {
+        display: block;
+        background: rgba(239, 68, 68, 0.12);
+        border: 1px solid rgba(239, 68, 68, 0.35);
+        color: var(--error);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="logo">Small Business Fridge &mdash; Kiosk</div>
+      <h1>Initial Setup</h1>
+      <p class="subtitle">
+        Configure the kiosk before first use. Settings can be changed later with
+        <code>snap set sbf-kiosk key=value</code>.
+      </p>
+
+      <form id="setup-form" novalidate>
+        <p class="section-label">Connection</p>
+
+        <div class="field">
+          <label for="url">Server URL<span class="required">*</span></label>
+          <input
+            type="url"
+            id="url"
+            name="url"
+            placeholder="http://192.168.1.100:3333"
+            required
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <p class="hint">
+            The address of the Small Business Fridge web server this kiosk will load.
+          </p>
+        </div>
+
+        <div class="field">
+          <label for="allowedOrigins">Additional Allowed Origins</label>
+          <input
+            type="text"
+            id="allowedOrigins"
+            name="allowedOrigins"
+            placeholder=""
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <p class="hint">
+            Extra origins the kiosk may navigate to (comma-separated). Leave blank if not needed.
+          </p>
+        </div>
+
+        <details id="advanced">
+          <summary>
+            <span class="summary-arrow">&#9658;</span>
+            Advanced settings
+          </summary>
+
+          <p class="section-label">Display &amp; Language</p>
+
+          <div class="field">
+            <label for="lang">Language</label>
+            <input
+              type="text"
+              id="lang"
+              name="lang"
+              value="en"
+              placeholder="en"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <p class="hint">
+              Language code passed to the browser (e.g. <code>cs</code>, <code>en</code>,
+              <code>de</code>).
+            </p>
+          </div>
+
+          <p class="section-label">Audio</p>
+
+          <div class="field">
+            <label for="pulseSink">Audio Device</label>
+            <input
+              type="text"
+              id="pulseSink"
+              name="pulseSink"
+              value="auto"
+              placeholder="auto"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <p class="hint">
+              ALSA device string. <code>auto</code> uses the system default. Check available devices
+              with <code>aplay -l</code>. Examples: <code>hw:0,0</code> (analog),
+              <code>hw:0,3</code> (HDMI).
+            </p>
+          </div>
+
+          <div class="field">
+            <label for="pulseVolume">Startup Volume (%)</label>
+            <input
+              type="number"
+              id="pulseVolume"
+              name="pulseVolume"
+              value="100"
+              min="0"
+              max="100"
+            />
+            <p class="hint">Volume level applied at startup (0&ndash;100).</p>
+          </div>
+
+          <p class="section-label">Service</p>
+
+          <div class="field">
+            <div class="toggle-row">
+              <label class="toggle">
+                <input type="checkbox" id="daemon" name="daemon" checked />
+                <span class="toggle-track"></span>
+                <span class="toggle-thumb"></span>
+              </label>
+              <div class="toggle-labels">
+                <label for="daemon">Run as system service</label>
+                <p class="hint">
+                  Start automatically on boot (daemon mode). Disable to launch manually.
+                </p>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <div class="actions">
+          <button type="submit" id="submit-btn" class="btn-submit" disabled>
+            Save &amp; Launch Kiosk
+          </button>
+        </div>
+
+        <div class="status" id="status"></div>
+      </form>
+    </div>
+
+    <script>
+      const urlInput = document.getElementById('url')
+      const submitBtn = document.getElementById('submit-btn')
+      const statusEl = document.getElementById('status')
+
+      // Pre-fill form with current snap config values.
+      if (window.kioskSetup) {
+        window.kioskSetup.getConfig().then((cfg) => {
+          if (cfg.url) urlInput.value = cfg.url
+          if (cfg.allowedOrigins)
+            document.getElementById('allowedOrigins').value = cfg.allowedOrigins
+          if (cfg.lang) document.getElementById('lang').value = cfg.lang
+          if (cfg.pulseSink) document.getElementById('pulseSink').value = cfg.pulseSink
+          if (cfg.pulseVolume != null)
+            document.getElementById('pulseVolume').value = cfg.pulseVolume
+          if (cfg.daemon !== undefined) {
+            document.getElementById('daemon').checked = cfg.daemon !== 'false'
+          }
+          validateUrl()
+        })
+      }
+
+      function validateUrl() {
+        const val = urlInput.value.trim()
+        let valid = false
+        try {
+          const u = new URL(val)
+          valid = u.protocol === 'http:' || u.protocol === 'https:'
+        } catch {}
+        submitBtn.disabled = !valid
+        urlInput.classList.toggle('invalid', val.length > 0 && !valid)
+        return valid
+      }
+
+      urlInput.addEventListener('input', validateUrl)
+
+      document.getElementById('setup-form').addEventListener('submit', async (e) => {
+        e.preventDefault()
+        if (!validateUrl()) return
+
+        submitBtn.disabled = true
+        submitBtn.textContent = 'Saving\u2026'
+        statusEl.className = 'status'
+        statusEl.textContent = ''
+
+        const config = {
+          url: urlInput.value.trim(),
+          allowedOrigins: document.getElementById('allowedOrigins').value.trim(),
+          lang: document.getElementById('lang').value.trim() || 'en',
+          pulseSink: document.getElementById('pulseSink').value.trim() || 'auto',
+          pulseVolume: String(document.getElementById('pulseVolume').value || '100'),
+          daemon: document.getElementById('daemon').checked ? 'true' : 'false',
+        }
+
+        if (!window.kioskSetup) {
+          // Dev mode without IPC bridge — show what would be saved.
+          statusEl.className = 'status success'
+          statusEl.textContent = 'Dev mode: set KIOSK_URL=' + config.url + ' and restart to test.'
+          submitBtn.disabled = false
+          submitBtn.textContent = 'Save & Launch Kiosk'
+          return
+        }
+
+        const result = await window.kioskSetup.saveConfig(config)
+        if (result.success) {
+          statusEl.className = 'status success'
+          statusEl.textContent = 'Configuration saved! The kiosk is restarting\u2026'
+          submitBtn.textContent = 'Saved!'
+        } else {
+          statusEl.className = 'status error'
+          statusEl.textContent = 'Error: ' + (result.error || 'Failed to save configuration.')
+          submitBtn.disabled = false
+          submitBtn.textContent = 'Save & Launch Kiosk'
+        }
+      })
+    </script>
+  </body>
+</html>

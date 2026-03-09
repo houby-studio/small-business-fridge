@@ -1,6 +1,6 @@
 'use strict'
 
-const { app, BrowserWindow, session } = require('electron')
+const { app, BrowserWindow, session, ipcMain } = require('electron')
 const path = require('node:path')
 const { execFileSync } = require('node:child_process')
 
@@ -104,6 +104,78 @@ function parseKioskUrl(raw) {
   }
 }
 
+// ── Onboarding (first-run setup) ───────────────────────────────────────────────
+
+function snapctlGetSilent(key) {
+  return execFileSync('snapctl', ['get', key], { encoding: 'utf8' }).trim()
+}
+
+function registerIpcHandlers() {
+  ipcMain.handle('get-config', () => {
+    if (!process.env.SNAP) return {}
+    try {
+      return {
+        url: snapctlGetSilent('url'),
+        allowedOrigins: snapctlGetSilent('allowed-origins'),
+        lang: snapctlGetSilent('lang'),
+        pulseSink: snapctlGetSilent('pulse-sink'),
+        pulseVolume: snapctlGetSilent('pulse-volume'),
+        daemon: snapctlGetSilent('daemon'),
+      }
+    } catch {
+      return {}
+    }
+  })
+
+  ipcMain.handle('save-config', (_event, config) => {
+    try {
+      if (process.env.SNAP) {
+        execFileSync('snapctl', [
+          'set',
+          `url=${config.url}`,
+          `allowed-origins=${config.allowedOrigins ?? ''}`,
+          `lang=${config.lang ?? 'en'}`,
+          `pulse-sink=${config.pulseSink ?? 'auto'}`,
+          `pulse-volume=${config.pulseVolume ?? '100'}`,
+          `daemon=${config.daemon ?? 'true'}`,
+        ])
+      }
+      // Quit after a short pause so the renderer can show the success message.
+      // In snap daemon mode the service manager will restart the process automatically.
+      // In dev mode we relaunch with the new URL in the environment.
+      setTimeout(() => {
+        if (!process.env.SNAP) {
+          process.env.KIOSK_URL = config.url
+          app.relaunch()
+        }
+        app.quit()
+      }, 2500)
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: String(err.message) }
+    }
+  })
+}
+
+let onboardingOpen = false
+
+function createOnboardingWindow() {
+  onboardingOpen = true
+  const win = new BrowserWindow({
+    fullscreen: true,
+    frame: false,
+    autoHideMenuBar: true,
+    backgroundColor: '#0f172a',
+    webPreferences: {
+      preload: path.join(__dirname, 'onboarding-preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  })
+  win.loadFile(path.join(__dirname, 'onboarding.html'))
+}
+
 // ── Window factory ─────────────────────────────────────────────────────────────
 function createWindow(kioskUrl) {
   const parsedUrl = parseKioskUrl(kioskUrl)
@@ -204,9 +276,10 @@ function createWindow(kioskUrl) {
 
 // ── App lifecycle ──────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
+  registerIpcHandlers()
   const rawUrl = getKioskUrl()
   if (!rawUrl) {
-    app.quit()
+    createOnboardingWindow()
     return
   }
   createWindow(rawUrl)
@@ -214,7 +287,13 @@ app.whenReady().then(() => {
 
 // In kiosk mode the app should never fully close — respawn the window if it
 // somehow gets destroyed (e.g. after a crash recovery).
+// If the onboarding window was closed (user cancelled or save triggered quit),
+// just quit — the snap daemon will restart the process automatically.
 app.on('window-all-closed', () => {
+  if (onboardingOpen) {
+    app.quit()
+    return
+  }
   const rawUrl = getKioskUrl()
   if (rawUrl && parseKioskUrl(rawUrl)) {
     createWindow(rawUrl)
