@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Kiosk Setup — Small Business Fridge</title>
+    <title>Setup</title>
     <style>
       *,
       *::before,
@@ -14,16 +14,20 @@
       }
 
       :root {
-        --bg: #0f172a;
-        --surface: #1e293b;
-        --surface2: #0f172a;
-        --border: #334155;
-        --text: #f1f5f9;
-        --text-muted: #94a3b8;
-        --accent: #3b82f6;
-        --accent-hover: #2563eb;
-        --success: #22c55e;
-        --error: #ef4444;
+        --bg: #111827;
+        --surface: #1f2937;
+        --border: #374151;
+        --border-light: #4b5563;
+        --text: #ffffff;
+        --text-sec: #d1d5db;
+        --text-muted: #9ca3af;
+        --green: #16a34a;
+        --green-h: #22c55e;
+        --red: #dc2626;
+        --red-dim: rgba(220, 38, 38, 0.15);
+        --red-border: rgba(220, 38, 38, 0.4);
+        --green-dim: rgba(22, 163, 74, 0.15);
+        --green-border: rgba(22, 163, 74, 0.4);
       }
 
       body {
@@ -42,70 +46,82 @@
         line-height: 1.5;
       }
 
+      /* ── Card ───────────────────────────────────────────────────── */
       .card {
+        width: 100%;
+        max-width: 740px;
         background: var(--surface);
         border: 1px solid var(--border);
-        border-radius: 1rem;
-        padding: 2.5rem;
-        width: 100%;
-        max-width: 620px;
-        box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+        border-radius: 1.5rem;
+        padding: 3rem;
+        box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
       }
 
-      .logo {
-        font-size: 0.875rem;
-        font-weight: 600;
+      /* ── Header ─────────────────────────────────────────────────── */
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        background: var(--green-dim);
+        border: 1px solid var(--green-border);
+        border-radius: 9999px;
+        padding: 0.375rem 1rem;
+        font-size: 0.8125rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
         text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: var(--accent);
-        margin-bottom: 0.75rem;
+        color: #4ade80;
+        margin-bottom: 1.25rem;
       }
 
       h1 {
-        font-size: 1.75rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
+        font-size: 2.25rem;
+        font-weight: 800;
+        line-height: 1.15;
+        margin-bottom: 0.625rem;
       }
 
       .subtitle {
-        color: var(--text-muted);
-        margin-bottom: 2rem;
-        font-size: 0.9375rem;
+        color: var(--text-sec);
+        font-size: 1rem;
+        margin-bottom: 2.5rem;
       }
 
       .subtitle code {
         font-family: ui-monospace, 'Cascadia Code', monospace;
-        font-size: 0.8125rem;
-        background: var(--surface2);
-        padding: 0.125rem 0.375rem;
-        border-radius: 0.25rem;
+        font-size: 0.8rem;
+        background: rgba(255, 255, 255, 0.08);
+        padding: 0.125rem 0.4rem;
+        border-radius: 0.375rem;
         color: var(--text);
       }
 
+      /* ── Section label ──────────────────────────────────────────── */
       .section-label {
         font-size: 0.6875rem;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.07em;
+        letter-spacing: 0.08em;
         color: var(--text-muted);
-        margin-bottom: 1rem;
-        padding-bottom: 0.5rem;
+        padding-bottom: 0.625rem;
+        margin-bottom: 1.5rem;
         border-bottom: 1px solid var(--border);
       }
 
+      /* ── Field ──────────────────────────────────────────────────── */
       .field {
-        margin-bottom: 1.25rem;
+        margin-bottom: 1.75rem;
       }
 
-      label {
+      .field-label {
         display: block;
-        font-size: 0.875rem;
-        font-weight: 500;
-        margin-bottom: 0.375rem;
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-sec);
+        margin-bottom: 0.625rem;
       }
 
       .required {
-        color: var(--error);
+        color: var(--red);
         margin-left: 0.125rem;
       }
 
@@ -113,211 +129,233 @@
       input[type='url'],
       input[type='number'] {
         width: 100%;
-        background: var(--surface2);
-        border: 1px solid var(--border);
-        border-radius: 0.5rem;
+        height: 4rem;
+        background: var(--bg);
+        border: 2px solid var(--border);
+        border-radius: 1rem;
         color: var(--text);
-        padding: 0.625rem 0.75rem;
-        font-size: 0.9375rem;
+        padding: 0 1.25rem;
+        font-size: 1.125rem;
         font-family: inherit;
         outline: none;
+        appearance: none;
+        -webkit-appearance: none;
         transition:
           border-color 0.15s,
           box-shadow 0.15s;
       }
 
       input:focus {
-        border-color: var(--accent);
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        border-color: var(--green);
+        box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.2);
       }
 
       input.invalid {
-        border-color: var(--error);
+        border-color: var(--red);
+        box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.15);
       }
 
       .hint {
-        font-size: 0.75rem;
+        margin-top: 0.5rem;
+        font-size: 0.875rem;
         color: var(--text-muted);
-        margin-top: 0.375rem;
       }
 
       .hint code {
-        font-family: ui-monospace, 'Cascadia Code', monospace;
-        font-size: 0.7rem;
-        background: var(--surface2);
-        padding: 0.0625rem 0.25rem;
-        border-radius: 0.2rem;
-        color: var(--text);
+        font-family: ui-monospace, monospace;
+        font-size: 0.8rem;
+        background: rgba(255, 255, 255, 0.08);
+        padding: 0.0625rem 0.3rem;
+        border-radius: 0.25rem;
       }
 
-      /* Advanced section */
-      details {
-        margin-bottom: 0.5rem;
-      }
-
-      summary {
+      /* ── Advanced toggle button ─────────────────────────────────── */
+      .advanced-btn {
+        width: 100%;
+        height: 4rem;
+        background: var(--bg);
+        border: 2px solid var(--border);
+        border-radius: 1rem;
+        color: var(--text-sec);
+        font-size: 1rem;
+        font-weight: 600;
+        font-family: inherit;
         cursor: pointer;
-        color: var(--text-muted);
-        font-size: 0.875rem;
-        font-weight: 500;
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        list-style: none;
-        margin-bottom: 1.5rem;
-        user-select: none;
-        transition: color 0.15s;
+        gap: 0.75rem;
+        padding: 0 1.25rem;
+        margin-bottom: 1.75rem;
+        transition:
+          background 0.15s,
+          border-color 0.15s;
+        text-align: left;
+        appearance: none;
+        -webkit-appearance: none;
       }
 
-      summary::-webkit-details-marker {
+      .advanced-btn:hover {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: var(--border-light);
+      }
+
+      .advanced-btn:active {
+        transform: scale(0.99);
+      }
+
+      .advanced-icon {
+        font-size: 0.875rem;
+        margin-left: auto;
+        transition: transform 0.2s;
+        color: var(--text-muted);
+      }
+
+      .advanced-icon.open {
+        transform: rotate(180deg);
+      }
+
+      .advanced-section {
         display: none;
       }
 
-      summary:hover {
-        color: var(--text);
+      .advanced-section.open {
+        display: block;
       }
 
-      .summary-arrow {
-        font-size: 0.625rem;
-        transition: transform 0.2s;
-        display: inline-block;
-      }
-
-      details[open] .summary-arrow {
-        transform: rotate(90deg);
-      }
-
-      /* Toggle switch */
+      /* ── Toggle switch ──────────────────────────────────────────── */
       .toggle-row {
         display: flex;
-        align-items: flex-start;
-        gap: 0.875rem;
+        align-items: center;
+        gap: 1.25rem;
+        min-height: 3.5rem;
       }
 
       .toggle {
         position: relative;
-        width: 3rem;
-        height: 1.625rem;
+        width: 4rem;
+        height: 2.25rem;
         flex-shrink: 0;
-        margin-top: 0.0625rem;
       }
 
       .toggle input {
+        position: absolute;
         opacity: 0;
         width: 0;
         height: 0;
-        position: absolute;
       }
 
       .toggle-track {
         position: absolute;
         inset: 0;
-        background: var(--border);
-        border-radius: 999px;
+        background: var(--border-light);
+        border-radius: 9999px;
         cursor: pointer;
         transition: background 0.2s;
       }
 
       .toggle-thumb {
         position: absolute;
-        width: 1.25rem;
-        height: 1.25rem;
-        left: 0.1875rem;
-        top: 0.1875rem;
+        width: 1.75rem;
+        height: 1.75rem;
+        top: 0.25rem;
+        left: 0.25rem;
         background: white;
         border-radius: 50%;
-        transition: transform 0.2s;
         pointer-events: none;
+        transition: transform 0.2s;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
       }
 
       .toggle input:checked ~ .toggle-track {
-        background: var(--accent);
+        background: var(--green);
       }
 
       .toggle input:checked ~ .toggle-thumb {
-        transform: translateX(1.375rem);
+        transform: translateX(1.75rem);
       }
 
       .toggle-labels label {
-        cursor: pointer;
-        font-size: 0.875rem;
-        font-weight: 500;
-        margin-bottom: 0.125rem;
-      }
-
-      /* Actions */
-      .actions {
-        margin-top: 2rem;
-      }
-
-      .btn-submit {
-        width: 100%;
-        background: var(--accent);
-        color: white;
-        border: none;
-        border-radius: 0.5rem;
-        padding: 0.8125rem 1.5rem;
+        display: block;
         font-size: 1rem;
         font-weight: 600;
+        color: var(--text-sec);
+        cursor: pointer;
+      }
+
+      /* ── Submit button ──────────────────────────────────────────── */
+      .btn-submit {
+        width: 100%;
+        height: 5rem;
+        background: var(--green);
+        color: white;
+        border: none;
+        border-radius: 1rem;
+        font-size: 1.375rem;
+        font-weight: 700;
         font-family: inherit;
         cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
         transition:
           background 0.15s,
-          opacity 0.15s;
+          opacity 0.15s,
+          transform 0.1s;
+        appearance: none;
+        -webkit-appearance: none;
       }
 
       .btn-submit:hover:not(:disabled) {
-        background: var(--accent-hover);
+        background: var(--green-h);
+      }
+
+      .btn-submit:active:not(:disabled) {
+        transform: scale(0.98);
       }
 
       .btn-submit:disabled {
-        opacity: 0.45;
+        opacity: 0.35;
         cursor: not-allowed;
       }
 
-      /* Status message */
+      /* ── Status message ─────────────────────────────────────────── */
       .status {
-        margin-top: 1rem;
-        padding: 0.875rem 1rem;
-        border-radius: 0.5rem;
-        font-size: 0.875rem;
+        margin-top: 1.25rem;
+        padding: 1.125rem 1.25rem;
+        border-radius: 1rem;
+        font-size: 1rem;
+        font-weight: 500;
         display: none;
       }
 
       .status.success {
         display: block;
-        background: rgba(34, 197, 94, 0.12);
-        border: 1px solid rgba(34, 197, 94, 0.35);
-        color: var(--success);
+        background: var(--green-dim);
+        border: 1px solid var(--green-border);
+        color: #4ade80;
       }
 
       .status.error {
         display: block;
-        background: rgba(239, 68, 68, 0.12);
-        border: 1px solid rgba(239, 68, 68, 0.35);
-        color: var(--error);
+        background: var(--red-dim);
+        border: 1px solid var(--red-border);
+        color: #f87171;
       }
     </style>
   </head>
   <body>
     <div class="card">
-      <div class="logo">Small Business Fridge &mdash; Kiosk</div>
-      <h1>Initial Setup</h1>
-      <p class="subtitle">
-        Configure the kiosk before first use. Settings can be changed later with
-        <code>snap set sbf-kiosk key=value</code>.
-      </p>
+      <h1>Setup</h1>
 
       <form id="setup-form" novalidate>
-        <p class="section-label">Connection</p>
-
         <div class="field">
-          <label for="url">Server URL<span class="required">*</span></label>
+          <label class="field-label" for="url">Server URL<span class="required">*</span></label>
           <input
             type="url"
             id="url"
             name="url"
-            placeholder="http://192.168.1.100:3333"
+            placeholder="https://sbf.example.com"
             required
             autocomplete="off"
             spellcheck="false"
@@ -328,30 +366,29 @@
         </div>
 
         <div class="field">
-          <label for="allowedOrigins">Additional Allowed Origins</label>
+          <label class="field-label" for="allowedOrigins">Additional Allowed Origins</label>
           <input
             type="text"
             id="allowedOrigins"
             name="allowedOrigins"
-            placeholder=""
             autocomplete="off"
             spellcheck="false"
           />
           <p class="hint">
-            Extra origins the kiosk may navigate to (comma-separated). Leave blank if not needed.
+            Comma-separated list of URL origins for OIDC redirects. Leave blank if not needed.
           </p>
         </div>
 
-        <details id="advanced">
-          <summary>
-            <span class="summary-arrow">&#9658;</span>
-            Advanced settings
-          </summary>
+        <button type="button" class="advanced-btn" id="advanced-btn" aria-expanded="false">
+          Advanced Settings
+          <span class="advanced-icon" id="advanced-icon">&#9660;</span>
+        </button>
 
+        <div class="advanced-section" id="advanced-section">
           <p class="section-label">Display &amp; Language</p>
 
           <div class="field">
-            <label for="lang">Language</label>
+            <label class="field-label" for="lang">Language</label>
             <input
               type="text"
               id="lang"
@@ -370,7 +407,7 @@
           <p class="section-label">Audio</p>
 
           <div class="field">
-            <label for="pulseSink">Audio Device</label>
+            <label class="field-label" for="pulseSink">Audio Device</label>
             <input
               type="text"
               id="pulseSink"
@@ -381,14 +418,13 @@
               spellcheck="false"
             />
             <p class="hint">
-              ALSA device string. <code>auto</code> uses the system default. Check available devices
-              with <code>aplay -l</code>. Examples: <code>hw:0,0</code> (analog),
-              <code>hw:0,3</code> (HDMI).
+              ALSA device string. <code>auto</code> uses the system default. Examples:
+              <code>hw:0,0</code> (analog), <code>hw:0,3</code> (HDMI).
             </p>
           </div>
 
           <div class="field">
-            <label for="pulseVolume">Startup Volume (%)</label>
+            <label class="field-label" for="pulseVolume">Startup Volume (%)</label>
             <input
               type="number"
               id="pulseVolume"
@@ -411,19 +447,17 @@
               </label>
               <div class="toggle-labels">
                 <label for="daemon">Run as system service</label>
-                <p class="hint">
-                  Start automatically on boot (daemon mode). Disable to launch manually.
+                <p class="hint" style="margin-top: 0.25rem">
+                  Start automatically on boot. Disable to launch manually.
                 </p>
               </div>
             </div>
           </div>
-        </details>
-
-        <div class="actions">
-          <button type="submit" id="submit-btn" class="btn-submit" disabled>
-            Save &amp; Launch Kiosk
-          </button>
         </div>
+
+        <button type="submit" id="submit-btn" class="btn-submit" disabled>
+          Save &amp; Launch Kiosk
+        </button>
 
         <div class="status" id="status"></div>
       </form>
@@ -433,8 +467,16 @@
       const urlInput = document.getElementById('url')
       const submitBtn = document.getElementById('submit-btn')
       const statusEl = document.getElementById('status')
+      const advancedBtn = document.getElementById('advanced-btn')
+      const advancedSection = document.getElementById('advanced-section')
+      const advancedIcon = document.getElementById('advanced-icon')
 
-      // Pre-fill form with current snap config values.
+      advancedBtn.addEventListener('click', () => {
+        const open = advancedSection.classList.toggle('open')
+        advancedIcon.classList.toggle('open', open)
+        advancedBtn.setAttribute('aria-expanded', String(open))
+      })
+
       if (window.kioskSetup) {
         window.kioskSetup.getConfig().then((cfg) => {
           if (cfg.url) urlInput.value = cfg.url
@@ -472,7 +514,6 @@
         submitBtn.disabled = true
         submitBtn.textContent = 'Saving\u2026'
         statusEl.className = 'status'
-        statusEl.textContent = ''
 
         const config = {
           url: urlInput.value.trim(),
@@ -484,7 +525,6 @@
         }
 
         if (!window.kioskSetup) {
-          // Dev mode without IPC bridge — show what would be saved.
           statusEl.className = 'status success'
           statusEl.textContent = 'Dev mode: set KIOSK_URL=' + config.url + ' and restart to test.'
           submitBtn.disabled = false
