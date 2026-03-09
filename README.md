@@ -18,6 +18,7 @@ Colleagues browse available products, buy with one click, then pay later via QR 
 ```bash
 cp .env.example .env
 npm install
+npm run hooks:install                        # one-time setup to use repo-tracked git hooks
 node ace generate:key
 docker compose -f compose.dev.yaml up -d
 export NODE_ENV=development                  # tracking bug https://github.com/adonisjs/env/issues/48
@@ -28,6 +29,9 @@ npm run dev                                  # app at http://localhost:3000
 
 Seed credentials: `admin / admin123`, `supplier / supplier123`, `customer / customer123`, `kiosk / kiosk123`.
 Mailpit web UI: <http://localhost:8025>
+
+Git hooks are stored in `.githooks/` and are not installed automatically during `npm install`.
+Run `npm run hooks:install` once per clone to enable them locally. Verify with `npm run hooks:status`.
 
 ## Production quickstart (Docker)
 

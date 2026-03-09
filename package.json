@@ -6,7 +6,6 @@
   "license": "UNLICENSED",
   "scripts": {
     "start": "node bin/server.js",
-    "prepare": "npm run hooks:install",
     "build": "node ace build",
     "dev": "node ace serve --hmr",
     "scheduler": "node ace scheduler:run",
