@@ -39,7 +39,8 @@ services:
       - PULSE_ALSA_CARD=0
     healthcheck:
       # pactl runs as root inside the container; auth-anonymous=1 on the unix socket allows it.
-      test: ['CMD-SHELL', 'PULSE_SERVER=unix:/run/user/1000/pulse/native pactl info >/dev/null 2>&1']
+      test:
+        ['CMD-SHELL', 'PULSE_SERVER=unix:/run/user/1000/pulse/native pactl info >/dev/null 2>&1']
       interval: 5s
       timeout: 3s
       retries: 12
