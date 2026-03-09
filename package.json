@@ -22,8 +22,8 @@
     "typecheck:frontend": "vue-tsc --noEmit -p tsconfig.frontend.json",
     "typecheck:tests": "tsc --noEmit -p tsconfig.tests.json",
     "generate:keypad-tones": "node --import=tsx scripts/generate_keypad_tones.ts",
-    "hooks:install": "bash ./scripts/install_git_hooks.sh",
-    "hooks:status": "bash ./scripts/install_git_hooks.sh --status"
+    "hooks:install": "node -e \"const fs=require('fs'); const cp=require('child_process'); if (!fs.existsSync('.git')) { console.log('[hooks] Skipping install: .git directory not found.'); process.exit(0); } try { cp.execFileSync('git', ['config', '--local', 'core.hooksPath', '.githooks'], { stdio: 'inherit' }); } catch (error) { if (error && error.code === 'ENOENT') { console.log('[hooks] Skipping install: git is not available.'); process.exit(0); } throw error; } console.log('[hooks] Installed hooks path: .githooks');\"",
+    "hooks:status": "node -e \"const fs=require('fs'); const cp=require('child_process'); if (!fs.existsSync('.git')) { console.log('not a git worktree'); process.exit(0); } try { const output = cp.execFileSync('git', ['config', '--get', 'core.hooksPath'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] }).trim(); console.log(output || '(default .git/hooks)'); } catch (error) { if (error && error.code === 'ENOENT') { console.log('git not available'); process.exit(0); } if (error && error.status === 1) { console.log('(default .git/hooks)'); process.exit(0); } throw error; }\""
   },
   "imports": {
     "#controllers/*": "./app/controllers/*.js",
