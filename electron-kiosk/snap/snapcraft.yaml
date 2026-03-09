@@ -17,6 +17,7 @@ apps:
       - bin/wayland-launch
     command: &_command usr/bin/wrapper
     plugs: &_plugs
+      - audio-playback
       - opengl
       - wayland
       - browser-support
@@ -69,6 +70,28 @@ parts:
     organize:
       wrapper.sh: usr/bin/wrapper
 
+  pulseaudio:
+    plugin: nil
+    stage-packages:
+      - pulseaudio
+      - pulseaudio-utils
+    override-prime: |
+      craftctl default
+      # pulseaudio's private shared library (libpulsecore, libpulsecommon) lives in
+      # an arch-specific subdirectory. Add it to the snap's LD_LIBRARY_PATH by copying
+      # it up to usr/lib/pulseaudio/ — a fixed path that wrapper.sh can glob for at runtime.
+      mkdir -p usr/lib/pulseaudio
+      for dir in usr/lib/*/pulseaudio; do
+        [ "$dir" = "usr/lib/pulseaudio" ] && continue
+        [ -d "$dir" ] && cp -rn "$dir/." usr/lib/pulseaudio/ 2>/dev/null || true
+      done
+
+  pulseaudio-config:
+    plugin: dump
+    source: pulseaudio-config
+    organize:
+      pulse.pa: etc/sbf-kiosk/pulse.pa
+
   gsettings+pixbuf+immodules:
     plugin: nil
     build-packages:
@@ -99,7 +122,7 @@ parts:
     plugin: dump
     source: wayland-launch
     override-build: |
-      PLUGS="opengl wayland browser-support network network-bind"
+      PLUGS="audio-playback opengl wayland browser-support network network-bind"
       sed --in-place "s/%PLUGS%/$PLUGS/g" $CRAFT_PART_BUILD/bin/wayland-launch
       sed --in-place "s/%PLUGS%/$PLUGS/g" $CRAFT_PART_BUILD/bin/setup.sh
       craftctl default

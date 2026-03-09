@@ -35,11 +35,13 @@ esac
 # lang: language code passed to Chromium (e.g. cs, en, de)
 [ -n "$(snapctl get lang)" ]            || snapctl set lang="en"
 
-# pulse-server: PulseAudio connection string for audio playback.
-# TCP (default): no special snap interface required — the `network` plug covers it.
-#   tcp:localhost:4713  (port must be bound to 127.0.0.1 in compose.yaml)
-# Unix socket alternative (requires system PulseAudio running as the kiosk user):
-#   unix:/run/user/1000/pulse/native
-[ -n "$(snapctl get pulse-server)" ]    || snapctl set pulse-server="tcp:localhost:4713"
+# pulse-sink: PulseAudio output sink selection.
+# 'auto' keeps the system default. Use 'hdmi', 'analog', or an exact sink name
+# (check available sinks with: pactl list sinks short) to force a specific output.
+# Requires the audio-playback plug to be connected: snap connect sbf-kiosk:audio-playback pulseaudio:audio-playback
+[ -n "$(snapctl get pulse-sink)" ]      || snapctl set pulse-sink="auto"
+
+# pulse-volume: output volume percentage applied to the default sink at startup (0-150).
+[ -n "$(snapctl get pulse-volume)" ]    || snapctl set pulse-volume="100"
 
 snapctl restart $SNAP_INSTANCE_NAME
