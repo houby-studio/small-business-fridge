@@ -10,7 +10,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 # Ensure a home directory exists for uid 1000.
 # Ubuntu base images already ship a user at uid 1000 ("ubuntu"); we do not
 # create a new one — setpriv accepts numeric uids directly.
-RUN mkdir -p /home/kiosk && chown 1000:1000 /home/kiosk
+RUN mkdir -p /home/kiosk /run/user/1000/pulse && \
+    chown -R 1000:1000 /home/kiosk /run/user/1000
 
 ENV HOME=/home/kiosk \
     XDG_RUNTIME_DIR=/run/user/1000
