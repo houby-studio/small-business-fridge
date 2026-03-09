@@ -1,11 +1,8 @@
 # PulseAudio server for the SBF kiosk.
 #
-# The snap connects via a Unix socket at /run/user/1000/pulse/native.
-# On first run Docker will create the socket directory; the entrypoint
-# fixes ownership so PulseAudio (uid 1000) can write to it.
-#
-# If the kiosk runs as a different uid, adjust the volume path and the
-# uid inside the image accordingly (rebuild with a matching UBUNTU_VERSION).
+# The snap connects via TCP on localhost:4713.  The port is bound only to
+# 127.0.0.1 so it is not reachable from the network.  The snap's existing
+# `network` plug covers outbound TCP — no extra audio interface is required.
 
 services:
   pulseaudio:
@@ -15,8 +12,12 @@ services:
     devices:
       - /dev/snd
     volumes:
-      # Shared Unix socket directory — the snap reads the socket from here.
+      # Socket directory — used by the internal healthcheck (pactl via unix socket).
+      # The snap itself connects via TCP, so this is not required for audio playback.
       - /run/user/1000/pulse:/run/user/1000/pulse
+    ports:
+      # Bind to loopback only — never expose PulseAudio on the network.
+      - '127.0.0.1:4713:4713'
     cap_add:
       # SYS_NICE allows PulseAudio to set real-time scheduling priority.
       - SYS_NICE
@@ -37,8 +38,8 @@ services:
       # ALSA card index used for mixer configuration (amixer -c N)
       - PULSE_ALSA_CARD=0
     healthcheck:
-      # Socket presence is the cleanest signal that PA is ready to accept connections.
-      test: ['CMD-SHELL', '[ -S /run/user/1000/pulse/native ]']
+      # pactl runs as root inside the container; auth-anonymous=1 on the unix socket allows it.
+      test: ['CMD-SHELL', 'PULSE_SERVER=unix:/run/user/1000/pulse/native pactl info >/dev/null 2>&1']
       interval: 5s
       timeout: 3s
       retries: 12

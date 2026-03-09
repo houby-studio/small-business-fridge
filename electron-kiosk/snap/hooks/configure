@@ -36,10 +36,10 @@ esac
 [ -n "$(snapctl get lang)" ]            || snapctl set lang="en"
 
 # pulse-server: PulseAudio connection string for audio playback.
-# Unix socket (default, requires pulseaudio-server Docker container):
+# TCP (default): no special snap interface required — the `network` plug covers it.
+#   tcp:localhost:4713  (port must be bound to 127.0.0.1 in compose.yaml)
+# Unix socket alternative (requires system PulseAudio running as the kiosk user):
 #   unix:/run/user/1000/pulse/native
-# TCP fallback (bind to 127.0.0.1 in compose.yaml):
-#   tcp:localhost:4713
-[ -n "$(snapctl get pulse-server)" ]    || snapctl set pulse-server="unix:/run/user/1000/pulse/native"
+[ -n "$(snapctl get pulse-server)" ]    || snapctl set pulse-server="tcp:localhost:4713"
 
 snapctl restart $SNAP_INSTANCE_NAME

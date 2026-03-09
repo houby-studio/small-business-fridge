@@ -22,7 +22,6 @@ apps:
       - browser-support
       - network
       - network-bind
-      - audio-playback
     extensions: &_extensions
       - gnome
     environment: &_environment
@@ -100,7 +99,7 @@ parts:
     plugin: dump
     source: wayland-launch
     override-build: |
-      PLUGS="opengl wayland browser-support network network-bind audio-playback"
+      PLUGS="opengl wayland browser-support network network-bind"
       sed --in-place "s/%PLUGS%/$PLUGS/g" $CRAFT_PART_BUILD/bin/wayland-launch
       sed --in-place "s/%PLUGS%/$PLUGS/g" $CRAFT_PART_BUILD/bin/setup.sh
       craftctl default

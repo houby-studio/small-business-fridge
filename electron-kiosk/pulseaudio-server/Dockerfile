@@ -12,18 +12,26 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 # create a new one — setpriv accepts numeric uids directly.
 RUN mkdir -p /home/kiosk && chown 1000:1000 /home/kiosk
 
-# Configure the Unix socket with anonymous auth.
-# The socket is only reachable via a bind-mounted host path (not the network),
-# so anonymous auth is safe.  Without this the snap daemon (root) would be
-# rejected by PulseAudio's cookie auth because it runs as a different uid.
-RUN sed -i \
-    's|^load-module module-native-protocol-unix.*|load-module module-native-protocol-unix auth-anonymous=1|' \
-    /etc/pulse/default.pa && \
-    grep -q 'module-native-protocol-unix' /etc/pulse/default.pa || \
-    echo 'load-module module-native-protocol-unix auth-anonymous=1' >> /etc/pulse/default.pa
-
 ENV HOME=/home/kiosk \
     XDG_RUNTIME_DIR=/run/user/1000
+
+# Configure PulseAudio for network access.
+#
+# TCP  (primary): the snap connects via tcp:localhost:4713; the port is bound to
+#   127.0.0.1 in compose.yaml so it is not reachable from the network.
+# Unix socket (secondary): kept for local tooling (pactl in the healthcheck).
+#
+# auth-anonymous=1 is required for both because the snap daemon runs as root
+# while PulseAudio runs as uid 1000 — their cookie files never match.
+#
+# The sed replaces the default unix socket line in-place; the echo adds TCP.
+RUN sed -i \
+      's|^load-module module-native-protocol-unix.*|load-module module-native-protocol-unix auth-anonymous=1|' \
+      /etc/pulse/default.pa && \
+    grep -q 'module-native-protocol-unix' /etc/pulse/default.pa || \
+      echo 'load-module module-native-protocol-unix auth-anonymous=1' >> /etc/pulse/default.pa && \
+    echo 'load-module module-native-protocol-tcp auth-ip-acl=127.0.0.1;172.16.0.0/12;192.168.0.0/16;10.0.0.0/8 auth-anonymous=1' \
+      >> /etc/pulse/default.pa
 
 # Add init script and privilege-dropping entrypoint
 COPY init.sh /usr/local/bin/init.sh
