@@ -1,0 +1,22 @@
+# This compose file should be used on kiosk to pull PulseAudio server image
+services:
+  pulseaudio:
+    image: apptechdatasharedcr.azurecr.io/mtf-it-kiosky/pulseaudio-server:24.04
+    container_name: pulseaudio
+    restart: always
+    devices:
+      - /dev/snd
+    volumes:
+      - /dev/shm:/dev/shm
+    ports:
+      - '4713:4713'
+    privileged: true
+    environment:
+      # Options: analog, hdmi, auto, or exact sink name
+      - PULSE_SINK=hdmi
+      # Volume percentage (0-150)
+      - PULSE_VOLUME=100
+      # Whether to unmute on startup
+      - PULSE_UNMUTE=true
+      # Seconds to wait for PA to initialize
+      - PULSE_STARTUP_DELAY=2
