@@ -49,7 +49,7 @@
       /* ── Card ───────────────────────────────────────────────────── */
       .card {
         width: 100%;
-        max-width: 740px;
+        max-width: 1000px;
         background: var(--surface);
         border: 1px solid var(--border);
         border-radius: 1.5rem;
@@ -57,54 +57,44 @@
         box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
       }
 
-      /* ── Header ─────────────────────────────────────────────────── */
-      .badge {
-        display: inline-flex;
-        align-items: center;
-        background: var(--green-dim);
-        border: 1px solid var(--green-border);
-        border-radius: 9999px;
-        padding: 0.375rem 1rem;
-        font-size: 0.8125rem;
-        font-weight: 700;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        color: #4ade80;
-        margin-bottom: 1.25rem;
-      }
-
       h1 {
         font-size: 2.25rem;
         font-weight: 800;
-        line-height: 1.15;
-        margin-bottom: 0.625rem;
-      }
-
-      .subtitle {
-        color: var(--text-sec);
-        font-size: 1rem;
         margin-bottom: 2.5rem;
       }
 
-      .subtitle code {
-        font-family: ui-monospace, 'Cascadia Code', monospace;
-        font-size: 0.8rem;
-        background: rgba(255, 255, 255, 0.08);
-        padding: 0.125rem 0.4rem;
-        border-radius: 0.375rem;
-        color: var(--text);
+      /* ── Two-column grid ────────────────────────────────────────── */
+      .fields-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        margin-bottom: 2.5rem;
       }
 
-      /* ── Section label ──────────────────────────────────────────── */
-      .section-label {
-        font-size: 0.6875rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: var(--text-muted);
-        padding-bottom: 0.625rem;
-        margin-bottom: 1.5rem;
-        border-bottom: 1px solid var(--border);
+      .col-left {
+        padding-right: 2.5rem;
+      }
+
+      .col-right {
+        padding-left: 2.5rem;
+        border-left: 1px solid var(--border);
+      }
+
+      @media (max-width: 700px) {
+        .fields-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .col-left {
+          padding-right: 0;
+        }
+
+        .col-right {
+          padding-left: 0;
+          border-left: none;
+          border-top: 1px solid var(--border);
+          padding-top: 1.75rem;
+          margin-top: 0.25rem;
+        }
       }
 
       /* ── Field ──────────────────────────────────────────────────── */
@@ -125,9 +115,10 @@
         margin-left: 0.125rem;
       }
 
+      /* ── Inputs & select ────────────────────────────────────────── */
       input[type='text'],
       input[type='url'],
-      input[type='number'] {
+      select {
         width: 100%;
         height: 4rem;
         background: var(--bg);
@@ -145,7 +136,21 @@
           box-shadow 0.15s;
       }
 
-      input:focus {
+      select {
+        cursor: pointer;
+        padding-right: 3rem;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 1.25rem center;
+      }
+
+      select option {
+        background: var(--surface);
+        color: var(--text);
+      }
+
+      input:focus,
+      select:focus {
         border-color: var(--green);
         box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.2);
       }
@@ -169,57 +174,87 @@
         border-radius: 0.25rem;
       }
 
-      /* ── Advanced toggle button ─────────────────────────────────── */
-      .advanced-btn {
-        width: 100%;
-        height: 4rem;
-        background: var(--bg);
-        border: 2px solid var(--border);
-        border-radius: 1rem;
-        color: var(--text-sec);
-        font-size: 1rem;
-        font-weight: 600;
-        font-family: inherit;
-        cursor: pointer;
+      /* ── Range slider ───────────────────────────────────────────── */
+      .range-row {
         display: flex;
         align-items: center;
-        gap: 0.75rem;
-        padding: 0 1.25rem;
-        margin-bottom: 1.75rem;
-        transition:
-          background 0.15s,
-          border-color 0.15s;
-        text-align: left;
+        gap: 1rem;
+        height: 4rem;
+        padding: 0 0.25rem;
+      }
+
+      input[type='range'] {
+        flex: 1;
+        height: 2rem;
+        background: transparent;
+        outline: none;
+        cursor: pointer;
+        padding: 0;
         appearance: none;
         -webkit-appearance: none;
       }
 
-      .advanced-btn:hover {
-        background: rgba(255, 255, 255, 0.04);
-        border-color: var(--border-light);
+      input[type='range']::-webkit-slider-runnable-track {
+        height: 0.5rem;
+        border-radius: 9999px;
+        background: linear-gradient(
+          to right,
+          var(--green) 0%,
+          var(--green) var(--range-val, 100%),
+          var(--border-light) var(--range-val, 100%),
+          var(--border-light) 100%
+        );
       }
 
-      .advanced-btn:active {
-        transform: scale(0.99);
+      input[type='range']::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 50%;
+        background: var(--green);
+        border: none;
+        cursor: pointer;
+        margin-top: -0.875rem;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+        transition:
+          background 0.15s,
+          transform 0.1s;
       }
 
-      .advanced-icon {
-        font-size: 0.875rem;
-        margin-left: auto;
-        transition: transform 0.2s;
-        color: var(--text-muted);
+      input[type='range']::-webkit-slider-thumb:active {
+        transform: scale(1.15);
+        background: var(--green-h);
       }
 
-      .advanced-icon.open {
-        transform: rotate(180deg);
+      input[type='range']::-moz-range-track {
+        height: 0.5rem;
+        border-radius: 9999px;
+        background: var(--border-light);
       }
 
-      .advanced-section {
-        display: none;
+      input[type='range']::-moz-range-progress {
+        height: 0.5rem;
+        border-radius: 9999px;
+        background: var(--green);
       }
 
-      .advanced-section.open {
-        display: block;
+      input[type='range']::-moz-range-thumb {
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 50%;
+        background: var(--green);
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+      }
+
+      .range-value {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-sec);
+        min-width: 3.25rem;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
       }
 
       /* ── Toggle switch ──────────────────────────────────────────── */
@@ -227,7 +262,7 @@
         display: flex;
         align-items: center;
         gap: 1.25rem;
-        min-height: 3.5rem;
+        min-height: 4rem;
       }
 
       .toggle {
@@ -349,107 +384,95 @@
       <h1>Setup</h1>
 
       <form id="setup-form" novalidate>
-        <div class="field">
-          <label class="field-label" for="url">Server URL<span class="required">*</span></label>
-          <input
-            type="url"
-            id="url"
-            name="url"
-            placeholder="https://sbf.example.com"
-            required
-            autocomplete="off"
-            spellcheck="false"
-          />
-          <p class="hint">
-            The address of the Small Business Fridge web server this kiosk will load.
-          </p>
-        </div>
+        <div class="fields-grid">
+          <!-- Left column: connection & locale -->
+          <div class="col-left">
+            <div class="field">
+              <label class="field-label" for="url">Server URL<span class="required">*</span></label>
+              <input
+                type="url"
+                id="url"
+                name="url"
+                placeholder="https://sbf.example.com"
+                required
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <p class="hint">
+                The address of the Small Business Fridge web server this kiosk will load.
+              </p>
+            </div>
 
-        <div class="field">
-          <label class="field-label" for="allowedOrigins">Additional Allowed Origins</label>
-          <input
-            type="text"
-            id="allowedOrigins"
-            name="allowedOrigins"
-            autocomplete="off"
-            spellcheck="false"
-          />
-          <p class="hint">
-            Comma-separated list of URL origins for OIDC redirects. Leave blank if not needed.
-          </p>
-        </div>
+            <div class="field">
+              <label class="field-label" for="allowedOrigins">Additional Allowed Origins</label>
+              <input
+                type="text"
+                id="allowedOrigins"
+                name="allowedOrigins"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <p class="hint">
+                Comma-separated list of URL origins for OIDC redirects. Leave blank if not needed.
+              </p>
+            </div>
 
-        <button type="button" class="advanced-btn" id="advanced-btn" aria-expanded="false">
-          Advanced Settings
-          <span class="advanced-icon" id="advanced-icon">&#9660;</span>
-        </button>
-
-        <div class="advanced-section" id="advanced-section">
-          <p class="section-label">Display &amp; Language</p>
-
-          <div class="field">
-            <label class="field-label" for="lang">Language</label>
-            <input
-              type="text"
-              id="lang"
-              name="lang"
-              value="en"
-              placeholder="en"
-              autocomplete="off"
-              spellcheck="false"
-            />
-            <p class="hint">
-              Language code passed to the browser (e.g. <code>cs</code>, <code>en</code>,
-              <code>de</code>).
-            </p>
+            <div class="field">
+              <label class="field-label" for="lang">Language</label>
+              <select id="lang" name="lang">
+                <option value="en">English (en)</option>
+                <option value="cs">&#268;e&#353;tina (cs)</option>
+              </select>
+            </div>
           </div>
 
-          <p class="section-label">Audio</p>
+          <!-- Right column: audio & service -->
+          <div class="col-right">
+            <div class="field">
+              <label class="field-label" for="pulseSink">Audio Device</label>
+              <input
+                type="text"
+                id="pulseSink"
+                name="pulseSink"
+                value="auto"
+                placeholder="auto"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <p class="hint">
+                ALSA device string. <code>auto</code> uses the system default. Examples:
+                <code>hw:0,0</code> (analog), <code>hw:0,3</code> (HDMI).
+              </p>
+            </div>
 
-          <div class="field">
-            <label class="field-label" for="pulseSink">Audio Device</label>
-            <input
-              type="text"
-              id="pulseSink"
-              name="pulseSink"
-              value="auto"
-              placeholder="auto"
-              autocomplete="off"
-              spellcheck="false"
-            />
-            <p class="hint">
-              ALSA device string. <code>auto</code> uses the system default. Examples:
-              <code>hw:0,0</code> (analog), <code>hw:0,3</code> (HDMI).
-            </p>
-          </div>
+            <div class="field">
+              <label class="field-label" for="pulseVolume">Startup Volume</label>
+              <div class="range-row">
+                <input
+                  type="range"
+                  id="pulseVolume"
+                  name="pulseVolume"
+                  min="0"
+                  max="100"
+                  value="100"
+                />
+                <output class="range-value" id="volumeDisplay" for="pulseVolume">100%</output>
+              </div>
+            </div>
 
-          <div class="field">
-            <label class="field-label" for="pulseVolume">Startup Volume (%)</label>
-            <input
-              type="number"
-              id="pulseVolume"
-              name="pulseVolume"
-              value="100"
-              min="0"
-              max="100"
-            />
-            <p class="hint">Volume level applied at startup (0&ndash;100).</p>
-          </div>
-
-          <p class="section-label">Service</p>
-
-          <div class="field">
-            <div class="toggle-row">
-              <label class="toggle">
-                <input type="checkbox" id="daemon" name="daemon" checked />
-                <span class="toggle-track"></span>
-                <span class="toggle-thumb"></span>
-              </label>
-              <div class="toggle-labels">
-                <label for="daemon">Run as system service</label>
-                <p class="hint" style="margin-top: 0.25rem">
-                  Start automatically on boot. Disable to launch manually.
-                </p>
+            <div class="field">
+              <div class="toggle-row">
+                <label class="toggle">
+                  <input type="checkbox" id="daemon" name="daemon" checked />
+                  <span class="toggle-track"></span>
+                  <span class="toggle-thumb"></span>
+                </label>
+                <div class="toggle-labels">
+                  <label for="daemon">Run as system service</label>
+                  <p class="hint" style="margin-top: 0.25rem">
+                    Start automatically on boot. Disable to launch manually.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -467,25 +490,32 @@
       const urlInput = document.getElementById('url')
       const submitBtn = document.getElementById('submit-btn')
       const statusEl = document.getElementById('status')
-      const advancedBtn = document.getElementById('advanced-btn')
-      const advancedSection = document.getElementById('advanced-section')
-      const advancedIcon = document.getElementById('advanced-icon')
+      const volumeSlider = document.getElementById('pulseVolume')
+      const volumeDisplay = document.getElementById('volumeDisplay')
 
-      advancedBtn.addEventListener('click', () => {
-        const open = advancedSection.classList.toggle('open')
-        advancedIcon.classList.toggle('open', open)
-        advancedBtn.setAttribute('aria-expanded', String(open))
-      })
+      function updateSlider(slider) {
+        const pct = slider.value + '%'
+        volumeDisplay.textContent = pct
+        slider.style.setProperty('--range-val', pct)
+      }
+
+      volumeSlider.addEventListener('input', () => updateSlider(volumeSlider))
+      updateSlider(volumeSlider)
 
       if (window.kioskSetup) {
         window.kioskSetup.getConfig().then((cfg) => {
           if (cfg.url) urlInput.value = cfg.url
           if (cfg.allowedOrigins)
             document.getElementById('allowedOrigins').value = cfg.allowedOrigins
-          if (cfg.lang) document.getElementById('lang').value = cfg.lang
+          if (cfg.lang) {
+            const sel = document.getElementById('lang')
+            if ([...sel.options].some((o) => o.value === cfg.lang)) sel.value = cfg.lang
+          }
           if (cfg.pulseSink) document.getElementById('pulseSink').value = cfg.pulseSink
-          if (cfg.pulseVolume != null)
-            document.getElementById('pulseVolume').value = cfg.pulseVolume
+          if (cfg.pulseVolume != null) {
+            volumeSlider.value = cfg.pulseVolume
+            updateSlider(volumeSlider)
+          }
           if (cfg.daemon !== undefined) {
             document.getElementById('daemon').checked = cfg.daemon !== 'false'
           }
@@ -518,9 +548,9 @@
         const config = {
           url: urlInput.value.trim(),
           allowedOrigins: document.getElementById('allowedOrigins').value.trim(),
-          lang: document.getElementById('lang').value.trim() || 'en',
+          lang: document.getElementById('lang').value,
           pulseSink: document.getElementById('pulseSink').value.trim() || 'auto',
-          pulseVolume: String(document.getElementById('pulseVolume').value || '100'),
+          pulseVolume: String(volumeSlider.value),
           daemon: document.getElementById('daemon').checked ? 'true' : 'false',
         }
 
