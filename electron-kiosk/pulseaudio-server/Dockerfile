@@ -12,6 +12,16 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 # create a new one — setpriv accepts numeric uids directly.
 RUN mkdir -p /home/kiosk && chown 1000:1000 /home/kiosk
 
+# Configure the Unix socket with anonymous auth.
+# The socket is only reachable via a bind-mounted host path (not the network),
+# so anonymous auth is safe.  Without this the snap daemon (root) would be
+# rejected by PulseAudio's cookie auth because it runs as a different uid.
+RUN sed -i \
+    's|^load-module module-native-protocol-unix.*|load-module module-native-protocol-unix auth-anonymous=1|' \
+    /etc/pulse/default.pa && \
+    grep -q 'module-native-protocol-unix' /etc/pulse/default.pa || \
+    echo 'load-module module-native-protocol-unix auth-anonymous=1' >> /etc/pulse/default.pa
+
 ENV HOME=/home/kiosk \
     XDG_RUNTIME_DIR=/run/user/1000
 
