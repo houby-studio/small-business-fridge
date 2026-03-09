@@ -22,7 +22,7 @@ services:
     environment:
       - XDG_RUNTIME_DIR=/run/user/1000
       # Options: analog, hdmi, auto, or exact sink name
-      - PULSE_SINK=hdmi
+      - PULSE_SINK=auto
       # Volume percentage (0-150)
       - PULSE_VOLUME=100
       # Whether to unmute on startup
