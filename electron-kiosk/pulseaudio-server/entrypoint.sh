@@ -7,6 +7,8 @@ mkdir -p /run/user/1000/pulse
 chown 1000:1000 /run/user/1000 /run/user/1000/pulse 2>/dev/null || true
 chmod 700 /run/user/1000/pulse
 
-# Drop to kiosk user (uid 1000) for the actual PulseAudio process.
+# Drop to uid/gid 1000 for the actual PulseAudio process.
 # setpriv is part of util-linux, available in Ubuntu base image.
-exec setpriv --reuid=1000 --regid=1000 --init-groups /usr/local/bin/init.sh "$@"
+# We use numeric ids — no /etc/passwd entry required.
+# Supplementary groups (audio) are provided by compose group_add.
+exec setpriv --reuid=1000 --regid=1000 /usr/local/bin/init.sh "$@"
