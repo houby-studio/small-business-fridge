@@ -20,3 +20,6 @@ SECURITY.md
 electron-kiosk/snap/snapcraft.yaml
 electron-kiosk/wrapper/
 electron-kiosk/wayland-launch/
+
+# Docs
+docs/
