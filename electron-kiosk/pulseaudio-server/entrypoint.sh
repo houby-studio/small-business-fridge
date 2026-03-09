@@ -11,4 +11,4 @@ chmod 700 /run/user/1000/pulse
 # setpriv is part of util-linux, available in Ubuntu base image.
 # We use numeric ids — no /etc/passwd entry required.
 # Supplementary groups (audio) are provided by compose group_add.
-exec setpriv --reuid=1000 --regid=1000 /usr/local/bin/init.sh "$@"
+exec setpriv --reuid=1000 --regid=1000 --clear-groups /usr/local/bin/init.sh "$@"
