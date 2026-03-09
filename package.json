@@ -22,8 +22,8 @@
     "typecheck:frontend": "vue-tsc --noEmit -p tsconfig.frontend.json",
     "typecheck:tests": "tsc --noEmit -p tsconfig.tests.json",
     "generate:keypad-tones": "node --import=tsx scripts/generate_keypad_tones.ts",
-    "hooks:install": "git config --local core.hooksPath .githooks",
-    "hooks:status": "git config --get core.hooksPath"
+    "hooks:install": "bash ./scripts/install_git_hooks.sh",
+    "hooks:status": "bash ./scripts/install_git_hooks.sh --status"
   },
   "imports": {
     "#controllers/*": "./app/controllers/*.js",
