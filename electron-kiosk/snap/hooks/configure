@@ -35,15 +35,14 @@ esac
 # lang: language code passed to Chromium (e.g. cs, en, de)
 [ -n "$(snapctl get lang)" ]            || snapctl set lang="en"
 
-# pulse-uid: UID of the logged-in user whose PipeWire/PulseAudio session to connect to.
-# Run `id -u` as the kiosk desktop user to find the correct value.
-[ -n "$(snapctl get pulse-uid)" ]       || snapctl set pulse-uid="1000"
-
-# pulse-sink: output sink selection. 'auto' keeps the system default.
-# Use 'hdmi', 'analog', or an exact sink name (from: pactl list sinks short).
+# pulse-sink: ALSA output device. 'auto' uses the ALSA default.
+# For a specific output use the ALSA device string (check with: aplay -l):
+#   hw:0,0   — analog / first output
+#   hw:0,3   — HDMI (typical on Intel)
+#   hw:0,7   — DisplayPort / second HDMI
 [ -n "$(snapctl get pulse-sink)" ]      || snapctl set pulse-sink="auto"
 
-# pulse-volume: output volume percentage applied at startup (0-150).
+# pulse-volume: output volume percentage applied at startup via amixer (0-100).
 [ -n "$(snapctl get pulse-volume)" ]    || snapctl set pulse-volume="100"
 
 snapctl restart $SNAP_INSTANCE_NAME
