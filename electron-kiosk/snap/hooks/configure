@@ -27,7 +27,7 @@ esac
 [ -n "$(snapctl get daemon)" ]          || snapctl set daemon="true"
 
 # url: address of the SBF web server the kiosk will load.
-# Intentionally no default — an empty url triggers the onboarding UI.
+[ -n "$(snapctl get url)" ]             || snapctl set url=""
 
 # allowed-origins: extra origins the kiosk may navigate to (space- or comma-separated)
 [ -n "$(snapctl get allowed-origins)" ] || snapctl set allowed-origins=""
