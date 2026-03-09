@@ -6,6 +6,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "start": "node bin/server.js",
+    "prepare": "npm run hooks:install",
     "build": "node ace build",
     "dev": "node ace serve --hmr",
     "scheduler": "node ace scheduler:run",
@@ -20,7 +21,9 @@
     "typecheck:backend": "tsc --noEmit",
     "typecheck:frontend": "vue-tsc --noEmit -p tsconfig.frontend.json",
     "typecheck:tests": "tsc --noEmit -p tsconfig.tests.json",
-    "generate:keypad-tones": "node --import=tsx scripts/generate_keypad_tones.ts"
+    "generate:keypad-tones": "node --import=tsx scripts/generate_keypad_tones.ts",
+    "hooks:install": "git config --local core.hooksPath .githooks",
+    "hooks:status": "git config --get core.hooksPath"
   },
   "imports": {
     "#controllers/*": "./app/controllers/*.js",
