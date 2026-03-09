@@ -1,19 +1,25 @@
 # SBF Kiosk — Minimal PulseAudio configuration
 # Loaded via --file argument in wrapper.sh; replaces the system default.pa.
-.fail
 
-# Auto-detect ALSA sound hardware via udev.
-# The audio-playback snap plug grants the required /dev/snd/** and udev access.
+# .nofail makes module load failures non-fatal so PA keeps starting
+# even if udev or a specific ALSA card isn't accessible.
+.nofail
+
+# Auto-detect ALSA sound hardware via udev (preferred).
+# Requires the audio-playback plug's /dev/snd and udev data access.
 load-module module-udev-detect
 
-# Persist volume and device settings across restarts.
-load-module module-device-restore
-load-module module-stream-restore
-load-module module-card-restore
+# Direct ALSA fallback: load cards 0 and 1 explicitly in case udev-detect
+# fails (e.g. if udev netlink access is restricted in strict confinement).
+# Harmless if the cards were already loaded by module-udev-detect.
+load-module module-alsa-card card=0
+load-module module-alsa-card card=1
+
+.fail
 
 # Unix socket for local clients (Electron/Chromium).
-# auth-anonymous=1 because the snap daemon may run as a different UID than PA.
+# auth-anonymous=1 is required in --system mode (no per-user cookie available).
 load-module module-native-protocol-unix auth-anonymous=1
 
-# Prevent PulseAudio from exiting when idle — the kiosk always needs audio ready.
+# Null sink of last resort — keeps PA running even if hardware detection fails.
 load-module module-always-sink

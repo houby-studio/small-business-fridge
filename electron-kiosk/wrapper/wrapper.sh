@@ -22,38 +22,50 @@ if [ -n "$LANG" ]; then
 fi
 
 # --- Bundled PulseAudio ---
-# Run a snap-private PA instance so no external audio server is needed.
-# PULSE_RUNTIME_PATH controls where PA places its Unix socket and PID file.
-# A fresh directory each start avoids stale sockets from previous runs.
-export PULSE_RUNTIME_PATH="${SNAP_USER_COMMON}/pulse/runtime"
-rm -rf "$PULSE_RUNTIME_PATH"
-mkdir -p "$PULSE_RUNTIME_PATH"
 
-# PA's private shared library (libpulsecore, libpulsecommon) lives in an
-# arch-specific subdirectory. The override-prime step in snapcraft.yaml copies
-# it to usr/lib/pulseaudio/ so we can add it to LD_LIBRARY_PATH here.
+# Add PA's private shared library (libpulsecore, libpulsecommon) to the library path.
+# The override-prime step in snapcraft.yaml normalises it to usr/lib/pulseaudio/.
 PA_LIB_DIR="$SNAP/usr/lib/pulseaudio"
 [ -d "$PA_LIB_DIR" ] && export LD_LIBRARY_PATH="${PA_LIB_DIR}:${LD_LIBRARY_PATH:-}"
 
-# Modules live in a versioned directory (e.g. pulse-16.1+dfsg1/modules).
-# Glob at runtime so this works across any PA version staged in the snap.
+# Locate versioned module directory (e.g. pulse-16.1+dfsg1/modules).
+# Glob so this works across any PA version staged in the snap.
 PA_MOD_DIR=$(ls -d "$SNAP"/usr/lib/pulse-*/modules 2>/dev/null | head -1)
 
 if [ -n "$PA_MOD_DIR" ]; then
-  echo "Starting PulseAudio (modules: $PA_MOD_DIR)..."
+  # PulseAudio refuses to start as root in normal user mode.
+  # Snap daemons run as root, so we use --system which:
+  #   - allows root execution
+  #   - places the socket at /run/pulse/native
+  # The audio-playback plug grants /run/pulse/** rw so this path is accessible.
+  if [ "$(id -u)" = "0" ]; then
+    mkdir -p /run/pulse
+    PA_MODE="--system"
+    export PULSE_SERVER="unix:/run/pulse/native"
+    PA_SOCKET="/run/pulse/native"
+  else
+    export PULSE_RUNTIME_PATH="${SNAP_USER_COMMON}/pulse/runtime"
+    rm -rf "$PULSE_RUNTIME_PATH"
+    mkdir -p "$PULSE_RUNTIME_PATH"
+    PA_MODE=""
+    export PULSE_SERVER="unix:${PULSE_RUNTIME_PATH}/native"
+    PA_SOCKET="${PULSE_RUNTIME_PATH}/native"
+  fi
+
+  echo "Starting PulseAudio (modules: $PA_MOD_DIR, mode: ${PA_MODE:-(user)})..."
+  # --no-realtime: skip mlockall/SCHED_RR which AppArmor may block in strict confinement.
+  # stderr intentionally not suppressed so failures appear in snap logs.
   "$SNAP/usr/bin/pulseaudio" \
+    $PA_MODE \
+    --no-realtime \
     --dl-search-path="$PA_MOD_DIR" \
     --daemonize=no \
     --exit-idle-time=-1 \
-    --file="$SNAP/etc/sbf-kiosk/pulse.pa" \
-    2>/dev/null &
+    --file="$SNAP/etc/sbf-kiosk/pulse.pa" &
 
-  # Tell Electron/Chromium where to find our PA socket.
-  export PULSE_SERVER="unix:${PULSE_RUNTIME_PATH}/native"
-
-  # Wait for module-native-protocol-unix to create the socket (up to 30 s).
+  # Wait for module-native-protocol-unix to create the socket (up to 30s).
   TRIES=0
-  while ! [ -S "${PULSE_RUNTIME_PATH}/native" ]; do
+  while ! [ -S "$PA_SOCKET" ]; do
     TRIES=$((TRIES + 1))
     if [ "$TRIES" -ge 30 ]; then
       echo "WARNING: PulseAudio not ready after 30s. Continuing without audio."
@@ -62,13 +74,12 @@ if [ -n "$PA_MOD_DIR" ]; then
     fi
     sleep 1
   done
-  [ -S "${PULSE_RUNTIME_PATH}/native" ] && echo "PulseAudio ready."
+  [ -S "$PA_SOCKET" ] && echo "PulseAudio ready at $PULSE_SERVER"
 else
   echo "WARNING: PulseAudio modules not found in snap. Audio disabled."
 fi
 
 # Configure output sink and volume via pactl.
-# Runs after PA is up; silently skipped if PA is unavailable.
 # snap set sbf-kiosk pulse-sink=hdmi   (or 'analog', or an exact sink name)
 # snap set sbf-kiosk pulse-volume=80
 {
