@@ -110,8 +110,17 @@ function snapctlGetSilent(key) {
   return execFileSync('snapctl', ['get', key], { encoding: 'utf8' }).trim()
 }
 
+function isOnboardingFrame(event) {
+  // Reject any IPC call that did not originate from a local file:// frame.
+  // This prevents a BrowserWindow that somehow acquired the onboarding preload
+  // from invoking these handlers while displaying a remote URL.
+  const url = event.senderFrame?.url ?? ''
+  return url.startsWith('file://')
+}
+
 function registerIpcHandlers() {
-  ipcMain.handle('get-config', () => {
+  ipcMain.handle('get-config', (event) => {
+    if (!isOnboardingFrame(event)) return {}
     if (!process.env.SNAP) return {}
     try {
       return {
@@ -127,12 +136,27 @@ function registerIpcHandlers() {
     }
   })
 
-  ipcMain.handle('save-config', (_event, config) => {
+  ipcMain.handle('save-config', (event, config) => {
+    if (!isOnboardingFrame(event)) {
+      return { success: false, error: 'Unauthorized' }
+    }
+
+    // Validate URL in the main process — do not rely solely on renderer validation.
+    let parsedUrl
+    try {
+      parsedUrl = new URL(String(config.url ?? ''))
+      if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+        return { success: false, error: 'URL must use http or https' }
+      }
+    } catch {
+      return { success: false, error: 'Invalid URL' }
+    }
+
     try {
       if (process.env.SNAP) {
         execFileSync('snapctl', [
           'set',
-          `url=${config.url}`,
+          `url=${parsedUrl.href}`,
           `allowed-origins=${config.allowedOrigins ?? ''}`,
           `lang=${config.lang ?? 'en'}`,
           `pulse-sink=${config.pulseSink ?? 'auto'}`,
@@ -145,7 +169,7 @@ function registerIpcHandlers() {
       // In dev mode we relaunch with the new URL in the environment.
       setTimeout(() => {
         if (!process.env.SNAP) {
-          process.env.KIOSK_URL = config.url
+          process.env.KIOSK_URL = parsedUrl.href
           app.relaunch()
         }
         app.quit()
@@ -173,6 +197,15 @@ function createOnboardingWindow() {
       sandbox: true,
     },
   })
+
+  // Block popups and prevent any navigation away from the local setup page.
+  // If the window navigated to a remote URL, window.kioskSetup would be
+  // present in that remote context and could invoke the config IPC handlers.
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  win.webContents.on('will-navigate', (event) => {
+    event.preventDefault()
+  })
+
   win.loadFile(path.join(__dirname, 'onboarding.html'))
 }
 
