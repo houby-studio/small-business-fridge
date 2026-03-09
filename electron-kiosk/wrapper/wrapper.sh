@@ -21,28 +21,37 @@ if [ -n "$LANG" ]; then
   EXTRAOPTS="$EXTRAOPTS --lang=$LANG"
 fi
 
-# --- Audio setup (ALSA direct via the 'alsa' snap plug) ---
-# This kiosk runs on a headless machine with no PulseAudio/PipeWire daemon.
-# We use ALSA directly. libpulse0 is still staged so Electron can use PA
-# automatically if a PA-compatible server becomes available in future.
-#
-# Volume: snap set sbf-kiosk pulse-volume=80   (0-100%, applied via amixer)
-# Output: snap set sbf-kiosk pulse-sink=auto   ('auto' = ALSA default device)
-#         For a specific output pass the ALSA device: hw:0,3 (HDMI), hw:0,0 (analog)
-#         Check available devices: aplay -l
+# --- ALSA audio initialisation ---
+# The sound card boots with Master muted at 0%. We must unmute and set volume
+# before Electron starts, otherwise there is no sound even though the hardware works.
+# Requires the 'alsa' snap plug to be connected (auto on store installs;
+# manual on sideloads: sudo snap connect sbf-kiosk:alsa).
 {
-  if [ -n "$PULSE_VOLUME" ]; then
-    # Try common ALSA mixer controls in order of preference
-    amixer -q sset Master "${PULSE_VOLUME}%" 2>/dev/null \
-      || amixer -q sset PCM "${PULSE_VOLUME}%" 2>/dev/null \
-      || true
-    echo "Audio: volume → ${PULSE_VOLUME}%"
-  fi
-} 2>/dev/null || true
+  VOL="${PULSE_VOLUME:-100}"
+
+  # Unmute and set volume on every relevant analog control.
+  # The 'unmute' keyword is required — without it amixer only changes the level.
+  for CTL in Master PCM Speaker Headphone; do
+    amixer -q sset "$CTL" "${VOL}%" unmute 2>/dev/null || true
+  done
+
+  # Also unmute digital/HDMI controls (no volume knob, just switch)
+  for CTL in "IEC958" "IEC958 Default PCM" "S/PDIF"; do
+    amixer -q sset "$CTL" unmute 2>/dev/null || true
+  done
+
+  echo "Audio: volume → ${VOL}% (controls unmuted)"
+} 2>/dev/null || echo "Audio: amixer not available — is the 'alsa' plug connected?"
 
 # Select ALSA output device if explicitly configured.
-# 'auto' uses the ALSA default (defined by alsa.conf).
-# Any other value is passed directly as the --alsa-output-device Chromium flag.
+# 'auto' uses the ALSA default (hw:0,0 = analog on most Intel HDA systems).
+# Available devices: run  aplay -l  from inside the snap:
+#   sudo snap run --shell sbf-kiosk.daemon -c "aplay -l"
+#
+# Examples:
+#   snap set sbf-kiosk pulse-sink=hw:0,0   # ALC3228 Analog
+#   snap set sbf-kiosk pulse-sink=hw:0,3   # HDMI 0
+#   snap set sbf-kiosk pulse-sink=hw:0,7   # HDMI 1
 if [ -n "$PULSE_SINK" ] && [ "$PULSE_SINK" != "auto" ]; then
   EXTRAOPTS="$EXTRAOPTS --alsa-output-device=${PULSE_SINK}"
   echo "Audio: ALSA device → ${PULSE_SINK}"
