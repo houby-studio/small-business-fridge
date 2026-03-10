@@ -9,7 +9,29 @@ fi
 # Chromium/aplay may fail with "Unknown PCM default" under strict confinement.
 export ALSA_CONFIG_PATH="${ALSA_CONFIG_PATH:-$SNAP/usr/share/alsa/alsa.conf}"
 export ALSA_CONFIG_DIR="${ALSA_CONFIG_DIR:-$SNAP/usr/share/alsa}"
-export ALSA_PLUGIN_DIR="${ALSA_PLUGIN_DIR:-$SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/alsa-lib}"
+
+resolve_alsa_plugin_dir() {
+  if [ -n "${ALSA_PLUGIN_DIR:-}" ] && [ -d "${ALSA_PLUGIN_DIR}" ]; then
+    printf '%s\n' "${ALSA_PLUGIN_DIR}"
+    return
+  fi
+
+  for candidate in \
+    "$SNAP/usr/lib/"*-linux-gnu/alsa-lib \
+    "$SNAP/usr/lib/alsa-lib"
+  do
+    if [ -d "$candidate" ]; then
+      printf '%s\n' "$candidate"
+      return
+    fi
+  done
+
+  # Fall back to the historical location so ALSA still gets a deterministic
+  # path even if the staged runtime layout changes.
+  printf '%s\n' "$SNAP/usr/lib/alsa-lib"
+}
+
+export ALSA_PLUGIN_DIR="$(resolve_alsa_plugin_dir)"
 
 # Read all snap configuration for use in this script.
 # The Electron app reads these directly via snapctl — no env exports needed.
