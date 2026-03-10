@@ -234,6 +234,43 @@
         border-radius: 0.25rem;
       }
 
+      .hidden {
+        display: none;
+      }
+
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .device-list {
+        margin-top: 0.75rem;
+        padding: 0.875rem 1rem;
+        background: rgba(17, 24, 39, 0.75);
+        border: 1px solid var(--border);
+        border-radius: 1rem;
+        font-size: 0.9rem;
+        color: var(--text-sec);
+      }
+
+      .device-list ul {
+        margin: 0.5rem 0 0;
+        padding-left: 1.1rem;
+      }
+
+      .device-list li + li {
+        margin-top: 0.35rem;
+      }
+
+      .device-list code {
+        font-family: ui-monospace, monospace;
+        font-size: 0.8rem;
+        background: rgba(255, 255, 255, 0.08);
+        padding: 0.0625rem 0.3rem;
+        border-radius: 0.25rem;
+      }
+
       /* ── Range slider ───────────────────────────────────────────── */
       .range-row {
         display: flex;
@@ -497,19 +534,27 @@
           <div class="col-right">
             <div class="field">
               <label class="field-label" for="audioSink">Audio Device</label>
-              <input
-                type="text"
-                id="audioSink"
-                name="audioSink"
-                value="auto"
-                placeholder="auto"
-                autocomplete="off"
-                spellcheck="false"
-              />
+              <div class="stack">
+                <select id="audioSinkPreset" name="audioSinkPreset">
+                  <option value="auto">System default (auto)</option>
+                  <option value="__custom__">Custom ALSA device</option>
+                </select>
+                <input
+                  type="text"
+                  id="audioSink"
+                  name="audioSink"
+                  value="auto"
+                  placeholder="hw:0,0"
+                  autocomplete="off"
+                  spellcheck="false"
+                  class="hidden"
+                />
+              </div>
               <p class="hint">
                 ALSA device string. <code>auto</code> uses the system default. Examples:
                 <code>hw:0,0</code> (analog), <code>hw:0,3</code> (HDMI).
               </p>
+              <div class="device-list hidden" id="audioDeviceList"></div>
             </div>
 
             <div class="field">
@@ -561,6 +606,73 @@
       const statusEl = document.getElementById('status')
       const volumeSlider = document.getElementById('audioVolume')
       const volumeDisplay = document.getElementById('volumeDisplay')
+      const audioSinkPreset = document.getElementById('audioSinkPreset')
+      const audioSinkInput = document.getElementById('audioSink')
+      const audioDeviceList = document.getElementById('audioDeviceList')
+
+      function setAudioSinkMode(mode, value = '') {
+        const isCustom = mode === '__custom__'
+        audioSinkPreset.value = isCustom ? '__custom__' : mode
+        audioSinkInput.classList.toggle('hidden', !isCustom)
+        if (isCustom) {
+          audioSinkInput.value = value
+        } else {
+          audioSinkInput.value = mode
+        }
+      }
+
+      function populateAudioDevices(devices, selectedValue) {
+        const previous = new Set(
+          [...audioSinkPreset.querySelectorAll('option[data-device-option="true"]')].map(
+            (option) => option.value
+          )
+        )
+
+        for (const value of previous) {
+          const option = audioSinkPreset.querySelector(`option[value="${CSS.escape(value)}"]`)
+          option?.remove()
+        }
+
+        if (Array.isArray(devices) && devices.length > 0) {
+          for (const device of devices) {
+            const option = document.createElement('option')
+            option.value = device.value
+            option.dataset.deviceOption = 'true'
+            option.textContent = `${device.description} (${device.value})`
+            audioSinkPreset.insertBefore(option, audioSinkPreset.lastElementChild)
+          }
+
+          audioDeviceList.className = 'device-list'
+          audioDeviceList.replaceChildren()
+
+          const heading = document.createElement('strong')
+          heading.textContent = 'Detected playback devices'
+
+          const list = document.createElement('ul')
+          for (const device of devices) {
+            const item = document.createElement('li')
+            const code = document.createElement('code')
+            code.textContent = device.value
+            item.append(code, ` ${device.description}`)
+            list.appendChild(item)
+          }
+
+          audioDeviceList.append(heading, list)
+        } else {
+          audioDeviceList.className = 'device-list'
+          audioDeviceList.textContent =
+            'No ALSA playback devices were detected yet. You can still enter a manual ALSA device string.'
+        }
+
+        const knownValues = new Set(['auto', ...devices.map((device) => device.value)])
+        if (selectedValue && knownValues.has(selectedValue)) {
+          setAudioSinkMode(selectedValue)
+        } else if (selectedValue && selectedValue !== 'auto') {
+          setAudioSinkMode('__custom__', selectedValue)
+        } else {
+          setAudioSinkMode('auto')
+        }
+      }
 
       function updateSlider(slider) {
         const pct = slider.value + '%'
@@ -586,7 +698,7 @@
             const sel = document.getElementById('lang')
             if ([...sel.options].some((o) => o.value === cfg.lang)) sel.value = cfg.lang
           }
-          if (cfg.audioSink) document.getElementById('audioSink').value = cfg.audioSink
+          populateAudioDevices(cfg.audioDevices || [], cfg.audioSink || 'auto')
           if (cfg.audioVolume != null) {
             volumeSlider.value = cfg.audioVolume
             updateSlider(volumeSlider)
@@ -618,6 +730,17 @@
 
       urlHost.addEventListener('input', validateUrl)
       urlProtocol.addEventListener('change', validateUrl)
+      audioSinkPreset.addEventListener('change', () => {
+        if (audioSinkPreset.value === '__custom__') {
+          setAudioSinkMode(
+            '__custom__',
+            audioSinkInput.value === 'auto' ? '' : audioSinkInput.value
+          )
+          audioSinkInput.focus()
+          return
+        }
+        setAudioSinkMode(audioSinkPreset.value)
+      })
 
       document.getElementById('setup-form').addEventListener('submit', async (e) => {
         e.preventDefault()
@@ -631,7 +754,7 @@
           url: buildUrl(),
           allowedOrigins: document.getElementById('allowedOrigins').value.trim(),
           lang: document.getElementById('lang').value,
-          audioSink: document.getElementById('audioSink').value.trim() || 'auto',
+          audioSink: audioSinkInput.value.trim() || 'auto',
           audioVolume: String(volumeSlider.value),
           daemon: document.getElementById('daemon').checked ? 'true' : 'false',
         }

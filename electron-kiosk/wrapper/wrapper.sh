@@ -22,6 +22,18 @@ echo "Launching Kiosk App with config:
 - daemon          = $DAEMON
 - allowed-origins = $ALLOWED_ORIGINS"
 
+if command -v aplay >/dev/null 2>&1; then
+  AUDIO_DEVICE_LIST="$(aplay -l 2>/dev/null || true)"
+  if [ -n "$AUDIO_DEVICE_LIST" ]; then
+    echo "Audio: available ALSA playback devices:"
+    printf '%s\n' "$AUDIO_DEVICE_LIST"
+  else
+    echo "Audio: no ALSA playback devices reported by aplay -l"
+  fi
+else
+  echo "Audio: aplay not available inside snap runtime"
+fi
+
 # Optional language override from snap config: snap set sbf-kiosk lang=cs-CZ
 if [ -n "$KIOSK_LANG" ]; then
   EXTRAOPTS="$EXTRAOPTS --lang=$KIOSK_LANG"

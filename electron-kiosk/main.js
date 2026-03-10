@@ -3,6 +3,7 @@
 const { app, BrowserWindow, session, ipcMain } = require('electron')
 const path = require('node:path')
 const { execFileSync } = require('node:child_process')
+const { listAudioDevices } = require('./audio_devices')
 
 const CONSOLE_LEVEL_TO_METHOD = {
   0: 'info',
@@ -121,7 +122,15 @@ function isOnboardingFrame(event) {
 function registerIpcHandlers() {
   ipcMain.handle('get-config', (event) => {
     if (!isOnboardingFrame(event)) return {}
-    if (!process.env.SNAP) return {}
+    const audioInventory = listAudioDevices()
+
+    if (!process.env.SNAP) {
+      return {
+        audioDevices: audioInventory.devices,
+        audioDevicesRaw: audioInventory.rawOutput,
+        audioDevicesError: audioInventory.error,
+      }
+    }
     try {
       return {
         url: snapctlGetSilent('url'),
@@ -130,9 +139,16 @@ function registerIpcHandlers() {
         audioSink: snapctlGetSilent('audio-sink'),
         audioVolume: snapctlGetSilent('audio-volume'),
         daemon: snapctlGetSilent('daemon'),
+        audioDevices: audioInventory.devices,
+        audioDevicesRaw: audioInventory.rawOutput,
+        audioDevicesError: audioInventory.error,
       }
     } catch {
-      return {}
+      return {
+        audioDevices: audioInventory.devices,
+        audioDevicesRaw: audioInventory.rawOutput,
+        audioDevicesError: audioInventory.error,
+      }
     }
   })
 
