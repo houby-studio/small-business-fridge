@@ -67,8 +67,6 @@ layout:
     bind: $SNAP/usr/share/alsa
   /usr/share/alsa/alsa.conf:
     bind-file: $SNAP/usr/share/alsa/alsa.conf
-  /usr/lib/$SNAPCRAFT_ARCH_TRIPLET/alsa-lib:
-    bind: $SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/alsa-lib
 
 parts:
   sbf-kiosk:
