@@ -65,8 +65,6 @@ layout:
   # The snap stages alsa.conf via libasound2t64; this layout makes it visible.
   /usr/share/alsa:
     bind: $SNAP/usr/share/alsa
-  /usr/share/alsa/alsa.conf:
-    bind-file: $SNAP/usr/share/alsa/alsa.conf
 
 parts:
   sbf-kiosk:
