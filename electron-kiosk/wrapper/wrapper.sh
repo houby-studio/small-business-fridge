@@ -47,6 +47,20 @@ if [ -n "$KIOSK_LANG" ]; then
   EXTRAOPTS="$EXTRAOPTS --lang=$KIOSK_LANG"
 fi
 
+normalize_audio_sink_for_chromium() {
+  case "$1" in
+    hw:*)
+      # Chromium may open the device with stream params that raw `hw:` nodes do
+      # not accept, such as mono output on HDMI sinks. `plughw:` keeps the same
+      # target card/device while letting ALSA adapt channel count/format.
+      printf 'plughw:%s\n' "${1#hw:}"
+      ;;
+    *)
+      printf '%s\n' "$1"
+      ;;
+  esac
+}
+
 # --- ALSA audio initialisation ---
 # The sound card boots with Master muted at 0%. We must unmute and set volume
 # before Electron starts, otherwise there is no sound even though the hardware works.
@@ -100,7 +114,7 @@ fi
 } 2>/dev/null || echo "Audio: amixer not available — is the 'alsa' plug connected?"
 
 # Select ALSA output device if explicitly configured.
-# 'auto' uses the ALSA default (hw:0,0 = analog on most Intel HDA systems).
+# 'auto' uses the ALSA default device and mixer routing.
 # Available devices: run  aplay -l  from inside the snap:
 #   sudo snap run --shell sbf-kiosk.daemon -c "aplay -l"
 #
@@ -108,9 +122,11 @@ fi
 #   snap set sbf-kiosk audio-sink=hw:0,0   # ALC3228 Analog
 #   snap set sbf-kiosk audio-sink=hw:0,3   # HDMI 0
 #   snap set sbf-kiosk audio-sink=hw:0,7   # HDMI 1
+# Raw `hw:` values are normalized to `plughw:` for Chromium compatibility.
 if [ -n "$AUDIO_SINK" ] && [ "$AUDIO_SINK" != "auto" ]; then
-  EXTRAOPTS="$EXTRAOPTS --alsa-output-device=${AUDIO_SINK}"
-  echo "Audio: ALSA device → ${AUDIO_SINK}"
+  CHROMIUM_AUDIO_SINK="$(normalize_audio_sink_for_chromium "$AUDIO_SINK")"
+  EXTRAOPTS="$EXTRAOPTS --alsa-output-device=${CHROMIUM_AUDIO_SINK}"
+  echo "Audio: ALSA device → ${AUDIO_SINK} (Chromium uses ${CHROMIUM_AUDIO_SINK})"
 fi
 
 exec "$SNAP/sbf-kiosk" \
