@@ -30,6 +30,9 @@ apps:
       XDG_DATA_DIRS: $SNAP/usr/share
       GTK_USE_PORTAL: 0
       GDK_GL: gles
+      ALSA_CONFIG_PATH: $SNAP/usr/share/alsa/alsa.conf
+      ALSA_CONFIG_DIR: $SNAP/usr/share/alsa
+      ALSA_PLUGIN_DIR: $SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/alsa-lib
 
   daemon:
     daemon: simple
@@ -47,6 +50,9 @@ environment:
   XDG_CONFIG_DIRS: $SNAP/etc/xdg
   XDG_DATA_DIRS:   $SNAP/usr/local/share:$SNAP/usr/share
   XKB_CONFIG_ROOT: $SNAP/usr/share/X11/xkb
+  ALSA_CONFIG_PATH: $SNAP/usr/share/alsa/alsa.conf
+  ALSA_CONFIG_DIR: $SNAP/usr/share/alsa
+  ALSA_PLUGIN_DIR: $SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/alsa-lib
 
 layout:
   /usr/share/fonts:
@@ -59,6 +65,10 @@ layout:
   # The snap stages alsa.conf via libasound2t64; this layout makes it visible.
   /usr/share/alsa:
     bind: $SNAP/usr/share/alsa
+  /usr/share/alsa/alsa.conf:
+    bind-file: $SNAP/usr/share/alsa/alsa.conf
+  /usr/lib/$SNAPCRAFT_ARCH_TRIPLET/alsa-lib:
+    bind: $SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/alsa-lib
 
 parts:
   sbf-kiosk:

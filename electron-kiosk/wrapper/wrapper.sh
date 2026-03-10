@@ -5,6 +5,12 @@ if grep -q "Pi 4" /proc/cpuinfo; then
   EXTRAOPTS="--disable-gpu"
 fi
 
+# Keep ALSA pointed at the snap-staged config and plugins. Without these,
+# Chromium/aplay may fail with "Unknown PCM default" under strict confinement.
+export ALSA_CONFIG_PATH="${ALSA_CONFIG_PATH:-$SNAP/usr/share/alsa/alsa.conf}"
+export ALSA_CONFIG_DIR="${ALSA_CONFIG_DIR:-$SNAP/usr/share/alsa}"
+export ALSA_PLUGIN_DIR="${ALSA_PLUGIN_DIR:-$SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/alsa-lib}"
+
 # Read all snap configuration for use in this script.
 # The Electron app reads these directly via snapctl — no env exports needed.
 KIOSK_URL=$(snapctl get url)
@@ -20,7 +26,9 @@ echo "Launching Kiosk App with config:
 - audio-sink      = $AUDIO_SINK
 - audio-volume    = $AUDIO_VOLUME
 - daemon          = $DAEMON
-- allowed-origins = $ALLOWED_ORIGINS"
+- allowed-origins = $ALLOWED_ORIGINS
+- alsa-config     = $ALSA_CONFIG_PATH
+- alsa-plugins    = $ALSA_PLUGIN_DIR"
 
 if command -v aplay >/dev/null 2>&1; then
   AUDIO_DEVICE_LIST="$(aplay -l 2>/dev/null || true)"
