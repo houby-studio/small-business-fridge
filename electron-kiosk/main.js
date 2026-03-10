@@ -129,6 +129,7 @@ function registerIpcHandlers() {
         audioDevices: audioInventory.devices,
         audioDevicesRaw: audioInventory.rawOutput,
         audioDevicesError: audioInventory.error,
+        audioDevicesStatus: audioInventory.status,
       }
     }
     try {
@@ -142,12 +143,14 @@ function registerIpcHandlers() {
         audioDevices: audioInventory.devices,
         audioDevicesRaw: audioInventory.rawOutput,
         audioDevicesError: audioInventory.error,
+        audioDevicesStatus: audioInventory.status,
       }
     } catch {
       return {
         audioDevices: audioInventory.devices,
         audioDevicesRaw: audioInventory.rawOutput,
         audioDevicesError: audioInventory.error,
+        audioDevicesStatus: audioInventory.status,
       }
     }
   })

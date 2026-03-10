@@ -621,7 +621,7 @@
         }
       }
 
-      function populateAudioDevices(devices, selectedValue) {
+      function populateAudioDevices(devices, selectedValue, error, status) {
         const previous = new Set(
           [...audioSinkPreset.querySelectorAll('option[data-device-option="true"]')].map(
             (option) => option.value
@@ -633,7 +633,25 @@
           option?.remove()
         }
 
-        if (Array.isArray(devices) && devices.length > 0) {
+        if (status === 'alsa-not-connected') {
+          audioDeviceList.className = 'device-list'
+          audioDeviceList.replaceChildren()
+
+          const heading = document.createElement('strong')
+          heading.textContent = 'Audio plug not connected'
+
+          const text = document.createElement('p')
+          text.textContent =
+            'This snap cannot see ALSA devices until the alsa interface is connected.'
+
+          const command = document.createElement('code')
+          command.textContent = 'sudo snap connect sbf-kiosk:alsa'
+
+          const hint = document.createElement('p')
+          hint.textContent = 'Run this command on the device, then reopen onboarding.'
+
+          audioDeviceList.append(heading, text, command, hint)
+        } else if (Array.isArray(devices) && devices.length > 0) {
           for (const device of devices) {
             const option = document.createElement('option')
             option.value = device.value
@@ -661,6 +679,7 @@
         } else {
           audioDeviceList.className = 'device-list'
           audioDeviceList.textContent =
+            error ||
             'No ALSA playback devices were detected yet. You can still enter a manual ALSA device string.'
         }
 
@@ -698,7 +717,12 @@
             const sel = document.getElementById('lang')
             if ([...sel.options].some((o) => o.value === cfg.lang)) sel.value = cfg.lang
           }
-          populateAudioDevices(cfg.audioDevices || [], cfg.audioSink || 'auto')
+          populateAudioDevices(
+            cfg.audioDevices || [],
+            cfg.audioSink || 'auto',
+            cfg.audioDevicesError || '',
+            cfg.audioDevicesStatus || ''
+          )
           if (cfg.audioVolume != null) {
             volumeSlider.value = cfg.audioVolume
             updateSlider(volumeSlider)

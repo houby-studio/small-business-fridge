@@ -3,7 +3,11 @@ import { test } from '@japa/runner'
 import { createRequire } from 'node:module'
 
 const require = createRequire(import.meta.url)
-const { parseAplayDevices } = require('../../electron-kiosk/audio_devices.js')
+const {
+  getSnapAudioConnectionStatus,
+  listAudioDevices,
+  parseAplayDevices,
+} = require('../../electron-kiosk/audio_devices.js')
 
 test.group('electron kiosk audio device discovery', () => {
   test('parses standard aplay -l output into hw device options', ({ assert }) => {
@@ -60,5 +64,25 @@ card 1: Audio [USB Audio]
         description: 'USB Audio / USB Audio',
       },
     ])
+  })
+
+  test('reports disconnected alsa snap plug with actionable guidance', ({ assert }) => {
+    const env = { SNAP: '/snap/sbf-kiosk/current', SNAP_INSTANCE_NAME: 'sbf-kiosk' }
+    const inventory = listAudioDevices((command: string) => {
+      if (command === 'snapctl') {
+        throw new Error('alsa plug disconnected')
+      }
+      throw new Error('aplay should not be called when alsa is disconnected')
+    }, env)
+
+    assert.equal(
+      getSnapAudioConnectionStatus(() => {
+        throw new Error('alsa plug disconnected')
+      }, env),
+      'alsa-not-connected'
+    )
+    assert.equal(inventory.status, 'alsa-not-connected')
+    assert.equal(inventory.devices.length, 0)
+    assert.include(inventory.error, 'sudo snap connect sbf-kiosk:alsa')
   })
 })

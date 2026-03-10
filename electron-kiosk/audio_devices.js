@@ -61,24 +61,49 @@ function parseAplayDevices(output) {
   return devices
 }
 
-function listAudioDevices() {
+function getSnapAudioConnectionStatus(exec = execFileSync, env = process.env) {
+  if (!env.SNAP) return 'not-a-snap'
+
   try {
-    const output = execFileSync('aplay', ['-l'], { encoding: 'utf8' })
+    exec('snapctl', ['is-connected', 'alsa'], { stdio: 'ignore' })
+    return 'connected'
+  } catch {
+    return 'alsa-not-connected'
+  }
+}
+
+function listAudioDevices(exec = execFileSync, env = process.env) {
+  const connectionStatus = getSnapAudioConnectionStatus(exec, env)
+  if (connectionStatus === 'alsa-not-connected') {
+    const snapName = env.SNAP_INSTANCE_NAME || env.SNAP_NAME || 'sbf-kiosk'
+    return {
+      devices: [],
+      rawOutput: '',
+      error: `The snap's alsa plug is not connected. Run: sudo snap connect ${snapName}:alsa`,
+      status: 'alsa-not-connected',
+    }
+  }
+
+  try {
+    const output = exec('aplay', ['-l'], { encoding: 'utf8' })
     return {
       devices: parseAplayDevices(output),
       rawOutput: output.trim(),
       error: null,
+      status: 'ok',
     }
   } catch (error) {
     return {
       devices: [],
       rawOutput: '',
       error: String(error.message || error),
+      status: 'aplay-error',
     }
   }
 }
 
 module.exports = {
+  getSnapAudioConnectionStatus,
   listAudioDevices,
   parseAplayDevices,
 }
