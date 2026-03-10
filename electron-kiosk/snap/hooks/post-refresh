@@ -1,11 +1,12 @@
 #!/bin/sh
-set -x
+set -eu
 
-if [ "$(snapctl get daemon)" = "" ]
-then
-  # if no model at all, it's either classic or something is wrong
-  if ! snapctl model > /dev/null || [ "$( snapctl model | awk '/^classic:/ { print $2 }' )" = "true" ]
-  then snapctl set daemon=false
-  else snapctl set daemon=true
+if [ -z "$(snapctl get daemon)" ]; then
+  snapctl set daemon=false
+
+  # `SNAP_SAVE_DATA` is only exposed on Ubuntu Core systems. This avoids
+  # relying on `snapctl model`, which is restricted for many regular snaps.
+  if [ -n "${SNAP_SAVE_DATA:-}" ] || snapctl system-mode >/dev/null 2>&1; then
+    snapctl set daemon=true
   fi
 fi

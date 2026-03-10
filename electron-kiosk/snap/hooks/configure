@@ -1,25 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-daemon=$(snapctl get daemon)
-case "$daemon" in
-  true)
-    # start the daemon
-    if snapctl services "$SNAP_INSTANCE_NAME" | grep -q inactive; then
-      snapctl start --enable "$SNAP_INSTANCE_NAME" 2>&1 || true
-    fi
-    ;;
-  false)
-    # stop the daemon
-    snapctl stop --disable "$SNAP_INSTANCE_NAME" 2>&1 || true
-    ;;
-  *)
-    snapctl set daemon="true"
-    exit 1
-    ;;
-esac
-
-# Set defaults for all configurable options.
+# Set defaults for all configurable options before consuming them.
 # Run `snap get sbf-kiosk` to inspect current values.
 # Run `snap set sbf-kiosk key=value` to change them.
 
@@ -45,4 +27,19 @@ esac
 # audio-volume: output volume percentage applied at startup via amixer (0-100).
 [ -n "$(snapctl get audio-volume)" ]    || snapctl set audio-volume="100"
 
-snapctl restart $SNAP_INSTANCE_NAME
+daemon=$(snapctl get daemon)
+service="${SNAP_INSTANCE_NAME}.daemon"
+case "$daemon" in
+  true)
+    # Enable the service and restart it so changed snap config is applied.
+    snapctl start --enable "$service" 2>&1 || true
+    snapctl restart "$service" 2>&1 || true
+    ;;
+  false)
+    snapctl stop --disable "$service" 2>&1 || true
+    ;;
+  *)
+    snapctl set daemon="true"
+    exit 1
+    ;;
+esac
