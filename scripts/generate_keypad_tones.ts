@@ -14,7 +14,7 @@ type TonePartSpec = {
 }
 
 type EventToneSpec = {
-  name: 'loginSuccess' | 'loginError'
+  name: 'loginSuccess' | 'loginError' | 'purchaseConfirmed' | 'purchaseCancelled'
   description: string
   fileName: string
   parts: TonePartSpec[]
@@ -72,6 +72,46 @@ const EVENT_TONE_SPECS: EventToneSpec[] = [
       { durationMs: 130, frequenciesHz: [330], amplitudeScale: 1 },
       { durationMs: 35, frequenciesHz: [], amplitudeScale: 0 },
       { durationMs: 170, frequenciesHz: [220], amplitudeScale: 1 },
+    ],
+  },
+  {
+    name: 'purchaseConfirmed',
+    description: 'Original three-second victory fanfare for completed kiosk purchase',
+    fileName: 'purchase-confirmed.wav',
+    parts: [
+      { durationMs: 180, frequenciesHz: [392, 784, 1175], amplitudeScale: 0.92 },
+      { durationMs: 30, frequenciesHz: [], amplitudeScale: 0 },
+      { durationMs: 180, frequenciesHz: [523, 1046, 1568], amplitudeScale: 0.94 },
+      { durationMs: 30, frequenciesHz: [], amplitudeScale: 0 },
+      { durationMs: 210, frequenciesHz: [659, 1318, 1977], amplitudeScale: 0.98 },
+      { durationMs: 45, frequenciesHz: [], amplitudeScale: 0 },
+      { durationMs: 170, frequenciesHz: [523, 1046, 1568], amplitudeScale: 0.92 },
+      { durationMs: 28, frequenciesHz: [], amplitudeScale: 0 },
+      { durationMs: 170, frequenciesHz: [659, 1318, 1977], amplitudeScale: 0.96 },
+      { durationMs: 28, frequenciesHz: [], amplitudeScale: 0 },
+      { durationMs: 230, frequenciesHz: [784, 1568, 2352], amplitudeScale: 1 },
+      { durationMs: 55, frequenciesHz: [], amplitudeScale: 0 },
+      { durationMs: 260, frequenciesHz: [659, 988, 1318, 1977], amplitudeScale: 0.9 },
+      { durationMs: 35, frequenciesHz: [], amplitudeScale: 0 },
+      { durationMs: 280, frequenciesHz: [784, 1175, 1568, 2352], amplitudeScale: 0.94 },
+      { durationMs: 40, frequenciesHz: [], amplitudeScale: 0 },
+      { durationMs: 460, frequenciesHz: [523, 784, 1046, 1568, 2093], amplitudeScale: 1 },
+    ],
+  },
+  {
+    name: 'purchaseCancelled',
+    description: 'More dramatic descending 8-bit defeat sting for cancelled kiosk purchase session',
+    fileName: 'purchase-cancelled.wav',
+    parts: [
+      { durationMs: 78, frequenciesHz: [466, 932], amplitudeScale: 0.95 },
+      { durationMs: 18, frequenciesHz: [], amplitudeScale: 0 },
+      { durationMs: 82, frequenciesHz: [392, 784], amplitudeScale: 0.95 },
+      { durationMs: 18, frequenciesHz: [], amplitudeScale: 0 },
+      { durationMs: 92, frequenciesHz: [349, 698], amplitudeScale: 0.94 },
+      { durationMs: 22, frequenciesHz: [], amplitudeScale: 0 },
+      { durationMs: 104, frequenciesHz: [294, 588], amplitudeScale: 0.92 },
+      { durationMs: 28, frequenciesHz: [], amplitudeScale: 0 },
+      { durationMs: 170, frequenciesHz: [165, 330, 494], amplitudeScale: 1 },
     ],
   },
 ]

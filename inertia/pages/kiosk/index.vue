@@ -93,7 +93,7 @@ const recommendedIds = ref<number[]>([])
 const excludedAllergenIds = ref<number[]>([])
 const musicTracks = ref<MusicTrack[]>([])
 const backgroundAudio = ref<HTMLAudioElement | null>(null)
-const loginTonePlayers = new Map<string, HTMLAudioElement>()
+const eventTonePlayers = new Map<string, HTMLAudioElement>()
 let remainingTrackIds: number[] = []
 
 function refillTrackQueue() {
@@ -141,20 +141,22 @@ function startBackgroundMusic(tracks: MusicTrack[]) {
   playNextTrack()
 }
 
-function playLoginTone(type: 'success' | 'error') {
-  const fileName = type === 'success' ? 'login-success.wav' : 'login-error.wav'
-
-  let player = loginTonePlayers.get(fileName)
+function playEventTone(fileName: string) {
+  let player = eventTonePlayers.get(fileName)
   if (!player) {
     player = new Audio(`/keypad/${fileName}`)
     player.preload = 'auto'
-    loginTonePlayers.set(fileName, player)
+    eventTonePlayers.set(fileName, player)
   }
 
   player.currentTime = 0
   void player.play().catch(() => {
     // Ignore playback failures due to browser autoplay restrictions.
   })
+}
+
+function playLoginTone(type: 'success' | 'error') {
+  playEventTone(type === 'success' ? 'login-success.wav' : 'login-error.wav')
 }
 
 // ── Basket ────────────────────────────────────────────────────────────────────
@@ -515,6 +517,7 @@ async function submitBasket() {
     const data = await res.json()
 
     if (data.ok) {
+      playEventTone('purchase-confirmed.wav')
       // Capture summary before resetting state, then show thank-you modal
       lastPurchaseItems.value = [...basket.value]
       lastOrderCount.value = data.orderCount
@@ -563,9 +566,14 @@ function resetToIdle() {
   lastOrderCount.value = 0
 }
 
+function cancelPurchaseSession() {
+  playEventTone('purchase-cancelled.wav')
+  resetToIdle()
+}
+
 function requestCancel() {
   if (basket.value.length === 0) {
-    resetToIdle()
+    cancelPurchaseSession()
     return
   }
   confirm.require({
@@ -575,7 +583,7 @@ function requestCancel() {
     icon: 'pi pi-exclamation-triangle',
     acceptLabel: t('kiosk.cancel_purchase'),
     rejectLabel: t('kiosk.continue_shopping'),
-    accept: () => resetToIdle(),
+    accept: () => cancelPurchaseSession(),
   })
 }
 
@@ -588,11 +596,16 @@ watch(appState, (s) => {
 
 onMounted(() => {
   document.addEventListener('keydown', onGlobalKeydown)
-  // Pre-load login tone files so they are cached before the first identification attempt.
-  for (const fileName of ['login-success.wav', 'login-error.wav']) {
+  // Pre-load event tone files so kiosk feedback remains immediate.
+  for (const fileName of [
+    'login-success.wav',
+    'login-error.wav',
+    'purchase-confirmed.wav',
+    'purchase-cancelled.wav',
+  ]) {
     const player = new Audio(`/keypad/${fileName}`)
     player.preload = 'auto'
-    loginTonePlayers.set(fileName, player)
+    eventTonePlayers.set(fileName, player)
   }
 })
 
@@ -600,10 +613,10 @@ onUnmounted(() => {
   document.removeEventListener('keydown', onGlobalKeydown)
   stopIdleTimer()
   stopBackgroundMusic()
-  for (const player of loginTonePlayers.values()) {
+  for (const player of eventTonePlayers.values()) {
     player.pause()
   }
-  loginTonePlayers.clear()
+  eventTonePlayers.clear()
   if (barcodeTimeout) clearTimeout(barcodeTimeout)
 })
 </script>
