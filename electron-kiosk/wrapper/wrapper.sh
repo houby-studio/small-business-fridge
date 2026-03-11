@@ -69,18 +69,57 @@ if [ -n "$KIOSK_LANG" ]; then
   EXTRAOPTS="$EXTRAOPTS --lang=$KIOSK_LANG"
 fi
 
-normalize_audio_sink_for_chromium() {
+get_asoundrc_path() {
+  CONFIG_ROOT="${XDG_CONFIG_HOME:-$SNAP_USER_DATA/.config}"
+  printf '%s/alsa/asoundrc\n' "$CONFIG_ROOT"
+}
+
+extract_card_and_device_from_sink() {
   case "$1" in
-    hw:*)
-      # Chromium may open the device with stream params that raw `hw:` nodes do
-      # not accept, such as mono output on HDMI sinks. `plughw:` keeps the same
-      # target card/device while letting ALSA adapt channel count/format.
-      printf 'plughw:%s\n' "${1#hw:}"
+    hw:[0-9]*,[0-9]*|plughw:[0-9]*,[0-9]*)
+      CARD_AND_DEVICE="${1#*:}"
+      printf '%s %s\n' "${CARD_AND_DEVICE%,*}" "${CARD_AND_DEVICE#*,}"
       ;;
     *)
-      printf '%s\n' "$1"
+      return 1
       ;;
   esac
+}
+
+configure_alsa_default_sink() {
+  ALSARC_PATH="$(get_asoundrc_path)"
+  ALSARC_DIR="$(dirname "$ALSARC_PATH")"
+
+  if [ -z "$AUDIO_SINK" ] || [ "$AUDIO_SINK" = "auto" ]; then
+    rm -f "$ALSARC_PATH"
+    echo "Audio: ALSA default → auto"
+    return
+  fi
+
+  mkdir -p "$ALSARC_DIR"
+
+  if CARD_AND_DEVICE="$(extract_card_and_device_from_sink "$AUDIO_SINK")"; then
+    ALSA_CARD="${CARD_AND_DEVICE%% *}"
+    ALSA_DEVICE="${CARD_AND_DEVICE##* }"
+
+    cat >"$ALSARC_PATH" <<EOF
+defaults.pcm.card ${ALSA_CARD}
+defaults.pcm.device ${ALSA_DEVICE}
+defaults.ctl.card ${ALSA_CARD}
+EOF
+
+    echo "Audio: ALSA default → card ${ALSA_CARD}, device ${ALSA_DEVICE} via ${ALSARC_PATH}"
+    return
+  fi
+
+  cat >"$ALSARC_PATH" <<EOF
+pcm.!default {
+  type plug
+  slave.pcm "${AUDIO_SINK}"
+}
+EOF
+
+  echo "Audio: ALSA default → ${AUDIO_SINK} via ${ALSARC_PATH}"
 }
 
 # --- ALSA audio initialisation ---
@@ -135,21 +174,10 @@ normalize_audio_sink_for_chromium() {
   echo "Audio: volume → ${VOL}% (primary controls: ${PRIMARY_CONTROLS:-none}, PCM preserved when present)"
 } 2>/dev/null || echo "Audio: amixer not available — is the 'alsa' plug connected?"
 
-# Select ALSA output device if explicitly configured.
-# 'auto' uses the ALSA default device and mixer routing.
-# Available devices: run  aplay -l  from inside the snap:
-#   sudo snap run --shell sbf-kiosk.daemon -c "aplay -l"
-#
-# Examples:
-#   snap set sbf-kiosk audio-sink=hw:0,0   # ALC3228 Analog
-#   snap set sbf-kiosk audio-sink=hw:0,3   # HDMI 0
-#   snap set sbf-kiosk audio-sink=hw:0,7   # HDMI 1
-# Raw `hw:` values are normalized to `plughw:` for Chromium compatibility.
-if [ -n "$AUDIO_SINK" ] && [ "$AUDIO_SINK" != "auto" ]; then
-  CHROMIUM_AUDIO_SINK="$(normalize_audio_sink_for_chromium "$AUDIO_SINK")"
-  EXTRAOPTS="$EXTRAOPTS --alsa-output-device=${CHROMIUM_AUDIO_SINK}"
-  echo "Audio: ALSA device → ${AUDIO_SINK} (Chromium uses ${CHROMIUM_AUDIO_SINK})"
-fi
+# Select ALSA output device by overriding ALSA's default mapping instead of
+# passing a raw hw/plughw node to Chromium. Browsers behave more reliably when
+# they keep using the standard `default` PCM with ALSA's conversion/mixing path.
+configure_alsa_default_sink
 
 exec "$SNAP/sbf-kiosk" \
   --enable-features=UseOzonePlatform \
