@@ -110,7 +110,7 @@ export default class AdminService {
       sortOrder?: string
     }
   ) {
-    const SORT_WHITELIST = ['keypadId', 'displayName']
+    const SORT_WHITELIST = ['id', 'keypadId', 'displayName']
     const safeSort = SORT_WHITELIST.includes(filters?.sortBy ?? '') ? filters!.sortBy! : 'keypadId'
     const sortDir: 'asc' | 'desc' = filters?.sortOrder === 'desc' ? 'desc' : 'asc'
 
@@ -143,6 +143,7 @@ export default class AdminService {
       role?: 'customer' | 'supplier' | 'admin'
       isDisabled?: boolean
       isKiosk?: boolean
+      keypadId?: number
     }
   ) {
     const user = await User.findOrFail(userId)
@@ -175,9 +176,20 @@ export default class AdminService {
       }
     }
 
+    if (data.keypadId !== undefined && data.keypadId !== user.keypadId) {
+      const conflict = await User.query()
+        .where('keypadId', data.keypadId)
+        .whereNot('id', user.id)
+        .first()
+      if (conflict) {
+        throw new Error('KEYPAD_ID_TAKEN')
+      }
+    }
+
     if (data.role !== undefined) user.role = data.role
     if (data.isDisabled !== undefined) user.isDisabled = data.isDisabled
     if (data.isKiosk !== undefined) user.isKiosk = data.isKiosk
+    if (data.keypadId !== undefined) user.keypadId = data.keypadId
 
     await user.save()
     return user

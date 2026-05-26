@@ -27,7 +27,7 @@ interface UserData {
   ibanVerifiedAt: string | null
   phone: string | null
   iban: string | null
-  keypadId: number
+  keypadId: number | null
   cardId: string | null
   role: string
   showAllProducts: boolean
@@ -555,6 +555,7 @@ onMounted(() => {
             {{ t('profile.role') }}: {{ user.role }}
           </span>
           <span
+            v-if="user.keypadId !== null"
             class="rounded-full border border-gray-200 bg-white px-3 py-1 text-sm font-medium text-gray-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
           >
             {{ t('profile.keypad_id') }}: {{ user.keypadId }}

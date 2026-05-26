@@ -10,7 +10,7 @@ export interface User {
   role: 'customer' | 'supplier' | 'admin'
   isKiosk: boolean
   colorMode: 'light' | 'dark'
-  keypadId: number
+  keypadId: number | null
 }
 
 export interface FlashMessages {

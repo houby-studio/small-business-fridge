@@ -451,7 +451,7 @@ export class UserSchema extends BaseModel {
   @column()
   declare keypadDisabled: boolean | null
   @column()
-  declare keypadId: number
+  declare keypadId: number | null
   @column({ serializeAs: null })
   declare password: string | null
   @column()

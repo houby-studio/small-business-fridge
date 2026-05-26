@@ -50,7 +50,7 @@ export default class User extends compose(BaseModel, AuthFinder) {
   declare ibanVerifiedAt: DateTime | null
 
   @column()
-  declare keypadId: number
+  declare keypadId: number | null
 
   @column()
   declare cardId: string | null

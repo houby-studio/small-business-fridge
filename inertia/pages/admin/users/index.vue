@@ -7,6 +7,7 @@ import Tag from 'primevue/tag'
 import Select from 'primevue/select'
 import ToggleSwitch from 'primevue/toggleswitch'
 import Button from 'primevue/button'
+import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
 import ConfirmDialog from 'primevue/confirmdialog'
 import Paginator from 'primevue/paginator'
@@ -26,7 +27,7 @@ interface UserRow {
   role: 'customer' | 'supplier' | 'admin'
   isKiosk: boolean
   isDisabled: boolean
-  keypadId: number
+  keypadId: number | null
   createdAt: string
   hasUninvoicedOrders: boolean
   hasUnpaidInvoices: boolean
@@ -151,6 +152,16 @@ function generateInvoiceForUser(userId: number, displayName: string) {
 
 function toggleKiosk(userId: number, isKiosk: boolean) {
   router.put(`/admin/users/${userId}`, { isKiosk }, { preserveState: true })
+}
+
+function commitKeypadId(user: UserRow, nextValue: number | null) {
+  if (nextValue === null || !Number.isInteger(nextValue) || nextValue <= 0) return
+  if (nextValue === user.keypadId) return
+  router.put(
+    `/admin/users/${user.id}`,
+    { keypadId: nextValue },
+    { preserveState: true, preserveScroll: true }
+  )
 }
 
 function clearFilters() {
@@ -401,13 +412,41 @@ function changeInvitePage(page: number) {
       @sort="onSort"
     >
       <Column
-        :header="t('admin.users_col_id')"
+        :header="t('admin.users_col_db_id')"
+        field="id"
+        sortable
+        headerClass="sbf-col-id"
+        bodyClass="sbf-col-id"
+      >
+        <template #body="{ data }">{{ data.id }}</template>
+      </Column>
+      <Column
+        :header="t('admin.users_col_keypad_id')"
         field="keypadId"
         sortable
         headerClass="sbf-col-id"
         bodyClass="sbf-col-id"
       >
-        <template #body="{ data }">{{ data.keypadId }}</template>
+        <template #body="{ data }">
+          <InputNumber
+            :modelValue="data.keypadId"
+            :min="1"
+            :useGrouping="false"
+            showButtons
+            buttonLayout="horizontal"
+            class="sbf-keypad-input"
+            inputClass="w-20 text-center"
+            @blur="
+              (e: any) =>
+                commitKeypadId(
+                  data,
+                  e.value === null || e.value === undefined || e.value === ''
+                    ? null
+                    : Number(e.value)
+                )
+            "
+          />
+        </template>
       </Column>
       <Column :header="t('admin.users_name')" field="displayName" sortable>
         <template #body="{ data }">{{ data.displayName }}</template>

@@ -485,6 +485,49 @@ test.group('Admin - generate invoice for user', (group) => {
     assert.equal(targetAdmin.role, 'admin')
   })
 
+  test('admin can change another user keypadId to a free value', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const target = await UserFactory.create()
+    const before = target.keypadId
+
+    const response = await client
+      .put(`/admin/users/${target.id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .form({ keypadId: '4242' })
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    await target.refresh()
+    assert.equal(target.keypadId, 4242)
+    assert.notEqual(target.keypadId, before)
+  })
+
+  test('admin cannot reassign keypadId to one already used by another user', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const occupant = await UserFactory.merge({ keypadId: 555 }).create()
+    const target = await UserFactory.create()
+    const originalKeypadId = target.keypadId
+
+    const response = await client
+      .put(`/admin/users/${target.id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .form({ keypadId: '555' })
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    await target.refresh()
+    await occupant.refresh()
+    assert.equal(target.keypadId, originalKeypadId)
+    assert.equal(occupant.keypadId, 555)
+  })
+
   test('customer cannot call generate invoice for user endpoint', async ({ client }) => {
     const customer = await UserFactory.create()
     const buyer = await UserFactory.create()
