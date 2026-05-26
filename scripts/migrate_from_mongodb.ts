@@ -128,11 +128,11 @@ async function createPlaceholders(pgDb: pg.Client) {
   const userResult = await pgDb.query(
     `INSERT INTO users (
       password, display_name, email, phone, iban,
-      keypad_id, card_id, role, is_kiosk, is_disabled,
+      keypad_id, card_id, role, is_kiosk, is_disabled, disabled_at, anonymized_at,
       show_all_products, send_mail_on_purchase, send_daily_report,
       color_mode, keypad_disabled, created_at, updated_at
     ) VALUES (NULL, 'Deleted User', 'migration@anon',
-      NULL, NULL, 89999, NULL, 'customer', false, true,
+      NULL, NULL, 89999, NULL, 'customer', false, true, NOW(), NOW(),
       false, false, false, 'dark', false, NOW(), NOW())
     RETURNING id`
   )
@@ -281,10 +281,10 @@ async function migrateUsers(mongo: Db, pgDb: pg.Client) {
       const result = await pgDb.query(
         `INSERT INTO users (
           password, display_name, email, phone, iban,
-          keypad_id, card_id, role, is_kiosk, is_disabled,
+          keypad_id, card_id, role, is_kiosk, is_disabled, disabled_at,
           show_all_products, send_mail_on_purchase, send_daily_report,
           color_mode, keypad_disabled, is_premium, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW(), NOW())
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW(), NOW())
          RETURNING id`,
         [
           null, // password (OIDC users don't have one)
@@ -296,7 +296,8 @@ async function migrateUsers(mongo: Db, pgDb: pg.Client) {
           cardId, // card_id
           role, // role
           doc.kiosk ?? false, // is_kiosk
-          doc.disabled ?? false, // is_disabled
+          isDisabled, // is_disabled
+          isDisabled ? new Date() : null, // disabled_at
           doc.showAllProducts ?? false, // show_all_products
           doc.sendMailOnEshopPurchase ?? true, // send_mail_on_purchase
           doc.sendDailyReport ?? true, // send_daily_report

@@ -1,6 +1,7 @@
 import scheduler from 'adonisjs-scheduler/services/main'
 import NotificationService from '#services/notification_service'
 import RecommendationService from '#services/recommendation_service'
+import AnonymizationService from '#services/anonymization_service'
 import env from '#start/env'
 import logger from '@adonisjs/core/services/logger'
 
@@ -70,3 +71,27 @@ scheduler
     }
   })
   .cron('0 2 * * *')
+
+/**
+ * Anonymize accounts that have been disabled for ANONYMIZE_GRACE_DAYS (default 7).
+ * Wipes PII and detaches external identities so the slot becomes a faceless
+ * audit anchor. Runs daily at 03:00; override via CRON_ANONYMIZE_DISABLED.
+ * Disabled by default — set ANONYMIZE_DISABLED_USERS=true to opt in (typically
+ * only in production; test environments leave it off for reproducible seeds).
+ */
+scheduler
+  .call(async () => {
+    if (env.get('ANONYMIZE_DISABLED_USERS') !== true) {
+      logger.debug('Anonymization cron skipped (ANONYMIZE_DISABLED_USERS not enabled)')
+      return
+    }
+    const graceDays = env.get('ANONYMIZE_GRACE_DAYS') ?? AnonymizationService.DEFAULT_GRACE_DAYS
+    const service = new AnonymizationService()
+    try {
+      const summary = await service.anonymizeDisabledUsers(graceDays)
+      logger.info({ graceDays, ...summary }, 'Anonymization sweep completed for disabled accounts')
+    } catch (error) {
+      logger.error({ err: error }, 'Anonymization sweep failed')
+    }
+  })
+  .cron(env.get('CRON_ANONYMIZE_DISABLED') ?? '0 3 * * *')

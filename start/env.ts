@@ -114,7 +114,10 @@ export default await Env.create(new URL('../', import.meta.url), {
   CRON_DAILY_REPORT: Env.schema.string.optional(),
   CRON_UNPAID_REMINDER: Env.schema.string.optional(),
   CRON_PENDING_APPROVAL: Env.schema.string.optional(),
+  CRON_ANONYMIZE_DISABLED: Env.schema.string.optional(),
   UNPAID_REMINDER_MIN_AGE_DAYS: Env.schema.number.optional(),
+  ANONYMIZE_DISABLED_USERS: Env.schema.boolean.optional(),
+  ANONYMIZE_GRACE_DAYS: Env.schema.number.optional(),
 
   /*
   |----------------------------------------------------------

@@ -422,14 +422,18 @@ export class UserInvitationSchema extends BaseModel {
 }
 
 export class UserSchema extends BaseModel {
-  static $columns = ['cardId', 'colorMode', 'createdAt', 'displayName', 'email', 'emailVerifiedAt', 'iban', 'ibanVerifiedAt', 'id', 'isDisabled', 'isKiosk', 'isPremium', 'keypadDisabled', 'keypadId', 'password', 'pendingEmail', 'pendingIban', 'phone', 'role', 'sendDailyReport', 'sendMailOnPurchase', 'showAllProducts', 'updatedAt'] as const
+  static $columns = ['anonymizedAt', 'cardId', 'colorMode', 'createdAt', 'disabledAt', 'displayName', 'email', 'emailVerifiedAt', 'iban', 'ibanVerifiedAt', 'id', 'isDisabled', 'isKiosk', 'isPremium', 'keypadDisabled', 'keypadId', 'password', 'pendingEmail', 'pendingIban', 'phone', 'role', 'sendDailyReport', 'sendMailOnPurchase', 'showAllProducts', 'updatedAt'] as const
   $columns = UserSchema.$columns
+  @column.dateTime()
+  declare anonymizedAt: DateTime | null
   @column()
   declare cardId: string | null
   @column()
   declare colorMode: string | null
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
+  @column.dateTime()
+  declare disabledAt: DateTime | null
   @column()
   declare displayName: string | null
   @column()
