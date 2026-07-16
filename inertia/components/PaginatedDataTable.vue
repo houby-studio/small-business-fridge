@@ -14,11 +14,14 @@ const props = defineProps<{
   meta: PageMeta
   sortField?: string
   sortOrder?: number
+  dataKey?: string
+  expandedRows?: Record<string | number, boolean>
 }>()
 
 const emit = defineEmits<{
-  page: [event: any]
-  sort: [event: any]
+  'page': [event: any]
+  'sort': [event: any]
+  'update:expandedRows': [rows: any]
 }>()
 
 const first = computed(() => (props.meta.currentPage - 1) * props.meta.perPage)
@@ -27,21 +30,27 @@ const first = computed(() => (props.meta.currentPage - 1) * props.meta.perPage)
 <template>
   <DataTable
     :value="value"
-    :paginator="meta.lastPage > 1"
+    :paginator="meta.total > 0"
     :rows="meta.perPage"
     :totalRecords="meta.total"
     :lazy="true"
     :first="first"
     :sortField="sortField"
     :sortOrder="sortOrder"
+    :dataKey="dataKey"
+    :expandedRows="expandedRows"
     @page="emit('page', $event)"
     @sort="emit('sort', $event)"
+    @update:expandedRows="emit('update:expandedRows', $event)"
     stripedRows
     class="rounded-lg border"
   >
     <slot />
     <template #empty>
       <slot name="empty" />
+    </template>
+    <template v-if="$slots.expansion" #expansion="slotProps">
+      <slot name="expansion" v-bind="slotProps" />
     </template>
   </DataTable>
 </template>

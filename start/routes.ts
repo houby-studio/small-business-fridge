@@ -50,6 +50,7 @@ const AdminInvoicesController = () => import('#controllers/web/admin/invoices_co
 const AdminStornoController = () => import('#controllers/web/admin/storno_controller')
 const AdminImpersonationController = () => import('#controllers/web/admin/impersonation_controller')
 const AuditController = () => import('#controllers/web/audit_controller')
+const RatingsController = () => import('#controllers/web/ratings_controller')
 const AdminAuditController = () => import('#controllers/web/admin/audit_controller')
 const KioskController = () => import('#controllers/web/kiosk_controller')
 
@@ -59,7 +60,16 @@ const ApiProductsController = () => import('#controllers/api/products_controller
 const ApiOrdersController = () => import('#controllers/api/orders_controller')
 const ApiCustomersController = () => import('#controllers/api/customers_controller')
 const ApiHealthController = () => import('#controllers/api/health_controller')
+
+// MCP (Model Context Protocol) controllers
+const ApiMcpController = () => import('#controllers/api/mcp_controller')
+const ApiMcpOauthMetaController = () => import('#controllers/api/mcp_oauth_meta_controller')
+const McpOauthRegisterController = () => import('#controllers/web/mcp_oauth_register_controller')
+const McpOauthAuthorizeController = () => import('#controllers/web/mcp_oauth_authorize_controller')
+const McpOauthTokenController = () => import('#controllers/web/mcp_oauth_token_controller')
+
 const authThrottleLimit = process.env.NODE_ENV === 'test' ? 1000 : 10
+const mcpThrottleLimit = process.env.NODE_ENV === 'test' ? 1000 : 120
 
 /*
 |--------------------------------------------------------------------------
@@ -68,6 +78,30 @@ const authThrottleLimit = process.env.NODE_ENV === 'test' ? 1000 : 10
 */
 
 router.get('/', [HomeController, 'index'])
+
+// OAuth 2.0 discovery + AS endpoints for MCP clients — CSRF-exempt, no session
+// required for token/register; authorize uses the web session but is not a
+// mutating form.
+router.get('/.well-known/oauth-protected-resource', [
+  ApiMcpOauthMetaController,
+  'protectedResource',
+])
+router.get('/.well-known/oauth-authorization-server', [
+  ApiMcpOauthMetaController,
+  'authorizationServer',
+])
+router
+  .post('/oauth/register', [McpOauthRegisterController, 'store'])
+  .use(middleware.throttle({ maxRequests: authThrottleLimit, windowMs: 60_000 }))
+router.get('/oauth/authorize', [McpOauthAuthorizeController, 'show'])
+router
+  .post('/oauth/token', [McpOauthTokenController, 'store'])
+  .use(middleware.throttle({ maxRequests: authThrottleLimit, windowMs: 60_000 }))
+
+// MCP (Model Context Protocol) — handles its own auth (Entra ID JWT or API token)
+router
+  .any('/mcp', [ApiMcpController, 'handle'])
+  .use(middleware.throttle({ maxRequests: mcpThrottleLimit, windowMs: 60_000 }))
 
 // Serve uploaded files from storage
 router.get('/uploads/*', async ({ request, response }) => {
@@ -234,6 +268,13 @@ router
     router.post('/profile/email-verification/resend', [EmailVerificationController, 'resend'])
     router.post('/profile/iban-verification/resend', [IbanChangeController, 'resend'])
 
+    // Product ratings
+    router.get('/ratings', [RatingsController, 'feed'])
+    router.post('/ratings', [RatingsController, 'store'])
+    router.put('/ratings/:id', [RatingsController, 'update'])
+    router.delete('/ratings/:id', [RatingsController, 'destroy'])
+    router.post('/ratings/:id/upvote', [RatingsController, 'toggleUpvote'])
+
     // Audit log (customer view)
     router.get('/audit', [AuditController, 'index'])
   })
@@ -398,6 +439,22 @@ if (env.get('SWAGGER_ENABLED')) {
   const swagger = autoswagger.default.default
   const swaggerModule = await import('../config/swagger.js')
   const swaggerConfig = swaggerModule.default
+  const {
+    pinScalarCdnVersion,
+    scalarAuthConfiguration,
+    normalizeNullableRefs,
+    applyEntraSecurity,
+  } = await import('#helpers/openapi_security')
+
+  const collectSchemaRefs = (value: unknown, into: Set<string>) => {
+    const json = JSON.stringify(value) ?? ''
+    const re = /#\/components\/schemas\/([A-Za-z0-9_.-]+)/g
+    let match: RegExpExecArray | null
+    while ((match = re.exec(json)) !== null) {
+      into.add(match[1])
+    }
+  }
+
   const keepOnlyApiV1 = (spec: any) => {
     spec.paths = Object.fromEntries(
       Object.entries(spec.paths ?? {}).filter(([path]) => path.startsWith('/api/v1'))
@@ -414,9 +471,43 @@ if (env.get('SWAGGER_ENABLED')) {
     }
 
     spec.tags = (spec.tags ?? []).filter((tag: any) => usedTags.has(tag?.name))
+
+    // Prune components.schemas to only those reachable (transitively) from the
+    // retained /api/v1 paths. autoswagger emits a schema per model AND per validator,
+    // so without this the served spec leaks Inertia-only and MCP-only objects.
+    const schemas = spec.components?.schemas
+    if (schemas) {
+      const reachable = new Set<string>()
+      collectSchemaRefs(spec.paths, reachable)
+      const queue = [...reachable]
+      while (queue.length > 0) {
+        const name = queue.shift()!
+        const nested = new Set<string>()
+        collectSchemaRefs(schemas[name], nested)
+        for (const ref of nested) {
+          if (!reachable.has(ref)) {
+            reachable.add(ref)
+            queue.push(ref)
+          }
+        }
+      }
+
+      spec.components.schemas = Object.fromEntries(
+        Object.entries(schemas).filter(([name]) => reachable.has(name))
+      )
+    }
+
+    // autoswagger always emits BasicAuth + ApiKeyAuth defaults, but this API only
+    // accepts Bearer tokens — drop them so the Scalar auth dropdown offers only the
+    // schemes that actually work (BearerAuth, plus EntraId added at serve time).
+    const securitySchemes = spec.components?.securitySchemes
+    if (securitySchemes) {
+      delete securitySchemes.BasicAuth
+      delete securitySchemes.ApiKeyAuth
+    }
   }
 
-  router.get('/swagger', async ({ response }) => {
+  const buildSpec = async () => {
     const routes = router.toJSON() as any
     const flattenedRoutes = Array.isArray(routes)
       ? routes
@@ -424,24 +515,77 @@ if (env.get('SWAGGER_ENABLED')) {
           Array.isArray(domainRoutes) ? domainRoutes : []
         )
     const normalizedRoutes = { root: flattenedRoutes }
+    // json() reads the pre-generated swagger.json in production and generates from
+    // routes in dev/test. keepOnlyApiV1 then filters + prunes it.
+    let spec: any
     try {
-      const spec = await swagger.json(normalizedRoutes, swaggerConfig)
-      keepOnlyApiV1(spec)
-      return response.json(spec)
+      spec = await swagger.json(normalizedRoutes, swaggerConfig)
     } catch (error: any) {
-      // In production, adonis-autoswagger reads a pre-generated swagger.json.
-      // If the file is missing in the image, generate docs at runtime as fallback.
+      // If the pre-generated swagger.json is missing from the image, generate at
+      // runtime as a fallback so /docs still works.
       if (error?.code === 'ENOENT') {
-        const runtimeSwagger = swagger as any
-        const spec = await runtimeSwagger.generate(normalizedRoutes, swaggerConfig)
-        keepOnlyApiV1(spec)
-        return response.json(spec)
+        spec = await (swagger as any).generate(normalizedRoutes, swaggerConfig)
+      } else {
+        throw error
       }
-      throw error
     }
-  })
+    keepOnlyApiV1(spec)
+    // Fix `T | null` refs autoswagger's interface parser can't represent.
+    normalizeNullableRefs(spec)
+    // Inject the Entra oauth2 scheme from RUNTIME env (the pre-generated spec is
+    // built without the Microsoft env vars present).
+    applyEntraSecurity(
+      spec,
+      env.get('AUTH_PROVIDER_MICROSOFT_TENANT_ID'),
+      env.get('AUTH_PROVIDER_MICROSOFT_CLIENT_ID')
+    )
+    return spec
+  }
 
-  router.get('/docs', async ({ response }) => {
-    return response.header('Content-Type', 'text/html').send(swagger.ui('/swagger', swaggerConfig))
-  })
+  // Docs endpoints require an authenticated (web session) user and are rate-limited.
+  const docsMiddleware = [
+    middleware.auth(),
+    middleware.emailVerified(),
+    middleware.throttle({ maxRequests: 60, windowMs: 60_000 }),
+  ]
+
+  // NOTE: the spec is served at /docs/openapi.json, NOT /swagger. In dev/test the
+  // Vite middleware intercepts /swagger and serves the pre-generated swagger.yml/json
+  // file from the project root (as an ES module) before the request reaches the
+  // router — a path with no matching root file avoids that collision.
+  const specPath = '/docs/openapi.json'
+
+  router
+    .get(specPath, async ({ response }) => {
+      return response.json(await buildSpec())
+    })
+    .use(docsMiddleware)
+
+  router
+    .get('/docs', async ({ response }) => {
+      // Scalar API reference renderer (bundled with adonis-autoswagger).
+      // Consumes the same OpenAPI spec, so all @tag/@requestBody/@responseBody
+      // annotations are reused unchanged. Empty proxy URL keeps "Try it" requests
+      // same-origin (our API) instead of routing them — and the Bearer token —
+      // through Scalar's public CORS proxy.
+      let html = swagger.scalar(specPath, '')
+      // Pin the renderer to a known-good version (autoswagger emits an unversioned CDN
+      // URL). See SCALAR_PINNED_VERSION — newer Scalar duplicates the auth scheme entry.
+      html = pinScalarCdnVersion(html)
+      // Pre-drive the Entra OAuth flow (client id, scope, PKCE, redirect) so the
+      // user doesn't configure it by hand. No-op when Microsoft auth is unconfigured.
+      const scalarConfig = scalarAuthConfiguration(
+        env.get('AUTH_PROVIDER_MICROSOFT_TENANT_ID'),
+        env.get('AUTH_PROVIDER_MICROSOFT_CLIENT_ID'),
+        env.get('APP_URL')
+      )
+      if (scalarConfig) {
+        html = html.replace(
+          'id="api-reference"',
+          `id="api-reference" data-configuration='${JSON.stringify(scalarConfig)}'`
+        )
+      }
+      return response.header('Content-Type', 'text/html').send(html)
+    })
+    .use(docsMiddleware)
 }

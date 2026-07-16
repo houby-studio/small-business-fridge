@@ -1,10 +1,16 @@
-export type FilterParams = Record<string, string | number | null | undefined>
+export type FilterParams = Record<string, string | number | number[] | null | undefined>
 
 function normalizeFilterParams(params: FilterParams): Record<string, string> {
   return Object.fromEntries(
     Object.entries(params)
-      .filter(([, value]) => value !== undefined && value !== null && value !== '')
-      .map(([key, value]) => [key, String(value)])
+      .filter(
+        ([, value]) =>
+          value !== undefined &&
+          value !== null &&
+          value !== '' &&
+          !(Array.isArray(value) && value.length === 0)
+      )
+      .map(([key, value]) => [key, Array.isArray(value) ? value.join(',') : String(value)])
   )
 }
 

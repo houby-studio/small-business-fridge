@@ -37,6 +37,21 @@ test.group('RegistrationPolicyService', (group) => {
     assert.deepEqual(decision, { allowed: false, reason: 'invite_required' })
   })
 
+  test('closed mode blocks self-registration', async ({ assert }) => {
+    const service = new RegistrationPolicyService({ mode: 'closed' })
+    const decision = service.canSelfRegister({ provider: 'local', email: 'user@example.com' })
+
+    assert.deepEqual(decision, { allowed: false, reason: 'invite_required' })
+  })
+
+  test('closed mode resolves from AUTH_REGISTRATION_MODE env', async ({ assert }) => {
+    process.env.AUTH_REGISTRATION_MODE = 'closed'
+
+    const service = new RegistrationPolicyService()
+
+    assert.equal(service.getMode(), 'closed')
+  })
+
   test('domain_auto_approve allows email in allowed domains', async ({ assert }) => {
     const service = new RegistrationPolicyService({
       mode: 'domain_auto_approve',

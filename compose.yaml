@@ -40,6 +40,8 @@ x-app-env: &app-env
   DB_USER: ${DB_USER:-sbf}
   DB_DATABASE: ${DB_DATABASE:-sbf}
   DB_PASSWORD: ${DB_PASSWORD:?Missing DB_PASSWORD value in .env file!} # [REQUIRED] set a strong password
+  DB_POOL_MIN: ${DB_POOL_MIN:-2} # minimum idle connections
+  DB_POOL_MAX: ${DB_POOL_MAX:-10} # maximum connections
   DB_MIGRATE: ${DB_MIGRATE:-true} # run DB migrations on app container startup
 
   # ---------------------------------------------------------------------------
@@ -81,6 +83,12 @@ x-app-env: &app-env
   AUTH_PROVIDER_DISCORD_EMAIL_VERIFICATION_MODE: ${AUTH_PROVIDER_DISCORD_EMAIL_VERIFICATION_MODE:-claim}
 
   # ---------------------------------------------------------------------------
+  # Proxy trust — set to 'uniquelocal' when running behind nginx on the same
+  # Docker network; set to 'loopback' (default) for direct connections
+  # ---------------------------------------------------------------------------
+  TRUST_PROXY: ${TRUST_PROXY:-uniquelocal}
+
+  # ---------------------------------------------------------------------------
   # API authentication (optional)
   # ---------------------------------------------------------------------------
   API_SECRET: ${API_SECRET:-} # bearer token for REST API access; leave empty to disable
@@ -89,6 +97,11 @@ x-app-env: &app-env
   # Swagger UI (optional)
   # ---------------------------------------------------------------------------
   SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false} # expose /docs endpoint
+
+  # ---------------------------------------------------------------------------
+  # Product ratings (optional)
+  # ---------------------------------------------------------------------------
+  RATINGS_PUBLIC_FEED_ENABLED: ${RATINGS_PUBLIC_FEED_ENABLED:-false} # customers see each other's public ratings
 
   # ---------------------------------------------------------------------------
   # OpenAI integration (optional)
@@ -126,6 +139,21 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'node -e "require(\"http\").get(\"http://localhost:3000/api/v1/health\",r=>{process.exit(r.statusCode<400?0:1)}).on(\"error\",()=>process.exit(1))"',
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '5'
     restart: unless-stopped
 
   scheduler:
@@ -143,6 +171,11 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: '5m'
+        max-file: '3'
     restart: unless-stopped
 
   postgres:

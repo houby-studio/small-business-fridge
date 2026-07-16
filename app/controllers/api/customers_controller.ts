@@ -1,6 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import User from '#models/user'
 import db from '@adonisjs/lucid/services/db'
+import type { CustomerInsightsResponse, CustomerResponse } from '#interfaces/api_responses'
 
 export default class CustomersController {
   /**
@@ -9,8 +10,10 @@ export default class CustomersController {
    * @description Returns customer profile information.
    * @tag Customers
    * @paramPath id - Customer user ID - @type(integer) @required
-   * @responseBody 200 - {"data": {}}
-   * @responseBody 401 - {"error": "Unauthorized"}
+   * @responseBody 200 - <CustomerResponse>
+   * @responseBody 401 - <ApiErrorResponse>
+   * @responseBody 403 - <ApiErrorResponse>
+   * @responseBody 404 - <ApiErrorResponse>
    */
   async show({ auth, params, response }: HttpContext) {
     const id = Number(params.id)
@@ -28,13 +31,14 @@ export default class CustomersController {
       return response.notFound({ error: 'Customer not found.' })
     }
 
-    return response.json({
+    const payload: CustomerResponse = {
       data: {
         id: customer.id,
         displayName: customer.displayName,
         role: customer.role,
       },
-    })
+    }
+    return response.json(payload)
   }
 
   /**
@@ -43,8 +47,10 @@ export default class CustomersController {
    * @description Returns spending and invoice insight aggregates.
    * @tag Customers
    * @paramPath id - Customer user ID - @type(integer) @required
-   * @responseBody 200 - {"data": {}}
-   * @responseBody 401 - {"error": "Unauthorized"}
+   * @responseBody 200 - <CustomerInsightsResponse>
+   * @responseBody 401 - <ApiErrorResponse>
+   * @responseBody 403 - <ApiErrorResponse>
+   * @responseBody 404 - <ApiErrorResponse>
    */
   async insights({ auth, params, response }: HttpContext) {
     const id = Number(params.id)
@@ -90,7 +96,7 @@ export default class CustomersController {
       )
       .first()
 
-    return response.json({
+    const payload: CustomerInsightsResponse = {
       data: {
         orderCount: Number(orderStats?.order_count ?? 0),
         totalSpend: Number(orderStats?.total_spend ?? 0),
@@ -98,8 +104,11 @@ export default class CustomersController {
         invoiceCount: Number(invoiceStats?.invoice_count ?? 0),
         unpaidInvoiceCount: Number(invoiceStats?.unpaid_invoice_count ?? 0),
         pendingApprovalInvoiceCount: Number(invoiceStats?.pending_approval_invoice_count ?? 0),
-        lastOrderAt: orderStats?.last_order_at ?? null,
+        lastOrderAt: orderStats?.last_order_at
+          ? new Date(orderStats.last_order_at).toISOString()
+          : null,
       },
-    })
+    }
+    return response.json(payload)
   }
 }

@@ -26,7 +26,11 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: 1,
-  reporter: [['list'], ['junit', { outputFile: 'test-results/junit-e2e.xml' }]],
+  reporter: [
+    ['list'],
+    ['junit', { outputFile: 'test-results/junit-e2e.xml' }],
+    ['html', { outputFolder: 'playwright-report', open: 'never' }],
+  ],
   // Separate artifact dir from test-results/ so Playwright's startup cleanup
   // does not delete the Japa JUnit XML that was written before E2E runs.
   outputDir: 'playwright-artifacts',

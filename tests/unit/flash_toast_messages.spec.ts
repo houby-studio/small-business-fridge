@@ -23,6 +23,22 @@ test.group('Flash toast message extraction', () => {
     ])
   })
 
+  test('maps notice channel into a toast with 6s life', ({ assert }) => {
+    const messages = extractFlashToastMessages({
+      notice: { type: 'info', message: 'Heads-up notice' },
+    } as any)
+
+    assert.deepEqual(messages, [{ severity: 'info', summary: 'Heads-up notice', life: 6000 }])
+  })
+
+  test('notice with unknown type falls back to warn severity', ({ assert }) => {
+    const messages = extractFlashToastMessages({
+      notice: { type: 'bogus', message: 'Fallback notice' },
+    } as any)
+
+    assert.deepEqual(messages, [{ severity: 'warn', summary: 'Fallback notice', life: 6000 }])
+  })
+
   test('returns empty list for missing/empty flash payloads', ({ assert }) => {
     assert.deepEqual(extractFlashToastMessages(undefined), [])
     assert.deepEqual(extractFlashToastMessages({} as any), [])

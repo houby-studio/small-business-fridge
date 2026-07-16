@@ -18,6 +18,10 @@ export interface FlashMessages {
     type: 'success' | 'info' | 'warn' | 'danger'
     message: string
   }
+  notice?: {
+    type: 'success' | 'info' | 'warn' | 'danger'
+    message: string
+  }
   errors?: Record<string, string[]>
   [key: string]: unknown
 }

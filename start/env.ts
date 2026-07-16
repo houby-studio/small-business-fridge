@@ -37,6 +37,8 @@ export default await Env.create(new URL('../', import.meta.url), {
   DB_USER: Env.schema.string(),
   DB_PASSWORD: Env.schema.string.optional(),
   DB_DATABASE: Env.schema.string(),
+  DB_POOL_MIN: Env.schema.number.optional(),
+  DB_POOL_MAX: Env.schema.number.optional(),
 
   /*
   |----------------------------------------------------------
@@ -80,6 +82,7 @@ export default await Env.create(new URL('../', import.meta.url), {
     'open',
     'invite_only',
     'domain_auto_approve',
+    'closed',
   ] as const),
   AUTH_REGISTRATION_ALLOWED_DOMAINS: Env.schema.string.optional(),
   AUTH_EMAIL_VERIFICATION_REQUIRED: Env.schema.boolean.optional(),
@@ -105,6 +108,7 @@ export default await Env.create(new URL('../', import.meta.url), {
   APP_URL: Env.schema.string.optional({ format: 'url', tld: false }),
   FEEDBACK_URL: Env.schema.string.optional({ format: 'url', tld: false }),
   SWAGGER_ENABLED: Env.schema.boolean.optional(),
+  RATINGS_PUBLIC_FEED_ENABLED: Env.schema.boolean.optional(),
 
   /*
   |----------------------------------------------------------

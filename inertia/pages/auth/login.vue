@@ -12,10 +12,11 @@ import { computed } from 'vue'
 import { useI18n } from '~/composables/use_i18n'
 import type { SharedProps } from '~/types'
 
-defineProps<{
+const props = defineProps<{
   externalProviders?: Array<'microsoft' | 'discord'>
   allowLocalRegistration?: boolean
   localEnabled?: boolean
+  returnTo?: string | null
 }>()
 
 const { t } = useI18n()
@@ -25,6 +26,7 @@ const form = useForm({
   email: '',
   password: '',
   rememberMe: false,
+  returnTo: props.returnTo ?? '',
 })
 
 const emailInvalid = computed(() => {
@@ -63,7 +65,8 @@ function providerIcon(provider: 'microsoft' | 'discord'): string {
 }
 
 function providerHref(provider: 'microsoft' | 'discord'): string {
-  return `/auth/${provider}/redirect`
+  const base = `/auth/${provider}/redirect`
+  return props.returnTo ? `${base}?returnTo=${encodeURIComponent(props.returnTo)}` : base
 }
 </script>
 

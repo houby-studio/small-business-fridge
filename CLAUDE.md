@@ -295,6 +295,219 @@ When adding user-facing text:
 
 ---
 
+## UI Component Standards
+
+These rules apply to ALL new Vue pages and components. Never deviate from these patterns.
+
+### PrimeVue Components — Never Use Raw HTML Equivalents
+
+| Need                     | Use           | Never                     |
+| ------------------------ | ------------- | ------------------------- |
+| Text input               | `InputText`   | `<input type="text">`     |
+| Date filter / date field | `DatePicker`  | `<input type="date">`     |
+| Password                 | `Password`    | `<input type="password">` |
+| Dropdown select          | `Select`      | `<select>`                |
+| Multi-select             | `MultiSelect` | —                         |
+| Checkbox                 | `Checkbox`    | `<input type="checkbox">` |
+| Textarea                 | `Textarea`    | `<textarea>`              |
+| Number input             | `InputNumber` | `<input type="number">`   |
+| Button                   | `Button`      | `<button>`                |
+
+(Exception: the bespoke touch UI in `inertia/pages/kiosk/*` may use raw elements where the
+kiosk interaction model requires it.)
+
+### Buttons — Severity Mapping
+
+Always use these combinations — never invent others:
+
+| Action                                | `severity`       | Variants | `size`  |
+| ------------------------------------- | ---------------- | -------- | ------- |
+| Primary submit / main CTA             | (none — default) | —        | —       |
+| Page-level "Create" / "Add" in header | (none — default) | —        | —       |
+| Edit (pencil) icon in table row       | `info`           | `text`   | `small` |
+| Delete / trash icon in table row      | `danger`         | `text`   | `small` |
+| Archive / warn icon in table row      | `warn`           | `text`   | `small` |
+| Approve / positive confirm            | `success`        | —        | —       |
+| Destructive confirm (in dialog)       | `danger`         | —        | —       |
+| Cancel in dialog footer               | `secondary`      | `text`   | —       |
+| Back navigation                       | `secondary`      | `text`   | —       |
+| Secondary ghost action                | `secondary`      | `text`   | `small` |
+
+**Never** use the `rounded` prop — it is not part of this design language.
+
+**Icon-only buttons** (no `label`) MUST include `:aria-label`:
+
+<!-- prettier-ignore -->
+```html
+<!-- ✅ Correct -->
+<Button icon="pi pi-pencil" severity="info" text size="small" :aria-label="t('common.edit')" @click="..." />
+
+<!-- ❌ Wrong — no aria-label -->
+<Button icon="pi pi-pencil" severity="info" text size="small" @click="..." />
+```
+
+**Submit buttons** MUST always have both `:loading` and `:disabled` guards:
+
+<!-- prettier-ignore -->
+```html
+<Button type="submit" :label="t('common.save')" :disabled="!formValid || submitting" :loading="submitting" />
+```
+
+### Form Field Labels
+
+All labels — both form fields and filter inputs — use the same class set:
+
+<!-- prettier-ignore -->
+```html
+<label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300">{{ t('field.label') }}</label>
+```
+
+- No `font-medium` anywhere
+- Always `mb-1 block`
+- Required fields: append ` *` to the label text (no separate indicator on the input)
+
+### Form Input Validation
+
+Pass `:invalid="!!errorMessage"` on PrimeVue inputs. Show errors with `<small>` below:
+
+```html
+<InputText v-model="form.email" :invalid="!!emailError" />
+<small v-if="emailError" class="text-red-500 dark:text-red-400">{{ emailError }}</small>
+```
+
+### DatePicker — Standard Props
+
+Always use this combination (not just `dateFormat` alone):
+
+```html
+<DatePicker
+  v-model="..."
+  dateFormat="dd.mm.yy"
+  :firstDayOfWeek="1"
+  showIcon
+  :showOnFocus="false"
+  class="w-48"
+/>
+```
+
+### No Native Browser Dialogs — Ever
+
+**Never** call `window.alert`, `window.confirm`, `window.prompt`, or bare `alert(...)` / `confirm(...)` / `prompt(...)` from Vue/Inertia code. They are unstyled, untranslatable, can't be tested with Playwright's normal flow, and break the visual language of the app.
+
+- Confirmation → PrimeVue `Dialog` (see below) with Cancel + Confirm buttons.
+- Notifications / transient feedback → `useFlash()` flash messages from the server, or PrimeVue `Toast` / `Message` on the client.
+- Input → a proper `Dialog` containing PrimeVue form inputs (never `window.prompt`).
+
+If you catch yourself reaching for `window.confirm`, stop and build a `Dialog` instead — the storno dialog in `inertia/pages/admin/orders/index.vue` is a good reference.
+
+### Dialogs — Two Standard Sizes
+
+Choose based on content, always add `modal :draggable="false"`:
+
+| Size  | Use for                          | Sizing prop                                           |
+| ----- | -------------------------------- | ----------------------------------------------------- |
+| Small | Single confirm, 1–2 input fields | `:style="{ width: '28rem' }"`                         |
+| Large | Multi-field forms                | `style="width: 560px; max-width: calc(100vw - 2rem)"` |
+
+Dialog footer: **Cancel left, Confirm right**:
+
+<!-- prettier-ignore -->
+```html
+<template #footer>
+  <Button :label="t('common.cancel')" severity="secondary" text @click="close" />
+  <Button :label="t('common.save')" :disabled="!valid || submitting" :loading="submitting" @click="submit" />
+</template>
+```
+
+### Tabular Data (DataTable) — Mandatory Rules
+
+Every table-based page MUST have all of the following:
+
+1. **Server-side pagination, filtering, and sorting** — never client-side. Use `@page` / `@sort` → `router.get()` with `only: [...]` partial reload.
+
+2. **Sensible default sort** — always define a default `sortBy` + `sortOrder` in both the service whitelist and the Vue refs. Never leave a table unsorted. Pick the most useful default (e.g., `createdAt desc` for admin logs, `name asc` for catalog lists).
+
+3. **Empty state** via the `#empty` template slot:
+
+```html
+<template #empty>
+  <div class="py-8 text-center text-gray-500 dark:text-zinc-400">{{ t('common.no_data') }}</div>
+</template>
+```
+
+4. Always use `stripedRows class="rounded-lg border"` on `<DataTable>`.
+
+### Filter Inputs — FilterBar + "All" Option
+
+Always use the `FilterBar` component for any page with filters — never a custom `div` layout:
+
+<!-- prettier-ignore -->
+```html
+<FilterBar @apply="applyFilters" @clear="clearFilters">
+  <div>
+    <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300">{{ t('filter.status') }}</label>
+    <Select v-model="filterStatus" :options="statusOptions" optionLabel="label" optionValue="value" class="w-48" />
+  </div>
+</FilterBar>
+```
+
+**Every `Select` used as a filter MUST include an "All" option as the first item and pre-select it by default** (`value: null` → controller treats null/missing as no filter applied):
+
+```typescript
+// ✅ Correct
+const statusOptions = computed(() => [
+  { label: t('common.all'), value: null },
+  { label: t('status.active'), value: 'active' },
+  { label: t('status.inactive'), value: 'inactive' },
+])
+const filterStatus = ref(props.filters.status ?? null)
+```
+
+### Status Badges / Chips
+
+Use only these color classes — never invent new variants:
+
+| Meaning             | Classes                                                                        |
+| ------------------- | ------------------------------------------------------------------------------ |
+| Active / Info       | `bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200`             |
+| Success / Completed | `bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200`         |
+| Warning / Pending   | `bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200`         |
+| Danger / Rejected   | `bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300`                 |
+| Neutral / Cancelled | `bg-gray-100 text-gray-800 dark:bg-zinc-700 dark:text-zinc-200`                |
+| Verified            | `bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200` |
+
+Badge wrapper: `inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium`
+
+### Page Header Pattern
+
+<!-- prettier-ignore -->
+```html
+<!-- Simple header -->
+<h1 class="mb-6 text-2xl font-bold text-gray-900 dark:text-zinc-100">{{ t('page.title') }}</h1>
+
+<!-- Header with create button -->
+<div class="mb-6 flex items-center justify-between">
+  <h1 class="text-2xl font-bold text-gray-900 dark:text-zinc-100">{{ t('page.title') }}</h1>
+  <Button :label="t('page.create')" icon="pi pi-plus" @click="openCreate" />
+</div>
+```
+
+Back button (detail pages):
+
+<!-- prettier-ignore -->
+```html
+<Button icon="pi pi-arrow-left" severity="secondary" text :aria-label="t('common.back')" @click="router.get(...)" />
+```
+
+### Default Selections
+
+Always pre-select a sensible default for any `Select` in a data-entry form — never leave a required dropdown blank when there is an obvious choice. Examples:
+
+- Product category field → pre-select the first available category
+- Filter dropdowns → always pre-select the "All" option
+
+---
+
 ## Common Gotchas
 
 - `@adonisjs/mail` must be **v10+** (v3.x is for old AdonisJS 5)

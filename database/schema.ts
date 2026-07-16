@@ -184,6 +184,125 @@ export class KioskSessionSchema extends BaseModel {
   declare userId: number
 }
 
+export class McpEvalResultSchema extends BaseModel {
+  static $columns = ['createdAt', 'durationMs', 'expectedTool', 'failureReason', 'id', 'passed', 'runId', 'scenarioDescription', 'scenarioId', 'toolCalled', 'toolInput', 'updatedAt'] as const
+  $columns = McpEvalResultSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare durationMs: number
+  @column()
+  declare expectedTool: string
+  @column()
+  declare failureReason: string | null
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare passed: boolean
+  @column()
+  declare runId: number
+  @column()
+  declare scenarioDescription: string
+  @column()
+  declare scenarioId: string
+  @column()
+  declare toolCalled: string | null
+  @column()
+  declare toolInput: any | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
+export class McpEvalRunSchema extends BaseModel {
+  static $columns = ['createdAt', 'errorCount', 'failCount', 'finishedAt', 'id', 'modelId', 'modelLabel', 'passCount', 'startedAt', 'status', 'totalCount', 'updatedAt'] as const
+  $columns = McpEvalRunSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare errorCount: number
+  @column()
+  declare failCount: number
+  @column.dateTime()
+  declare finishedAt: DateTime | null
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare modelId: string
+  @column()
+  declare modelLabel: string | null
+  @column()
+  declare passCount: number
+  @column.dateTime()
+  declare startedAt: DateTime
+  @column()
+  declare status: string
+  @column()
+  declare totalCount: number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
+export class McpOauthClientSchema extends BaseModel {
+  static $columns = ['clientId', 'clientName', 'createdAt', 'grantTypes', 'redirectUris'] as const
+  $columns = McpOauthClientSchema.$columns
+  @column({ isPrimary: true })
+  declare clientId: string
+  @column()
+  declare clientName: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare grantTypes: string
+  @column()
+  declare redirectUris: string
+}
+
+export class McpOauthCodeSchema extends BaseModel {
+  static $columns = ['clientId', 'code', 'codeChallenge', 'createdAt', 'expiresAt', 'redirectUri', 'used', 'userId'] as const
+  $columns = McpOauthCodeSchema.$columns
+  @column()
+  declare clientId: string
+  @column({ isPrimary: true })
+  declare code: string
+  @column()
+  declare codeChallenge: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column.dateTime()
+  declare expiresAt: DateTime
+  @column()
+  declare redirectUri: string
+  @column()
+  declare used: boolean
+  @column()
+  declare userId: bigint | number
+}
+
+export class McpToolCallSchema extends BaseModel {
+  static $columns = ['createdAt', 'durationMs', 'errorMessage', 'id', 'msCorrelationId', 'success', 'toolArguments', 'toolName', 'userAgent', 'userId'] as const
+  $columns = McpToolCallSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare durationMs: number | null
+  @column()
+  declare errorMessage: string | null
+  @column({ isPrimary: true })
+  declare id: bigint | number
+  @column()
+  declare msCorrelationId: string | null
+  @column()
+  declare success: boolean
+  @column()
+  declare toolArguments: any | null
+  @column()
+  declare toolName: string
+  @column()
+  declare userAgent: string | null
+  @column()
+  declare userId: bigint | number | null
+}
+
 export class MusicTrackSchema extends BaseModel {
   static $columns = ['accessLevel', 'createdAt', 'filePath', 'id', 'isDisabled', 'mimeType', 'name', 'updatedAt', 'uploadedByUserId'] as const
   $columns = MusicTrackSchema.$columns
@@ -267,6 +386,42 @@ export class ProductAllergenSchema extends BaseModel {
   declare id: number
   @column()
   declare productId: number
+}
+
+export class ProductRatingUpvoteSchema extends BaseModel {
+  static $columns = ['createdAt', 'id', 'productRatingId', 'updatedAt', 'userId'] as const
+  $columns = ProductRatingUpvoteSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare productRatingId: number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare userId: number
+}
+
+export class ProductRatingSchema extends BaseModel {
+  static $columns = ['comment', 'createdAt', 'id', 'productId', 'stars', 'updatedAt', 'userId', 'visibility'] as const
+  $columns = ProductRatingSchema.$columns
+  @column()
+  declare comment: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare productId: number
+  @column()
+  declare stars: number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare userId: number
+  @column()
+  declare visibility: string
 }
 
 export class ProductSchema extends BaseModel {

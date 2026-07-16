@@ -1,6 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import logger from '@adonisjs/core/services/logger'
 import db from '@adonisjs/lucid/services/db'
+import env from '#start/env'
 import { DateTime } from 'luxon'
 import {
   updateProfileValidator,
@@ -142,6 +143,8 @@ export default class ProfileController {
       localAuthEnabled: this.authModes.isLocalEnabled(),
       hasLocalPassword: !!user.password,
       pendingDraft,
+      // Show the API docs (Scalar) link only when swagger is enabled.
+      apiDocsEnabled: env.get('SWAGGER_ENABLED') === true,
     })
   }
 
