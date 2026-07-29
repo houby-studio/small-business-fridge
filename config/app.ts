@@ -1,5 +1,6 @@
 import app from '@adonisjs/core/services/app'
 import { defineConfig } from '@adonisjs/core/http'
+import proxyaddr from 'proxy-addr'
 
 /**
  * Parse the TRUST_PROXY env var into a value accepted by AdonisJS / proxy-addr.
@@ -10,12 +11,31 @@ import { defineConfig } from '@adonisjs/core/http'
  *   true             – trust all proxies (not recommended)
  *   false            – trust no proxy
  *   <ip/cidr>        – e.g. "172.16.0.0/12"
+ *   <ip/cidr>,<...>  – comma-separated list, e.g. "10.0.0.5,172.64.0.0/13".
+ *                      Needed when several proxy tiers sit in front of the app,
+ *                      e.g. a local reverse proxy behind Cloudflare — only then
+ *                      does request.ip() resolve to the real client instead of
+ *                      the nearest untrusted hop.
+ *
+ * A list must be compiled here: passing the raw "a,b" string on makes
+ * proxy-addr throw "invalid IP address" and the app never finishes booting,
+ * while an array is rejected by AdonisJS's own types.
  */
-function parseTrustProxy(raw: string | undefined): boolean | string {
+export function parseTrustProxy(
+  raw: string | undefined
+): boolean | string | ((address: string, distance: number) => boolean) {
   if (!raw || raw === 'loopback') return 'loopback'
   if (raw === 'true') return true
   if (raw === 'false') return false
-  return raw
+
+  const entries = raw
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0)
+
+  if (entries.length === 0) return 'loopback'
+  if (entries.length === 1) return entries[0]
+  return proxyaddr.compile(entries)
 }
 
 /**
