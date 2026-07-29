@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>Small Business Fridge</title>
+  <defs>
+    <linearGradient id="sbf-cabinet" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="168">
+      <stop offset="0" stop-color="#2d3440" />
+      <stop offset="0.45" stop-color="#1f2937" />
+      <stop offset="1" stop-color="#111827" />
+    </linearGradient>
+    <linearGradient id="sbf-door" gradientUnits="userSpaceOnUse" x1="0" y1="-12.1" x2="0" y2="180.1">
+      <stop offset="0" stop-color="#f3f4f6" />
+      <stop offset="0.55" stop-color="#e5e7eb" />
+      <stop offset="1" stop-color="#d1d5db" />
+    </linearGradient>
+    <linearGradient id="sbf-bottle" gradientUnits="userSpaceOnUse" x1="0" y1="6" x2="0" y2="84">
+      <stop offset="0" stop-color="#f82843" />
+      <stop offset="0.28" stop-color="#ef1c37" />
+      <stop offset="1" stop-color="#d0112b" />
+    </linearGradient>
+    <linearGradient id="sbf-door-shadow" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="66" y2="0">
+      <stop offset="0" stop-color="#000000" stop-opacity="0.42" />
+      <stop offset="0.55" stop-color="#000000" stop-opacity="0.14" />
+      <stop offset="1" stop-color="#000000" stop-opacity="0" />
+    </linearGradient>
+    <clipPath id="sbf-door-clip">
+      <path d="M-15 21Q-15 0 -5.43 -2.37L25.32 -9.97Q33.52 -12 33.52 8.57L33.52 159.43Q33.52 180 25.32 177.97L-5.43 170.37Q-15 168 -15 147Z" />
+    </clipPath>
+  </defs>
+  <g transform="translate(86.98 15.36) scale(2.5) translate(15 12.1)">
+    <rect x="0" y="0" width="120" height="168" rx="21" fill="url(#sbf-cabinet)" stroke="rgba(255,255,255,0.16)" stroke-width="1" />
+    <rect x="10" y="84" width="100" height="2" fill="rgba(255,255,255,0.18)" />
+    <rect x="54" y="6" width="12" height="6" rx="3" fill="url(#sbf-bottle)" />
+    <rect x="53" y="12" width="14" height="18" rx="6" fill="url(#sbf-bottle)" />
+    <path fill="url(#sbf-bottle)" d="M45 48A13 20 0 0 1 58 28h4a13 20 0 0 1 13 20v24a10 12 0 0 1-10 12H55a10 12 0 0 1-10-12Z" />
+    <rect x="0" y="0" width="120" height="168" rx="21" fill="url(#sbf-door-shadow)" />
+    <path d="M-15 21Q-15 0 -5.43 -2.37L25.32 -9.97Q33.52 -12 33.52 8.57L33.52 159.43Q33.52 180 25.32 177.97L-5.43 170.37Q-15 168 -15 147Z" fill="url(#sbf-door)" />
+    <g clip-path="url(#sbf-door-clip)" fill="none">
+      <path d="M-15 21Q-15 0 -5.43 -2.37L25.32 -9.97Q33.52 -12 33.52 8.57L33.52 159.43Q33.52 180 25.32 177.97L-5.43 170.37Q-15 168 -15 147Z" stroke="rgba(255,255,255,0.55)" stroke-width="4" />
+      <path d="M-15 21Q-15 0 -5.43 -2.37L25.32 -9.97Q33.52 -12 33.52 8.57L33.52 159.43Q33.52 180 25.32 177.97L-5.43 170.37Q-15 168 -15 147Z" stroke="rgba(0,0,0,0.28)" stroke-width="2" />
+    </g>
+    <rect x="25.65" y="30.26" width="2.91" height="40.2" rx="1.46" fill="rgba(31,41,55,0.65)" />
+  </g>
+</svg>

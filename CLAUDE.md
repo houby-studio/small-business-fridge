@@ -508,6 +508,40 @@ Always pre-select a sensible default for any `Select` in a data-entry form — n
 
 ---
 
+## App Icons / Favicon
+
+The whole icon set is **generated** — never hand-edit the files in `public/`:
+
+```bash
+npm run generate:app-icons   # scripts/generate_app_icons.ts (needs Playwright's chromium)
+```
+
+The artwork is a vector copy of the boot-loader fridge (`#sbf-boot-loader .fridge-*` in
+`inertia/css/app.css`) with the door caught at the end of its opening animation — favicons
+cannot animate. The script reproduces the CSS 3D transform (`rotateY` + `perspective`)
+analytically, so **if the boot-loader CSS changes, update the constants at the top of the
+script and re-run it**.
+
+Generated files (all committed, copied into the build via `metaFiles` in `adonisrc.ts`):
+
+| File                    | Used for                                                        |
+| ----------------------- | --------------------------------------------------------------- |
+| `icon.svg`              | Master artwork, transparent background — also usable in UI      |
+| `favicon.svg`           | Browser tab (simplified: hairlines dropped for 16px legibility) |
+| `favicon.ico`           | Legacy tab icon, 16/32/48 frames                                |
+| `favicon-96x96.png`     | Bookmark / search-result sizes                                  |
+| `apple-touch-icon.png`  | iOS home screen (180px, full-bleed backdrop — iOS masks it)     |
+| `icon-192.png`          | Android home screen / manifest `any`                            |
+| `icon-512.png`          | Manifest `any`, splash screens                                  |
+| `icon-maskable-512.png` | Manifest `maskable` (artwork inside the 80% safe zone)          |
+
+`<head>` links live in `resources/views/inertia_layout.edge`. The PWA manifest is served
+dynamically by `ManifestController` at `GET /site.webmanifest` so it carries the instance's
+`APP_NAME` and the request locale — keep that route public (browsers fetch manifests without
+credentials).
+
+---
+
 ## Common Gotchas
 
 - `@adonisjs/mail` must be **v10+** (v3.x is for old AdonisJS 5)
@@ -518,3 +552,4 @@ Always pre-select a sensible default for any `Select` in a data-entry form — n
 - Scheduler provider: only registered in console environment (`adonisrc.ts`)
 - `v-tooltip` → runtime crash → use `aria-label` or PrimeVue Tooltip component with mount
 - `npx prettier --check .` also checks `CLAUDE.md` — always run format fix after editing it
+- Icons in `public/` are generated artefacts — edit `scripts/generate_app_icons.ts`, not the output

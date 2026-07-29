@@ -22,6 +22,7 @@ import { access } from 'node:fs/promises'
 
 // Web controllers
 const HomeController = () => import('#controllers/web/home_controller')
+const ManifestController = () => import('#controllers/web/manifest_controller')
 const LoginController = () => import('#controllers/web/login_controller')
 const BootstrapController = () => import('#controllers/web/bootstrap_controller')
 const RegisterController = () => import('#controllers/web/register_controller')
@@ -78,6 +79,9 @@ const mcpThrottleLimit = process.env.NODE_ENV === 'test' ? 1000 : 120
 */
 
 router.get('/', [HomeController, 'index'])
+
+// PWA manifest — browsers fetch it without credentials, so it stays public
+router.get('/site.webmanifest', [ManifestController, 'index']).as('manifest')
 
 // OAuth 2.0 discovery + AS endpoints for MCP clients — CSRF-exempt, no session
 // required for token/register; authorize uses the web session but is not a

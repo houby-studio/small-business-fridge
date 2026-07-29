@@ -36,6 +36,7 @@ export const controllers = {
     Invoices: () => import('#controllers/web/invoices_controller'),
     Kiosk: () => import('#controllers/web/kiosk_controller'),
     Login: () => import('#controllers/web/login_controller'),
+    Manifest: () => import('#controllers/web/manifest_controller'),
     McpOauthAuthorize: () => import('#controllers/web/mcp_oauth_authorize_controller'),
     McpOauthRegister: () => import('#controllers/web/mcp_oauth_register_controller'),
     McpOauthToken: () => import('#controllers/web/mcp_oauth_token_controller'),
