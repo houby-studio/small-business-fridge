@@ -517,10 +517,18 @@ npm run generate:app-icons   # scripts/generate_app_icons.ts (needs Playwright's
 ```
 
 The artwork is a vector copy of the boot-loader fridge (`#sbf-boot-loader .fridge-*` in
-`inertia/css/app.css`) with the door caught at the end of its opening animation — favicons
-cannot animate. The script reproduces the CSS 3D transform (`rotateY` + `perspective`)
-analytically, so **if the boot-loader CSS changes, update the constants at the top of the
-script and re-run it**.
+`inertia/css/app.css`) in its **first animation frame — doors shut**. Favicons cannot animate,
+and the swung-open frame is not recognisable as a fridge at 16px. If the boot-loader CSS
+changes, update the constants at the top of the script and re-run it.
+
+Two departures from the CSS are intentional, both for legibility at tab sizes:
+
+- the door seam is drawn **dark** (the CSS white 18% line is invisible on a white door),
+- the handles are **brand red**, not slate — and there are two of them (freezer + fridge),
+  which is what makes the silhouette read as a fridge rather than a rounded rectangle.
+
+Small sizes additionally thicken the seam and handles (`SIZING` in the script) — without that
+optical correction both disappear below ~48px.
 
 Generated files (all committed, copied into the build via `metaFiles` in `adonisrc.ts`):
 

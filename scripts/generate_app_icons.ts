@@ -2,13 +2,15 @@
  * Generates the whole favicon / app-icon set from a single source of truth.
  *
  * The artwork is a vector copy of the boot-loader fridge (see the
- * `#sbf-boot-loader .fridge-*` rules in `inertia/css/app.css`), captured at the
- * end of its door-opening animation — a favicon cannot animate, so the icon
- * shows the door already swung open.
+ * `#sbf-boot-loader .fridge-*` rules in `inertia/css/app.css`) in its *first*
+ * animation frame — doors shut. A favicon cannot animate, and the swung-open
+ * frame is unreadable at 16px, so the closed silhouette is what ships.
  *
- * The door is a flat element rotated in 3D by CSS, so its outline here is the
- * same perspective projection the browser performs: rotateY around the left
- * edge, then translateX, then the wrapper's `perspective` divide.
+ * Two deliberate departures from the CSS, both needed for legibility once the
+ * artwork is 16px wide: the door seam is drawn dark (the CSS uses a white 18%
+ * line, invisible against the white door) and the handles are brand red rather
+ * than slate. Small sizes additionally thicken the seam and handles — see
+ * `SIZING`, without it both vanish below ~48px.
  *
  * Run with: npm run generate:app-icons
  */
@@ -25,18 +27,15 @@ import { chromium } from '@playwright/test'
 
 const WRAP_WIDTH = 120
 const WRAP_HEIGHT = 168
-const PERSPECTIVE = 780
+const CABINET_RADIUS = 21
+/** `.fridge-door`: 92% wide, so the cabinet stays visible down its right edge. */
 const DOOR_WIDTH = WRAP_WIDTH * 0.92
-const DOOR_ANGLE_DEG = -62
-const DOOR_SHIFT_X = -15
+const DOOR_RADIUS_RIGHT = 18
+/** `.fridge-seam`: sits at 50% height. */
+const SEAM_Y = WRAP_HEIGHT / 2
 
-/** Bounding box of the whole composition (cabinet + swung-open door). */
-const CONTENT = {
-  left: DOOR_SHIFT_X,
-  top: -12.1,
-  width: WRAP_WIDTH - DOOR_SHIFT_X,
-  height: WRAP_HEIGHT + 12.1 * 2,
-}
+/** Bounding box of the composition — the cabinet, doors shut. */
+const CONTENT = { left: 0, top: 0, width: WRAP_WIDTH, height: WRAP_HEIGHT }
 
 const COLORS = {
   cabinetTop: '#2d3440',
@@ -47,106 +46,38 @@ const COLORS = {
   doorMid: '#e5e7eb',
   doorBottom: '#d1d5db',
   doorBorder: 'rgba(0,0,0,0.28)',
-  doorHighlight: 'rgba(255,255,255,0.55)',
-  handle: 'rgba(31,41,55,0.65)',
-  shelf: 'rgba(255,255,255,0.18)',
-  bottleTop: '#f82843',
-  bottleMid: '#ef1c37',
-  bottleBottom: '#d0112b',
-  bottleBorder: '#8c1321',
+  doorHighlight: 'rgba(255,255,255,0.62)',
+  seam: 'rgba(17,24,39,0.5)',
+  handleTop: '#f82843',
+  handleBottom: '#c30f2b',
   backdropTop: '#1c1c20',
   backdropBottom: '#09090b',
-}
-
-/**
- * Projects a point of the door element into wrapper coordinates, reproducing
- * `transform: translateX(...) rotateY(...)` under the wrapper's perspective.
- */
-function projectDoorPoint(u: number, v: number): { x: number; y: number } {
-  const theta = (DOOR_ANGLE_DEG * Math.PI) / 180
-  const originY = WRAP_HEIGHT / 2
-  const perspectiveOrigin = { x: WRAP_WIDTH / 2, y: WRAP_HEIGHT / 2 }
-
-  const x = u * Math.cos(theta) + DOOR_SHIFT_X
-  const z = -u * Math.sin(theta)
-  const y = v
-  const scale = PERSPECTIVE / (PERSPECTIVE - z)
-
-  return {
-    x: perspectiveOrigin.x + (x - perspectiveOrigin.x) * scale,
-    y: originY + (y - originY) * scale,
-  }
 }
 
 function round(value: number): number {
   return Math.round(value * 100) / 100
 }
 
-type Point = { x: number; y: number }
-
-function subtract(a: Point, b: Point): Point {
-  return { x: a.x - b.x, y: a.y - b.y }
-}
-
-function unit(vector: Point): Point {
-  const length = Math.hypot(vector.x, vector.y)
-  return { x: vector.x / length, y: vector.y / length }
-}
-
 /**
- * Outline of the open door: a trapezoid whose corners keep the CSS
- * `border-radius: 21px 18px 18px 21px`. The rounding is drawn as quadratic
- * curves with the corner as control point — elliptical arcs would need radii
- * that no longer fit once perspective has skewed the edges.
+ * The shut door: `border-radius: 21px 18px 18px 21px`, its left corners
+ * following the cabinet's own rounding.
  */
 function doorPath(): string {
-  const topLeft = projectDoorPoint(0, 0)
-  const topRight = projectDoorPoint(DOOR_WIDTH, 0)
-  const bottomRight = projectDoorPoint(DOOR_WIDTH, WRAP_HEIGHT)
-  const bottomLeft = projectDoorPoint(0, WRAP_HEIGHT)
+  const right = DOOR_WIDTH
+  const bottom = WRAP_HEIGHT
 
-  // Radii along the horizontal edges shrink with the rotation; along the
-  // vertical edges they grow with the perspective scale of that edge.
-  const cos = Math.abs(Math.cos((DOOR_ANGLE_DEG * Math.PI) / 180))
-  const rightScale = (bottomRight.y - topRight.y) / WRAP_HEIGHT
-  const corners = [
-    { at: topLeft, from: bottomLeft, to: topRight, inset: 21, outset: 21 * cos },
-    { at: topRight, from: topLeft, to: bottomRight, inset: 18 * cos, outset: 18 * rightScale },
-    { at: bottomRight, from: topRight, to: bottomLeft, inset: 18 * rightScale, outset: 18 * cos },
-    { at: bottomLeft, from: bottomRight, to: topLeft, inset: 21 * cos, outset: 21 },
-  ]
-
-  const segments: string[] = []
-
-  corners.forEach((corner, index) => {
-    const incoming = unit(subtract(corner.at, corner.from))
-    const outgoing = unit(subtract(corner.to, corner.at))
-    const start = {
-      x: corner.at.x - incoming.x * corner.inset,
-      y: corner.at.y - incoming.y * corner.inset,
-    }
-    const end = {
-      x: corner.at.x + outgoing.x * corner.outset,
-      y: corner.at.y + outgoing.y * corner.outset,
-    }
-
-    segments.push(
-      `${index === 0 ? 'M' : 'L'}${round(start.x)} ${round(start.y)}`,
-      `Q${round(corner.at.x)} ${round(corner.at.y)} ${round(end.x)} ${round(end.y)}`
-    )
-  })
-
-  return `${segments.join('')}Z`
-}
-
-/** The door handle (`.fridge-door::before`), projected the same way. */
-function handleMarkup(): string {
-  const topLeft = projectDoorPoint(DOOR_WIDTH - 16, 36)
-  const bottomRight = projectDoorPoint(DOOR_WIDTH - 10, 72)
-  const width = round(bottomRight.x - topLeft.x)
-  const height = round(bottomRight.y - topLeft.y)
-
-  return `<rect x="${round(topLeft.x)}" y="${round(topLeft.y)}" width="${width}" height="${height}" rx="${round(width / 2)}" fill="${COLORS.handle}" />`
+  return [
+    `M${CABINET_RADIUS} 0`,
+    `H${round(right - DOOR_RADIUS_RIGHT)}`,
+    `a${DOOR_RADIUS_RIGHT} ${DOOR_RADIUS_RIGHT} 0 0 1 ${DOOR_RADIUS_RIGHT} ${DOOR_RADIUS_RIGHT}`,
+    `V${round(bottom - DOOR_RADIUS_RIGHT)}`,
+    `a${DOOR_RADIUS_RIGHT} ${DOOR_RADIUS_RIGHT} 0 0 1 -${DOOR_RADIUS_RIGHT} ${DOOR_RADIUS_RIGHT}`,
+    `H${CABINET_RADIUS}`,
+    `a${CABINET_RADIUS} ${CABINET_RADIUS} 0 0 1 -${CABINET_RADIUS} -${CABINET_RADIUS}`,
+    `V${CABINET_RADIUS}`,
+    `a${CABINET_RADIUS} ${CABINET_RADIUS} 0 0 1 ${CABINET_RADIUS} -${CABINET_RADIUS}`,
+    'Z',
+  ].join('')
 }
 
 /*
@@ -166,39 +97,45 @@ type ArtworkOptions = {
   contentScale: number
 }
 
+/**
+ * Optical corrections: the seam and handles are hairlines in the CSS, so at tab
+ * sizes they have to grow to survive rasterising at all.
+ */
+const SIZING: Record<Detail, { seam: number; handleWidth: number; handleHeight: number }> = {
+  full: { seam: 3, handleWidth: 7, handleHeight: 34 },
+  simple: { seam: 6, handleWidth: 10, handleHeight: 38 },
+}
+
 function fridgeMarkup(detail: Detail): string {
-  const bottle = [
-    `<rect x="54" y="6" width="12" height="6" rx="3" fill="url(#sbf-bottle)" />`,
-    `<rect x="53" y="12" width="14" height="18" rx="6" fill="url(#sbf-bottle)" />`,
-    `<path fill="url(#sbf-bottle)" d="M45 48A13 20 0 0 1 58 28h4a13 20 0 0 1 13 20v24a10 12 0 0 1-10 12H55a10 12 0 0 1-10-12Z" />`,
+  const { seam, handleWidth, handleHeight } = SIZING[detail]
+
+  // Freezer handle above the seam, fridge handle below — the pair is what makes
+  // the silhouette read as a fridge rather than a plain rounded rectangle.
+  const handleX = round(DOOR_WIDTH - 10 - handleWidth)
+  const handleGap = 12
+  const handles = [
+    `<rect x="${handleX}" y="${round(SEAM_Y - handleGap - handleHeight)}" width="${handleWidth}" height="${handleHeight}" rx="${round(handleWidth / 2)}" fill="url(#sbf-handle)" />`,
+    `<rect x="${handleX}" y="${round(SEAM_Y + handleGap)}" width="${handleWidth}" height="${handleHeight}" rx="${round(handleWidth / 2)}" fill="url(#sbf-handle)" />`,
   ].join('\n    ')
 
   const cabinetBorder =
     detail === 'full' ? ` stroke="${COLORS.cabinetBorder}" stroke-width="1"` : ''
-  const shelf =
-    detail === 'full'
-      ? `\n    <rect x="10" y="84" width="100" height="2" fill="${COLORS.shelf}" />\n    `
-      : '\n    '
-  // Stands in for the open door's drop shadow falling into the cabinet.
-  const doorShadow =
-    detail === 'full'
-      ? `\n    <rect x="0" y="0" width="${WRAP_WIDTH}" height="${WRAP_HEIGHT}" rx="21" fill="url(#sbf-door-shadow)" />`
-      : ''
 
-  // The door border and its inset highlight are stroked inside the clip, which
-  // keeps both hairlines within the door outline (as CSS border/inset shadow do).
+  // Border and inset highlight are stroked inside the clip, so both hairlines
+  // stay within the door outline (as the CSS border/inset shadow do).
   const doorEdges =
     detail === 'full'
       ? `
     <g clip-path="url(#sbf-door-clip)" fill="none">
       <path d="${doorPath()}" stroke="${COLORS.doorHighlight}" stroke-width="4" />
       <path d="${doorPath()}" stroke="${COLORS.doorBorder}" stroke-width="2" />
-    </g>
-    ${handleMarkup()}`
+    </g>`
       : ''
 
-  return `    <rect x="0" y="0" width="${WRAP_WIDTH}" height="${WRAP_HEIGHT}" rx="21" fill="url(#sbf-cabinet)"${cabinetBorder} />${shelf}${bottle}${doorShadow}
-    <path d="${doorPath()}" fill="url(#sbf-door)" />${doorEdges}`
+  return `    <rect x="0" y="0" width="${WRAP_WIDTH}" height="${WRAP_HEIGHT}" rx="${CABINET_RADIUS}" fill="url(#sbf-cabinet)"${cabinetBorder} />
+    <path d="${doorPath()}" fill="url(#sbf-door)" />${doorEdges}
+    <rect x="0" y="${round(SEAM_Y - seam / 2)}" width="${round(DOOR_WIDTH)}" height="${seam}" fill="${COLORS.seam}" />
+    ${handles}`
 }
 
 function buildSvg({ detail, backdrop, contentScale }: ArtworkOptions): string {
@@ -223,15 +160,10 @@ function buildSvg({ detail, backdrop, contentScale }: ArtworkOptions): string {
     </linearGradient>
 `
 
-  // Only the detailed artwork uses the door shadow and the inset-hairline clip.
+  // Only the detailed artwork strokes hairlines inside the door outline.
   const detailDefs =
     detail === 'full'
-      ? `    <linearGradient id="sbf-door-shadow" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${round(WRAP_WIDTH * 0.55)}" y2="0">
-      <stop offset="0" stop-color="#000000" stop-opacity="0.42" />
-      <stop offset="0.55" stop-color="#000000" stop-opacity="0.14" />
-      <stop offset="1" stop-color="#000000" stop-opacity="0" />
-    </linearGradient>
-    <clipPath id="sbf-door-clip">
+      ? `    <clipPath id="sbf-door-clip">
       <path d="${doorPath()}" />
     </clipPath>
 `
@@ -250,10 +182,9 @@ ${backdropGradient}    <linearGradient id="sbf-cabinet" gradientUnits="userSpace
       <stop offset="0.55" stop-color="${COLORS.doorMid}" />
       <stop offset="1" stop-color="${COLORS.doorBottom}" />
     </linearGradient>
-    <linearGradient id="sbf-bottle" gradientUnits="userSpaceOnUse" x1="0" y1="6" x2="0" y2="84">
-      <stop offset="0" stop-color="${COLORS.bottleTop}" />
-      <stop offset="0.28" stop-color="${COLORS.bottleMid}" />
-      <stop offset="1" stop-color="${COLORS.bottleBottom}" />
+    <linearGradient id="sbf-handle" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="${WRAP_HEIGHT}">
+      <stop offset="0" stop-color="${COLORS.handleTop}" />
+      <stop offset="1" stop-color="${COLORS.handleBottom}" />
     </linearGradient>
 ${detailDefs}  </defs>
 ${backdropMarkup}  <g transform="translate(${round(offsetX)} ${round(offsetY)}) scale(${round(scale)}) translate(${round(-CONTENT.left)} ${round(-CONTENT.top)})">
