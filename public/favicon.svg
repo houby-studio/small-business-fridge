@@ -1,31 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <title>Small Business Fridge</title>
   <defs>
-    <linearGradient id="sbf-backdrop" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#1c1c20" />
-      <stop offset="1" stop-color="#09090b" />
+    <linearGradient id="sbf-cabinet" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="500">
+      <stop offset="0" stop-color="#1f2937" />
+      <stop offset="1" stop-color="#0b1220" />
     </linearGradient>
-    <linearGradient id="sbf-cabinet" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="168">
-      <stop offset="0" stop-color="#2d3440" />
-      <stop offset="0.45" stop-color="#1f2937" />
-      <stop offset="1" stop-color="#111827" />
+    <linearGradient id="sbf-door" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="500">
+      <stop offset="0" stop-color="#ffffff" />
+      <stop offset="1" stop-color="#e5e7eb" />
     </linearGradient>
-    <linearGradient id="sbf-door" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="168">
-      <stop offset="0" stop-color="#f3f4f6" />
-      <stop offset="0.55" stop-color="#e5e7eb" />
-      <stop offset="1" stop-color="#d1d5db" />
-    </linearGradient>
-    <linearGradient id="sbf-handle" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="168">
+    <linearGradient id="sbf-handle" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="500">
       <stop offset="0" stop-color="#f82843" />
       <stop offset="1" stop-color="#c30f2b" />
     </linearGradient>
   </defs>
-  <rect x="0.75" y="0.75" width="510.5" height="510.5" rx="101" fill="url(#sbf-backdrop)" stroke="rgba(255,255,255,0.09)" stroke-width="1.5" />
-  <g transform="translate(109.71 51.2) scale(2.44) translate(0 0)">
-    <rect x="0" y="0" width="120" height="168" rx="21" fill="url(#sbf-cabinet)" />
-    <path d="M21 0H92.4a18 18 0 0 1 18 18V150a18 18 0 0 1 -18 18H21a21 21 0 0 1 -21 -21V21a21 21 0 0 1 21 -21Z" fill="url(#sbf-door)" />
-    <rect x="0" y="81" width="110.4" height="6" fill="rgba(17,24,39,0.5)" />
-    <rect x="90.4" y="34" width="10" height="38" rx="5" fill="url(#sbf-handle)" />
-    <rect x="90.4" y="96" width="10" height="38" rx="5" fill="url(#sbf-handle)" />
+  <g transform="translate(65.33 5.12) scale(1)">
+    <rect x="0" y="0" width="380" height="500" rx="74" fill="url(#sbf-cabinet)" />
+    <rect x="38" y="38" width="304" height="424" rx="44" fill="url(#sbf-door)" />
+    <rect x="262" y="175" width="50" height="150" rx="25" fill="url(#sbf-handle)" />
   </g>
 </svg>

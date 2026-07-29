@@ -516,32 +516,29 @@ The whole icon set is **generated** — never hand-edit the files in `public/`:
 npm run generate:app-icons   # scripts/generate_app_icons.ts (needs Playwright's chromium)
 ```
 
-The artwork is a vector copy of the boot-loader fridge (`#sbf-boot-loader .fridge-*` in
-`inertia/css/app.css`) in its **first animation frame — doors shut**. Favicons cannot animate,
-and the swung-open frame is not recognisable as a fridge at 16px. If the boot-loader CSS
-changes, update the constants at the top of the script and re-run it.
+The artwork is a **flat sticker-style silhouette**: dark cabinet frame, single white door, one
+bold red handle, on a **transparent** canvas. Design constraints, learned the hard way:
 
-Two departures from the CSS are intentional, both for legibility at tab sizes:
-
-- the door seam is drawn **dark** (the CSS white 18% line is invisible on a white door),
-- the handles are **brand red**, not slate — and there are two of them (freezer + fridge),
-  which is what makes the silhouette read as a fridge rather than a rounded rectangle.
-
-Small sizes additionally thicken the seam and handles (`SIZING` in the script) — without that
-optical correction both disappear below ~48px.
+- **No backdrop tile on tab icons.** A filled rounded square reads as an ugly black box next to
+  the tab title. Transparency plus the dark frame works on light and dark tabs alike.
+- **Big elements only.** Everything is sized to survive a 16px raster — the frame lands at ~1px
+  and the handle at ~1.5px wide there. Do not make anything thinner, and do not add detail
+  (seams, hairlines, bottles, shelves): it turns to mush and it has been tried.
+- It is intentionally **not** a copy of the boot-loader fridge (`#sbf-boot-loader .fridge-*`);
+  only the palette is shared. Geometry lives in `SHAPE` at the top of the script.
 
 Generated files (all committed, copied into the build via `metaFiles` in `adonisrc.ts`):
 
-| File                    | Used for                                                        |
-| ----------------------- | --------------------------------------------------------------- |
-| `icon.svg`              | Master artwork, transparent background — also usable in UI      |
-| `favicon.svg`           | Browser tab (simplified: hairlines dropped for 16px legibility) |
-| `favicon.ico`           | Legacy tab icon, 16/32/48 frames                                |
-| `favicon-96x96.png`     | Bookmark / search-result sizes                                  |
-| `apple-touch-icon.png`  | iOS home screen (180px, full-bleed backdrop — iOS masks it)     |
-| `icon-192.png`          | Android home screen / manifest `any`                            |
-| `icon-512.png`          | Manifest `any`, splash screens                                  |
-| `icon-maskable-512.png` | Manifest `maskable` (artwork inside the 80% safe zone)          |
+| File                    | Used for                                                             |
+| ----------------------- | -------------------------------------------------------------------- |
+| `icon.svg`              | Master artwork, transparent — also usable in UI                      |
+| `favicon.svg`           | Browser tab, transparent, near full-bleed                            |
+| `favicon.ico`           | Legacy tab icon, 16/32/48 frames                                     |
+| `favicon-96x96.png`     | Bookmark / search-result sizes                                       |
+| `apple-touch-icon.png`  | iOS home screen (180px, light backdrop — iOS fills alpha with black) |
+| `icon-192.png`          | Android home screen / manifest `any`, transparent                    |
+| `icon-512.png`          | Manifest `any`, splash screens, transparent                          |
+| `icon-maskable-512.png` | Manifest `maskable` (light backdrop, artwork in the 80% safe zone)   |
 
 `<head>` links live in `resources/views/inertia_layout.edge`. The PWA manifest is served
 dynamically by `ManifestController` at `GET /site.webmanifest` so it carries the instance's

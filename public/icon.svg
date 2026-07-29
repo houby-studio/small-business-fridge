@@ -1,33 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <title>Small Business Fridge</title>
   <defs>
-    <linearGradient id="sbf-cabinet" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="168">
-      <stop offset="0" stop-color="#2d3440" />
-      <stop offset="0.45" stop-color="#1f2937" />
-      <stop offset="1" stop-color="#111827" />
+    <linearGradient id="sbf-cabinet" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="500">
+      <stop offset="0" stop-color="#1f2937" />
+      <stop offset="1" stop-color="#0b1220" />
     </linearGradient>
-    <linearGradient id="sbf-door" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="168">
-      <stop offset="0" stop-color="#f3f4f6" />
-      <stop offset="0.55" stop-color="#e5e7eb" />
-      <stop offset="1" stop-color="#d1d5db" />
+    <linearGradient id="sbf-door" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="500">
+      <stop offset="0" stop-color="#ffffff" />
+      <stop offset="1" stop-color="#e5e7eb" />
     </linearGradient>
-    <linearGradient id="sbf-handle" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="168">
+    <linearGradient id="sbf-handle" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="500">
       <stop offset="0" stop-color="#f82843" />
       <stop offset="1" stop-color="#c30f2b" />
     </linearGradient>
-    <clipPath id="sbf-door-clip">
-      <path d="M21 0H92.4a18 18 0 0 1 18 18V150a18 18 0 0 1 -18 18H21a21 21 0 0 1 -21 -21V21a21 21 0 0 1 21 -21Z" />
-    </clipPath>
   </defs>
-  <g transform="translate(84.11 15.36) scale(2.86) translate(0 0)">
-    <rect x="0" y="0" width="120" height="168" rx="21" fill="url(#sbf-cabinet)" stroke="rgba(255,255,255,0.16)" stroke-width="1" />
-    <path d="M21 0H92.4a18 18 0 0 1 18 18V150a18 18 0 0 1 -18 18H21a21 21 0 0 1 -21 -21V21a21 21 0 0 1 21 -21Z" fill="url(#sbf-door)" />
-    <g clip-path="url(#sbf-door-clip)" fill="none">
-      <path d="M21 0H92.4a18 18 0 0 1 18 18V150a18 18 0 0 1 -18 18H21a21 21 0 0 1 -21 -21V21a21 21 0 0 1 21 -21Z" stroke="rgba(255,255,255,0.62)" stroke-width="4" />
-      <path d="M21 0H92.4a18 18 0 0 1 18 18V150a18 18 0 0 1 -18 18H21a21 21 0 0 1 -21 -21V21a21 21 0 0 1 21 -21Z" stroke="rgba(0,0,0,0.28)" stroke-width="2" />
-    </g>
-    <rect x="0" y="82.5" width="110.4" height="3" fill="rgba(17,24,39,0.5)" />
-    <rect x="93.4" y="38" width="7" height="34" rx="3.5" fill="url(#sbf-handle)" />
-    <rect x="93.4" y="96" width="7" height="34" rx="3.5" fill="url(#sbf-handle)" />
+  <g transform="translate(77 20.48) scale(0.94)">
+    <rect x="0" y="0" width="380" height="500" rx="74" fill="url(#sbf-cabinet)" />
+    <rect x="38" y="38" width="304" height="424" rx="44" fill="url(#sbf-door)" />
+    <rect x="262" y="175" width="50" height="150" rx="25" fill="url(#sbf-handle)" />
   </g>
 </svg>
