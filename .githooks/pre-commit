@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+ROOT_DIR="$(git rev-parse --show-toplevel)"
+cd "$ROOT_DIR"
+
+echo "[pre-commit] Running lint and format checks..."
+
+run_checks() {
+  npm run lint
+  npx prettier --check .
+}
+
+if run_checks; then
+  echo "[pre-commit] Checks passed."
+  exit 0
+fi
+
+echo "[pre-commit] Checks failed. Attempting automatic fixes..."
+npm run lint:fix || true
+npm run format || true
+
+echo "[pre-commit] Re-running checks after auto-fix..."
+if ! run_checks; then
+  echo "[pre-commit] Checks still failing after auto-fix."
+  echo "[pre-commit] Commit blocked."
+  exit 1
+fi
+
+if ! git diff --quiet; then
+  echo "[pre-commit] Auto-fixes updated files."
+  echo "[pre-commit] Review changes, stage them, and commit again."
+  git status --short
+  exit 1
+fi
+
+echo "[pre-commit] Checks passed after auto-fix."

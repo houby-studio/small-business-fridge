@@ -4,7 +4,7 @@ summary: Small Business Fridge — kiosk client
 description: |
   Kiosk client for the Small Business Fridge office inventory system.
   Configure the server URL after installation:
-    snap set sbf-kiosk kiosk-url=https://your-server.example.com
+    snap set sbf-kiosk url=https://your-server.example.com
 
 confinement: strict
 compression: lzo
@@ -14,39 +14,34 @@ base: core24
 apps:
   sbf-kiosk:
     command-chain: &_command-chain
-      - bin/gpu-2404-wrapper
       - bin/wayland-launch
     command: &_command usr/bin/wrapper
     plugs: &_plugs
+      - alsa
       - opengl
       - wayland
       - browser-support
       - network
       - network-bind
-      - audio-playback
+    extensions: &_extensions
+      - gnome
     environment: &_environment
       XDG_DATA_HOME: $SNAP_USER_DATA
       XDG_DATA_DIRS: $SNAP/usr/share
       GTK_USE_PORTAL: 0
       GDK_GL: gles
+      ALSA_CONFIG_PATH: $SNAP/usr/share/alsa/alsa.conf
+      ALSA_CONFIG_DIR: $SNAP/usr/share/alsa
 
   daemon:
     daemon: simple
-    restart-delay: 3s
+    restart-delay: 2s
     restart-condition: always
     command-chain: *_command-chain
     command: *_command
     plugs: *_plugs
     environment: *_environment
-
-# gpu-2404 provides the userspace graphics stack (Mesa, DRM, Vulkan).
-# mesa-2404 is the default provider; ubuntu-frame also ships one.
-# See: https://mir-server.io/docs/the-gpu-2404-snap-interface
-plugs:
-  gpu-2404:
-    interface: content
-    target: $SNAP/gpu-2404
-    default-provider: mesa-2404
+    extensions: *_extensions
 
 environment:
   XDG_CACHE_HOME:  $SNAP_USER_COMMON/.cache
@@ -54,28 +49,20 @@ environment:
   XDG_CONFIG_DIRS: $SNAP/etc/xdg
   XDG_DATA_DIRS:   $SNAP/usr/local/share:$SNAP/usr/share
   XKB_CONFIG_ROOT: $SNAP/usr/share/X11/xkb
+  ALSA_CONFIG_PATH: $SNAP/usr/share/alsa/alsa.conf
+  ALSA_CONFIG_DIR: $SNAP/usr/share/alsa
 
 layout:
-  /usr/share/libdrm:
-    bind: $SNAP/gpu-2404/libdrm
-  /usr/share/drirc.d:
-    symlink: $SNAP/gpu-2404/drirc.d
   /usr/share/fonts:
     bind: $SNAP/usr/share/fonts
   /usr/share/icons:
     bind: $SNAP/usr/share/icons
-  /usr/share/sounds:
-    bind: $SNAP/usr/share/sounds
   /etc/fonts:
     bind: $SNAP/etc/fonts
-  /usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/gdk-pixbuf-2.0:
-    bind: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/gdk-pixbuf-2.0
-  /usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/gtk-3.0:
-    bind: $SNAP/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/gtk-3.0
-  /usr/share/mime:
-    bind: $SNAP/usr/share/mime
-  /etc/gtk-3.0:
-    bind: $SNAP/etc/gtk-3.0
+  # ALSA config must be accessible at its expected system path.
+  # The snap stages alsa.conf via libasound2t64; this layout makes it visible.
+  /usr/share/alsa:
+    bind: $SNAP/usr/share/alsa
 
 parts:
   sbf-kiosk:
@@ -84,19 +71,10 @@ parts:
     stage-packages:
       - libnspr4
       - libnss3
-      - libatk-bridge2.0-0
-      - libcups2
-      - libgtk-3-0
-      - libasound2
-      - xkb-data
-      - liboss4-salsa2
-    override-prime: |
-      craftctl default
-      # liboss4-salsa2 installs libOSSlib.so into oss4-libsalsa/ subdirectory,
-      # which is not in the dynamic linker's default search path.
-      # Create a symlink in the standard lib dir so it can be found at runtime.
-      ln -sf oss4-libsalsa/libOSSlib.so \
-        "$CRAFT_PRIME/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/libOSSlib.so" || true
+      - libasound2t64
+      - libasound2-plugins
+      # alsa-utils provides amixer for volume control.
+      - alsa-utils
 
   wrapper:
     plugin: dump
@@ -134,30 +112,12 @@ parts:
     plugin: dump
     source: wayland-launch
     override-build: |
-      PLUGS="opengl wayland gpu-2404 browser-support network network-bind audio-playback"
+      PLUGS="alsa opengl wayland browser-support network network-bind"
       sed --in-place "s/%PLUGS%/$PLUGS/g" $CRAFT_PART_BUILD/bin/wayland-launch
       sed --in-place "s/%PLUGS%/$PLUGS/g" $CRAFT_PART_BUILD/bin/setup.sh
       craftctl default
     stage-packages:
       - inotify-tools
-
-  gpu-2404:
-    after:
-      - sbf-kiosk
-      - wrapper
-      - gsettings+pixbuf+immodules
-      - setup
-    source: https://github.com/canonical/gpu-snap.git
-    plugin: dump
-    override-prime: |
-      craftctl default
-      ${CRAFT_PART_SRC}/bin/gpu-2404-cleanup mesa-2404
-      cd "$CRAFT_PRIME/usr/share/"
-      rm -rf bug drirc.d glvnd libdrm lintian man
-      rm -rf applications apport bash-completion dbus-1 doc-base doc gtk-doc \
-             help pkgconfig libthai metainfo themes thumbnailers xml
-    prime:
-      - bin/gpu-2404-wrapper
 
 platforms:
   amd64:

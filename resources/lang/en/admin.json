@@ -74,6 +74,8 @@
   "invoices_filter_supplier": "Supplier",
 
   "users_col_id": "ID",
+  "users_col_db_id": "DB ID",
+  "users_col_keypad_id": "Keypad ID",
   "users_col_email": "Email",
   "users_col_role": "Role",
   "users_actions": "Actions",

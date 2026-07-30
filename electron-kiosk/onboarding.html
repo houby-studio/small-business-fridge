@@ -1,0 +1,809 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Setup</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #111827;
+        --surface: #1f2937;
+        --border: #374151;
+        --border-light: #4b5563;
+        --text: #ffffff;
+        --text-sec: #d1d5db;
+        --text-muted: #9ca3af;
+        --green: #16a34a;
+        --green-h: #22c55e;
+        --red: #dc2626;
+        --red-dim: rgba(220, 38, 38, 0.15);
+        --red-border: rgba(220, 38, 38, 0.4);
+        --green-dim: rgba(22, 163, 74, 0.15);
+        --green-border: rgba(22, 163, 74, 0.4);
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        line-height: 1.5;
+      }
+
+      /* ── Card ───────────────────────────────────────────────────── */
+      .card {
+        width: 100%;
+        max-width: 1000px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 1.5rem;
+        padding: 3rem;
+        box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+      }
+
+      h1 {
+        font-size: 2.25rem;
+        font-weight: 800;
+        margin-bottom: 2.5rem;
+      }
+
+      /* ── Two-column grid ────────────────────────────────────────── */
+      .fields-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        margin-bottom: 2.5rem;
+      }
+
+      .col-left {
+        padding-right: 2.5rem;
+      }
+
+      .col-right {
+        padding-left: 2.5rem;
+        border-left: 1px solid var(--border);
+      }
+
+      @media (max-width: 900px) {
+        .fields-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .col-left {
+          padding-right: 0;
+        }
+
+        .col-right {
+          padding-left: 0;
+          border-left: none;
+          border-top: 1px solid var(--border);
+          padding-top: 1.75rem;
+          margin-top: 0.25rem;
+        }
+      }
+
+      /* ── Field ──────────────────────────────────────────────────── */
+      .field {
+        margin-bottom: 1.75rem;
+      }
+
+      .field-label {
+        display: block;
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-sec);
+        margin-bottom: 0.625rem;
+      }
+
+      .required {
+        color: var(--red);
+        margin-left: 0.125rem;
+      }
+
+      /* ── Inputs & select ────────────────────────────────────────── */
+      input[type='text'],
+      select {
+        width: 100%;
+        height: 4rem;
+        background: var(--bg);
+        border: 2px solid var(--border);
+        border-radius: 1rem;
+        color: var(--text);
+        padding: 0 1.25rem;
+        font-size: 1.125rem;
+        font-family: inherit;
+        outline: none;
+        appearance: none;
+        -webkit-appearance: none;
+        transition:
+          border-color 0.15s,
+          box-shadow 0.15s;
+      }
+
+      select {
+        cursor: pointer;
+        padding-right: 3rem;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 1.25rem center;
+      }
+
+      select option {
+        background: var(--surface);
+        color: var(--text);
+      }
+
+      input:focus,
+      select:focus {
+        border-color: var(--green);
+        box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.2);
+      }
+
+      input.invalid {
+        border-color: var(--red);
+        box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.15);
+      }
+
+      /* ── Split URL input (protocol select + host text) ──────────── */
+      .url-row {
+        display: flex;
+        height: 4rem;
+        border: 2px solid var(--border);
+        border-radius: 1rem;
+        overflow: hidden;
+        transition:
+          border-color 0.15s,
+          box-shadow 0.15s;
+      }
+
+      .url-row:focus-within {
+        border-color: var(--green);
+        box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.2);
+      }
+
+      .url-row.invalid {
+        border-color: var(--red);
+        box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.15);
+      }
+
+      /* Inner elements — strip border/radius; parent owns them */
+      .url-row select,
+      .url-row input[type='text'] {
+        height: 100%;
+        border: none;
+        border-radius: 0;
+        width: auto;
+        transition: none;
+      }
+
+      .url-row select:focus,
+      .url-row input[type='text']:focus {
+        box-shadow: none;
+        border-color: transparent;
+      }
+
+      .url-protocol {
+        background: var(--surface);
+        border-right: 2px solid var(--border);
+        flex-shrink: 0;
+        padding: 0 2.5rem 0 1.25rem;
+        font-size: 1rem;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.75rem center;
+      }
+
+      .url-host {
+        flex: 1;
+        min-width: 0;
+        background: var(--bg);
+        padding: 0 1.25rem;
+        font-size: 1.125rem;
+        color: var(--text);
+        font-family: inherit;
+        outline: none;
+        border: none;
+      }
+
+      .hint {
+        margin-top: 0.5rem;
+        font-size: 0.875rem;
+        color: var(--text-muted);
+      }
+
+      .hint code {
+        font-family: ui-monospace, monospace;
+        font-size: 0.8rem;
+        background: rgba(255, 255, 255, 0.08);
+        padding: 0.0625rem 0.3rem;
+        border-radius: 0.25rem;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .device-list {
+        margin-top: 0.75rem;
+        padding: 0.875rem 1rem;
+        background: rgba(17, 24, 39, 0.75);
+        border: 1px solid var(--border);
+        border-radius: 1rem;
+        font-size: 0.9rem;
+        color: var(--text-sec);
+      }
+
+      .device-list ul {
+        margin: 0.5rem 0 0;
+        padding-left: 1.1rem;
+      }
+
+      .device-list li + li {
+        margin-top: 0.35rem;
+      }
+
+      .device-list code {
+        font-family: ui-monospace, monospace;
+        font-size: 0.8rem;
+        background: rgba(255, 255, 255, 0.08);
+        padding: 0.0625rem 0.3rem;
+        border-radius: 0.25rem;
+      }
+
+      /* ── Range slider ───────────────────────────────────────────── */
+      .range-row {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        height: 4rem;
+        padding: 0 0.25rem;
+      }
+
+      input[type='range'] {
+        flex: 1;
+        height: 2rem;
+        background: transparent;
+        outline: none;
+        cursor: pointer;
+        padding: 0;
+        appearance: none;
+        -webkit-appearance: none;
+      }
+
+      input[type='range']::-webkit-slider-runnable-track {
+        height: 0.5rem;
+        border-radius: 9999px;
+        background: linear-gradient(
+          to right,
+          var(--green) 0%,
+          var(--green) var(--range-val, 100%),
+          var(--border-light) var(--range-val, 100%),
+          var(--border-light) 100%
+        );
+      }
+
+      input[type='range']::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 50%;
+        background: var(--green);
+        border: none;
+        cursor: pointer;
+        margin-top: -0.875rem;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+        transition:
+          background 0.15s,
+          transform 0.1s;
+      }
+
+      input[type='range']::-webkit-slider-thumb:active {
+        transform: scale(1.15);
+        background: var(--green-h);
+      }
+
+      input[type='range']::-moz-range-track {
+        height: 0.5rem;
+        border-radius: 9999px;
+        background: var(--border-light);
+      }
+
+      input[type='range']::-moz-range-progress {
+        height: 0.5rem;
+        border-radius: 9999px;
+        background: var(--green);
+      }
+
+      input[type='range']::-moz-range-thumb {
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 50%;
+        background: var(--green);
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+      }
+
+      .range-value {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-sec);
+        min-width: 3.25rem;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* ── Toggle switch ──────────────────────────────────────────── */
+      .toggle-row {
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+        min-height: 4rem;
+      }
+
+      .toggle {
+        position: relative;
+        width: 4rem;
+        height: 2.25rem;
+        flex-shrink: 0;
+      }
+
+      .toggle input {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .toggle-track {
+        position: absolute;
+        inset: 0;
+        background: var(--border-light);
+        border-radius: 9999px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .toggle-thumb {
+        position: absolute;
+        width: 1.75rem;
+        height: 1.75rem;
+        top: 0.25rem;
+        left: 0.25rem;
+        background: white;
+        border-radius: 50%;
+        pointer-events: none;
+        transition: transform 0.2s;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+      }
+
+      .toggle input:checked ~ .toggle-track {
+        background: var(--green);
+      }
+
+      .toggle input:checked ~ .toggle-thumb {
+        transform: translateX(1.75rem);
+      }
+
+      .toggle-labels label {
+        display: block;
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-sec);
+        cursor: pointer;
+      }
+
+      /* ── Submit button ──────────────────────────────────────────── */
+      .btn-submit {
+        width: 100%;
+        height: 5rem;
+        background: var(--green);
+        color: white;
+        border: none;
+        border-radius: 1rem;
+        font-size: 1.375rem;
+        font-weight: 700;
+        font-family: inherit;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        transition:
+          background 0.15s,
+          opacity 0.15s,
+          transform 0.1s;
+        appearance: none;
+        -webkit-appearance: none;
+      }
+
+      .btn-submit:hover:not(:disabled) {
+        background: var(--green-h);
+      }
+
+      .btn-submit:active:not(:disabled) {
+        transform: scale(0.98);
+      }
+
+      .btn-submit:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+      }
+
+      /* ── Status message ─────────────────────────────────────────── */
+      .status {
+        margin-top: 1.25rem;
+        padding: 1.125rem 1.25rem;
+        border-radius: 1rem;
+        font-size: 1rem;
+        font-weight: 500;
+        display: none;
+      }
+
+      .status.success {
+        display: block;
+        background: var(--green-dim);
+        border: 1px solid var(--green-border);
+        color: #4ade80;
+      }
+
+      .status.error {
+        display: block;
+        background: var(--red-dim);
+        border: 1px solid var(--red-border);
+        color: #f87171;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Setup</h1>
+
+      <form id="setup-form" novalidate>
+        <div class="fields-grid">
+          <!-- Left column: connection & locale -->
+          <div class="col-left">
+            <div class="field">
+              <label class="field-label" for="urlHost"
+                >Server URL<span class="required">*</span></label
+              >
+              <div class="url-row" id="urlRow">
+                <select id="urlProtocol" class="url-protocol" aria-label="Protocol">
+                  <option value="https">https</option>
+                  <option value="http">http</option>
+                </select>
+                <input
+                  type="text"
+                  id="urlHost"
+                  class="url-host"
+                  placeholder="sbf.example.com"
+                  autocomplete="off"
+                  spellcheck="false"
+                />
+              </div>
+              <p class="hint">
+                The address of the Small Business Fridge web server this kiosk will load.
+              </p>
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="allowedOrigins">Additional Allowed Origins</label>
+              <input
+                type="text"
+                id="allowedOrigins"
+                name="allowedOrigins"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <p class="hint">
+                Comma-separated list of URL origins for OIDC redirects. Leave blank if not needed.
+              </p>
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="lang">Language</label>
+              <select id="lang" name="lang">
+                <option value="en">English (en)</option>
+                <option value="cs">&#268;e&#353;tina (cs)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Right column: audio & service -->
+          <div class="col-right">
+            <div class="field">
+              <label class="field-label" for="audioSink">Audio Device</label>
+              <div class="stack">
+                <select id="audioSinkPreset" name="audioSinkPreset">
+                  <option value="auto">System default (auto)</option>
+                  <option value="__custom__">Custom ALSA device</option>
+                </select>
+                <input
+                  type="text"
+                  id="audioSink"
+                  name="audioSink"
+                  value="auto"
+                  placeholder="hw:0,0"
+                  autocomplete="off"
+                  spellcheck="false"
+                  class="hidden"
+                />
+              </div>
+              <p class="hint">
+                ALSA device string. <code>auto</code> uses the system default. Examples:
+                <code>hw:0,0</code> (analog), <code>hw:0,3</code> (HDMI). Raw
+                <code>hw:</code> values are passed through ALSA's plug layer automatically.
+              </p>
+              <div class="device-list hidden" id="audioDeviceList"></div>
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="audioVolume">Startup Volume</label>
+              <div class="range-row">
+                <input
+                  type="range"
+                  id="audioVolume"
+                  name="audioVolume"
+                  min="0"
+                  max="100"
+                  value="100"
+                />
+                <output class="range-value" id="volumeDisplay" for="audioVolume">100%</output>
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="toggle-row">
+                <label class="toggle">
+                  <input type="checkbox" id="daemon" name="daemon" checked />
+                  <span class="toggle-track"></span>
+                  <span class="toggle-thumb"></span>
+                </label>
+                <div class="toggle-labels">
+                  <label for="daemon">Run as system service</label>
+                  <p class="hint" style="margin-top: 0.25rem">
+                    Start automatically on boot. Disable to launch manually.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" id="submit-btn" class="btn-submit" disabled>
+          Save &amp; Launch Kiosk
+        </button>
+
+        <div class="status" id="status"></div>
+      </form>
+    </div>
+
+    <script>
+      const urlProtocol = document.getElementById('urlProtocol')
+      const urlHost = document.getElementById('urlHost')
+      const urlRow = document.getElementById('urlRow')
+      const submitBtn = document.getElementById('submit-btn')
+      const statusEl = document.getElementById('status')
+      const volumeSlider = document.getElementById('audioVolume')
+      const volumeDisplay = document.getElementById('volumeDisplay')
+      const audioSinkPreset = document.getElementById('audioSinkPreset')
+      const audioSinkInput = document.getElementById('audioSink')
+      const audioDeviceList = document.getElementById('audioDeviceList')
+
+      function setAudioSinkMode(mode, value = '') {
+        const isCustom = mode === '__custom__'
+        audioSinkPreset.value = isCustom ? '__custom__' : mode
+        audioSinkInput.classList.toggle('hidden', !isCustom)
+        if (isCustom) {
+          audioSinkInput.value = value
+        } else {
+          audioSinkInput.value = mode
+        }
+      }
+
+      function populateAudioDevices(devices, selectedValue, error, status) {
+        const previous = new Set(
+          [...audioSinkPreset.querySelectorAll('option[data-device-option="true"]')].map(
+            (option) => option.value
+          )
+        )
+
+        for (const value of previous) {
+          const option = audioSinkPreset.querySelector(`option[value="${CSS.escape(value)}"]`)
+          option?.remove()
+        }
+
+        if (status === 'alsa-not-connected') {
+          audioDeviceList.className = 'device-list'
+          audioDeviceList.replaceChildren()
+
+          const heading = document.createElement('strong')
+          heading.textContent = 'Audio plug not connected'
+
+          const text = document.createElement('p')
+          text.textContent =
+            'This snap cannot see ALSA devices until the alsa interface is connected.'
+
+          const command = document.createElement('code')
+          command.textContent = 'sudo snap connect sbf-kiosk:alsa'
+
+          const hint = document.createElement('p')
+          hint.textContent = 'Run this command on the device, then reopen onboarding.'
+
+          audioDeviceList.append(heading, text, command, hint)
+        } else if (Array.isArray(devices) && devices.length > 0) {
+          for (const device of devices) {
+            const option = document.createElement('option')
+            option.value = device.value
+            option.dataset.deviceOption = 'true'
+            option.textContent = `${device.description} (${device.value})`
+            audioSinkPreset.insertBefore(option, audioSinkPreset.lastElementChild)
+          }
+
+          audioDeviceList.className = 'device-list'
+          audioDeviceList.replaceChildren()
+
+          const heading = document.createElement('strong')
+          heading.textContent = 'Detected playback devices'
+
+          const list = document.createElement('ul')
+          for (const device of devices) {
+            const item = document.createElement('li')
+            const code = document.createElement('code')
+            code.textContent = device.value
+            item.append(code, ` ${device.description}`)
+            list.appendChild(item)
+          }
+
+          audioDeviceList.append(heading, list)
+        } else {
+          audioDeviceList.className = 'device-list'
+          audioDeviceList.textContent =
+            error ||
+            'No ALSA playback devices were detected yet. You can still enter a manual ALSA device string.'
+        }
+
+        const knownValues = new Set(['auto', ...devices.map((device) => device.value)])
+        if (selectedValue && knownValues.has(selectedValue)) {
+          setAudioSinkMode(selectedValue)
+        } else if (selectedValue && selectedValue !== 'auto') {
+          setAudioSinkMode('__custom__', selectedValue)
+        } else {
+          setAudioSinkMode('auto')
+        }
+      }
+
+      function updateSlider(slider) {
+        const pct = slider.value + '%'
+        volumeDisplay.textContent = pct
+        slider.style.setProperty('--range-val', pct)
+      }
+
+      volumeSlider.addEventListener('input', () => updateSlider(volumeSlider))
+      updateSlider(volumeSlider)
+
+      if (window.kioskSetup) {
+        window.kioskSetup.getConfig().then((cfg) => {
+          if (cfg.url) {
+            try {
+              const u = new URL(cfg.url)
+              urlProtocol.value = u.protocol.replace(':', '') // 'http' or 'https'
+              urlHost.value = u.host // hostname or hostname:port
+            } catch {}
+          }
+          if (cfg.allowedOrigins)
+            document.getElementById('allowedOrigins').value = cfg.allowedOrigins
+          if (cfg.lang) {
+            const sel = document.getElementById('lang')
+            if ([...sel.options].some((o) => o.value === cfg.lang)) sel.value = cfg.lang
+          }
+          populateAudioDevices(
+            cfg.audioDevices || [],
+            cfg.audioSink || 'auto',
+            cfg.audioDevicesError || '',
+            cfg.audioDevicesStatus || ''
+          )
+          if (cfg.audioVolume != null) {
+            volumeSlider.value = cfg.audioVolume
+            updateSlider(volumeSlider)
+          }
+          if (cfg.daemon !== undefined) {
+            document.getElementById('daemon').checked = cfg.daemon !== 'false'
+          }
+          validateUrl()
+        })
+      }
+
+      function buildUrl() {
+        return urlProtocol.value + '://' + urlHost.value.trim()
+      }
+
+      function validateUrl() {
+        const host = urlHost.value.trim()
+        let valid = false
+        if (host) {
+          try {
+            const u = new URL(buildUrl())
+            valid = u.protocol === 'http:' || u.protocol === 'https:'
+          } catch {}
+        }
+        submitBtn.disabled = !valid
+        urlRow.classList.toggle('invalid', host.length > 0 && !valid)
+        return valid
+      }
+
+      urlHost.addEventListener('input', validateUrl)
+      urlProtocol.addEventListener('change', validateUrl)
+      audioSinkPreset.addEventListener('change', () => {
+        if (audioSinkPreset.value === '__custom__') {
+          setAudioSinkMode(
+            '__custom__',
+            audioSinkInput.value === 'auto' ? '' : audioSinkInput.value
+          )
+          audioSinkInput.focus()
+          return
+        }
+        setAudioSinkMode(audioSinkPreset.value)
+      })
+
+      document.getElementById('setup-form').addEventListener('submit', async (e) => {
+        e.preventDefault()
+        if (!validateUrl()) return
+
+        submitBtn.disabled = true
+        submitBtn.textContent = 'Saving\u2026'
+        statusEl.className = 'status'
+
+        const config = {
+          url: buildUrl(),
+          allowedOrigins: document.getElementById('allowedOrigins').value.trim(),
+          lang: document.getElementById('lang').value,
+          audioSink: audioSinkInput.value.trim() || 'auto',
+          audioVolume: String(volumeSlider.value),
+          daemon: document.getElementById('daemon').checked ? 'true' : 'false',
+        }
+
+        if (!window.kioskSetup) {
+          statusEl.className = 'status success'
+          statusEl.textContent = 'Dev mode: set KIOSK_URL=' + config.url + ' and restart to test.'
+          submitBtn.disabled = false
+          submitBtn.textContent = 'Save & Launch Kiosk'
+          return
+        }
+
+        const result = await window.kioskSetup.saveConfig(config)
+        if (result.success) {
+          statusEl.className = 'status success'
+          statusEl.textContent = 'Configuration saved! The kiosk is restarting\u2026'
+          submitBtn.textContent = 'Saved!'
+        } else {
+          statusEl.className = 'status error'
+          statusEl.textContent = 'Error: ' + (result.error || 'Failed to save configuration.')
+          submitBtn.disabled = false
+          submitBtn.textContent = 'Save & Launch Kiosk'
+        }
+      })
+    </script>
+  </body>
+</html>

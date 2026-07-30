@@ -96,7 +96,7 @@ export default class UsersController {
           acceptedAt: invite.acceptedAt?.toISO() ?? null,
           revokedAt: invite.revokedAt?.toISO() ?? null,
           inviteUrl:
-            !invite.acceptedAt && !invite.revokedAt && invite.expiresAt > DateTime.now()
+            !invite.acceptedAt && !invite.revokedAt && invite.expiresAt > DateTime.utc()
               ? invitationService.getInviteUrl(invite)
               : null,
         })),
@@ -120,6 +120,7 @@ export default class UsersController {
       role: userBefore.role,
       isDisabled: userBefore.isDisabled,
       isKiosk: userBefore.isKiosk,
+      keypadId: userBefore.keypadId,
     }
 
     const service = new AdminService()
@@ -138,11 +139,18 @@ export default class UsersController {
       if (err instanceof Error && err.message === 'USER_HAS_UNINVOICED_ORDERS') {
         return response.redirect(usersUrl(request))
       }
+      if (err instanceof Error && err.message === 'KEYPAD_ID_TAKEN') {
+        session.flash('alert', {
+          type: 'danger',
+          message: i18n.t('messages.keypad_id_taken'),
+        })
+        return response.redirect(usersUrl(request))
+      }
       throw err
     }
 
     const changes: Record<string, { from: unknown; to: unknown }> = {}
-    for (const key of ['role', 'isDisabled', 'isKiosk'] as const) {
+    for (const key of ['role', 'isDisabled', 'isKiosk', 'keypadId'] as const) {
       if (data[key] !== undefined && before[key] !== data[key]) {
         changes[key] = { from: before[key], to: data[key] }
       }

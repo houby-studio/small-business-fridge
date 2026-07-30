@@ -74,6 +74,8 @@
   "invoices_filter_supplier": "Dodavatel",
 
   "users_col_id": "ID",
+  "users_col_db_id": "DB ID",
+  "users_col_keypad_id": "Keypad ID",
   "users_col_email": "E-mail",
   "users_col_role": "Role",
   "users_actions": "Akce",

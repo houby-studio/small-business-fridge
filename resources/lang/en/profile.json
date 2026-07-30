@@ -35,6 +35,7 @@
   "save": "Save Changes",
   "update_success": "Profile updated successfully.",
   "tokens_heading": "API Tokens",
+  "api_docs_link": "API documentation",
   "tokens_empty": "No active tokens.",
   "tokens_name": "Name",
   "tokens_created": "Created",

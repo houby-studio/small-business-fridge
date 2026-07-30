@@ -18,6 +18,7 @@ export default class InvoiceService {
         })
         .preload('delivery')
         .orderBy('buyerId')
+        .forUpdate()
 
       if (groups.length === 0) {
         return []
@@ -53,11 +54,10 @@ export default class InvoiceService {
         )
 
         // Link all orders to this invoice
+        const orderIds = orders.map((o) => o.id)
         await Order.query({ client: trx })
-          .whereIn(
-            'id',
-            orders.map((o) => o.id)
-          )
+          .whereNull('invoiceId')
+          .whereIn('id', orderIds)
           .update({ invoiceId: invoice.id })
 
         invoices.push(invoice)
@@ -294,6 +294,7 @@ export default class InvoiceService {
           q.where('supplierId', supplierId)
         })
         .preload('delivery')
+        .forUpdate()
 
       if (orders.length === 0) {
         return null
@@ -315,11 +316,10 @@ export default class InvoiceService {
         { client: trx }
       )
 
+      const orderIds = orders.map((o) => o.id)
       await Order.query({ client: trx })
-        .whereIn(
-          'id',
-          orders.map((o) => o.id)
-        )
+        .whereNull('invoiceId')
+        .whereIn('id', orderIds)
         .update({ invoiceId: invoice.id })
 
       await AuditService.log(supplierId, 'invoice.generated', 'invoice', invoice.id, buyerId, {
@@ -341,6 +341,7 @@ export default class InvoiceService {
         .whereNull('invoiceId')
         .where('buyerId', buyerId)
         .preload('delivery')
+        .forUpdate()
 
       if (allOrders.length === 0) {
         return []
@@ -373,11 +374,10 @@ export default class InvoiceService {
           { client: trx }
         )
 
+        const orderIds = orders.map((o) => o.id)
         await Order.query({ client: trx })
-          .whereIn(
-            'id',
-            orders.map((o) => o.id)
-          )
+          .whereNull('invoiceId')
+          .whereIn('id', orderIds)
           .update({ invoiceId: invoice.id })
 
         invoices.push(invoice)

@@ -24,6 +24,7 @@ x-app-env: &app-env
   TZ: ${TZ:-UTC} # e.g. Europe/Prague
   APP_NAME: ${APP_NAME:-Small Business Fridge}
   APP_URL: ${APP_URL:-http://localhost:3000} # [REQUIRED] public URL used in email links
+  CURRENCY: ${CURRENCY:-CZK} # ISO 4217 currency code (e.g. CZK, USD, EUR)
   FEEDBACK_URL: ${FEEDBACK_URL:-} # optional link shown in the UI sidebar
 
   # ---------------------------------------------------------------------------
@@ -40,6 +41,8 @@ x-app-env: &app-env
   DB_USER: ${DB_USER:-sbf}
   DB_DATABASE: ${DB_DATABASE:-sbf}
   DB_PASSWORD: ${DB_PASSWORD:?Missing DB_PASSWORD value in .env file!} # [REQUIRED] set a strong password
+  DB_POOL_MIN: ${DB_POOL_MIN:-2} # minimum idle connections
+  DB_POOL_MAX: ${DB_POOL_MAX:-10} # maximum connections
   DB_MIGRATE: ${DB_MIGRATE:-true} # run DB migrations on app container startup
 
   # ---------------------------------------------------------------------------
@@ -69,6 +72,8 @@ x-app-env: &app-env
   EMAIL_VERIFICATION_TTL_MINUTES: ${EMAIL_VERIFICATION_TTL_MINUTES:-1440}
   IBAN_CHANGE_TTL_MINUTES: ${IBAN_CHANGE_TTL_MINUTES:-1440}
   SENSITIVE_ACTION_REAUTH_TTL_MINUTES: ${SENSITIVE_ACTION_REAUTH_TTL_MINUTES:-10}
+  INVITE_EXPIRY_HOURS: ${INVITE_EXPIRY_HOURS:-168} # default invitation lifetime (7 days)
+  PASSWORD_RESET_TTL_MINUTES: ${PASSWORD_RESET_TTL_MINUTES:-60} # password reset token lifetime
   AUTH_PROVIDER_MICROSOFT_CLIENT_ID: ${AUTH_PROVIDER_MICROSOFT_CLIENT_ID:-}
   AUTH_PROVIDER_MICROSOFT_CLIENT_SECRET: ${AUTH_PROVIDER_MICROSOFT_CLIENT_SECRET:-}
   AUTH_PROVIDER_MICROSOFT_TENANT_ID: ${AUTH_PROVIDER_MICROSOFT_TENANT_ID:-common}
@@ -81,6 +86,12 @@ x-app-env: &app-env
   AUTH_PROVIDER_DISCORD_EMAIL_VERIFICATION_MODE: ${AUTH_PROVIDER_DISCORD_EMAIL_VERIFICATION_MODE:-claim}
 
   # ---------------------------------------------------------------------------
+  # Proxy trust — set to 'uniquelocal' when running behind nginx on the same
+  # Docker network; set to 'loopback' (default) for direct connections
+  # ---------------------------------------------------------------------------
+  TRUST_PROXY: ${TRUST_PROXY:-uniquelocal}
+
+  # ---------------------------------------------------------------------------
   # API authentication (optional)
   # ---------------------------------------------------------------------------
   API_SECRET: ${API_SECRET:-} # bearer token for REST API access; leave empty to disable
@@ -89,6 +100,11 @@ x-app-env: &app-env
   # Swagger UI (optional)
   # ---------------------------------------------------------------------------
   SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false} # expose /docs endpoint
+
+  # ---------------------------------------------------------------------------
+  # Product ratings (optional)
+  # ---------------------------------------------------------------------------
+  RATINGS_PUBLIC_FEED_ENABLED: ${RATINGS_PUBLIC_FEED_ENABLED:-false} # customers see each other's public ratings
 
   # ---------------------------------------------------------------------------
   # OpenAI integration (optional)
@@ -126,6 +142,21 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'node -e "require(\"http\").get(\"http://localhost:3000/api/v1/health\",r=>{process.exit(r.statusCode<400?0:1)}).on(\"error\",()=>process.exit(1))"',
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '5'
     restart: unless-stopped
 
   scheduler:
@@ -137,12 +168,21 @@ services:
       CRON_DAILY_REPORT: ${CRON_DAILY_REPORT:-}
       CRON_UNPAID_REMINDER: ${CRON_UNPAID_REMINDER:-}
       CRON_PENDING_APPROVAL: ${CRON_PENDING_APPROVAL:-}
+      CRON_ANONYMIZE_DISABLED: ${CRON_ANONYMIZE_DISABLED:-}
       UNPAID_REMINDER_MIN_AGE_DAYS: ${UNPAID_REMINDER_MIN_AGE_DAYS:-}
+      # GDPR — wipe PII from long-disabled accounts (opt-in, see .env.example)
+      ANONYMIZE_DISABLED_USERS: ${ANONYMIZE_DISABLED_USERS:-false}
+      ANONYMIZE_GRACE_DAYS: ${ANONYMIZE_GRACE_DAYS:-7}
     volumes:
       - app_uploads:/app/storage/uploads
     depends_on:
       postgres:
         condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: '5m'
+        max-file: '3'
     restart: unless-stopped
 
   postgres:

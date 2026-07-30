@@ -1,6 +1,7 @@
 import { defineConfig } from '@adonisjs/auth'
 import { sessionGuard, sessionUserProvider } from '@adonisjs/auth/session'
-import { tokensGuard, tokensUserProvider } from '@adonisjs/auth/access_tokens'
+import { tokensUserProvider } from '@adonisjs/auth/access_tokens'
+import { apiOrEntraGuard } from '#auth/api_or_entra_guard'
 import type { InferAuthenticators, InferAuthEvents, Authenticators } from '@adonisjs/auth/types'
 
 const authConfig = defineConfig({
@@ -13,7 +14,8 @@ const authConfig = defineConfig({
         model: () => import('#models/user'),
       }),
     }),
-    api: tokensGuard({
+    // Accepts opaque personal API tokens AND Microsoft Entra ID JWTs.
+    api: apiOrEntraGuard({
       provider: tokensUserProvider({
         tokens: 'accessTokens',
         model: () => import('#models/user'),

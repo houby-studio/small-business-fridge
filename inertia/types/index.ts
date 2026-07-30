@@ -10,11 +10,15 @@ export interface User {
   role: 'customer' | 'supplier' | 'admin'
   isKiosk: boolean
   colorMode: 'light' | 'dark'
-  keypadId: number
+  keypadId: number | null
 }
 
 export interface FlashMessages {
   alert?: {
+    type: 'success' | 'info' | 'warn' | 'danger'
+    message: string
+  }
+  notice?: {
     type: 'success' | 'info' | 'warn' | 'danger'
     message: string
   }

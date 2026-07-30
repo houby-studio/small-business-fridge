@@ -5,6 +5,7 @@
   "type": "module",
   "license": "UNLICENSED",
   "scripts": {
+    "prepare": "npm run hooks:install",
     "start": "node bin/server.js",
     "build": "node ace build",
     "dev": "node ace serve --hmr",
@@ -12,14 +13,18 @@
     "test": "node ace test",
     "test:e2e": "node --import=tsx scripts/run_e2e.ts",
     "test:e2e:auth-matrix": "node --import=tsx scripts/run_e2e.ts -c playwright.auth-matrix.config.ts",
-    "test:e2e:reset": "./scripts/reset_e2e_state.sh",
+    "test:e2e:reset": "node -e \"const cp=require('child_process'); const isWin=process.platform==='win32'; const cmd=isWin ? 'powershell -ExecutionPolicy Bypass -File .\\\\scripts\\\\reset_e2e_state.ps1' : 'bash ./scripts/reset_e2e_state.sh'; cp.execSync(cmd,{stdio:'inherit'});\"",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
     "format": "prettier --write .",
     "typecheck": "npm run typecheck:backend && npm run typecheck:frontend && npm run typecheck:tests",
     "typecheck:backend": "tsc --noEmit",
     "typecheck:frontend": "vue-tsc --noEmit -p tsconfig.frontend.json",
-    "typecheck:tests": "tsc --noEmit -p tsconfig.tests.json"
+    "typecheck:tests": "tsc --noEmit -p tsconfig.tests.json",
+    "generate:app-icons": "node --import=tsx scripts/generate_app_icons.ts",
+    "generate:keypad-tones": "node --import=tsx scripts/generate_keypad_tones.ts",
+    "hooks:install": "node -e \"const fs=require('fs'); const cp=require('child_process'); if (!fs.existsSync('.git')) { console.log('[hooks] Skipping install: .git directory not found.'); process.exit(0); } try { cp.execFileSync('git', ['config', '--local', 'core.hooksPath', '.githooks'], { stdio: 'inherit' }); } catch (error) { if (error && error.code === 'ENOENT') { console.log('[hooks] Skipping install: git is not available.'); process.exit(0); } throw error; } console.log('[hooks] Installed hooks path: .githooks');\"",
+    "hooks:status": "node -e \"const fs=require('fs'); const cp=require('child_process'); if (!fs.existsSync('.git')) { console.log('not a git worktree'); process.exit(0); } try { const output = cp.execFileSync('git', ['config', '--get', 'core.hooksPath'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] }).trim(); console.log(output || '(default .git/hooks)'); } catch (error) { if (error && error.code === 'ENOENT') { console.log('git not available'); process.exit(0); } if (error && error.status === 1) { console.log('(default .git/hooks)'); process.exit(0); } throw error; }\""
   },
   "imports": {
     "#controllers/*": "./app/controllers/*.js",
@@ -38,7 +43,11 @@
     "#tests/*": "./tests/*.js",
     "#start/*": "./start/*.js",
     "#config/*": "./config/*.js",
-    "#helpers/*": "./app/helpers/*.js"
+    "#helpers/*": "./app/helpers/*.js",
+    "#mcp/*": "./app/mcp/*.js",
+    "#utils/*": "./app/utils/*.js",
+    "#auth/*": "./app/auth/*.js",
+    "#interfaces/*": "./app/interfaces/*.js"
   },
   "devDependencies": {
     "@adonisjs/assembler": "^8.0.0",
@@ -55,6 +64,7 @@
     "@types/luxon": "^3.7.1",
     "@types/node": "^22.15.18",
     "@types/pg": "^8.16.0",
+    "@types/proxy-addr": "^2.0.3",
     "@types/qrcode": "^1.5.6",
     "@vitejs/plugin-vue": "^6.0.4",
     "eslint": "^9.26.0",
@@ -83,6 +93,7 @@
     "@adonisjs/static": "^2.0.0",
     "@adonisjs/vite": "^5.1.0",
     "@inertiajs/vue3": "^2.3.15",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@primeuix/styled": "^0.7.4",
     "@primeuix/themes": "^2.0.3",
     "@vinejs/vine": "^4.3.0",
@@ -90,14 +101,18 @@
     "adonisjs-scheduler": "^2.7.0",
     "dotenv": "^17.3.1",
     "edge.js": "^6.5.0",
+    "jose": "^6.2.3",
     "luxon": "^3.7.2",
     "mongodb": "^7.1.0",
+    "openai": "^6.47.0",
     "pg": "^8.18.0",
     "primeicons": "^7.0.0",
     "primevue": "^4.5.4",
+    "proxy-addr": "^2.0.7",
     "qrcode": "^1.5.4",
     "reflect-metadata": "^0.2.2",
-    "vue": "^3.5.28"
+    "vue": "^3.5.28",
+    "zod": "^4.4.3"
   },
   "hotHook": {
     "boundaries": [

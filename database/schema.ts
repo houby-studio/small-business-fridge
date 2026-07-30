@@ -8,447 +8,625 @@ import { BaseModel, column } from '@adonisjs/lucid/orm'
 import { DateTime } from 'luxon'
 
 export class AllergenSchema extends BaseModel {
-  static $columns = ['id', 'name', 'isDisabled', 'createdAt', 'updatedAt'] as const
+  static $columns = ['createdAt', 'id', 'isDisabled', 'name', 'updatedAt'] as const
   $columns = AllergenSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
   @column({ isPrimary: true })
   declare id: number
   @column()
-  declare name: string
-  @column()
   declare isDisabled: boolean | null
-  @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
+  @column()
+  declare name: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
 }
 
 export class AuditLogSchema extends BaseModel {
-  static $columns = ['id', 'userId', 'action', 'entityType', 'entityId', 'targetUserId', 'metadata', 'createdAt'] as const
+  static $columns = ['action', 'createdAt', 'entityId', 'entityType', 'id', 'metadata', 'targetUserId', 'userId'] as const
   $columns = AuditLogSchema.$columns
-  @column({ isPrimary: true })
-  declare id: number
-  @column()
-  declare userId: number | null
   @column()
   declare action: string
-  @column()
-  declare entityType: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
   @column()
   declare entityId: number | null
   @column()
-  declare targetUserId: number | null
-  @column()
-  declare metadata: any | null
-  @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
-}
-
-export class AuthAccessTokenSchema extends BaseModel {
-  static $columns = ['id', 'tokenableId', 'type', 'name', 'hash', 'abilities', 'createdAt', 'updatedAt', 'lastUsedAt', 'expiresAt'] as const
-  $columns = AuthAccessTokenSchema.$columns
+  declare entityType: string
   @column({ isPrimary: true })
   declare id: number
   @column()
-  declare tokenableId: number
+  declare metadata: any | null
   @column()
-  declare type: string
+  declare targetUserId: number | null
   @column()
-  declare name: string | null
-  @column()
-  declare hash: string
+  declare userId: number | null
+}
+
+export class AuthAccessTokenSchema extends BaseModel {
+  static $columns = ['abilities', 'createdAt', 'expiresAt', 'hash', 'id', 'lastUsedAt', 'name', 'tokenableId', 'type', 'updatedAt'] as const
+  $columns = AuthAccessTokenSchema.$columns
   @column()
   declare abilities: string
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
-  @column.dateTime({ autoCreate: true, autoUpdate: true })
-  declare updatedAt: DateTime
-  @column.dateTime()
-  declare lastUsedAt: DateTime | null
   @column.dateTime()
   declare expiresAt: DateTime | null
+  @column()
+  declare hash: string
+  @column({ isPrimary: true })
+  declare id: number
+  @column.dateTime()
+  declare lastUsedAt: DateTime | null
+  @column()
+  declare name: string | null
+  @column()
+  declare tokenableId: number
+  @column()
+  declare type: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
 }
 
 export class CategorySchema extends BaseModel {
-  static $columns = ['id', 'name', 'color', 'isDisabled', 'createdAt', 'updatedAt'] as const
+  static $columns = ['color', 'createdAt', 'id', 'isDisabled', 'name', 'updatedAt'] as const
   $columns = CategorySchema.$columns
+  @column()
+  declare color: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
   @column({ isPrimary: true })
   declare id: number
   @column()
-  declare name: string
-  @column()
-  declare color: string
-  @column()
   declare isDisabled: boolean | null
-  @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
+  @column()
+  declare name: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
 }
 
 export class DeliverySchema extends BaseModel {
-  static $columns = ['id', 'supplierId', 'productId', 'amountSupplied', 'amountLeft', 'price', 'createdAt', 'updatedAt'] as const
+  static $columns = ['amountLeft', 'amountSupplied', 'createdAt', 'id', 'price', 'productId', 'supplierId', 'updatedAt'] as const
   $columns = DeliverySchema.$columns
-  @column({ isPrimary: true })
-  declare id: number
-  @column()
-  declare supplierId: number
-  @column()
-  declare productId: number
-  @column()
-  declare amountSupplied: number
   @column()
   declare amountLeft: number
   @column()
-  declare price: number
+  declare amountSupplied: number
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare price: number
+  @column()
+  declare productId: number
+  @column()
+  declare supplierId: number
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
 }
 
 export class EmailVerificationTokenSchema extends BaseModel {
-  static $columns = ['id', 'userId', 'email', 'tokenHash', 'expiresAt', 'usedAt', 'createdAt', 'updatedAt'] as const
+  static $columns = ['createdAt', 'email', 'expiresAt', 'id', 'tokenHash', 'updatedAt', 'usedAt', 'userId'] as const
   $columns = EmailVerificationTokenSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare email: string
+  @column.dateTime()
+  declare expiresAt: DateTime
   @column({ isPrimary: true })
   declare id: number
   @column()
-  declare userId: number
-  @column()
-  declare email: string
-  @column()
   declare tokenHash: string
-  @column.dateTime()
-  declare expiresAt: DateTime
-  @column.dateTime()
-  declare usedAt: DateTime | null
-  @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
+  @column.dateTime()
+  declare usedAt: DateTime | null
+  @column()
+  declare userId: number
 }
 
 export class IbanChangeTokenSchema extends BaseModel {
-  static $columns = ['id', 'userId', 'iban', 'tokenHash', 'expiresAt', 'usedAt', 'createdAt', 'updatedAt'] as const
+  static $columns = ['createdAt', 'expiresAt', 'iban', 'id', 'tokenHash', 'updatedAt', 'usedAt', 'userId'] as const
   $columns = IbanChangeTokenSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column.dateTime()
+  declare expiresAt: DateTime
+  @column()
+  declare iban: string
   @column({ isPrimary: true })
   declare id: number
   @column()
-  declare userId: number
-  @column()
-  declare iban: string
-  @column()
   declare tokenHash: string
-  @column.dateTime()
-  declare expiresAt: DateTime
-  @column.dateTime()
-  declare usedAt: DateTime | null
-  @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
+  @column.dateTime()
+  declare usedAt: DateTime | null
+  @column()
+  declare userId: number
 }
 
 export class InvoiceSchema extends BaseModel {
-  static $columns = ['id', 'buyerId', 'supplierId', 'totalCost', 'isPaid', 'isPaymentRequested', 'autoReminderCount', 'manualReminderCount', 'createdAt', 'updatedAt'] as const
+  static $columns = ['autoReminderCount', 'buyerId', 'createdAt', 'id', 'isPaid', 'isPaymentRequested', 'manualReminderCount', 'supplierId', 'totalCost', 'updatedAt'] as const
   $columns = InvoiceSchema.$columns
-  @column({ isPrimary: true })
-  declare id: number
+  @column()
+  declare autoReminderCount: number | null
   @column()
   declare buyerId: number
-  @column()
-  declare supplierId: number
-  @column()
-  declare totalCost: number
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: number
   @column()
   declare isPaid: boolean | null
   @column()
   declare isPaymentRequested: boolean | null
   @column()
-  declare autoReminderCount: number | null
-  @column()
   declare manualReminderCount: number | null
-  @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
+  @column()
+  declare supplierId: number
+  @column()
+  declare totalCost: number
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
 }
 
 export class KioskSessionSchema extends BaseModel {
-  static $columns = ['id', 'userId', 'createdAt'] as const
+  static $columns = ['createdAt', 'id', 'userId'] as const
   $columns = KioskSessionSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
   @column({ isPrimary: true })
   declare id: number
   @column()
   declare userId: number
-  @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
 }
 
-export class MusicTrackSchema extends BaseModel {
-  static $columns = ['id', 'name', 'filePath', 'mimeType', 'accessLevel', 'isDisabled', 'uploadedByUserId', 'createdAt', 'updatedAt'] as const
-  $columns = MusicTrackSchema.$columns
+export class McpEvalResultSchema extends BaseModel {
+  static $columns = ['createdAt', 'durationMs', 'expectedTool', 'failureReason', 'id', 'passed', 'runId', 'scenarioDescription', 'scenarioId', 'toolCalled', 'toolInput', 'updatedAt'] as const
+  $columns = McpEvalResultSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare durationMs: number
+  @column()
+  declare expectedTool: string
+  @column()
+  declare failureReason: string | null
   @column({ isPrimary: true })
   declare id: number
   @column()
-  declare name: string
+  declare passed: boolean
   @column()
-  declare filePath: string
+  declare runId: number
   @column()
-  declare mimeType: string
+  declare scenarioDescription: string
   @column()
-  declare accessLevel: string
+  declare scenarioId: string
   @column()
-  declare isDisabled: boolean
+  declare toolCalled: string | null
   @column()
-  declare uploadedByUserId: number | null
-  @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
+  declare toolInput: any | null
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
 }
 
-export class OrderSchema extends BaseModel {
-  static $columns = ['id', 'buyerId', 'deliveryId', 'invoiceId', 'channel', 'createdAt', 'updatedAt'] as const
-  $columns = OrderSchema.$columns
+export class McpEvalRunSchema extends BaseModel {
+  static $columns = ['createdAt', 'errorCount', 'failCount', 'finishedAt', 'id', 'modelId', 'modelLabel', 'passCount', 'startedAt', 'status', 'totalCount', 'updatedAt'] as const
+  $columns = McpEvalRunSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare errorCount: number
+  @column()
+  declare failCount: number
+  @column.dateTime()
+  declare finishedAt: DateTime | null
   @column({ isPrimary: true })
   declare id: number
   @column()
+  declare modelId: string
+  @column()
+  declare modelLabel: string | null
+  @column()
+  declare passCount: number
+  @column.dateTime()
+  declare startedAt: DateTime
+  @column()
+  declare status: string
+  @column()
+  declare totalCount: number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
+export class McpOauthClientSchema extends BaseModel {
+  static $columns = ['clientId', 'clientName', 'createdAt', 'grantTypes', 'redirectUris'] as const
+  $columns = McpOauthClientSchema.$columns
+  @column({ isPrimary: true })
+  declare clientId: string
+  @column()
+  declare clientName: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare grantTypes: string
+  @column()
+  declare redirectUris: string
+}
+
+export class McpOauthCodeSchema extends BaseModel {
+  static $columns = ['clientId', 'code', 'codeChallenge', 'createdAt', 'expiresAt', 'redirectUri', 'used', 'userId'] as const
+  $columns = McpOauthCodeSchema.$columns
+  @column()
+  declare clientId: string
+  @column({ isPrimary: true })
+  declare code: string
+  @column()
+  declare codeChallenge: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column.dateTime()
+  declare expiresAt: DateTime
+  @column()
+  declare redirectUri: string
+  @column()
+  declare used: boolean
+  @column()
+  declare userId: bigint | number
+}
+
+export class McpToolCallSchema extends BaseModel {
+  static $columns = ['createdAt', 'durationMs', 'errorMessage', 'id', 'msCorrelationId', 'success', 'toolArguments', 'toolName', 'userAgent', 'userId'] as const
+  $columns = McpToolCallSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare durationMs: number | null
+  @column()
+  declare errorMessage: string | null
+  @column({ isPrimary: true })
+  declare id: bigint | number
+  @column()
+  declare msCorrelationId: string | null
+  @column()
+  declare success: boolean
+  @column()
+  declare toolArguments: any | null
+  @column()
+  declare toolName: string
+  @column()
+  declare userAgent: string | null
+  @column()
+  declare userId: bigint | number | null
+}
+
+export class MusicTrackSchema extends BaseModel {
+  static $columns = ['accessLevel', 'createdAt', 'filePath', 'id', 'isDisabled', 'mimeType', 'name', 'updatedAt', 'uploadedByUserId'] as const
+  $columns = MusicTrackSchema.$columns
+  @column()
+  declare accessLevel: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare filePath: string
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare isDisabled: boolean
+  @column()
+  declare mimeType: string
+  @column()
+  declare name: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare uploadedByUserId: number | null
+}
+
+export class OrderSchema extends BaseModel {
+  static $columns = ['buyerId', 'channel', 'createdAt', 'deliveryId', 'id', 'invoiceId', 'updatedAt'] as const
+  $columns = OrderSchema.$columns
+  @column()
   declare buyerId: number
-  @column()
-  declare deliveryId: number
-  @column()
-  declare invoiceId: number | null
   @column()
   declare channel: string
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
+  @column()
+  declare deliveryId: number
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare invoiceId: number | null
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
 }
 
 export class PageViewSchema extends BaseModel {
-  static $columns = ['id', 'userId', 'channel', 'createdAt'] as const
+  static $columns = ['channel', 'createdAt', 'id', 'userId'] as const
   $columns = PageViewSchema.$columns
-  @column({ isPrimary: true })
-  declare id: number
-  @column()
-  declare userId: number
   @column()
   declare channel: string
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
-}
-
-export class PasswordResetTokenSchema extends BaseModel {
-  static $columns = ['id', 'email', 'tokenHash', 'expiresAt', 'usedAt', 'createdAt', 'updatedAt'] as const
-  $columns = PasswordResetTokenSchema.$columns
-  @column({ isPrimary: true })
-  declare id: number
-  @column()
-  declare email: string
-  @column()
-  declare tokenHash: string
-  @column.dateTime()
-  declare expiresAt: DateTime
-  @column.dateTime()
-  declare usedAt: DateTime | null
-  @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
-  @column.dateTime({ autoCreate: true, autoUpdate: true })
-  declare updatedAt: DateTime
-}
-
-export class ProductAllergenSchema extends BaseModel {
-  static $columns = ['id', 'productId', 'allergenId'] as const
-  $columns = ProductAllergenSchema.$columns
-  @column({ isPrimary: true })
-  declare id: number
-  @column()
-  declare productId: number
-  @column()
-  declare allergenId: number
-}
-
-export class ProductSchema extends BaseModel {
-  static $columns = ['id', 'keypadId', 'displayName', 'description', 'imagePath', 'categoryId', 'barcode', 'createdAt', 'updatedAt'] as const
-  $columns = ProductSchema.$columns
-  @column({ isPrimary: true })
-  declare id: number
-  @column()
-  declare keypadId: number
-  @column()
-  declare displayName: string
-  @column()
-  declare description: string
-  @column()
-  declare imagePath: string
-  @column()
-  declare categoryId: number | null
-  @column()
-  declare barcode: string | null
-  @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
-  @column.dateTime({ autoCreate: true, autoUpdate: true })
-  declare updatedAt: DateTime
-}
-
-export class RecommendationSchema extends BaseModel {
-  static $columns = ['id', 'userId', 'productId', 'score', 'model', 'rank', 'generatedAt', 'createdAt'] as const
-  $columns = RecommendationSchema.$columns
   @column({ isPrimary: true })
   declare id: number
   @column()
   declare userId: number
+}
+
+export class PasswordResetTokenSchema extends BaseModel {
+  static $columns = ['createdAt', 'email', 'expiresAt', 'id', 'tokenHash', 'updatedAt', 'usedAt'] as const
+  $columns = PasswordResetTokenSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare email: string
+  @column.dateTime()
+  declare expiresAt: DateTime
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare tokenHash: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column.dateTime()
+  declare usedAt: DateTime | null
+}
+
+export class ProductAllergenSchema extends BaseModel {
+  static $columns = ['allergenId', 'id', 'productId'] as const
+  $columns = ProductAllergenSchema.$columns
+  @column()
+  declare allergenId: number
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare productId: number
+}
+
+export class ProductRatingUpvoteSchema extends BaseModel {
+  static $columns = ['createdAt', 'id', 'productRatingId', 'updatedAt', 'userId'] as const
+  $columns = ProductRatingUpvoteSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare productRatingId: number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare userId: number
+}
+
+export class ProductRatingSchema extends BaseModel {
+  static $columns = ['comment', 'createdAt', 'id', 'productId', 'stars', 'updatedAt', 'userId', 'visibility'] as const
+  $columns = ProductRatingSchema.$columns
+  @column()
+  declare comment: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: number
   @column()
   declare productId: number
   @column()
-  declare score: number
+  declare stars: number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare userId: number
+  @column()
+  declare visibility: string
+}
+
+export class ProductSchema extends BaseModel {
+  static $columns = ['barcode', 'categoryId', 'createdAt', 'description', 'displayName', 'id', 'imagePath', 'keypadId', 'updatedAt'] as const
+  $columns = ProductSchema.$columns
+  @column()
+  declare barcode: string | null
+  @column()
+  declare categoryId: number | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare description: string
+  @column()
+  declare displayName: string
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare imagePath: string
+  @column()
+  declare keypadId: number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
+export class ProfilePendingDraftSchema extends BaseModel {
+  static $columns = ['createdAt', 'draftKey', 'expiresAt', 'id', 'payload', 'updatedAt', 'userId'] as const
+  $columns = ProfilePendingDraftSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare draftKey: string
+  @column.dateTime()
+  declare expiresAt: DateTime
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare payload: any
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare userId: number
+}
+
+export class RecommendationSchema extends BaseModel {
+  static $columns = ['createdAt', 'generatedAt', 'id', 'model', 'productId', 'rank', 'score', 'userId'] as const
+  $columns = RecommendationSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column.dateTime()
+  declare generatedAt: DateTime
+  @column({ isPrimary: true })
+  declare id: number
   @column()
   declare model: string
   @column()
+  declare productId: number
+  @column()
   declare rank: number
-  @column.dateTime()
-  declare generatedAt: DateTime
-  @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
+  @column()
+  declare score: number
+  @column()
+  declare userId: number
 }
 
 export class RememberMeTokenSchema extends BaseModel {
-  static $columns = ['id', 'tokenableId', 'hash', 'createdAt', 'updatedAt', 'expiresAt'] as const
+  static $columns = ['createdAt', 'expiresAt', 'hash', 'id', 'tokenableId', 'updatedAt'] as const
   $columns = RememberMeTokenSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column.dateTime()
+  declare expiresAt: DateTime
+  @column()
+  declare hash: string
   @column({ isPrimary: true })
   declare id: number
   @column()
   declare tokenableId: number
-  @column()
-  declare hash: string
-  @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
-  @column.dateTime()
-  declare expiresAt: DateTime
 }
 
 export class UserAuthIdentitySchema extends BaseModel {
-  static $columns = ['id', 'userId', 'provider', 'providerUserId', 'providerEmail', 'lastLoginAt', 'createdAt', 'updatedAt', 'providerEmailVerified'] as const
+  static $columns = ['createdAt', 'id', 'lastLoginAt', 'provider', 'providerEmail', 'providerEmailVerified', 'providerUserId', 'updatedAt', 'userId'] as const
   $columns = UserAuthIdentitySchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
   @column({ isPrimary: true })
   declare id: number
-  @column()
-  declare userId: number
+  @column.dateTime()
+  declare lastLoginAt: DateTime | null
   @column()
   declare provider: string
   @column()
-  declare providerUserId: string
-  @column()
   declare providerEmail: string | null
-  @column.dateTime()
-  declare lastLoginAt: DateTime | null
-  @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
+  @column()
+  declare providerEmailVerified: boolean
+  @column()
+  declare providerUserId: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
   @column()
-  declare providerEmailVerified: boolean
+  declare userId: number
 }
 
 export class UserExcludedAllergenSchema extends BaseModel {
-  static $columns = ['userId', 'allergenId'] as const
+  static $columns = ['allergenId', 'userId'] as const
   $columns = UserExcludedAllergenSchema.$columns
   @column()
-  declare userId: number
-  @column()
   declare allergenId: number
+  @column()
+  declare userId: number
 }
 
 export class UserFavoriteSchema extends BaseModel {
-  static $columns = ['id', 'userId', 'productId', 'createdAt'] as const
+  static $columns = ['createdAt', 'id', 'productId', 'userId'] as const
   $columns = UserFavoriteSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
   @column({ isPrimary: true })
   declare id: number
   @column()
-  declare userId: number
-  @column()
   declare productId: number
-  @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
+  @column()
+  declare userId: number
 }
 
 export class UserInvitationSchema extends BaseModel {
-  static $columns = ['id', 'email', 'role', 'tokenHash', 'invitedByUserId', 'acceptedUserId', 'expiresAt', 'acceptedAt', 'revokedAt', 'createdAt', 'updatedAt'] as const
+  static $columns = ['acceptedAt', 'acceptedUserId', 'createdAt', 'email', 'expiresAt', 'id', 'invitedByUserId', 'revokedAt', 'role', 'tokenHash', 'updatedAt'] as const
   $columns = UserInvitationSchema.$columns
+  @column.dateTime()
+  declare acceptedAt: DateTime | null
+  @column()
+  declare acceptedUserId: number | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare email: string
+  @column.dateTime()
+  declare expiresAt: DateTime
   @column({ isPrimary: true })
   declare id: number
   @column()
-  declare email: string
+  declare invitedByUserId: number | null
+  @column.dateTime()
+  declare revokedAt: DateTime | null
   @column()
   declare role: string
   @column()
   declare tokenHash: string
-  @column()
-  declare invitedByUserId: number | null
-  @column()
-  declare acceptedUserId: number | null
-  @column.dateTime()
-  declare expiresAt: DateTime
-  @column.dateTime()
-  declare acceptedAt: DateTime | null
-  @column.dateTime()
-  declare revokedAt: DateTime | null
-  @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
 }
 
 export class UserSchema extends BaseModel {
-  static $columns = ['id', 'password', 'displayName', 'email', 'phone', 'iban', 'keypadId', 'cardId', 'role', 'isKiosk', 'isDisabled', 'showAllProducts', 'sendMailOnPurchase', 'sendDailyReport', 'colorMode', 'keypadDisabled', 'createdAt', 'updatedAt', 'isPremium', 'emailVerifiedAt', 'pendingEmail', 'pendingIban', 'ibanVerifiedAt'] as const
+  static $columns = ['anonymizedAt', 'cardId', 'colorMode', 'createdAt', 'disabledAt', 'displayName', 'email', 'emailVerifiedAt', 'iban', 'ibanVerifiedAt', 'id', 'isDisabled', 'isKiosk', 'isPremium', 'keypadDisabled', 'keypadId', 'password', 'pendingEmail', 'pendingIban', 'phone', 'role', 'sendDailyReport', 'sendMailOnPurchase', 'showAllProducts', 'updatedAt'] as const
   $columns = UserSchema.$columns
-  @column({ isPrimary: true })
-  declare id: number
-  @column({ serializeAs: null })
-  declare password: string | null
+  @column.dateTime()
+  declare anonymizedAt: DateTime | null
+  @column()
+  declare cardId: string | null
+  @column()
+  declare colorMode: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column.dateTime()
+  declare disabledAt: DateTime | null
   @column()
   declare displayName: string | null
   @column()
   declare email: string | null
-  @column()
-  declare phone: string | null
+  @column.dateTime()
+  declare emailVerifiedAt: DateTime | null
   @column()
   declare iban: string | null
-  @column()
-  declare keypadId: number
-  @column()
-  declare cardId: string | null
-  @column()
-  declare role: string
-  @column()
-  declare isKiosk: boolean | null
+  @column.dateTime()
+  declare ibanVerifiedAt: DateTime | null
+  @column({ isPrimary: true })
+  declare id: number
   @column()
   declare isDisabled: boolean | null
   @column()
-  declare showAllProducts: boolean | null
-  @column()
-  declare sendMailOnPurchase: boolean | null
-  @column()
-  declare sendDailyReport: boolean | null
-  @column()
-  declare colorMode: string | null
-  @column()
-  declare keypadDisabled: boolean | null
-  @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
-  @column.dateTime({ autoCreate: true, autoUpdate: true })
-  declare updatedAt: DateTime
+  declare isKiosk: boolean | null
   @column()
   declare isPremium: boolean
-  @column.dateTime()
-  declare emailVerifiedAt: DateTime | null
+  @column()
+  declare keypadDisabled: boolean | null
+  @column()
+  declare keypadId: number | null
+  @column({ serializeAs: null })
+  declare password: string | null
   @column()
   declare pendingEmail: string | null
   @column()
   declare pendingIban: string | null
-  @column.dateTime()
-  declare ibanVerifiedAt: DateTime | null
+  @column()
+  declare phone: string | null
+  @column()
+  declare role: string
+  @column()
+  declare sendDailyReport: boolean | null
+  @column()
+  declare sendMailOnPurchase: boolean | null
+  @column()
+  declare showAllProducts: boolean | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
 }

@@ -1,8 +1,9 @@
 'use strict'
 
-const { app, BrowserWindow, session } = require('electron')
+const { app, BrowserWindow, session, ipcMain } = require('electron')
 const path = require('node:path')
 const { execFileSync } = require('node:child_process')
+const { listAudioDevices } = require('./audio_devices')
 
 const CONSOLE_LEVEL_TO_METHOD = {
   0: 'info',
@@ -66,13 +67,13 @@ if (!app.requestSingleInstanceLock()) {
  * Read the kiosk URL from snap configuration (when running as a snap) or from
  * the KIOSK_URL environment variable (dev/non-snap usage).
  *
- * Set in snap context:  sudo snap set sbf-kiosk kiosk-url=https://your-app.example.com
+ * Set in snap context:  sudo snap set sbf-kiosk url=https://your-app.example.com
  * Set in dev context:   KIOSK_URL=https://your-app.example.com npx electron .
  */
 function getKioskUrl() {
   if (process.env.SNAP) {
     try {
-      const url = execFileSync('snapctl', ['get', 'kiosk-url'], { encoding: 'utf8' }).trim()
+      const url = execFileSync('snapctl', ['get', 'url'], { encoding: 'utf8' }).trim()
       if (url) return url
     } catch {
       // snapctl unavailable or key not yet set — fall through to env var
@@ -83,7 +84,7 @@ function getKioskUrl() {
   if (!url) {
     console.error(
       'No kiosk URL configured.\n' +
-        '  Snap:  sudo snap set sbf-kiosk kiosk-url=https://your-app.example.com\n' +
+        '  Snap:  sudo snap set sbf-kiosk url=https://your-app.example.com\n' +
         '  Dev:   KIOSK_URL=https://your-app.example.com npx electron .'
     )
     return null
@@ -102,6 +103,129 @@ function parseKioskUrl(raw) {
     console.error(`Invalid kiosk URL "${raw}": ${err.message}`)
     return null
   }
+}
+
+// ── Onboarding (first-run setup) ───────────────────────────────────────────────
+
+function snapctlGetSilent(key) {
+  return execFileSync('snapctl', ['get', key], { encoding: 'utf8' }).trim()
+}
+
+function isOnboardingFrame(event) {
+  // Reject any IPC call that did not originate from a local file:// frame.
+  // This prevents a BrowserWindow that somehow acquired the onboarding preload
+  // from invoking these handlers while displaying a remote URL.
+  const url = event.senderFrame?.url ?? ''
+  return url.startsWith('file://')
+}
+
+function registerIpcHandlers() {
+  ipcMain.handle('get-config', (event) => {
+    if (!isOnboardingFrame(event)) return {}
+    const audioInventory = listAudioDevices()
+
+    if (!process.env.SNAP) {
+      return {
+        audioDevices: audioInventory.devices,
+        audioDevicesRaw: audioInventory.rawOutput,
+        audioDevicesError: audioInventory.error,
+        audioDevicesStatus: audioInventory.status,
+      }
+    }
+    try {
+      return {
+        url: snapctlGetSilent('url'),
+        allowedOrigins: snapctlGetSilent('allowed-origins'),
+        lang: snapctlGetSilent('lang'),
+        audioSink: snapctlGetSilent('audio-sink'),
+        audioVolume: snapctlGetSilent('audio-volume'),
+        daemon: snapctlGetSilent('daemon'),
+        audioDevices: audioInventory.devices,
+        audioDevicesRaw: audioInventory.rawOutput,
+        audioDevicesError: audioInventory.error,
+        audioDevicesStatus: audioInventory.status,
+      }
+    } catch {
+      return {
+        audioDevices: audioInventory.devices,
+        audioDevicesRaw: audioInventory.rawOutput,
+        audioDevicesError: audioInventory.error,
+        audioDevicesStatus: audioInventory.status,
+      }
+    }
+  })
+
+  ipcMain.handle('save-config', (event, config) => {
+    if (!isOnboardingFrame(event)) {
+      return { success: false, error: 'Unauthorized' }
+    }
+
+    // Validate URL in the main process — do not rely solely on renderer validation.
+    let parsedUrl
+    try {
+      parsedUrl = new URL(String(config.url ?? ''))
+      if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+        return { success: false, error: 'URL must use http or https' }
+      }
+    } catch {
+      return { success: false, error: 'Invalid URL' }
+    }
+
+    try {
+      if (process.env.SNAP) {
+        execFileSync('snapctl', [
+          'set',
+          `url=${parsedUrl.href}`,
+          `allowed-origins=${config.allowedOrigins ?? ''}`,
+          `lang=${config.lang ?? 'en'}`,
+          `audio-sink=${config.audioSink ?? 'auto'}`,
+          `audio-volume=${config.audioVolume ?? '100'}`,
+          `daemon=${config.daemon ?? 'true'}`,
+        ])
+      }
+      // Quit after a short pause so the renderer can show the success message.
+      // In snap daemon mode the service manager will restart the process automatically.
+      // In dev mode we relaunch with the new URL in the environment.
+      setTimeout(() => {
+        if (!process.env.SNAP) {
+          process.env.KIOSK_URL = parsedUrl.href
+          app.relaunch()
+        }
+        app.quit()
+      }, 2500)
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: String(err.message) }
+    }
+  })
+}
+
+let onboardingOpen = false
+
+function createOnboardingWindow() {
+  onboardingOpen = true
+  const win = new BrowserWindow({
+    fullscreen: true,
+    frame: false,
+    autoHideMenuBar: true,
+    backgroundColor: '#0f172a',
+    webPreferences: {
+      preload: path.join(__dirname, 'onboarding-preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  })
+
+  // Block popups and prevent any navigation away from the local setup page.
+  // If the window navigated to a remote URL, window.kioskSetup would be
+  // present in that remote context and could invoke the config IPC handlers.
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  win.webContents.on('will-navigate', (event) => {
+    event.preventDefault()
+  })
+
+  win.loadFile(path.join(__dirname, 'onboarding.html'))
 }
 
 // ── Window factory ─────────────────────────────────────────────────────────────
@@ -204,9 +328,10 @@ function createWindow(kioskUrl) {
 
 // ── App lifecycle ──────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
+  registerIpcHandlers()
   const rawUrl = getKioskUrl()
   if (!rawUrl) {
-    app.quit()
+    createOnboardingWindow()
     return
   }
   createWindow(rawUrl)
@@ -214,7 +339,13 @@ app.whenReady().then(() => {
 
 // In kiosk mode the app should never fully close — respawn the window if it
 // somehow gets destroyed (e.g. after a crash recovery).
+// If the onboarding window was closed (user cancelled or save triggered quit),
+// just quit — the snap daemon will restart the process automatically.
 app.on('window-all-closed', () => {
+  if (onboardingOpen) {
+    app.quit()
+    return
+  }
   const rawUrl = getKioskUrl()
   if (rawUrl && parseKioskUrl(rawUrl)) {
     createWindow(rawUrl)

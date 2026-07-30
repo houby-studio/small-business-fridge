@@ -5,6 +5,7 @@ export const updateUserValidator = vine.compile(
     role: vine.enum(['customer', 'supplier', 'admin'] as const).optional(),
     isDisabled: vine.boolean().optional(),
     isKiosk: vine.boolean().optional(),
+    keypadId: vine.number().withoutDecimals().positive().optional(),
   })
 )
 

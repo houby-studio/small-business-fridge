@@ -12,6 +12,7 @@ import ExternalProfileSyncService from '#services/external_profile_sync_service'
 import EmailVerificationService from '#services/email_verification_service'
 import ReauthStepupService from '#services/reauth_stepup_service'
 import KeypadIdService from '#services/keypad_id_service'
+import { normalizeInternalReturnTo } from '#helpers/safe_return_path'
 
 export default class OidcController {
   private static readonly BOOTSTRAP_INTENT_KEY = 'oauthBootstrapFirstAdminIntent'
@@ -164,7 +165,7 @@ export default class OidcController {
       if (!currentUser) {
         return response.redirect('/login')
       }
-      const returnTo = String(request.input('returnTo') ?? '/profile')
+      const returnTo = normalizeInternalReturnTo(request.input('returnTo'), '/profile')
       session.put(OidcController.REAUTH_INTENT_KEY, {
         userId: currentUser.id,
         provider,
@@ -268,10 +269,7 @@ export default class OidcController {
       this.stepup.markOneTimeGrant(session, Number(reauthIntent.userId))
       session.flash('alert', { type: 'success', message: i18n.t('messages.reauth_success') })
       session.flash('sensitiveReauthCompleted', true)
-      const returnTo =
-        typeof reauthIntent.returnTo === 'string' && reauthIntent.returnTo.length > 0
-          ? reauthIntent.returnTo
-          : '/profile'
+      const returnTo = normalizeInternalReturnTo(reauthIntent.returnTo, '/profile')
       return response.redirect(returnTo)
     }
 

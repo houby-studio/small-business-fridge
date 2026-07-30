@@ -87,6 +87,12 @@ const menuItems = computed(() => {
     { label: t('common.nav_orders'), icon: 'pi pi-list', url: '/orders' },
     { label: t('common.nav_invoices'), icon: 'pi pi-file', url: '/invoices' },
     {
+      label: t('common.nav_ratings'),
+      icon: 'pi pi-star',
+      url: '/ratings',
+      compactIconOnly: true,
+    },
+    {
       label: t('common.nav_activity'),
       icon: 'pi pi-history',
       url: '/audit',

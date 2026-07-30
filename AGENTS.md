@@ -46,6 +46,17 @@ For every feature or bugfix, add/update tests at all relevant levels:
 
 UI-related changes (layout, navigation, breakpoints, visibility, overlays, interactions) must include or update Playwright coverage.
 
+## Validation Architecture (VineJS + Frontend Composables)
+
+VineJS runs on Node.js only and **cannot be used in the browser**. This creates an inherent two-layer system:
+
+- **Backend (`app/validators/*.ts`)** — authoritative validation via VineJS; always runs; the source of truth for what is accepted.
+- **Frontend (`inertia/composables/use_*_form_validation.ts`)** — UX-only client-side mirror; disables the submit button and shows inline errors before the round-trip; must match backend constraints exactly.
+
+**Rule:** whenever you change a backend validator (add/remove a required field, change a max length, make a field optional, etc.), update the corresponding frontend composable to match. A mismatch causes the user to experience a silent server rejection with no client-side warning — a broken UX.
+
+Do not attempt to import VineJS validators into Vite/frontend code. The `tsconfig.json` deliberately excludes `inertia/**/*` from backend compilation and vice versa; there is no shared runtime. If max-length values or similar constants start drifting, extract them to a plain TS constants file importable by both sides — but do not introduce VineJS into the frontend bundle.
+
 ## Form UX and Validation Standards
 
 Apply these standards to all user-management flows (authentication, invitation, profile/account settings, and admin user actions with free-text input):

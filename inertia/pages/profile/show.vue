@@ -27,7 +27,7 @@ interface UserData {
   ibanVerifiedAt: string | null
   phone: string | null
   iban: string | null
-  keypadId: number
+  keypadId: number | null
   cardId: string | null
   role: string
   showAllProducts: boolean
@@ -87,6 +87,7 @@ const props = defineProps<{
   localAuthEnabled: boolean
   hasLocalPassword: boolean
   pendingDraft: PendingDraft | null
+  apiDocsEnabled?: boolean
 }>()
 const { t } = useI18n()
 const page = usePage<SharedProps>()
@@ -555,6 +556,7 @@ onMounted(() => {
             {{ t('profile.role') }}: {{ user.role }}
           </span>
           <span
+            v-if="user.keypadId !== null"
             class="rounded-full border border-gray-200 bg-white px-3 py-1 text-sm font-medium text-gray-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
           >
             {{ t('profile.keypad_id') }}: {{ user.keypadId }}
@@ -886,13 +888,26 @@ onMounted(() => {
 
       <Card class="xl:col-span-12" data-testid="profile-api-tokens-card">
         <template #title>
-          <div class="flex items-center gap-2">
-            <span
-              class="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-50 text-sky-600 dark:bg-sky-500/10 dark:text-sky-300"
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span
+                class="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-50 text-sky-600 dark:bg-sky-500/10 dark:text-sky-300"
+              >
+                <i class="pi pi-key text-sm" />
+              </span>
+              <span>{{ t('profile.tokens_heading') }}</span>
+            </div>
+            <a
+              v-if="props.apiDocsEnabled"
+              href="/docs"
+              target="_blank"
+              rel="noopener"
+              data-testid="api-docs-link"
+              class="inline-flex items-center gap-1 text-sm font-normal text-sky-600 hover:underline dark:text-sky-300"
             >
-              <i class="pi pi-key text-sm" />
-            </span>
-            <span>{{ t('profile.tokens_heading') }}</span>
+              <i class="pi pi-book text-xs" />
+              {{ t('profile.api_docs_link') }}
+            </a>
           </div>
         </template>
         <template #content>

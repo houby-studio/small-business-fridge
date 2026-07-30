@@ -1,31 +1,45 @@
 #!/bin/bash
-# Snap configure hook — runs when the user calls:
-#   snap set sbf-kiosk kiosk-url=…
-#   snap set sbf-kiosk locale=…
-# Validates settings before the app tries to use them.
-set -e
+set -euo pipefail
 
-KIOSK_URL=$(snapctl get kiosk-url 2>/dev/null || true)
-LOCALE=$(snapctl get locale 2>/dev/null || true)
+# Set defaults for all configurable options before consuming them.
+# Run `snap get sbf-kiosk` to inspect current values.
+# Run `snap set sbf-kiosk key=value` to change them.
 
-if [ -z "$KIOSK_URL" ]; then
-  # Key not set yet — that's fine, the app will print guidance on first launch.
-  true
-else
-  # Must be a valid http or https URL
-  if ! echo "$KIOSK_URL" | grep -qE '^https?://[^[:space:]]+$'; then
-    echo "Error: kiosk-url must be a valid http:// or https:// URL" >&2
+# daemon: run as a background system service (true) or launch manually (false)
+[ -n "$(snapctl get daemon)" ]          || snapctl set daemon="true"
+
+# url: address of the SBF web server the kiosk will load.
+[ -n "$(snapctl get url)" ]             || snapctl set url=""
+
+# allowed-origins: extra origins the kiosk may navigate to (space- or comma-separated)
+[ -n "$(snapctl get allowed-origins)" ] || snapctl set allowed-origins=""
+
+# lang: language code passed to Chromium (e.g. cs, en, de)
+[ -n "$(snapctl get lang)" ]            || snapctl set lang="en"
+
+# audio-sink: ALSA output device. 'auto' uses the ALSA default.
+# For a specific output use the ALSA device string (check with: aplay -l):
+#   hw:0,0   — analog / first output
+#   hw:0,3   — HDMI (typical on Intel)
+#   hw:0,7   — DisplayPort / second HDMI
+[ -n "$(snapctl get audio-sink)" ]      || snapctl set audio-sink="auto"
+
+# audio-volume: output volume percentage applied at startup via amixer (0-100).
+[ -n "$(snapctl get audio-volume)" ]    || snapctl set audio-volume="100"
+
+daemon=$(snapctl get daemon)
+service="${SNAP_INSTANCE_NAME}.daemon"
+case "$daemon" in
+  true)
+    # Enable the service and restart it so changed snap config is applied.
+    snapctl start --enable "$service" 2>&1 || true
+    snapctl restart "$service" 2>&1 || true
+    ;;
+  false)
+    snapctl stop --disable "$service" 2>&1 || true
+    ;;
+  *)
+    snapctl set daemon="true"
     exit 1
-  fi
-
-  echo "kiosk-url set to: $KIOSK_URL"
-fi
-
-if [ -n "$LOCALE" ]; then
-  # Basic BCP-47 locale tag check (e.g. cs, cs-CZ, en-US).
-  if ! echo "$LOCALE" | grep -qE '^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$'; then
-    echo "Error: locale must be a valid language tag (examples: cs, cs-CZ, en-US)" >&2
-    exit 1
-  fi
-  echo "locale set to: $LOCALE"
-fi
+    ;;
+esac

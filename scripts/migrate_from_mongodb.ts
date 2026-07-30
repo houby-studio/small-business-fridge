@@ -128,11 +128,11 @@ async function createPlaceholders(pgDb: pg.Client) {
   const userResult = await pgDb.query(
     `INSERT INTO users (
       password, display_name, email, phone, iban,
-      keypad_id, card_id, role, is_kiosk, is_disabled,
+      keypad_id, card_id, role, is_kiosk, is_disabled, disabled_at, anonymized_at,
       show_all_products, send_mail_on_purchase, send_daily_report,
       color_mode, keypad_disabled, created_at, updated_at
     ) VALUES (NULL, 'Deleted User', 'migration@anon',
-      NULL, NULL, 89999, NULL, 'customer', false, true,
+      NULL, NULL, 89999, NULL, 'customer', false, true, NOW(), NOW(),
       false, false, false, 'dark', false, NOW(), NOW())
     RETURNING id`
   )
@@ -188,9 +188,12 @@ async function migrateUsers(mongo: Db, pgDb: pg.Client) {
   const docs = await mongo.collection('users').find().toArray()
   log('📦', `Found ${docs.length} users in MongoDB`)
 
-  // Track used unique values to handle duplicates gracefully
-  const placeholderKeypadId = 0
-  const usedKeypadIds = new Set<number>([placeholderKeypadId])
+  // Track used unique values to handle duplicates gracefully.
+  // keypad_id is nullable + UNIQUE; Postgres allows multiple NULLs.
+  // Disabled users always get NULL so they no longer occupy a slot
+  // (and so admins can intentionally retire a keypad ID without breakage).
+  // Reserve the placeholder Deleted User's keypad_id (89999) so it never gets re-allocated.
+  const usedKeypadIds = new Set<number>([89999])
   const usedCardIds = new Set<string>()
   const usedMicrosoftIdentityIds = new Set<string>()
   const usedNormalizedEmails = new Set<string>(['migration@anon'])
@@ -199,6 +202,8 @@ async function migrateUsers(mongo: Db, pgDb: pg.Client) {
   let skipped = 0
   let migratedAuthIdentities = 0
   let anonymizedEmails = 0
+  let nulledDisabledKeypadIds = 0
+  let reassignedActiveKeypadIds = 0
 
   const allocateFallbackKeypadId = () => {
     while (usedKeypadIds.has(fallbackKeypadId)) fallbackKeypadId++
@@ -210,6 +215,7 @@ async function migrateUsers(mongo: Db, pgDb: pg.Client) {
   for (const doc of docs) {
     const mongoId = oid(doc._id)!
     const role = deriveRole(doc)
+    const isDisabled = doc.disabled === true
 
     // Ensure display_name is never null (required field)
     const displayName =
@@ -235,19 +241,30 @@ async function migrateUsers(mongo: Db, pgDb: pg.Client) {
       email = normalizedEmail
     }
 
-    // Handle keypad_id: NOT NULL + UNIQUE — assign the lowest free positive keypad ID
-    let keypadId = Number(doc.keypadId ?? 0)
-    const hasValidSourceKeypadId = Number.isInteger(keypadId) && keypadId > 0
-    if (!hasValidSourceKeypadId || usedKeypadIds.has(keypadId)) {
-      const reassignedKeypadId = allocateFallbackKeypadId()
-      if (hasValidSourceKeypadId && keypadId !== reassignedKeypadId) {
-        console.warn(
-          `  ⚠️  Duplicate keypad_id ${keypadId} for "${displayName}", reassigning to ${reassignedKeypadId}`
-        )
+    // Handle keypad_id:
+    //  - Disabled users -> NULL (frees the slot, no migration-time renaming)
+    //  - Active users   -> keep source keypadId; on collision fall back to lowest free
+    let keypadId: number | null
+    if (isDisabled) {
+      keypadId = null
+      nulledDisabledKeypadIds++
+    } else {
+      const sourceKeypadId = Number(doc.keypadId ?? 0)
+      const hasValidSourceKeypadId = Number.isInteger(sourceKeypadId) && sourceKeypadId > 0
+      if (!hasValidSourceKeypadId || usedKeypadIds.has(sourceKeypadId)) {
+        const reassignedKeypadId = allocateFallbackKeypadId()
+        if (hasValidSourceKeypadId && sourceKeypadId !== reassignedKeypadId) {
+          console.warn(
+            `  ⚠️  Duplicate keypad_id ${sourceKeypadId} for "${displayName}", reassigning to ${reassignedKeypadId}`
+          )
+          reassignedActiveKeypadIds++
+        }
+        keypadId = reassignedKeypadId
+      } else {
+        keypadId = sourceKeypadId
       }
-      keypadId = reassignedKeypadId
+      usedKeypadIds.add(keypadId)
     }
-    usedKeypadIds.add(keypadId)
 
     // Handle card_id: UNIQUE — nullify if duplicate
     let cardId: string | null = doc.card ?? null
@@ -264,10 +281,10 @@ async function migrateUsers(mongo: Db, pgDb: pg.Client) {
       const result = await pgDb.query(
         `INSERT INTO users (
           password, display_name, email, phone, iban,
-          keypad_id, card_id, role, is_kiosk, is_disabled,
+          keypad_id, card_id, role, is_kiosk, is_disabled, disabled_at,
           show_all_products, send_mail_on_purchase, send_daily_report,
           color_mode, keypad_disabled, is_premium, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW(), NOW())
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW(), NOW())
          RETURNING id`,
         [
           null, // password (OIDC users don't have one)
@@ -279,7 +296,8 @@ async function migrateUsers(mongo: Db, pgDb: pg.Client) {
           cardId, // card_id
           role, // role
           doc.kiosk ?? false, // is_kiosk
-          doc.disabled ?? false, // is_disabled
+          isDisabled, // is_disabled
+          isDisabled ? new Date() : null, // disabled_at
           doc.showAllProducts ?? false, // show_all_products
           doc.sendMailOnEshopPurchase ?? true, // send_mail_on_purchase
           doc.sendDailyReport ?? true, // send_daily_report
@@ -318,7 +336,7 @@ async function migrateUsers(mongo: Db, pgDb: pg.Client) {
 
   log(
     '✅',
-    `Migrated ${idMap.users.size} users and ${migratedAuthIdentities} auth identities${anonymizedEmails > 0 ? ` (${anonymizedEmails} anonymized emails)` : ''}${skipped > 0 ? ` (${skipped} skipped, see warnings above)` : ''}`
+    `Migrated ${idMap.users.size} users and ${migratedAuthIdentities} auth identities${anonymizedEmails > 0 ? ` (${anonymizedEmails} anonymized emails)` : ''}${nulledDisabledKeypadIds > 0 ? ` (${nulledDisabledKeypadIds} disabled users with NULL keypad_id)` : ''}${reassignedActiveKeypadIds > 0 ? ` (${reassignedActiveKeypadIds} active users reassigned due to keypad_id collision)` : ''}${skipped > 0 ? ` (${skipped} skipped, see warnings above)` : ''}`
   )
 }
 

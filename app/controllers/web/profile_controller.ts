@@ -1,6 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import logger from '@adonisjs/core/services/logger'
 import db from '@adonisjs/lucid/services/db'
+import env from '#start/env'
 import { DateTime } from 'luxon'
 import {
   updateProfileValidator,
@@ -23,6 +24,10 @@ import EmailVerificationService from '#services/email_verification_service'
 import NotificationService from '#services/notification_service'
 import IbanChangeService from '#services/iban_change_service'
 import ReauthStepupService from '#services/reauth_stepup_service'
+import ProfilePendingDraftService, {
+  type PendingDraftAction,
+  type PendingDraftPayload,
+} from '#services/profile_pending_draft_service'
 
 export default class ProfileController {
   private static readonly LINK_STEPUP_GRANT_KEY = '__oidc_link_stepup_grant'
@@ -31,6 +36,7 @@ export default class ProfileController {
   private verifications = new EmailVerificationService()
   private ibans = new IbanChangeService()
   private stepup = new ReauthStepupService()
+  private pendingDrafts = new ProfilePendingDraftService()
 
   private async getExcludedAllergenIds(userId: number): Promise<number[]> {
     const rows = await db
@@ -95,8 +101,7 @@ export default class ProfileController {
     return false
   }
 
-  private static readonly PENDING_DRAFT_KEY = 'profile_pending_draft'
-  private static readonly PENDING_DRAFT_TTL_MS = 30 * 60 * 1000
+  private static readonly PENDING_DRAFT_KEY = 'profile_pending_draft_key'
 
   async show({ inertia, auth, session }: HttpContext) {
     const user = auth.user!
@@ -118,17 +123,11 @@ export default class ProfileController {
 
     // Only consume the pending draft when OIDC reauth just completed.
     // This prevents accidental consumption on unrelated visits to /profile.
-    let pendingDraft: object | null = null
+    let pendingDraft: PendingDraftPayload | null = null
     if (session.flashMessages.get('sensitiveReauthCompleted') === true) {
-      const raw = session.pull(ProfileController.PENDING_DRAFT_KEY, null)
-      if (raw && typeof raw === 'object') {
-        const draft = raw as { createdAt?: number }
-        if (
-          !draft.createdAt ||
-          Date.now() - draft.createdAt <= ProfileController.PENDING_DRAFT_TTL_MS
-        ) {
-          pendingDraft = raw
-        }
+      const draftKey = session.pull(ProfileController.PENDING_DRAFT_KEY, null)
+      if (typeof draftKey === 'string' && draftKey.length > 0) {
+        pendingDraft = await this.pendingDrafts.consumeForUser(user.id, draftKey)
       }
     }
 
@@ -144,17 +143,74 @@ export default class ProfileController {
       localAuthEnabled: this.authModes.isLocalEnabled(),
       hasLocalPassword: !!user.password,
       pendingDraft,
+      // Show the API docs (Scalar) link only when swagger is enabled.
+      apiDocsEnabled: env.get('SWAGGER_ENABLED') === true,
     })
   }
 
-  async storePendingDraft({ request, session, response }: HttpContext) {
+  async storePendingDraft({ request, session, response, auth }: HttpContext) {
     const data = request.only(['action', 'form', 'password'])
-    const actionType = (data?.action as Record<string, unknown>)?.type
+    const actionRaw = (data?.action as Record<string, unknown> | undefined) ?? {}
+    const actionType = actionRaw.type
     if (!['profile-submit', 'password-change', 'oidc-link'].includes(String(actionType))) {
       return response.badRequest({ error: 'invalid_action' })
     }
 
-    session.put(ProfileController.PENDING_DRAFT_KEY, { ...data, createdAt: Date.now() })
+    if (
+      actionType === 'oidc-link' &&
+      actionRaw.provider !== 'microsoft' &&
+      actionRaw.provider !== 'discord'
+    ) {
+      return response.badRequest({ error: 'invalid_action' })
+    }
+
+    const payload: PendingDraftPayload = {
+      action:
+        actionType === 'oidc-link'
+          ? ({ type: 'oidc-link', provider: actionRaw.provider } as PendingDraftAction)
+          : ({ type: actionType } as PendingDraftAction),
+      form: {
+        displayName: String((data?.form as Record<string, unknown> | undefined)?.displayName ?? ''),
+        email: String((data?.form as Record<string, unknown> | undefined)?.email ?? ''),
+        phone: String((data?.form as Record<string, unknown> | undefined)?.phone ?? ''),
+        iban: String((data?.form as Record<string, unknown> | undefined)?.iban ?? ''),
+        showAllProducts:
+          (data?.form as Record<string, unknown> | undefined)?.showAllProducts === true,
+        sendMailOnPurchase:
+          (data?.form as Record<string, unknown> | undefined)?.sendMailOnPurchase === true,
+        sendDailyReport:
+          (data?.form as Record<string, unknown> | undefined)?.sendDailyReport === true,
+        colorMode:
+          (data?.form as Record<string, unknown> | undefined)?.colorMode === 'light'
+            ? 'light'
+            : 'dark',
+        keypadDisabled:
+          (data?.form as Record<string, unknown> | undefined)?.keypadDisabled === true,
+        excludedAllergenIds: Array.isArray(
+          (data?.form as Record<string, unknown> | undefined)?.excludedAllergenIds
+        )
+          ? ((data?.form as Record<string, unknown> | undefined)?.excludedAllergenIds as unknown[])
+              .map((value) => Number(value))
+              .filter((value) => Number.isInteger(value) && value > 0)
+          : [],
+      },
+      password: {
+        newPassword: String(
+          (data?.password as Record<string, unknown> | undefined)?.newPassword ?? ''
+        ),
+        newPasswordConfirmation: String(
+          (data?.password as Record<string, unknown> | undefined)?.newPasswordConfirmation ?? ''
+        ),
+      },
+    }
+
+    const user = auth.user
+    if (!user) {
+      return response.unauthorized({ error: 'unauthorized' })
+    }
+
+    const draftKey = await this.pendingDrafts.saveForUser(user.id, payload)
+    session.put(ProfileController.PENDING_DRAFT_KEY, draftKey)
     return response.ok({ ok: true })
   }
 
@@ -257,7 +313,14 @@ export default class ProfileController {
     user.sendDailyReport = data.sendDailyReport
     user.colorMode = data.colorMode
     user.keypadDisabled = data.keypadDisabled
-    await user.save()
+    await db.transaction(async (trx) => {
+      user.useTransaction(trx)
+      await user.save()
+
+      if (data.excludedAllergenIds !== undefined) {
+        await this.syncExcludedAllergenIds(user, data.excludedAllergenIds)
+      }
+    })
 
     if (emailPendingVerificationPayload) {
       const notifications = new NotificationService()
@@ -287,10 +350,6 @@ export default class ProfileController {
         .catch((err) => {
           logger.error({ err, userId: user.id }, 'Failed to send IBAN change verification')
         })
-    }
-
-    if (data.excludedAllergenIds !== undefined) {
-      await this.syncExcludedAllergenIds(user, data.excludedAllergenIds)
     }
 
     const changes: Record<string, { from: unknown; to: unknown }> = {}
@@ -454,8 +513,11 @@ export default class ProfileController {
     user.sendDailyReport = data.sendDailyReport
     user.colorMode = data.colorMode
     user.keypadDisabled = data.keypadDisabled
-    await user.save()
-    await this.syncExcludedAllergenIds(user, data.excludedAllergenIds)
+    await db.transaction(async (trx) => {
+      user.useTransaction(trx)
+      await user.save()
+      await this.syncExcludedAllergenIds(user, data.excludedAllergenIds)
+    })
 
     const changes: Record<string, { from: unknown; to: unknown }> = {}
     for (const key of [

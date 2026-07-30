@@ -93,6 +93,7 @@ const recommendedIds = ref<number[]>([])
 const excludedAllergenIds = ref<number[]>([])
 const musicTracks = ref<MusicTrack[]>([])
 const backgroundAudio = ref<HTMLAudioElement | null>(null)
+const eventTonePlayers = new Map<string, HTMLAudioElement>()
 let remainingTrackIds: number[] = []
 
 function refillTrackQueue() {
@@ -138,6 +139,24 @@ function startBackgroundMusic(tracks: MusicTrack[]) {
   }
 
   playNextTrack()
+}
+
+function playEventTone(fileName: string) {
+  let player = eventTonePlayers.get(fileName)
+  if (!player) {
+    player = new Audio(`/keypad/${fileName}`)
+    player.preload = 'auto'
+    eventTonePlayers.set(fileName, player)
+  }
+
+  player.currentTime = 0
+  void player.play().catch(() => {
+    // Ignore playback failures due to browser autoplay restrictions.
+  })
+}
+
+function playLoginTone(type: 'success' | 'error') {
+  playEventTone(type === 'success' ? 'login-success.wav' : 'login-error.wav')
 }
 
 // ── Basket ────────────────────────────────────────────────────────────────────
@@ -272,8 +291,6 @@ function addToBasket(product: ProductItem) {
   if (outOfStockDeliveryId.value === nextLot.deliveryId) {
     outOfStockDeliveryId.value = null
   }
-
-  toast.add({ severity: 'success', summary: product.displayName, life: 1200 })
 }
 
 function incrementProduct(productId: number) {
@@ -433,6 +450,7 @@ async function onKeypadSubmit(keypadId: string) {
     }
 
     if (!res.ok) {
+      playLoginTone('error')
       toast.add({
         severity: 'error',
         summary: data.error ?? t('messages.kiosk_customer_not_found'),
@@ -446,10 +464,12 @@ async function onKeypadSubmit(keypadId: string) {
     recommendedIds.value = data.recommendedIds
     excludedAllergenIds.value = data.excludedAllergenIds ?? []
     startBackgroundMusic(data.musicTracks ?? [])
+    playLoginTone('success')
     appState.value = 'identified'
     startIdleTimer()
     refreshProducts() // fetch fresh stock data for this customer's session
   } catch {
+    playLoginTone('error')
     toast.add({ severity: 'error', summary: t('kiosk.purchase_retry'), life: 3000 })
   } finally {
     keypadLoading.value = false
@@ -497,6 +517,7 @@ async function submitBasket() {
     const data = await res.json()
 
     if (data.ok) {
+      playEventTone('purchase-confirmed.wav')
       // Capture summary before resetting state, then show thank-you modal
       lastPurchaseItems.value = [...basket.value]
       lastOrderCount.value = data.orderCount
@@ -545,9 +566,14 @@ function resetToIdle() {
   lastOrderCount.value = 0
 }
 
+function cancelPurchaseSession() {
+  playEventTone('purchase-cancelled.wav')
+  resetToIdle()
+}
+
 function requestCancel() {
   if (basket.value.length === 0) {
-    resetToIdle()
+    cancelPurchaseSession()
     return
   }
   confirm.require({
@@ -557,7 +583,7 @@ function requestCancel() {
     icon: 'pi pi-exclamation-triangle',
     acceptLabel: t('kiosk.cancel_purchase'),
     rejectLabel: t('kiosk.continue_shopping'),
-    accept: () => resetToIdle(),
+    accept: () => cancelPurchaseSession(),
   })
 }
 
@@ -570,12 +596,27 @@ watch(appState, (s) => {
 
 onMounted(() => {
   document.addEventListener('keydown', onGlobalKeydown)
+  // Pre-load event tone files so kiosk feedback remains immediate.
+  for (const fileName of [
+    'login-success.wav',
+    'login-error.wav',
+    'purchase-confirmed.wav',
+    'purchase-cancelled.wav',
+  ]) {
+    const player = new Audio(`/keypad/${fileName}`)
+    player.preload = 'auto'
+    eventTonePlayers.set(fileName, player)
+  }
 })
 
 onUnmounted(() => {
   document.removeEventListener('keydown', onGlobalKeydown)
   stopIdleTimer()
   stopBackgroundMusic()
+  for (const player of eventTonePlayers.values()) {
+    player.pause()
+  }
+  eventTonePlayers.clear()
   if (barcodeTimeout) clearTimeout(barcodeTimeout)
 })
 </script>

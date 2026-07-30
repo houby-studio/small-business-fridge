@@ -43,7 +43,21 @@ export function extractFlashToastMessages(flash: FlashMessages | undefined): Toa
     })
   }
 
-  const errorsBag = (flash as any)?.errorsBag as Record<string, unknown> | undefined
+  if (flash?.notice) {
+    const severityMap: Record<string, 'success' | 'info' | 'warn' | 'error'> = {
+      success: 'success',
+      info: 'info',
+      warn: 'warn',
+      danger: 'error',
+    }
+    messages.push({
+      severity: severityMap[flash.notice.type] || 'warn',
+      summary: flash.notice.message,
+      life: 6000,
+    })
+  }
+
+  const errorsBag = flash?.errorsBag as Record<string, unknown> | undefined
   if (errorsBag) {
     for (const message of Object.values(errorsBag).flatMap((entry) =>
       collectStringMessages(entry)
@@ -56,7 +70,7 @@ export function extractFlashToastMessages(flash: FlashMessages | undefined): Toa
     }
   }
 
-  const inputErrorsBag = (flash as any)?.inputErrorsBag as Record<string, unknown> | undefined
+  const inputErrorsBag = flash?.inputErrorsBag as Record<string, unknown> | undefined
   if (inputErrorsBag) {
     for (const fieldMessages of Object.values(inputErrorsBag)) {
       for (const message of collectStringMessages(fieldMessages)) {

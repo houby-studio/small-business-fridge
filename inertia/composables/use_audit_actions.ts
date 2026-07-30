@@ -36,6 +36,9 @@ export const AUDIT_ACTION_I18N_KEYS: Record<string, string> = {
   'user.password_reset': 'audit.action_user_password_reset',
   'user.password_changed': 'audit.action_user_password_changed',
   'user.password_reset.requested': 'audit.action_user_password_reset_requested',
+  'product_rating.created': 'audit.action_product_rating_created',
+  'product_rating.updated': 'audit.action_product_rating_updated',
+  'product_rating.deleted': 'audit.action_product_rating_deleted',
 }
 
 export type TranslateFn = (key: string) => string

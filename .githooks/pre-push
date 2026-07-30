@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+ROOT_DIR="$(git rev-parse --show-toplevel)"
+cd "$ROOT_DIR"
+
+echo "[pre-push] Running lint and format checks..."
+npm run lint
+npx prettier --check .
+echo "[pre-push] Checks passed."

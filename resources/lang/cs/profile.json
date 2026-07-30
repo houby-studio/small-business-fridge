@@ -35,6 +35,7 @@
   "save": "Uložit změny",
   "update_success": "Profil byl úspěšně aktualizován.",
   "tokens_heading": "API tokeny",
+  "api_docs_link": "API dokumentace",
   "tokens_empty": "Žádné aktivní tokeny.",
   "tokens_name": "Název",
   "tokens_created": "Vytvořen",

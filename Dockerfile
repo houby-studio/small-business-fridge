@@ -27,9 +27,9 @@ FROM base AS production
 WORKDIR /app
 ENV NODE_ENV=production
 
-COPY --from=build /app/build ./
 COPY --from=build /app/swagger.json ./
 COPY --from=build /app/swagger.yml ./
+COPY --from=build /app/build ./
 RUN npm ci --omit=dev
 
 # Copy the entrypoint script

@@ -6,6 +6,7 @@ import AuditService from '#services/audit_service'
 import RegistrationPolicyService from '#services/registration_policy_service'
 import AuthModeService from '#services/auth_mode_service'
 import EmailVerificationService from '#services/email_verification_service'
+import { normalizeInternalReturnTo } from '#helpers/safe_return_path'
 
 export default class LoginController {
   private registrationPolicy = new RegistrationPolicyService()
@@ -16,10 +17,12 @@ export default class LoginController {
     return !!admin
   }
 
-  async show({ inertia, response, session }: HttpContext) {
+  async show({ inertia, request, response, session }: HttpContext) {
     if (!(await this.hasAnyAdmin())) {
       return response.redirect('/setup/bootstrap')
     }
+
+    const returnTo = normalizeInternalReturnTo(request.input('returnTo'), '/shop')
 
     const externalProviders = this.authModes.getEnabledExternalProviders()
     if (
@@ -27,13 +30,15 @@ export default class LoginController {
       externalProviders.length === 1 &&
       !session.flashMessages.has('alert')
     ) {
-      return response.redirect(`/auth/${externalProviders[0]}/redirect`)
+      const redirectUrl = `/auth/${externalProviders[0]}/redirect${returnTo !== '/shop' ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`
+      return response.redirect(redirectUrl)
     }
     const mode = this.registrationPolicy.getMode()
     return inertia.render('auth/login', {
       externalProviders,
       allowLocalRegistration: mode === 'open' || mode === 'domain_auto_approve',
       localEnabled: this.authModes.isLocalEnabled(),
+      returnTo: returnTo !== '/shop' ? returnTo : null,
     })
   }
 
@@ -74,7 +79,8 @@ export default class LoginController {
         })
         return response.redirect('/profile')
       }
-      return response.redirect('/shop')
+      const returnTo = normalizeInternalReturnTo(request.input('returnTo'), '/shop')
+      return response.redirect(returnTo)
     } catch {
       logger.warn({ email }, 'Password login failed: invalid credentials')
       session.flash('alert', { type: 'danger', message: i18n.t('messages.login_failed') })

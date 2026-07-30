@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>Small Business Fridge</title>
+  <defs>
+    <linearGradient id="sbf-cabinet" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="500">
+      <stop offset="0" stop-color="#1f2937" />
+      <stop offset="1" stop-color="#0b1220" />
+    </linearGradient>
+    <linearGradient id="sbf-door" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="500">
+      <stop offset="0" stop-color="#ffffff" />
+      <stop offset="1" stop-color="#e5e7eb" />
+    </linearGradient>
+    <linearGradient id="sbf-handle" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="500">
+      <stop offset="0" stop-color="#f82843" />
+      <stop offset="1" stop-color="#c30f2b" />
+    </linearGradient>
+  </defs>
+  <g transform="translate(77 20.48) scale(0.94)">
+    <rect x="0" y="0" width="380" height="500" rx="74" fill="url(#sbf-cabinet)" />
+    <rect x="38" y="38" width="304" height="424" rx="44" fill="url(#sbf-door)" />
+    <rect x="262" y="175" width="50" height="150" rx="25" fill="url(#sbf-handle)" />
+  </g>
+</svg>

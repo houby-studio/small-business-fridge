@@ -40,15 +40,22 @@ export default class RecommendationService {
       max_buys AS (SELECT GREATEST(MAX(total_buys), 1) AS val FROM user_history),
       in_stock AS (
         SELECT DISTINCT product_id FROM deliveries WHERE amount_left > 0
+      ),
+      user_ratings AS (
+        SELECT product_id, stars FROM product_ratings WHERE user_id = ?
       )
       SELECT
         uh.product_id,
         0.40 * (uh.context_buys::float / GREATEST(uh.total_buys, 1))
       + 0.35 * (uh.total_buys::float / (SELECT val FROM max_buys))
       + 0.25 * EXP(-EXTRACT(EPOCH FROM (NOW() - uh.last_bought)) / (14.0 * 86400))
+      -- Explicit feedback: the user's own star rating nudges the score.
+      -- 5★ → +0.15, 3★ → 0, 1★ → -0.15; unrated products are unaffected.
+      + 0.15 * COALESCE((ur.stars - 3) / 2.0, 0)
           AS score
       FROM user_history uh
       JOIN in_stock isp ON isp.product_id = uh.product_id
+      LEFT JOIN user_ratings ur ON ur.product_id = uh.product_id
       WHERE NOT EXISTS (
         SELECT 1
         FROM product_allergen pa
@@ -58,7 +65,7 @@ export default class RecommendationService {
       ORDER BY score DESC
       LIMIT 10
       `,
-      [userId, excludedAllergenIds]
+      [userId, userId, excludedAllergenIds]
     )
 
     return rows.rows.map((r) => ({
@@ -98,7 +105,7 @@ export default class RecommendationService {
       await Recommendation.query().where('userId', user.id).where('model', 'statistical').delete()
 
       if (scored.length > 0) {
-        const now = DateTime.now()
+        const now = DateTime.utc()
         await Recommendation.createMany(
           scored.map((s, idx) => ({
             userId: user.id,
