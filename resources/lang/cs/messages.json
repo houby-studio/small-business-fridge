@@ -20,7 +20,7 @@
   "action_failed": "Akce se nezdařila.",
   "product_created": "Produkt „{name}“ byl vytvořen.",
   "product_updated": "Produkt „{name}“ byl upraven.",
-  "delivery_created": "Naskladněno {amount} ks za {price} Kč/ks.",
+  "delivery_created": "Naskladněno {amount} ks za {price} {currency}/ks.",
   "category_created": "Kategorie „{name}“ byla vytvořena.",
   "category_updated": "Kategorie „{name}“ byla upravena.",
   "category_deleted": "Kategorie „{name}“ byla smazána.",
@@ -90,5 +90,7 @@
   "password_current_invalid": "Aktuální heslo je nesprávné.",
   "password_changed": "Heslo bylo úspěšně změněno.",
   "oidc_already_linked": "Tento externí účet je již propojen s jiným uživatelem.",
-  "too_many_requests": "Příliš mnoho požadavků. Zkuste to prosím znovu za {retryAfter} sekund."
+  "too_many_requests": "Příliš mnoho požadavků. Zkuste to prosím znovu za {retryAfter} sekund.",
+  "barcode_taken": "Tento čárový kód už používá jiný produkt.",
+  "name_taken": "Tento název už je použitý."
 }

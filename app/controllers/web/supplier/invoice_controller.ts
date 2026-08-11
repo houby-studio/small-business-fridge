@@ -1,4 +1,5 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import User from '#models/user'
 import InvoiceService from '#services/invoice_service'
 import NotificationService from '#services/notification_service'
 import logger from '@adonisjs/core/services/logger'
@@ -48,10 +49,12 @@ export default class InvoiceController {
         message: i18n.t('messages.invoice_no_orders_for_buyer'),
       })
     } else {
+      // The message reads "invoice generated for {name}", so pass the name — not the id.
+      const buyer = await User.find(buyerId)
       session.flash('alert', {
         type: 'success',
         message: i18n.t('supplier.invoice_generated_for_buyer', {
-          name: String(buyerId),
+          name: buyer?.displayName ?? String(buyerId),
         }),
       })
 

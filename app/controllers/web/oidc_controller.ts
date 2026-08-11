@@ -1,4 +1,5 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import db from '@adonisjs/lucid/services/db'
 import logger from '@adonisjs/core/services/logger'
 import { DateTime } from 'luxon'
 import User from '#models/user'
@@ -208,7 +209,7 @@ export default class OidcController {
 
     if (externalProvider.accessDenied()) {
       logger.warn({ provider }, 'External login cancelled by user')
-      session.flash('alert', { type: 'warning', message: i18n.t('messages.login_cancelled') })
+      session.flash('alert', { type: 'warn', message: i18n.t('messages.login_cancelled') })
       return response.redirect('/login')
     }
 
@@ -432,19 +433,27 @@ export default class OidcController {
         }
       }
 
-      // Auto-register new user
-      const nextKeypadId = await this.keypadIds.getNextAvailableUserKeypadId()
+      // Auto-register new user. Allocation and insert share one transaction — the
+      // keypad-id advisory lock is transaction-scoped.
+      user = await db.transaction(async (trx) => {
+        const nextKeypadId = await this.keypadIds.getNextAvailableUserKeypadId(
+          trx as unknown as Parameters<typeof this.keypadIds.getNextAvailableUserKeypadId>[0]
+        )
 
-      user = await User.create({
-        email,
-        displayName: displayName || email.split('@')[0],
-        phone,
-        role: allowBootstrapRegistration
-          ? 'admin'
-          : (invitation?.role ?? (hasAnyAdmin ? 'customer' : 'admin')),
-        keypadId: nextKeypadId,
-        emailVerifiedAt: DateTime.utc(),
-        pendingEmail: null,
+        return User.create(
+          {
+            email,
+            displayName: displayName || email.split('@')[0],
+            phone,
+            role: allowBootstrapRegistration
+              ? 'admin'
+              : (invitation?.role ?? (hasAnyAdmin ? 'customer' : 'admin')),
+            keypadId: nextKeypadId,
+            emailVerifiedAt: DateTime.utc(),
+            pendingEmail: null,
+          },
+          { client: trx }
+        )
       })
 
       if (invitation) {
@@ -524,7 +533,7 @@ export default class OidcController {
     })
     if (this.verifications.shouldBlockAppAccess(user)) {
       session.flash('alert', {
-        type: 'warning',
+        type: 'warn',
         message: i18n.t('messages.email_verification_required'),
       })
       return response.redirect('/profile')

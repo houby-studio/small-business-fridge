@@ -22,10 +22,18 @@ export function useInlineEdit({
   entityPrefix,
   updatePath,
   getEditValues,
+  isValid,
 }: {
   entityPrefix: string
   updatePath: (id: number) => string
   getEditValues: () => Record<string, string | number | boolean | null | undefined>
+  /**
+   * Guard checked before the request goes out. Without it a cleared field is submitted as
+   * an empty string, the bodyparser turns it into null, the optional validator lets it
+   * through as "not submitted" — and the row silently keeps its old value while the UI
+   * closes the editor as if the change had been saved.
+   */
+  isValid?: () => boolean
 }) {
   const editingId = ref<number | null>(null)
 
@@ -43,6 +51,7 @@ export function useInlineEdit({
 
   function saveEdit() {
     if (!editingId.value) return
+    if (isValid && !isValid()) return
     router.put(updatePath(editingId.value), getEditValues(), {
       preserveState: true,
       onFinish: () => (editingId.value = null),

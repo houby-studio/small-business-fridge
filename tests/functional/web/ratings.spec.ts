@@ -83,7 +83,7 @@ test.group('Web ratings', (group) => {
     response.assertStatus(200)
   })
 
-  test('POST /ratings for a never-purchased product → 403, no row created', async ({
+  test('POST /ratings for a never-purchased product is refused, no row created', async ({
     client,
     assert,
   }) => {
@@ -97,7 +97,10 @@ test.group('Web ratings', (group) => {
       .withCsrfToken()
       .redirects(0)
 
-    assert.equal(response.status(), 403)
+    // 302 back with a danger flash — a 4xx with a Location would make the Inertia
+    // client raise an error modal and swallow the message. The refusal is proven by
+    // the absence of a row, not by the status code.
+    assert.equal(response.status(), 302)
     const count = await db.from('product_ratings').count('* as cnt').first()
     assert.equal(Number(count?.cnt ?? 0), 0)
   })
@@ -159,7 +162,10 @@ test.group('Web ratings', (group) => {
     assert.equal(rows[0].visibility, 'public')
   })
 
-  test('rating a purchase older than 14 days → 403 (window closed)', async ({ client, assert }) => {
+  test('rating a purchase older than 14 days is refused (window closed)', async ({
+    client,
+    assert,
+  }) => {
     const user = await UserFactory.create()
     const { product, delivery } = await makeStockedProduct('Vinea')
     await makePurchase(user.id, delivery.id, 20)
@@ -171,7 +177,9 @@ test.group('Web ratings', (group) => {
       .withCsrfToken()
       .redirects(0)
 
-    assert.equal(response.status(), 403)
+    assert.equal(response.status(), 302)
+    const count = await db.from('product_ratings').count('* as cnt').first()
+    assert.equal(Number(count?.cnt ?? 0), 0)
   })
 
   test('customer only sees their own ratings when the public feed is off', async ({ assert }) => {
@@ -288,7 +296,11 @@ test.group('Web ratings', (group) => {
       .loginAs(mallory)
       .withCsrfToken()
       .redirects(0)
-    assert.equal(forbidden.status(), 403)
+    // A 302 back with a danger flash, not a 4xx: a 4xx carrying a Location makes the
+    // Inertia client raise an error modal and swallow the flashed message.
+    assert.equal(forbidden.status(), 302)
+    // What actually matters is that the rating survived a foreign delete.
+    assert.isNotNull(await ProductRating.find(r1.id))
 
     const byAdmin = await client
       .delete(`/ratings/${r1.id}`)
@@ -354,5 +366,146 @@ test.group('Web ratings', (group) => {
     const aggregate = await ProductRatingService.getProductAggregate(product.id)
     assert.equal(aggregate.count, 2)
     assert.closeTo(aggregate.average!, 3.5, 0.001)
+  })
+})
+
+test.group('Web ratings — HTTP mutations', (group) => {
+  group.each.setup(async () => {
+    throttleStore.clear()
+    await cleanAll()
+  })
+  group.each.teardown(async () => {
+    setPublicFeed(false)
+    await cleanAll()
+  })
+
+  test('PUT /ratings/:id updates the owner’s own rating', async ({ client, assert }) => {
+    const user = await UserFactory.create()
+    const { product, delivery } = await makeStockedProduct('Birell')
+    await makePurchase(user.id, delivery.id)
+    const rating = await ProductRating.create({
+      userId: user.id,
+      productId: product.id,
+      stars: 2,
+      visibility: 'private',
+    })
+
+    const response = await client
+      .put(`/ratings/${rating.id}`)
+      .loginAs(user)
+      .form({ productId: product.id, stars: 5, comment: 'lepší', visibility: 'private' })
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    await rating.refresh()
+    assert.equal(rating.stars, 5)
+  })
+
+  test('PUT /ratings/:id by a stranger changes nothing', async ({ client, assert }) => {
+    const owner = await UserFactory.create()
+    const stranger = await UserFactory.create()
+    const { product, delivery } = await makeStockedProduct('Zon')
+    await makePurchase(owner.id, delivery.id)
+    const rating = await ProductRating.create({
+      userId: owner.id,
+      productId: product.id,
+      stars: 3,
+      visibility: 'private',
+    })
+
+    const response = await client
+      .put(`/ratings/${rating.id}`)
+      .loginAs(stranger)
+      .form({ productId: product.id, stars: 1, visibility: 'private' })
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    await rating.refresh()
+    assert.equal(rating.stars, 3)
+  })
+
+  test('POST /ratings/:id/upvote toggles over HTTP', async ({ client, assert }) => {
+    setPublicFeed(true)
+    const author = await UserFactory.create()
+    const voter = await UserFactory.create()
+    const { product, delivery } = await makeStockedProduct('Toma')
+    await makePurchase(author.id, delivery.id)
+    const rating = await ProductRating.create({
+      userId: author.id,
+      productId: product.id,
+      stars: 4,
+      visibility: 'public',
+    })
+
+    const up = await client
+      .post(`/ratings/${rating.id}/upvote`)
+      .loginAs(voter)
+      .withCsrfToken()
+      .redirects(0)
+    up.assertStatus(302)
+
+    let rows = await db.from('product_rating_upvotes').where('product_rating_id', rating.id)
+    assert.lengthOf(rows, 1)
+
+    const down = await client
+      .post(`/ratings/${rating.id}/upvote`)
+      .loginAs(voter)
+      .withCsrfToken()
+      .redirects(0)
+    down.assertStatus(302)
+
+    rows = await db.from('product_rating_upvotes').where('product_rating_id', rating.id)
+    assert.lengthOf(rows, 0)
+  })
+
+  test('a customer cannot upvote while the public feed is off', async ({ client, assert }) => {
+    const author = await UserFactory.create()
+    const voter = await UserFactory.create()
+    const { product, delivery } = await makeStockedProduct('Korunní')
+    await makePurchase(author.id, delivery.id)
+    const rating = await ProductRating.create({
+      userId: author.id,
+      productId: product.id,
+      stars: 4,
+      visibility: 'private',
+    })
+
+    const response = await client
+      .post(`/ratings/${rating.id}/upvote`)
+      .loginAs(voter)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    const rows = await db.from('product_rating_upvotes').where('product_rating_id', rating.id)
+    assert.lengthOf(rows, 0)
+  })
+
+  test('a supplier can upvote a private rating even with the feed off', async ({
+    client,
+    assert,
+  }) => {
+    const author = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').create()
+    const { product, delivery } = await makeStockedProduct('Rajec voda')
+    await makePurchase(author.id, delivery.id)
+    const rating = await ProductRating.create({
+      userId: author.id,
+      productId: product.id,
+      stars: 4,
+      visibility: 'private',
+    })
+
+    const response = await client
+      .post(`/ratings/${rating.id}/upvote`)
+      .loginAs(supplier)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    const rows = await db.from('product_rating_upvotes').where('product_rating_id', rating.id)
+    assert.lengthOf(rows, 1)
   })
 })

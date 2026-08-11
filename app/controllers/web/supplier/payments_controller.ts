@@ -1,4 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import { resolvePage } from '#helpers/pagination'
+import { listRedirectUrl } from '#helpers/list_redirect'
 import InvoiceService from '#services/invoice_service'
 import NotificationService from '#services/notification_service'
 import { paymentActionValidator } from '#validators/invoice'
@@ -9,7 +11,7 @@ import Invoice from '#models/invoice'
 export default class PaymentsController {
   async index({ inertia, auth, request }: HttpContext) {
     const invoiceService = new InvoiceService()
-    const page = request.input('page', 1)
+    const page = resolvePage(request.input('page', 1))
     const status = request.input('status')
     const sortBy = request.input('sortBy')
     const sortOrder = request.input('sortOrder')
@@ -88,6 +90,6 @@ export default class PaymentsController {
       }
     }
 
-    return response.redirect('/supplier/payments')
+    return response.redirect(listRedirectUrl(request, '/supplier/payments'))
   }
 }

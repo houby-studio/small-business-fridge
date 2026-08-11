@@ -1,6 +1,8 @@
 import '#tests/test_context'
 import { test } from '@japa/runner'
 import { UserFactory } from '#database/factories/user_factory'
+import { ProductFactory } from '#database/factories/product_factory'
+import { CategoryFactory } from '#database/factories/category_factory'
 import User from '#models/user'
 import db from '@adonisjs/lucid/services/db'
 
@@ -481,5 +483,114 @@ test.group('Web Profile - update preferences', (group) => {
       .redirects(0)
 
     response.assertStatus(302)
+  })
+})
+
+test.group('Web Profile - favourites toggle', (group) => {
+  const cleanFavorites = async () => {
+    await db.from('audit_logs').delete()
+    await db.from('user_favorites').delete()
+    await db.from('deliveries').delete()
+    await db.from('product_allergen').delete()
+    await db.from('products').delete()
+    await db.from('categories').delete()
+    await db.from('auth_access_tokens').delete()
+    await db.from('users').delete()
+  }
+
+  group.each.setup(cleanFavorites)
+  group.each.teardown(cleanFavorites)
+
+  test('POST /profile/favorites/:id adds and then removes the favourite', async ({
+    client,
+    assert,
+  }) => {
+    const user = await UserFactory.create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+
+    const added = await client
+      .post(`/profile/favorites/${product.id}`)
+      .loginAs(user)
+      .withCsrfToken()
+      .redirects(0)
+    added.assertStatus(302)
+
+    let rows = await db.from('user_favorites').where('user_id', user.id)
+    assert.lengthOf(rows, 1)
+
+    const addLog = await db
+      .from('audit_logs')
+      .where('user_id', user.id)
+      .where('action', 'favorite.added')
+      .first()
+    assert.exists(addLog)
+
+    const removed = await client
+      .post(`/profile/favorites/${product.id}`)
+      .loginAs(user)
+      .withCsrfToken()
+      .redirects(0)
+    removed.assertStatus(302)
+
+    rows = await db.from('user_favorites').where('user_id', user.id)
+    assert.lengthOf(rows, 0)
+
+    const removeLog = await db
+      .from('audit_logs')
+      .where('user_id', user.id)
+      .where('action', 'favorite.removed')
+      .first()
+    assert.exists(removeLog)
+  })
+
+  test('an unknown product id changes nothing', async ({ client, assert }) => {
+    const user = await UserFactory.create()
+
+    const response = await client
+      .post('/profile/favorites/999999')
+      .loginAs(user)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    const rows = await db.from('user_favorites').where('user_id', user.id)
+    assert.lengthOf(rows, 0)
+  })
+})
+
+test.group('Web Profile - sensitive reauth endpoint', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('a correct password grants the step-up', async ({ client, assert }) => {
+    const user = await UserFactory.create()
+
+    const response = await client
+      .post('/profile/reauth')
+      .loginAs(user)
+      .form({ currentPassword: 'password123' })
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    // The grant lives in the session; assert it there rather than issuing a second
+    // request, which would start a fresh session and prove nothing.
+    assert.isString(response.session('__sensitive_reauth_at'))
+  })
+
+  test('a wrong password does not grant the step-up', async ({ client }) => {
+    const user = await UserFactory.create()
+
+    const response = await client
+      .post('/profile/reauth')
+      .loginAs(user)
+      .form({ currentPassword: 'definitely-not-it' })
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    response.assertSessionMissing('__sensitive_reauth_at')
   })
 })

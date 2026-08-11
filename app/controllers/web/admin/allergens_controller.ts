@@ -2,6 +2,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import AdminService from '#services/admin_service'
 import { createAllergenValidator, updateAllergenValidator } from '#validators/allergen'
 import AuditService from '#services/audit_service'
+import { isUniqueViolation } from '#services/unique_violation'
 import Allergen from '#models/allergen'
 
 export default class AllergensController {
@@ -26,7 +27,16 @@ export default class AllergensController {
     const data = await request.validateUsing(createAllergenValidator)
 
     const service = new AdminService()
-    const allergen = await service.createAllergen(data.name)
+    let allergen: Allergen
+    try {
+      allergen = await service.createAllergen(data.name)
+    } catch (err) {
+      if (isUniqueViolation(err, 'name')) {
+        session.flash('alert', { type: 'danger', message: i18n.t('messages.name_taken') })
+        return response.redirect().back()
+      }
+      throw err
+    }
 
     await AuditService.log(auth.user!.id, 'allergen.created', 'allergen', allergen.id, null, {
       name: allergen.name,

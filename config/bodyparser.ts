@@ -44,10 +44,14 @@ const bodyParserConfig = defineConfig({
     processManually: [],
 
     /**
-     * Maximum limit of data to parse including all files
-     * and fields
+     * Maximum limit of data to parse including all files and fields.
+     *
+     * Must stay ABOVE the largest per-file validator limit (music uploads allow 20mb, see
+     * app/validators/music_track.ts). At an equal limit the bodyparser aborts the request
+     * with a bare 413 before validation runs, so the user gets an untranslated error page
+     * instead of a field-level message — and the validator's own limit is unreachable.
      */
-    limit: '20mb',
+    limit: '25mb',
     types: ['multipart/form-data'],
   },
 })

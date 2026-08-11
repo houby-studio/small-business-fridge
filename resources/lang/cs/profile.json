@@ -60,5 +60,7 @@
   "sensitive_reauth_active": "Citlivý přístup aktivní",
   "security_heading": "Zabezpečení a přihlášení",
   "linked_accounts_heading": "Propojené účty",
-  "email_active": "Aktivní e-mail"
+  "email_active": "Aktivní e-mail",
+  "field_required": "Toto pole je povinné.",
+  "field_too_long": "Maximálně {max} znaků."
 }

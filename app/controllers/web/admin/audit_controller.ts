@@ -1,10 +1,11 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import { resolvePage } from '#helpers/pagination'
 import AuditService from '#services/audit_service'
 import User from '#models/user'
 
 export default class AdminAuditController {
   async index({ inertia, request }: HttpContext) {
-    const page = request.input('page', 1)
+    const page = resolvePage(request.input('page', 1))
     const action = request.input('action')
     const entityType = request.input('entityType')
     const userId = request.input('userId')

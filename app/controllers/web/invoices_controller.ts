@@ -1,4 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import { resolvePage } from '#helpers/pagination'
+import { listRedirectUrl } from '#helpers/list_redirect'
 import InvoiceService from '#services/invoice_service'
 import QrPaymentService from '#services/qr_payment_service'
 import NotificationService from '#services/notification_service'
@@ -8,7 +10,7 @@ import logger from '@adonisjs/core/services/logger'
 export default class InvoicesController {
   async index({ inertia, auth, request }: HttpContext) {
     const invoiceService = new InvoiceService()
-    const page = request.input('page', 1)
+    const page = resolvePage(request.input('page', 1))
     const status = request.input('status')
     const sortBy = request.input('sortBy')
     const sortOrder = request.input('sortOrder')
@@ -43,7 +45,7 @@ export default class InvoicesController {
     })
   }
 
-  async requestPaid({ params, auth, response, session, i18n }: HttpContext) {
+  async requestPaid({ params, request, auth, response, session, i18n }: HttpContext) {
     const invoiceService = new InvoiceService()
 
     try {
@@ -65,10 +67,10 @@ export default class InvoicesController {
       }
     }
 
-    return response.redirect('/invoices')
+    return response.redirect(listRedirectUrl(request, '/invoices'))
   }
 
-  async cancelPaid({ params, auth, response, session, i18n }: HttpContext) {
+  async cancelPaid({ params, request, auth, response, session, i18n }: HttpContext) {
     const invoiceService = new InvoiceService()
 
     try {
@@ -91,7 +93,7 @@ export default class InvoicesController {
       }
     }
 
-    return response.redirect('/invoices')
+    return response.redirect(listRedirectUrl(request, '/invoices'))
   }
 
   async qrcode({ params, auth, response, i18n }: HttpContext) {

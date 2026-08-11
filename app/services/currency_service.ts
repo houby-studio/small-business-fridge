@@ -47,3 +47,26 @@ export function getCurrencyCode(): string {
 export function getCurrencyDisplay(locale: string): string {
   return resolveCurrencyDisplay(getCurrencyCode(), locale)
 }
+
+/**
+ * Substitute the `{currency}` placeholder in a set of translations.
+ *
+ * The placeholder exists because the currency symbol comes from configuration, not from
+ * the language: hard-coding "Kč" in the strings meant a deployment with CURRENCY=EUR still
+ * mailed out amounts in crowns. Doing the substitution once, at load time, keeps every
+ * consumer working — server-side i18n, Edge mail templates and the client alike — without
+ * every t() call having to remember to pass the currency.
+ */
+export function applyCurrencyPlaceholder(
+  translations: Record<string, string>,
+  locale: string
+): Record<string, string> {
+  const display = getCurrencyDisplay(locale)
+  const result: Record<string, string> = {}
+
+  for (const [key, value] of Object.entries(translations)) {
+    result[key] = typeof value === 'string' ? value.replaceAll('{currency}', display) : value
+  }
+
+  return result
+}

@@ -7,13 +7,11 @@
   "dashboard_total_revenue": "Celkový obrat",
   "dashboard_invoices_detail": "{paid} zaplacených / {unpaid} nezaplacených",
   "dashboard_recent_orders": "Poslední objednávky",
-
   "users_title": "Správa uživatelů",
   "users_heading": "Správa uživatelů",
   "users_name": "Jméno",
   "users_kiosk": "Kiosk",
   "users_disabled": "Zablokován",
-
   "categories_title": "Správa kategorií",
   "categories_heading": "Správa kategorií",
   "categories_new": "Nová kategorie",
@@ -23,7 +21,6 @@
   "categories_delete_header": "Potvrdit smazání kategorie",
   "categories_delete_confirm": "Smazat kategorii „{name}“?",
   "categories_delete_accept": "Smazat kategorii",
-
   "allergens_title": "Správa alergenů",
   "allergens_heading": "Správa alergenů",
   "allergens_new": "Nový alergen",
@@ -32,7 +29,6 @@
   "allergens_delete_header": "Potvrdit smazání alergenu",
   "allergens_delete_confirm": "Smazat alergen „{name}“?",
   "allergens_delete_accept": "Smazat alergen",
-
   "music_title": "Správa hudby",
   "music_heading": "Správa hudby",
   "music_new": "Nová skladba",
@@ -45,7 +41,6 @@
   "music_delete_header": "Potvrdit smazání skladby",
   "music_delete_confirm": "Smazat skladbu „{name}“?",
   "music_delete_accept": "Smazat skladbu",
-
   "orders_title": "Všechny objednávky",
   "orders_heading": "Všechny objednávky",
   "orders_no_orders": "Žádné objednávky.",
@@ -54,25 +49,21 @@
   "orders_storno_confirm": "Opravdu chcete stornovat objednávku #{id}? Zboží bude vráceno na sklad.",
   "orders_storno_accept": "Stornovat",
   "orders_invoice": "Faktura",
-
   "invoices_title": "Všechny faktury",
   "invoices_heading": "Všechny faktury",
   "invoices_no_invoices": "Žádné faktury.",
   "invoices_filter_status": "Stav",
-
   "users_search": "Hledat uživatele",
   "users_filter_role": "Role",
   "users_filter_user": "Uživatel",
   "users_filter_disabled": "Zablokován",
   "users_filter_enabled": "Povolen",
-
   "orders_filter_channel": "Kanál",
   "orders_filter_invoiced": "Fakturováno",
   "orders_filter_customer": "Zákazník",
   "orders_filter_supplier": "Dodavatel",
   "invoices_filter_customer": "Zákazník",
   "invoices_filter_supplier": "Dodavatel",
-
   "users_col_id": "ID",
   "users_col_db_id": "DB ID",
   "users_col_keypad_id": "Keypad ID",
@@ -103,5 +94,8 @@
   "registration_mode_open": "Otevřený",
   "registration_mode_invite_only": "Pouze pozvánky",
   "registration_mode_domain_auto_approve": "Automatické schválení dle domény",
-  "registration_allowed_domains": "Povolené domény"
+  "registration_allowed_domains": "Povolené domény",
+  "music_name_too_long": "Název skladby může mít maximálně 255 znaků.",
+  "music_file_bad_format": "Podporované formáty jsou mp3, ogg, wav a m4a.",
+  "music_file_too_large": "Soubor je větší než 20 MB."
 }

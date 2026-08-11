@@ -1,13 +1,15 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import { resolvePage } from '#helpers/pagination'
 import ProductService from '#services/product_service'
 import { createProductValidator, updateProductValidator } from '#validators/product'
 import AuditService from '#services/audit_service'
 import { normalizeImagePath } from '#helpers/image_url'
+import { isUniqueViolation } from '#services/unique_violation'
 
 export default class ProductsController {
   async index({ inertia, request }: HttpContext) {
     const service = new ProductService()
-    const page = request.input('page', 1)
+    const page = resolvePage(request.input('page', 1))
     const search = request.input('search')
     const categoryId = request.input('categoryId')
 
@@ -56,14 +58,23 @@ export default class ProductsController {
     const data = await request.validateUsing(createProductValidator)
 
     const service = new ProductService()
-    const product = await service.createProduct({
-      displayName: data.displayName,
-      description: data.description,
-      categoryId: data.categoryId,
-      barcode: data.barcode,
-      image: data.image,
-      allergenIds: data.allergenIds,
-    })
+    let product: Awaited<ReturnType<ProductService['createProduct']>>
+    try {
+      product = await service.createProduct({
+        displayName: data.displayName,
+        description: data.description,
+        categoryId: data.categoryId,
+        barcode: data.barcode,
+        image: data.image,
+        allergenIds: data.allergenIds,
+      })
+    } catch (err) {
+      if (isUniqueViolation(err, 'barcode')) {
+        session.flash('alert', { type: 'danger', message: i18n.t('messages.barcode_taken') })
+        return response.redirect().back()
+      }
+      throw err
+    }
 
     await AuditService.log(auth.user!.id, 'product.created', 'product', product.id, null, {
       name: product.displayName,
@@ -110,14 +121,23 @@ export default class ProductsController {
     const service = new ProductService()
     const beforeProduct = await service.getProduct(Number(params.id))
 
-    const product = await service.updateProduct(Number(params.id), {
-      displayName: data.displayName,
-      description: data.description,
-      categoryId: data.categoryId,
-      barcode: data.barcode,
-      image: data.image,
-      allergenIds: data.allergenIds,
-    })
+    let product: Awaited<ReturnType<ProductService['updateProduct']>>
+    try {
+      product = await service.updateProduct(Number(params.id), {
+        displayName: data.displayName,
+        description: data.description,
+        categoryId: data.categoryId,
+        barcode: data.barcode,
+        image: data.image,
+        allergenIds: data.allergenIds,
+      })
+    } catch (err) {
+      if (isUniqueViolation(err, 'barcode')) {
+        session.flash('alert', { type: 'danger', message: i18n.t('messages.barcode_taken') })
+        return response.redirect().back()
+      }
+      throw err
+    }
 
     await product.load('category')
     await product.load('allergens')

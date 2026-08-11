@@ -62,6 +62,7 @@ const { editingId, getEditInputId, startEdit, saveEdit, cancelEdit, focusCreateI
     entityPrefix: 'admin-category',
     updatePath: (id) => `/admin/categories/${id}`,
     getEditValues: () => ({ name: editName.value, color: `#${editColor.value}` }),
+    isValid: () => editName.value.trim().length > 0,
   })
 
 function handleStartEdit(cat: CategoryRow) {

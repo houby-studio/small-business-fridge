@@ -26,7 +26,7 @@ export default class EmailVerifiedMiddleware {
 
     if (this.verifications.shouldBlockAppAccess(user)) {
       ctx.session.flash('alert', {
-        type: 'warning',
+        type: 'warn',
         message: ctx.i18n.t('messages.email_verification_required'),
       })
       return ctx.response.redirect('/profile')

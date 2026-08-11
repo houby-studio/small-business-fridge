@@ -20,7 +20,7 @@
   "action_failed": "Action failed.",
   "product_created": "Product \"{name}\" has been created.",
   "product_updated": "Product \"{name}\" has been updated.",
-  "delivery_created": "Stocked {amount} pcs at {price} CZK/pc.",
+  "delivery_created": "Stocked {amount} pcs at {price} {currency}/pc.",
   "category_created": "Category \"{name}\" has been created.",
   "category_updated": "Category \"{name}\" has been updated.",
   "category_deleted": "Category \"{name}\" has been deleted.",
@@ -90,5 +90,7 @@
   "password_current_invalid": "Current password is incorrect.",
   "password_changed": "Password changed successfully.",
   "oidc_already_linked": "This external account is already linked to a different user.",
-  "too_many_requests": "Too many requests. Please try again in {retryAfter} seconds."
+  "too_many_requests": "Too many requests. Please try again in {retryAfter} seconds.",
+  "barcode_taken": "That barcode already belongs to another product.",
+  "name_taken": "That name is already taken."
 }

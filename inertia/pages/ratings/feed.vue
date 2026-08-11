@@ -138,7 +138,11 @@ function onSort(event: any) {
 }
 
 function toggleUpvote(row: RatingRow) {
-  router.post(`/ratings/${row.id}/upvote`, {}, { preserveScroll: true, only: ['ratings', 'flash'] })
+  router.post(
+    `/ratings/${row.id}/upvote`,
+    {},
+    { preserveScroll: true, only: ['ratings', 'filters', 'flash'] }
+  )
 }
 
 // ── Rate dialog (create / edit) ────────────────────────────────────────────────
@@ -183,7 +187,7 @@ function submitRating() {
   }
   const options = {
     preserveScroll: true,
-    only: ['ratings', 'unrated', 'flash'],
+    only: ['ratings', 'unrated', 'filters', 'flash'],
     onFinish: () => {
       rateSubmitting.value = false
       rateDialogVisible.value = false
@@ -212,7 +216,7 @@ function confirmDeleteRating() {
   deleteSubmitting.value = true
   router.delete(`/ratings/${deleteTargetRating.value.id}`, {
     preserveScroll: true,
-    only: ['ratings', 'unrated', 'flash'],
+    only: ['ratings', 'unrated', 'filters', 'flash'],
     onFinish: () => {
       deleteSubmitting.value = false
       deleteDialogVisible.value = false

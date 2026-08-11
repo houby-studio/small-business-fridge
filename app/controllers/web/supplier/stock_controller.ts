@@ -1,11 +1,12 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import { resolvePage } from '#helpers/pagination'
 import DeliveryService from '#services/delivery_service'
 import Category from '#models/category'
 
 export default class StockController {
   async index({ inertia, auth, request }: HttpContext) {
     const service = new DeliveryService()
-    const page = Number(request.input('page', 1))
+    const page = resolvePage(request.input('page', 1))
     const categoryId = request.input('categoryId') ? Number(request.input('categoryId')) : undefined
     const sortBy = request.input('sortBy') || undefined
     const sortOrder = request.input('sortOrder') || undefined

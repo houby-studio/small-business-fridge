@@ -6,7 +6,12 @@ function parseAllergenIds() {
     .optional()
     .transform((v) => {
       if (v === undefined || v === null) return []
-      if (Array.isArray(v)) return v.filter((n): n is number => typeof n === 'number' && n > 0)
+      // FormData stringifies everything, so an array arrives as ['3', '7'] from the browser
+      // and as [3, 7] from JSON/MCP. Coerce instead of filtering the strings out — that
+      // silently dropped every allergen picked in the create form.
+      if (Array.isArray(v)) {
+        return v.map(Number).filter((n) => Number.isInteger(n) && n > 0)
+      }
       if (typeof v === 'string') {
         try {
           const p = JSON.parse(v) as unknown

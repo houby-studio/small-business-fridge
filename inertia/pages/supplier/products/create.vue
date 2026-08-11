@@ -132,9 +132,21 @@ function submit() {
     return
   }
 
-  form.post('/supplier/products', {
-    forceFormData: true,
-  })
+  // allergenIds goes as JSON for the same reason as in edit.vue: FormData cannot express
+  // an empty array, and this keeps both forms sending the exact same shape. Without the
+  // transform, Inertia's indexed FormData keys used to be dropped and every allergen
+  // picked here was silently lost.
+  form
+    .transform((data) => ({
+      ...data,
+      allergenIds: JSON.stringify(data.allergenIds),
+    }))
+    .post('/supplier/products', {
+      forceFormData: true,
+      onFinish: () => {
+        form.transform((data) => data)
+      },
+    })
 }
 
 function goBack() {
@@ -298,8 +310,8 @@ onMounted(() => {
               }}</label>
               <FileUpload
                 mode="basic"
-                accept="image/*"
-                :maxFileSize="5000000"
+                accept=".jpg,.jpeg,.png,.webp"
+                :maxFileSize="5 * 1024 * 1024"
                 :chooseLabel="t('supplier.products_image_choose')"
                 @select="onImageSelect"
                 :auto="false"

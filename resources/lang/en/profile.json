@@ -60,5 +60,7 @@
   "sensitive_reauth_active": "Sensitive access active",
   "security_heading": "Security & Sign-in",
   "linked_accounts_heading": "Connected Providers",
-  "email_active": "Active email"
+  "email_active": "Active email",
+  "field_required": "This field is required.",
+  "field_too_long": "At most {max} characters."
 }

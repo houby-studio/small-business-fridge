@@ -74,7 +74,7 @@ export default class LoginController {
       })
       if (this.verifications.shouldBlockAppAccess(user)) {
         session.flash('alert', {
-          type: 'warning',
+          type: 'warn',
           message: i18n.t('messages.email_verification_required'),
         })
         return response.redirect('/profile')

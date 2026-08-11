@@ -1187,3 +1187,96 @@ test.group('Admin - music tracks', (group) => {
     assert.equal(log.user_id, admin.id)
   })
 })
+
+test.group('Admin - storno over HTTP', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  const stockedOrder = async () => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    const delivery = await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountSupplied: 5,
+      amountLeft: 4,
+      price: 20,
+    }).create()
+    const order = await OrderFactory.merge({ buyerId: buyer.id, deliveryId: delivery.id }).create()
+    return { supplier, buyer, product, delivery, order }
+  }
+
+  test('admin can storno an uninvoiced order and stock returns', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const { delivery, order } = await stockedOrder()
+
+    const response = await client
+      .post(`/admin/storno/${order.id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    assert.equal(response.header('location'), '/admin/orders')
+
+    const orderRow = await db.from('orders').where('id', order.id).first()
+    assert.isNotOk(orderRow)
+
+    await delivery.refresh()
+    assert.equal(delivery.amountLeft, 5)
+
+    const log = await db
+      .from('audit_logs')
+      .where('action', 'order.storno')
+      .where('entity_id', order.id)
+      .first()
+    assert.exists(log)
+  })
+
+  test('an invoiced order cannot be stornoed and nothing changes', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const { buyer, supplier, delivery, order } = await stockedOrder()
+    const invoice = await InvoiceFactory.merge({
+      buyerId: buyer.id,
+      supplierId: supplier.id,
+      totalCost: 20,
+    }).create()
+    order.invoiceId = invoice.id
+    await order.save()
+
+    const response = await client
+      .post(`/admin/storno/${order.id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    const orderRow = await db.from('orders').where('id', order.id).first()
+    assert.exists(orderRow)
+
+    await delivery.refresh()
+    assert.equal(delivery.amountLeft, 4)
+  })
+
+  test('a supplier cannot storno an order', async ({ client, assert }) => {
+    const attacker = await UserFactory.apply('supplier').create()
+    const { order, delivery } = await stockedOrder()
+
+    const response = await client
+      .post(`/admin/storno/${order.id}`)
+      .loginAs(attacker)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    assert.equal(response.header('location'), '/')
+
+    const orderRow = await db.from('orders').where('id', order.id).first()
+    assert.exists(orderRow)
+    await delivery.refresh()
+    assert.equal(delivery.amountLeft, 4)
+  })
+})
