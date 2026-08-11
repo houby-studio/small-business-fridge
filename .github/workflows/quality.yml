@@ -67,6 +67,27 @@ jobs:
       - name: TypeScript typecheck
         run: npm run typecheck
 
+      # Catches frontend calls whose verb no route accepts — that mismatch answers 404,
+      # not 405, so it reads like a wrong URL and is easy to miss in review.
+      - name: Route/method parity
+        run: npm run check:routes
+        env:
+          TZ: UTC
+          NODE_ENV: test
+          APP_KEY: test-app-key-for-ci-only-123456789
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_USER: sbf
+          DB_PASSWORD: sbf
+          DB_DATABASE: sbf_test
+          SESSION_DRIVER: memory
+          LOG_LEVEL: error
+          SMTP_HOST: localhost
+          SMTP_PORT: 1025
+          OIDC_ENABLED: 'false'
+          API_SECRET: test-api-secret
+          APP_URL: http://localhost:3334
+
       - name: Run unit and functional tests
         run: node ace test --no-color
         env:

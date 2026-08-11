@@ -21,6 +21,7 @@
     "typecheck:backend": "tsc --noEmit",
     "typecheck:frontend": "vue-tsc --noEmit -p tsconfig.frontend.json",
     "typecheck:tests": "tsc --noEmit -p tsconfig.tests.json",
+    "check:routes": "node --import=tsx scripts/check_route_methods.ts",
     "generate:app-icons": "node --import=tsx scripts/generate_app_icons.ts",
     "generate:keypad-tones": "node --import=tsx scripts/generate_keypad_tones.ts",
     "hooks:install": "node -e \"const fs=require('fs'); const cp=require('child_process'); if (!fs.existsSync('.git')) { console.log('[hooks] Skipping install: .git directory not found.'); process.exit(0); } try { cp.execFileSync('git', ['config', '--local', 'core.hooksPath', '.githooks'], { stdio: 'inherit' }); } catch (error) { if (error && error.code === 'ENOENT') { console.log('[hooks] Skipping install: git is not available.'); process.exit(0); } throw error; } console.log('[hooks] Installed hooks path: .githooks');\"",
