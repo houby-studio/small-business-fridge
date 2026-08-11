@@ -171,8 +171,14 @@ await user.load((loader) => loader.load('orders'))
 // Role check — role middleware handles this, but in code:
 // admin implicitly has supplier access (check middleware/role.ts)
 
-// Method spoofing for DELETE/PUT in HTML forms:
-// <input type="hidden" name="_method" value="DELETE">
+// Method spoofing works ONLY from the query string — never from the body:
+//   POST /supplier/products/16?_method=PUT   ✅
+//   POST /supplier/products/16 + `_method: 'PUT'` field in the body   ❌ 404
+// The bodyparser is router middleware, so it runs AFTER route matching —
+// `_method` in the body is invisible to the router. From Inertia always issue a
+// real router.put()/form.put()/router.delete(); it works with forceFormData too
+// (unlike PHP, the Adonis bodyparser parses multipart on PUT/PATCH/DELETE), and
+// the Inertia middleware upgrades the 302 redirect to 303 for you.
 ```
 
 ### Vue / Inertia Patterns

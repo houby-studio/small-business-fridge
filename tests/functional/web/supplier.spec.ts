@@ -195,6 +195,57 @@ test.group('Web Supplier - products', (group) => {
     assert.isNotNull(product)
   })
 
+  test('updating product via PUT persists changes and redirects to stock', async ({
+    client,
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({
+      categoryId: category.id,
+      displayName: 'Před úpravou',
+    }).create()
+
+    const response = await client
+      .put(`/supplier/products/${product.id}`)
+      .loginAs(supplier)
+      .withCsrfToken()
+      .field('displayName', 'Po úpravě')
+      .field('description', 'Nový popis')
+      .field('categoryId', category.id)
+      .field('barcode', '987654321')
+      .field('allergenIds', JSON.stringify([]))
+      .redirects(0)
+
+    response.assertStatus(302)
+    assert.equal(response.header('location'), '/supplier/stock')
+
+    await product.refresh()
+    assert.equal(product.displayName, 'Po úpravě')
+    assert.equal(product.description, 'Nový popis')
+    assert.equal(product.barcode, '987654321')
+  })
+
+  test('product update is not routable as POST with _method in the body', async ({ client }) => {
+    // AdonisJS only honours `_method` spoofing from the query string, and the
+    // bodyparser runs after route matching — so a body-only `_method` 404s.
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+
+    const response = await client
+      .post(`/supplier/products/${product.id}`)
+      .loginAs(supplier)
+      .withCsrfToken()
+      .field('displayName', 'Spoofed')
+      .field('description', 'Spoofed')
+      .field('categoryId', category.id)
+      .field('_method', 'PUT')
+      .redirects(0)
+
+    response.assertStatus(404)
+  })
+
   test('stock page returns preselect value from query string', async ({ client, assert }) => {
     const supplier = await UserFactory.apply('supplier').create()
     const response = await client

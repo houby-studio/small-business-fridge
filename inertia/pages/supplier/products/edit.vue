@@ -141,13 +141,14 @@ function onDescriptionEnter() {
 function submit() {
   if (submitDisabled.value) return
 
+  // Must be a real PUT — AdonisJS only honours `_method` spoofing from the query
+  // string, never from the request body, and the body is parsed after routing.
   form
     .transform((data) => ({
       ...data,
-      _method: 'PUT',
       allergenIds: JSON.stringify(data.allergenIds),
     }))
-    .post(`/supplier/products/${props.product.id}`, {
+    .put(`/supplier/products/${props.product.id}`, {
       forceFormData: true,
       preserveScroll: true,
       onFinish: () => {

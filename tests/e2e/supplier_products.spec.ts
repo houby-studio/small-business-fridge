@@ -54,6 +54,43 @@ test.describe('Supplier products flow', () => {
     await expect(saveButton).toBeEnabled()
   })
 
+  test('saving the edit form persists the change', async ({ page }) => {
+    const createdName = `E2E Editace ${Date.now()}`
+    const renamedTo = `${createdName} upraveno`
+
+    await loginAs(page, 'supplier')
+
+    // Work on an own product so the seeded catalogue stays untouched.
+    await page.goto('/supplier/products/new')
+    await page.locator('#product-name').fill(createdName)
+    await page.locator('#product-description').fill('E2E editace produktu')
+    await page.getByRole('combobox').first().click()
+    await page.getByRole('option', { name: 'Nealko' }).click()
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'e2e-edit.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9WlH0JkAAAAASUVORK5CYII=',
+        'base64'
+      ),
+    })
+    await page.getByRole('button', { name: 'Vytvořit produkt' }).click()
+    await expect(page).toHaveURL(/\/supplier\/stock\?preselect=\d+/)
+
+    const productId = page.url().match(/preselect=(\d+)/)![1]
+
+    await page.goto(`/supplier/products/${productId}/edit`)
+    await page.locator('#edit-product-name').fill(renamedTo)
+    await page.getByRole('button', { name: 'Uložit změny' }).click()
+
+    await expect(page).toHaveURL(/\/supplier\/stock$/)
+    await expect(page.getByText(`Produkt „${renamedTo}“ byl upraven.`)).toBeVisible()
+
+    // The change must really be persisted, not just flashed.
+    await page.goto(`/supplier/products/${productId}/edit`)
+    await expect(page.locator('#edit-product-name')).toHaveValue(renamedTo)
+  })
+
   test('supplier products category tags keep white text color', async ({ page }) => {
     await loginAs(page, 'supplier')
     await page.goto('/supplier/products')
