@@ -171,15 +171,31 @@ await user.load((loader) => loader.load('orders'))
 // Role check — role middleware handles this, but in code:
 // admin implicitly has supplier access (check middleware/role.ts)
 
-// Method spoofing works ONLY from the query string — never from the body:
-//   POST /supplier/products/16?_method=PUT   ✅
-//   POST /supplier/products/16 + `_method: 'PUT'` field in the body   ❌ 404
-// The bodyparser is router middleware, so it runs AFTER route matching —
-// `_method` in the body is invisible to the router. From Inertia always issue a
-// real router.put()/form.put()/router.delete(); it works with forceFormData too
-// (unlike PHP, the Adonis bodyparser parses multipart on PUT/PATCH/DELETE), and
-// the Inertia middleware upgrades the 302 redirect to 303 for you.
+// Method spoofing is DISABLED (config/app.ts) and must stay that way:
+//   - `_method` is only ever read from the query string, never the body — the bodyparser
+//     is router middleware, so it runs AFTER route matching and the body does not exist yet
+//   - Shield picks whether to validate CSRF from request.method(), so a spoofable verb lets
+//     a cross-site POST with `_method=GET` in its body skip validation entirely
+// From Inertia always issue a real router.put()/form.put()/router.delete(). That works with
+// forceFormData too (unlike PHP, the Adonis bodyparser parses multipart on PUT/PATCH/DELETE),
+// and the Inertia middleware upgrades the 302 redirect to 303 for you.
+// `npm run check:routes` fails the build on any frontend call whose verb no route accepts.
 ```
+
+### Framework mechanics worth knowing (verified against node_modules, not from memory)
+
+| Mechanism                      | The rule                                                                                                                                                                      |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Middleware order               | `server.use` → `router.match` → `router.use` → named → controller. Server middleware sees no `ctx.route`, `ctx.params`, `request.body()`, `ctx.session` or `ctx.auth`.        |
+| Verb mismatch                  | Routes are indexed by method, so a wrong verb returns **404**, never 405. A 404 does not mean the URL is wrong.                                                               |
+| CSRF gate                      | Shield validates exactly the verbs in `config/shield.ts`. Never add GET/HEAD/OPTIONS — every navigation would then demand a token.                                            |
+| Inertia errors                 | `errors` must be shared from `inertia_middleware.share()`; without it `form.errors` is always empty, `onError` never fires and `onSuccess` runs after a validation failure.   |
+| Inertia mutations              | A 4xx carrying a `Location` makes the client raise an error modal and swallow the flash. Use a plain 302 plus a flash, and `redirect('back', true)` to keep the query string. |
+| `inertia_middleware` placement | Registered inside the session middleware (`router.use`), because its `dispose()` reflashes on a 409 and that only survives if it runs before the session commit.              |
+| FormData                       | Everything arrives as a string, and an empty array has no representation at all — the key is simply absent. Serialise "clear all" cases as JSON.                              |
+| Advisory locks                 | `pg_advisory_xact_lock` releases at commit, so allocation and insert must share one transaction.                                                                              |
+| Throttle keys                  | Derive from `request.ip()` (honours `trustProxy`), never from the `X-Forwarded-For` header directly.                                                                          |
+| Token lifetime                 | Remember-me (2y) and API tokens outlive sessions — revoke them when an account is disabled or its password is reset (`#services/credential_revocation`).                      |
 
 ### Vue / Inertia Patterns
 

@@ -1,5 +1,7 @@
 import '#tests/test_context'
 import { test } from '@japa/runner'
+import Tokens from 'csrf'
+import encryption from '@adonisjs/core/services/encryption'
 import { UserFactory } from '#database/factories/user_factory'
 import { InvoiceFactory } from '#database/factories/invoice_factory'
 import db from '@adonisjs/lucid/services/db'
@@ -242,5 +244,52 @@ test.group('Web Invoices - qrcode', (group) => {
     assert.exists(response.body().code)
     assert.exists(response.body().imageData)
     assert.include(response.body().code as string, supplier.iban as string)
+  })
+
+  test('the browser path works: encrypted XSRF token in the X-XSRF-TOKEN header', async ({
+    client,
+    assert,
+  }) => {
+    const buyer = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').apply('withIban').create()
+    const invoice = await InvoiceFactory.merge({
+      buyerId: buyer.id,
+      supplierId: supplier.id,
+      totalCost: 321,
+    }).create()
+
+    // The page sends the encrypted XSRF cookie back in the X-XSRF-TOKEN header, whereas
+    // withCsrfToken() uses the x-csrf-token channel. Only this reproduces what the browser
+    // does, so a break in the header path would otherwise go unnoticed.
+    const tokens = new Tokens()
+    const secret = await tokens.secret()
+    const token = tokens.create(secret)
+    const encrypted = encryption.encrypt(token, undefined, 'XSRF-TOKEN')
+
+    const response = await client
+      .post(`/invoices/${invoice.id}/qrcode`)
+      .loginAs(buyer)
+      .withSession({ 'csrf-secret': secret })
+      .header('x-xsrf-token', `e:${encrypted}`)
+      .redirects(0)
+
+    response.assertStatus(200)
+    assert.include(response.body().code as string, supplier.iban as string)
+  })
+
+  test('without any CSRF token the QR endpoint refuses', async ({ client, assert }) => {
+    const buyer = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').apply('withIban').create()
+    const invoice = await InvoiceFactory.merge({
+      buyerId: buyer.id,
+      supplierId: supplier.id,
+      totalCost: 321,
+    }).create()
+
+    const response = await client.post(`/invoices/${invoice.id}/qrcode`).loginAs(buyer).redirects(0)
+
+    // Rejected CSRF redirects away instead of answering with the payload.
+    assert.equal(response.status(), 302)
+    assert.notExists(response.body().code)
   })
 })

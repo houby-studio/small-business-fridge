@@ -4,6 +4,7 @@ import Allergen from '#models/allergen'
 import type { MultipartFile } from '@adonisjs/core/bodyparser'
 import app from '@adonisjs/core/services/app'
 import { randomUUID } from 'node:crypto'
+import { withProductKeypadId } from '#services/product_keypad_id'
 
 export default class ProductService {
   /**
@@ -17,27 +18,30 @@ export default class ProductService {
     image: MultipartFile
     allergenIds?: number[]
   }): Promise<Product> {
-    // Auto-assign next keypad ID
-    const maxKeypad = await Product.query().max('keypad_id as max').first()
-    const nextKeypadId = (maxKeypad?.$extras.max ?? 0) + 1
-
+    // Save the upload before opening the transaction — it is slow I/O and would hold the
+    // keypad-id lock for its duration.
     const imagePath = await this.saveImage(data.image)
 
-    const product = await Product.create({
-      keypadId: nextKeypadId,
-      displayName: data.displayName,
-      description: data.description,
-      imagePath,
-      categoryId: data.categoryId,
-      barcode: data.barcode || null,
+    return withProductKeypadId(async (trx, nextKeypadId) => {
+      const product = await Product.create(
+        {
+          keypadId: nextKeypadId,
+          displayName: data.displayName,
+          description: data.description,
+          imagePath,
+          categoryId: data.categoryId,
+          barcode: data.barcode || null,
+        },
+        { client: trx }
+      )
+
+      const ids = data.allergenIds ?? []
+      if (ids.length > 0) {
+        await product.related('allergens').attach(ids, trx)
+      }
+
+      return product
     })
-
-    const ids = data.allergenIds ?? []
-    if (ids.length > 0) {
-      await product.related('allergens').attach(ids)
-    }
-
-    return product
   }
 
   /**

@@ -1,10 +1,11 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import { resolvePage } from '#helpers/pagination'
 import AdminService from '#services/admin_service'
 import db from '@adonisjs/lucid/services/db'
 
 export default class InvoicesController {
   async index({ inertia, request }: HttpContext) {
-    const page = request.input('page', 1)
+    const page = resolvePage(request.input('page', 1))
     const status = request.input('status')
     const buyerId = request.input('buyerId')
     const supplierId = request.input('supplierId')

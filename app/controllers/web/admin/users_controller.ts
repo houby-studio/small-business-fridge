@@ -1,4 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import { resolvePage } from '#helpers/pagination'
+import { listRedirectUrl } from '#helpers/list_redirect'
 import { DateTime } from 'luxon'
 import AdminService from '#services/admin_service'
 import InvoiceService from '#services/invoice_service'
@@ -12,25 +14,10 @@ import RegistrationPolicyService from '#services/registration_policy_service'
 import PasswordResetService from '#services/password_reset_service'
 import InvitationService from '#services/invitation_service'
 
-/**
- * Return the referer URL if it points to /admin/users (preserving active filters),
- * otherwise fall back to /admin/users without filters.
- */
-function usersUrl(request: HttpContext['request']): string {
-  const referer = request.header('referer') ?? ''
-  try {
-    const { pathname, search } = new URL(referer)
-    if (pathname === '/admin/users') return pathname + search
-  } catch {
-    // invalid URL — use fallback
-  }
-  return '/admin/users'
-}
-
 export default class UsersController {
   async index({ inertia, request }: HttpContext) {
-    const page = request.input('page', 1)
-    const invitePage = Number(request.input('invitePage', 1))
+    const page = resolvePage(request.input('page', 1))
+    const invitePage = resolvePage(request.input('invitePage', 1))
     const role = request.input('role')
     const userId = request.input('userId')
     const disabled = request.input('disabled')
@@ -134,17 +121,17 @@ export default class UsersController {
           type: 'danger',
           message: i18n.t('messages.last_active_admin_required'),
         })
-        return response.redirect(usersUrl(request))
+        return response.redirect(listRedirectUrl(request, '/admin/users'))
       }
       if (err instanceof Error && err.message === 'USER_HAS_UNINVOICED_ORDERS') {
-        return response.redirect(usersUrl(request))
+        return response.redirect(listRedirectUrl(request, '/admin/users'))
       }
       if (err instanceof Error && err.message === 'KEYPAD_ID_TAKEN') {
         session.flash('alert', {
           type: 'danger',
           message: i18n.t('messages.keypad_id_taken'),
         })
-        return response.redirect(usersUrl(request))
+        return response.redirect(listRedirectUrl(request, '/admin/users'))
       }
       throw err
     }
@@ -170,7 +157,7 @@ export default class UsersController {
       message: i18n.t('messages.user_updated', { name: user.displayName }),
     })
 
-    return response.redirect(usersUrl(request))
+    return response.redirect(listRedirectUrl(request, '/admin/users'))
   }
 
   async generateInvoice({ params, request, response, session, i18n, auth }: HttpContext) {
@@ -202,7 +189,7 @@ export default class UsersController {
       }
     }
 
-    return response.redirect(usersUrl(request))
+    return response.redirect(listRedirectUrl(request, '/admin/users'))
   }
 
   async sendPasswordReset({ params, request, response, session, i18n, auth }: HttpContext) {
@@ -213,7 +200,7 @@ export default class UsersController {
     const payload = await resetService.createToken(user.email)
     if (!payload) {
       session.flash('alert', { type: 'danger', message: i18n.t('messages.action_failed') })
-      return response.redirect(usersUrl(request))
+      return response.redirect(listRedirectUrl(request, '/admin/users'))
     }
 
     const notificationService = new NotificationService()
@@ -235,6 +222,6 @@ export default class UsersController {
       type: 'success',
       message: i18n.t('messages.password_reset_email_sent'),
     })
-    return response.redirect(usersUrl(request))
+    return response.redirect(listRedirectUrl(request, '/admin/users'))
   }
 }

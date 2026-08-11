@@ -1,4 +1,5 @@
 import mail from '@adonisjs/mail/services/main'
+import router from '@adonisjs/core/services/router'
 import i18nManager from '@adonisjs/i18n/services/main'
 import env from '#start/env'
 import type { DateTime } from 'luxon'
@@ -43,7 +44,18 @@ export default class NotificationService {
       .where('product_id', productId)
       .first()
 
-    const addFavoriteUrl = isFavorite ? null : `${this.appUrl}/shop?add_favorite=${productId}`
+    // Signed link: the target writes to the database on a GET, so it must not be forgeable.
+    // Expires well after the mail is useful, but not forever.
+    const addFavoriteUrl = isFavorite
+      ? null
+      : this.appUrl +
+        router.makeSignedUrl(
+          '/shop/favorites/:productId',
+          { productId },
+          // disableRouteLookup: mails are also sent from the scheduler (console
+          // environment), where the router is never committed and a lookup by name throws.
+          { expiresIn: '30 days', purpose: 'add-favorite', disableRouteLookup: true }
+        )
 
     await mail.send((message) => {
       message

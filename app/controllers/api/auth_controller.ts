@@ -41,6 +41,12 @@ export default class AuthController {
       return response.unauthorized({ error: 'User not found or disabled.' })
     }
 
+    // Honour the user's own "disable keypad sign-in" preference on both identifiers —
+    // the keypad and the card are the two ways this endpoint identifies somebody.
+    if (user.keypadDisabled) {
+      return response.unauthorized({ error: 'Keypad sign-in is disabled for this user.' })
+    }
+
     const token = await User.accessTokens.create(user, ['*'], {
       name: 'kiosk-token',
       expiresIn: '24h',

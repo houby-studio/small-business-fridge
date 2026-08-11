@@ -1,4 +1,5 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import { listRedirectUrl } from '#helpers/list_redirect'
 import AdminService from '#services/admin_service'
 import AuditService from '#services/audit_service'
 import NotificationService from '#services/notification_service'
@@ -6,7 +7,7 @@ import Order from '#models/order'
 import logger from '@adonisjs/core/services/logger'
 
 export default class StornoController {
-  async store({ params, response, session, i18n, auth }: HttpContext) {
+  async store({ params, request, response, session, i18n, auth }: HttpContext) {
     const service = new AdminService()
 
     try {
@@ -50,6 +51,6 @@ export default class StornoController {
       session.flash('alert', { type: 'danger', message })
     }
 
-    return response.redirect('/admin/orders')
+    return response.redirect(listRedirectUrl(request, '/admin/orders'))
   }
 }

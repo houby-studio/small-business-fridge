@@ -143,6 +143,10 @@ function submit() {
 
   // Must be a real PUT — AdonisJS only honours `_method` spoofing from the query
   // string, never from the request body, and the body is parsed after routing.
+  //
+  // allergenIds goes as JSON because an empty array has no FormData representation: the
+  // key would simply be absent, which the server reads as "not submitted" rather than
+  // "all allergens removed", making it impossible to clear them.
   form
     .transform((data) => ({
       ...data,
@@ -322,8 +326,8 @@ onMounted(() => {
               }}</label>
               <FileUpload
                 mode="basic"
-                accept="image/*"
-                :maxFileSize="5000000"
+                accept=".jpg,.jpeg,.png,.webp"
+                :maxFileSize="5 * 1024 * 1024"
                 :chooseLabel="t('supplier.products_image_upload')"
                 @select="onImageSelect"
                 :auto="false"

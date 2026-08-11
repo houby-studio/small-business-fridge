@@ -53,6 +53,7 @@ export default class KioskController {
     const customer = await User.query()
       .where('keypadId', normalizedKeypadId)
       .where('isDisabled', false)
+      .where('keypadDisabled', false)
       .first()
 
     if (!customer) {
@@ -99,6 +100,12 @@ export default class KioskController {
   async purchaseBasket({ request, response }: HttpContext) {
     const { customerId, items } = await request.validateUsing(purchaseBasketValidator)
 
+    // The customer id comes from the request, so re-check the target is a live account.
+    const customer = await User.query().where('id', customerId).where('isDisabled', false).first()
+    if (!customer) {
+      return response.status(404).json({ ok: false, error: 'customer_not_found' })
+    }
+
     const orderService = new OrderService()
 
     try {
@@ -140,6 +147,7 @@ export default class KioskController {
     const customer = await User.query()
       .where('keypadId', keypadId)
       .where('isDisabled', false)
+      .where('keypadDisabled', false)
       .first()
 
     if (!customer) {
@@ -194,6 +202,12 @@ export default class KioskController {
       return response.redirect('/kiosk')
     }
 
+    // The customer id comes from the request, so re-check the target is a live account.
+    const customer = await User.query().where('id', customerId).where('isDisabled', false).first()
+    if (!customer) {
+      return response.redirect('/kiosk')
+    }
+
     const orderService = new OrderService()
 
     try {
@@ -204,13 +218,9 @@ export default class KioskController {
         logger.error({ err }, 'Failed to send purchase confirmation email')
       })
 
-      const customer = await User.find(customerId)
-      return response.redirect(`/kiosk/shop?keypadId=${customer?.keypadId ?? ''}&success=1`)
+      return response.redirect(`/kiosk/shop?keypadId=${customer.keypadId ?? ''}&success=1`)
     } catch {
-      const customer = await User.find(customerId)
-      return response.redirect(
-        `/kiosk/shop?keypadId=${customer?.keypadId ?? ''}&error=out_of_stock`
-      )
+      return response.redirect(`/kiosk/shop?keypadId=${customer.keypadId ?? ''}&error=out_of_stock`)
     }
   }
 }

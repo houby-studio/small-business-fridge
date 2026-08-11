@@ -20,6 +20,13 @@ export default await Env.create(new URL('../', import.meta.url), {
   APP_NAME: Env.schema.string.optional(),
   CURRENCY: Env.schema.string.optional(),
 
+  /**
+   * Pins the Inertia asset version instead of hashing the Vite manifest. Leave unset in
+   * production so a deploy still forces clients onto the new bundle; set it (e.g. to a
+   * commit sha, or any constant in CI) when the manifest is not a reliable source.
+   */
+  ASSETS_VERSION: Env.schema.string.optional(),
+
   /*
   |----------------------------------------------------------
   | Variables for configuring session package

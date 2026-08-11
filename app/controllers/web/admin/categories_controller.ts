@@ -2,6 +2,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import AdminService from '#services/admin_service'
 import { createCategoryValidator, updateCategoryValidator } from '#validators/category'
 import AuditService from '#services/audit_service'
+import { isUniqueViolation } from '#services/unique_violation'
 import Category from '#models/category'
 
 export default class CategoriesController {
@@ -27,7 +28,16 @@ export default class CategoriesController {
     const data = await request.validateUsing(createCategoryValidator)
 
     const service = new AdminService()
-    const category = await service.createCategory(data.name, data.color)
+    let category: Category
+    try {
+      category = await service.createCategory(data.name, data.color)
+    } catch (err) {
+      if (isUniqueViolation(err, 'name')) {
+        session.flash('alert', { type: 'danger', message: i18n.t('messages.name_taken') })
+        return response.redirect().back()
+      }
+      throw err
+    }
 
     const metadata = {
       name: category.name,

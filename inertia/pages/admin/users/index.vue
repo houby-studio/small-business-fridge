@@ -119,6 +119,8 @@ function buildFilterParams() {
     disabled: filterDisabled.value === ALL ? undefined : filterDisabled.value,
     sortBy: filterSortBy.value || undefined,
     sortOrder: filterSortOrder.value || undefined,
+    // Two paginators share this URL; keep the invitations cursor when the user list moves.
+    invitePage: props.inviteFilters.invitePage || undefined,
   }
 }
 
@@ -225,6 +227,8 @@ function changeInvitePage(page: number) {
     '/admin/users',
     {
       ...buildFilterParams(),
+      // ...and keep the user-list cursor when the invitations list moves.
+      page: props.users.meta.currentPage,
       invitePage: page,
     },
     {

@@ -1,4 +1,5 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import { resolvePage } from '#helpers/pagination'
 import DeliveryService from '#services/delivery_service'
 import NotificationService from '#services/notification_service'
 import { createDeliveryValidator } from '#validators/delivery'
@@ -21,7 +22,7 @@ function deliveryReturnUrl(request: HttpContext['request']): string {
 export default class DeliveriesController {
   async index({ inertia, auth, request }: HttpContext) {
     const service = new DeliveryService()
-    const page = request.input('page', 1)
+    const page = resolvePage(request.input('page', 1))
     const productId = request.input('productId')
     const sortBy = request.input('sortBy')
     const sortOrder = request.input('sortOrder')

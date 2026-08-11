@@ -440,7 +440,7 @@ export class ProductSchema extends BaseModel {
   @column({ isPrimary: true })
   declare id: number
   @column()
-  declare imagePath: string
+  declare imagePath: string | null
   @column()
   declare keypadId: number
   @column.dateTime({ autoCreate: true, autoUpdate: true })

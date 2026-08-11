@@ -123,8 +123,37 @@ const profileEmailInvalid = computed(() => {
   if (form.value.email.length === 0) return false
   return !/.+@.+/.test(form.value.email.trim())
 })
+// Client-side mirror of app/validators/user.ts (updateProfileValidator). Keep in step
+// with it — a mismatch means the user submits and gets a silent server rejection.
+const PROFILE_LIMITS = { displayName: 255, email: 255, phone: 20, iban: 24 } as const
+
+const profileFieldErrors = computed(() => ({
+  displayName:
+    form.value.displayName.trim().length === 0
+      ? t('profile.field_required')
+      : form.value.displayName.length > PROFILE_LIMITS.displayName
+        ? t('profile.field_too_long', { max: String(PROFILE_LIMITS.displayName) })
+        : '',
+  email:
+    form.value.email.trim().length === 0
+      ? t('profile.field_required')
+      : profileEmailInvalid.value
+        ? t('auth.email_invalid')
+        : form.value.email.length > PROFILE_LIMITS.email
+          ? t('profile.field_too_long', { max: String(PROFILE_LIMITS.email) })
+          : '',
+  phone:
+    (form.value.phone ?? '').length > PROFILE_LIMITS.phone
+      ? t('profile.field_too_long', { max: String(PROFILE_LIMITS.phone) })
+      : '',
+  iban:
+    (form.value.iban ?? '').length > PROFILE_LIMITS.iban
+      ? t('profile.field_too_long', { max: String(PROFILE_LIMITS.iban) })
+      : '',
+}))
+
 const canSubmitProfile = computed(
-  () => !!form.value.displayName.trim() && !!form.value.email.trim() && !profileEmailInvalid.value
+  () => !Object.values(profileFieldErrors.value).some((message) => message.length > 0)
 )
 const newPasswordTooShort = computed(
   () => passwordForm.value.newPassword.length > 0 && passwordForm.value.newPassword.length < 8
@@ -596,7 +625,17 @@ onMounted(() => {
                 <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
                   t('profile.display_name')
                 }}</label>
-                <InputText v-model="form.displayName" class="w-full" />
+                <InputText
+                  v-model="form.displayName"
+                  class="w-full"
+                  :maxlength="PROFILE_LIMITS.displayName"
+                  :invalid="!!profileFieldErrors.displayName"
+                />
+                <small
+                  v-if="profileFieldErrors.displayName"
+                  class="text-red-600 dark:text-red-400"
+                  >{{ profileFieldErrors.displayName }}</small
+                >
               </div>
 
               <div>
@@ -617,7 +656,13 @@ onMounted(() => {
                     }}
                   </span>
                 </div>
-                <InputText v-model="form.email" type="email" class="w-full" />
+                <InputText
+                  v-model="form.email"
+                  type="email"
+                  class="w-full"
+                  :maxlength="PROFILE_LIMITS.email"
+                  :invalid="!!profileFieldErrors.email"
+                />
                 <small v-if="profileEmailInvalid" class="text-red-500 dark:text-red-300">
                   {{ t('auth.email_invalid') }}
                 </small>
@@ -627,14 +672,27 @@ onMounted(() => {
                 <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
                   t('profile.phone')
                 }}</label>
-                <InputText v-model="form.phone" class="w-full" />
+                <InputText
+                  v-model="form.phone"
+                  class="w-full"
+                  :maxlength="PROFILE_LIMITS.phone"
+                  :invalid="!!profileFieldErrors.phone"
+                />
+                <small v-if="profileFieldErrors.phone" class="text-red-600 dark:text-red-400">{{
+                  profileFieldErrors.phone
+                }}</small>
               </div>
 
               <div>
                 <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
                   t('profile.iban')
                 }}</label>
-                <InputText v-model="form.iban" class="w-full" maxlength="24" />
+                <InputText
+                  v-model="form.iban"
+                  class="w-full"
+                  :maxlength="PROFILE_LIMITS.iban"
+                  :invalid="!!profileFieldErrors.iban"
+                />
               </div>
             </div>
 
@@ -757,6 +815,7 @@ onMounted(() => {
                 :options="colorModeOptions"
                 optionLabel="label"
                 optionValue="value"
+                :allowEmpty="false"
               />
             </div>
 

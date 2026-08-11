@@ -83,9 +83,10 @@ export default class ThrottleMiddleware {
     const userId = ctx.auth?.user?.id
     if (userId) return `throttle:user:${userId}`
 
-    const ip = ctx.request.header('x-forwarded-for')?.split(',')[0]?.trim() ?? ctx.request.ip()
-
-    return `throttle:ip:${ip}`
+    // request.ip() resolves X-Forwarded-For only through the configured trustProxy tier.
+    // Reading the header directly let any client pick its own bucket and rotate the header
+    // to get an unlimited number of them.
+    return `throttle:ip:${ctx.request.ip()}`
   }
 
   private shouldUseInertiaFlashResponse(ctx: HttpContext): boolean {

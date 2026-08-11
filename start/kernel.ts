@@ -29,7 +29,6 @@ server.use([
   () => import('@adonisjs/cors/cors_middleware'),
   () => import('@adonisjs/vite/vite_middleware'),
   () => import('@adonisjs/static/static_middleware'),
-  () => import('#middleware/inertia_middleware'),
 ])
 
 /**
@@ -39,6 +38,14 @@ server.use([
 router.use([
   () => import('@adonisjs/core/bodyparser_middleware'),
   () => import('@adonisjs/session/session_middleware'),
+  /**
+   * Sits *inside* the session middleware on purpose. Its dispose() step reflashes
+   * messages when it turns a stale-asset request into a 409, and that only survives if
+   * it runs before the session is committed. Registered in the server stack (where the
+   * adapter's docs put it) dispose() would run after the commit and the reflash would be
+   * a silent no-op, losing the flash message across the forced reload.
+   */
+  () => import('#middleware/inertia_middleware'),
   () => import('#middleware/cache_guard_middleware'),
   () => import('@adonisjs/shield/shield_middleware'),
   () => import('@adonisjs/auth/initialize_auth_middleware'),
@@ -57,5 +64,6 @@ export const middleware = router.named({
   emailVerified: () => import('#middleware/email_verified_middleware'),
   role: () => import('#middleware/role_middleware'),
   kiosk: () => import('#middleware/kiosk_middleware'),
+  kioskOnly: () => import('#middleware/kiosk_only_middleware'),
   throttle: () => import('#middleware/throttle_middleware'),
 })

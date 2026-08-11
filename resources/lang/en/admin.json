@@ -7,13 +7,11 @@
   "dashboard_total_revenue": "Total revenue",
   "dashboard_invoices_detail": "{paid} paid / {unpaid} unpaid",
   "dashboard_recent_orders": "Recent orders",
-
   "users_title": "User Management",
   "users_heading": "User Management",
   "users_name": "Name",
   "users_kiosk": "Kiosk",
   "users_disabled": "Disabled",
-
   "categories_title": "Category Management",
   "categories_heading": "Category Management",
   "categories_new": "New category",
@@ -23,7 +21,6 @@
   "categories_delete_header": "Confirm category deletion",
   "categories_delete_confirm": "Delete category \"{name}\"?",
   "categories_delete_accept": "Delete category",
-
   "allergens_title": "Allergen Management",
   "allergens_heading": "Allergen Management",
   "allergens_new": "New allergen",
@@ -32,7 +29,6 @@
   "allergens_delete_header": "Confirm allergen deletion",
   "allergens_delete_confirm": "Delete allergen \"{name}\"?",
   "allergens_delete_accept": "Delete allergen",
-
   "music_title": "Music Management",
   "music_heading": "Music Management",
   "music_new": "New track",
@@ -45,7 +41,6 @@
   "music_delete_header": "Confirm track deletion",
   "music_delete_confirm": "Delete track \"{name}\"?",
   "music_delete_accept": "Delete track",
-
   "orders_title": "All Orders",
   "orders_heading": "All Orders",
   "orders_no_orders": "No orders.",
@@ -54,25 +49,21 @@
   "orders_storno_confirm": "Are you sure you want to cancel order #{id}? Items will be returned to stock.",
   "orders_storno_accept": "Cancel order",
   "orders_invoice": "Invoice",
-
   "invoices_title": "All Invoices",
   "invoices_heading": "All Invoices",
   "invoices_no_invoices": "No invoices.",
   "invoices_filter_status": "Status",
-
   "users_search": "Search users",
   "users_filter_role": "Role",
   "users_filter_user": "User",
   "users_filter_disabled": "Disabled",
   "users_filter_enabled": "Enabled",
-
   "orders_filter_channel": "Channel",
   "orders_filter_invoiced": "Invoiced",
   "orders_filter_customer": "Customer",
   "orders_filter_supplier": "Supplier",
   "invoices_filter_customer": "Customer",
   "invoices_filter_supplier": "Supplier",
-
   "users_col_id": "ID",
   "users_col_db_id": "DB ID",
   "users_col_keypad_id": "Keypad ID",
@@ -103,5 +94,8 @@
   "registration_mode_open": "Open",
   "registration_mode_invite_only": "Invite only",
   "registration_mode_domain_auto_approve": "Domain auto-approve",
-  "registration_allowed_domains": "Allowed domains"
+  "registration_allowed_domains": "Allowed domains",
+  "music_name_too_long": "The track name can be at most 255 characters.",
+  "music_file_bad_format": "Supported formats are mp3, ogg, wav and m4a.",
+  "music_file_too_large": "The file is larger than 20 MB."
 }

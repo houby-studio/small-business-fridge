@@ -57,6 +57,7 @@ const { editingId, getEditInputId, startEdit, saveEdit, cancelEdit, focusCreateI
     entityPrefix: 'admin-allergen',
     updatePath: (id) => `/admin/allergens/${id}`,
     getEditValues: () => ({ name: editName.value }),
+    isValid: () => editName.value.trim().length > 0,
   })
 
 function handleStartEdit(row: AllergenRow) {

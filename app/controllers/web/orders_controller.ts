@@ -1,10 +1,11 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import { resolvePage } from '#helpers/pagination'
 import OrderService from '#services/order_service'
 
 export default class OrdersController {
   async index({ inertia, auth, request }: HttpContext) {
     const orderService = new OrderService()
-    const page = request.input('page', 1)
+    const page = resolvePage(request.input('page', 1))
     const channel = request.input('channel')
     const invoiced = request.input('invoiced')
     const sortBy = request.input('sortBy')

@@ -8,6 +8,7 @@ import { InvoiceFactory } from '#database/factories/invoice_factory'
 import { OrderFactory } from '#database/factories/order_factory'
 import Invoice from '#models/invoice'
 import Product from '#models/product'
+import Allergen from '#models/allergen'
 import db from '@adonisjs/lucid/services/db'
 
 const cleanAll = async () => {
@@ -16,7 +17,9 @@ const cleanAll = async () => {
   await db.from('orders').delete()
   await db.from('invoices').delete()
   await db.from('deliveries').delete()
+  await db.from('product_allergen').delete()
   await db.from('products').delete()
+  await db.from('allergens').delete()
   await db.from('categories').delete()
   await db.from('auth_access_tokens').delete()
   await db.from('users').delete()
@@ -595,7 +598,7 @@ test.group('Web Supplier - payments (approve/reject)', (group) => {
     assert.isTrue(invoice.isPaymentRequested)
   })
 
-  test('customer cannot access payment actions', async ({ client }) => {
+  test('customer cannot access payment actions', async ({ client, assert }) => {
     const customer = await UserFactory.create()
     const supplier = await UserFactory.apply('supplier').create()
     const buyer = await UserFactory.create()
@@ -610,8 +613,13 @@ test.group('Web Supplier - payments (approve/reject)', (group) => {
       .json({ action: 'approve' })
       .redirects(0)
 
-    // Customer is redirected (role middleware)
+    // 302 is also what success returns, so the status alone proves nothing: assert the
+    // redirect target of the role middleware AND that the invoice was left alone.
     response.assertStatus(302)
+    assert.equal(response.header('location'), '/')
+
+    await invoice.refresh()
+    assert.isFalse(invoice.isPaid)
   })
 
   test('approve action requires valid action field', async ({ client, assert }) => {
@@ -634,5 +642,163 @@ test.group('Web Supplier - payments (approve/reject)', (group) => {
     // Invoice should not have changed
     await invoice.refresh()
     assert.isFalse(invoice.isPaid)
+  })
+})
+
+test.group('Web Supplier - product allergens', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  const pngImage = () =>
+    Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9WlH0JkAAAAASUVORK5CYII=',
+      'base64'
+    )
+
+  test('allergens picked in the create form are actually stored', async ({ client, assert }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const gluten = await Allergen.create({ name: 'Lepek', isDisabled: false })
+    const milk = await Allergen.create({ name: 'Mléko', isDisabled: false })
+
+    // Exactly how Inertia serialises an array into FormData: indexed keys, values as strings.
+    const response = await client
+      .post('/supplier/products')
+      .loginAs(supplier)
+      .withCsrfToken()
+      .field('displayName', 'Sušenka')
+      .field('description', 'Obsahuje alergeny')
+      .field('categoryId', category.id)
+      .field('allergenIds[0]', String(gluten.id))
+      .field('allergenIds[1]', String(milk.id))
+      .file('image', pngImage(), { filename: 'cookie.png', contentType: 'image/png' })
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    const productId = Number(response.header('location')!.match(/preselect=(\d+)/)![1])
+    const product = await Product.findOrFail(productId)
+    await product.load('allergens')
+    assert.deepEqual(
+      product.allergens.map((a) => a.id).sort((a, b) => a - b),
+      [gluten.id, milk.id].sort((a, b) => a - b)
+    )
+  })
+
+  test('editing a product can add and then clear its allergens', async ({ client, assert }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const nuts = await Allergen.create({ name: 'Orechy', isDisabled: false })
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+
+    const added = await client
+      .put(`/supplier/products/${product.id}`)
+      .loginAs(supplier)
+      .withCsrfToken()
+      .field('displayName', product.displayName)
+      .field('description', 'S orechy')
+      .field('categoryId', category.id)
+      .field('allergenIds', JSON.stringify([nuts.id]))
+      .redirects(0)
+
+    added.assertStatus(302)
+    await product.load('allergens')
+    assert.deepEqual(
+      product.allergens.map((a) => a.id),
+      [nuts.id]
+    )
+
+    // Deselecting every allergen sends an empty JSON array — that is exactly why the form
+    // serialises this field as JSON instead of relying on FormData keys.
+    const cleared = await client
+      .put(`/supplier/products/${product.id}`)
+      .loginAs(supplier)
+      .withCsrfToken()
+      .field('displayName', product.displayName)
+      .field('description', 'Bez orechu')
+      .field('categoryId', category.id)
+      .field('allergenIds', JSON.stringify([]))
+      .redirects(0)
+
+    cleared.assertStatus(302)
+    await product.load('allergens')
+    assert.lengthOf(product.allergens, 0)
+  })
+})
+
+test.group('Web Supplier - deliveries (stocking)', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('POST /supplier/deliveries creates the stock row', async ({ client, assert }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+
+    const response = await client
+      .post('/supplier/deliveries')
+      .loginAs(supplier)
+      .withCsrfToken()
+      .form({ productId: product.id, amount: 3, price: 49 })
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    const row = await db
+      .from('deliveries')
+      .where('supplier_id', supplier.id)
+      .where('product_id', product.id)
+      .first()
+    assert.exists(row)
+    assert.equal(Number(row.amount_supplied), 3)
+    assert.equal(Number(row.amount_left), 3)
+    assert.equal(Number(row.price), 49)
+
+    const log = await db
+      .from('audit_logs')
+      .where('user_id', supplier.id)
+      .where('action', 'delivery.created')
+      .first()
+    assert.exists(log)
+  })
+
+  test('POST /supplier/deliveries rejects a zero price and stocks nothing', async ({
+    client,
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+
+    const response = await client
+      .post('/supplier/deliveries')
+      .loginAs(supplier)
+      .withCsrfToken()
+      .form({ productId: product.id, amount: 3, price: 0 })
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    const rows = await db.from('deliveries').where('product_id', product.id)
+    assert.lengthOf(rows, 0)
+  })
+
+  test('a customer cannot stock products', async ({ client, assert }) => {
+    const customer = await UserFactory.create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+
+    const response = await client
+      .post('/supplier/deliveries')
+      .loginAs(customer)
+      .withCsrfToken()
+      .form({ productId: product.id, amount: 3, price: 49 })
+      .redirects(0)
+
+    response.assertStatus(302)
+    assert.equal(response.header('location'), '/')
+
+    const rows = await db.from('deliveries').where('product_id', product.id)
+    assert.lengthOf(rows, 0)
   })
 })

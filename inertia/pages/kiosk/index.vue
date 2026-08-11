@@ -161,6 +161,9 @@ function playLoginTone(type: 'success' | 'error') {
 
 // ── Basket ────────────────────────────────────────────────────────────────────
 
+// Server-side cap per basket line (app/validators/order.ts).
+const MAX_LINE_QUANTITY = 99
+
 const basket = ref<BasketLine[]>([])
 const checkoutLoading = ref(false)
 const outOfStockDeliveryId = ref<number | null>(null)
@@ -270,7 +273,10 @@ function addToBasket(product: ProductItem) {
 
   const existing = basket.value.find((i) => i.deliveryId === nextLot.deliveryId)
   if (existing) {
-    if (existing.quantity >= existing.maxStock) {
+    // MAX_LINE_QUANTITY mirrors the server cap in app/validators/order.ts. Without it the
+    // basket happily grows past 99 and the whole checkout is then rejected with a generic
+    // error the customer cannot act on.
+    if (existing.quantity >= Math.min(existing.maxStock, MAX_LINE_QUANTITY)) {
       toast.add({ severity: 'warn', summary: t('kiosk.max_stock_reached'), life: 2000 })
       return
     }
@@ -436,7 +442,7 @@ async function onKeypadSubmit(keypadId: string) {
     const data = await res.json()
 
     if (data.action === 'logout') {
-      window.location.assign('/logout')
+      router.post('/logout')
       return
     }
 
@@ -507,6 +513,7 @@ async function submitBasket() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         'X-XSRF-TOKEN': getCsrfToken(),
       },
       body: JSON.stringify({

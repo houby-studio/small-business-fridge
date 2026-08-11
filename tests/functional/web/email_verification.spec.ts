@@ -293,3 +293,73 @@ test.group('Web Email Verification', (group) => {
     assert.isNull(owner.ibanVerifiedAt)
   })
 })
+
+test.group('Verification resend endpoints', (group) => {
+  group.each.setup(async () => {
+    await cleanAll()
+    process.env.AUTH_PROVIDERS = 'local'
+  })
+  group.each.teardown(cleanAll)
+
+  test('an unverified user gets a fresh email verification token', async ({ client, assert }) => {
+    const user = await UserFactory.merge({ emailVerifiedAt: null }).create()
+
+    const response = await client
+      .post('/profile/email-verification/resend')
+      .loginAs(user)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    const tokens = await db.from('email_verification_tokens').where('user_id', user.id)
+    assert.isAtLeast(tokens.length, 1)
+  })
+
+  test('an already-verified user gets no new token', async ({ client, assert }) => {
+    const user = await UserFactory.create()
+    assert.isNotNull(user.emailVerifiedAt)
+
+    const response = await client
+      .post('/profile/email-verification/resend')
+      .loginAs(user)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    const tokens = await db.from('email_verification_tokens').where('user_id', user.id)
+    assert.lengthOf(tokens, 0)
+  })
+
+  test('a pending IBAN change can be re-sent', async ({ client, assert }) => {
+    // pendingIban is what makes a resend meaningful — the endpoint re-issues for it.
+    const user = await UserFactory.merge({ pendingIban: 'CZ6508000000192000145399' }).create()
+
+    const response = await client
+      .post('/profile/iban-verification/resend')
+      .loginAs(user)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    const tokens = await db.from('iban_change_tokens').where('user_id', user.id)
+    assert.isAtLeast(tokens.length, 1)
+  })
+
+  test('with no pending IBAN change nothing is issued', async ({ client, assert }) => {
+    const user = await UserFactory.create()
+
+    const response = await client
+      .post('/profile/iban-verification/resend')
+      .loginAs(user)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    const tokens = await db.from('iban_change_tokens').where('user_id', user.id)
+    assert.lengthOf(tokens, 0)
+  })
+})

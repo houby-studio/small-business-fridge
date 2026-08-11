@@ -1,4 +1,5 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import db from '@adonisjs/lucid/services/db'
 import logger from '@adonisjs/core/services/logger'
 import { DateTime } from 'luxon'
 import User from '#models/user'
@@ -49,16 +50,25 @@ export default class BootstrapController {
       return response.redirect('/setup/bootstrap')
     }
 
-    const nextKeypadId = await this.keypadIds.getNextAvailableUserKeypadId()
+    // Allocation and insert share one transaction — the keypad-id advisory lock is
+    // transaction-scoped and would otherwise be released before the row exists.
+    const user = await db.transaction(async (trx) => {
+      const nextKeypadId = await this.keypadIds.getNextAvailableUserKeypadId(
+        trx as unknown as Parameters<typeof this.keypadIds.getNextAvailableUserKeypadId>[0]
+      )
 
-    const user = await User.create({
-      displayName: data.displayName,
-      email: data.email.trim().toLowerCase(),
-      password: data.password,
-      keypadId: nextKeypadId,
-      role: 'admin',
-      emailVerifiedAt: DateTime.utc(),
-      pendingEmail: null,
+      return User.create(
+        {
+          displayName: data.displayName,
+          email: data.email.trim().toLowerCase(),
+          password: data.password,
+          keypadId: nextKeypadId,
+          role: 'admin',
+          emailVerifiedAt: DateTime.utc(),
+          pendingEmail: null,
+        },
+        { client: trx }
+      )
     })
 
     await auth.use('web').login(user, true)

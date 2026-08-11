@@ -1,4 +1,5 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import db from '@adonisjs/lucid/services/db'
 import logger from '@adonisjs/core/services/logger'
 import User from '#models/user'
 import AuditService from '#services/audit_service'
@@ -69,16 +70,26 @@ export default class RegisterController {
       return response.redirect('/register')
     }
 
-    const nextKeypadId = await this.keypadIds.getNextAvailableUserKeypadId()
+    // The keypad-id advisory lock is transaction-scoped, so the allocation and the insert
+    // have to share one transaction — otherwise the lock is gone before the row exists and
+    // two concurrent registrations collide on the unique index.
+    const user = await db.transaction(async (trx) => {
+      const nextKeypadId = await this.keypadIds.getNextAvailableUserKeypadId(
+        trx as unknown as Parameters<typeof this.keypadIds.getNextAvailableUserKeypadId>[0]
+      )
 
-    const user = await User.create({
-      displayName: data.displayName.trim(),
-      email: normalizedEmail,
-      password: data.password,
-      keypadId: nextKeypadId,
-      role: 'customer',
-      emailVerifiedAt: null,
-      pendingEmail: null,
+      return User.create(
+        {
+          displayName: data.displayName.trim(),
+          email: normalizedEmail,
+          password: data.password,
+          keypadId: nextKeypadId,
+          role: 'customer',
+          emailVerifiedAt: null,
+          pendingEmail: null,
+        },
+        { client: trx }
+      )
     })
 
     await auth.use('web').login(user, true)

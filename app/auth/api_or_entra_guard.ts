@@ -3,6 +3,7 @@ import type { ApplicationService, ConfigProvider } from '@adonisjs/core/types'
 import { AccessTokensGuard } from '@adonisjs/auth/access_tokens'
 import type { GuardConfigProvider } from '@adonisjs/auth/types'
 import type { AccessTokensUserProviderContract } from '@adonisjs/auth/types/access_tokens'
+import { errors as authErrors } from '@adonisjs/auth'
 import { entraIdJwtVerifier } from '#services/entra_id_jwt_verifier'
 import { looksLikeJwt } from '#utils/bearer_token'
 
@@ -29,6 +30,19 @@ class ApiOrEntraGuard<
     this.#httpContext = args[1]
   }
 
+  /**
+   * Disabled accounts must not authenticate. Tokens outlive the account state, so this
+   * is checked on every request rather than only at issuance — otherwise a token minted
+   * before an account was disabled would keep working indefinitely.
+   */
+  #rejectIfDisabled(user: unknown) {
+    if ((user as { isDisabled?: boolean } | null)?.isDisabled) {
+      throw new authErrors.E_UNAUTHORIZED_ACCESS('Unauthorized access', {
+        guardDriverName: this.driverName,
+      })
+    }
+  }
+
   async authenticate() {
     const authHeader = this.#httpContext.request.header('authorization')
     if (authHeader?.startsWith('Bearer ')) {
@@ -36,6 +50,7 @@ class ApiOrEntraGuard<
       if (looksLikeJwt(token)) {
         const user = await entraIdJwtVerifier.resolveUser(token)
         if (user) {
+          this.#rejectIfDisabled(user)
           this.authenticationAttempted = true
           this.isAuthenticated = true
           // Entra-resolved users have no currentAccessToken; API controllers only
@@ -46,7 +61,10 @@ class ApiOrEntraGuard<
         // A JWT that doesn't resolve to a linked user falls through and fails below.
       }
     }
-    return super.authenticate()
+
+    const user = await super.authenticate()
+    this.#rejectIfDisabled(user)
+    return user
   }
 }
 

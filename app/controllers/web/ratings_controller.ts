@@ -1,4 +1,5 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import { resolvePage } from '#helpers/pagination'
 import app from '@adonisjs/core/services/app'
 import ProductRatingService from '#services/product_rating_service'
 import { createOrUpdateRatingValidator } from '#validators/rating'
@@ -30,7 +31,7 @@ export default class RatingsController {
     const canSeePrivate = viewerCanSeePrivate(user)
     const publicFeedEnabled = isPublicFeedEnabled()
 
-    const page = Number(request.input('page', 1)) || 1
+    const page = resolvePage(request.input('page', 1))
     const productIdRaw = request.input('productId')
     const visibilityRaw = request.input('visibility') as string | undefined
     const onlyMineRaw = request.input('onlyMine') as string | undefined
@@ -123,7 +124,7 @@ export default class RatingsController {
     const productId = Number(productIdRaw)
     if (!productId) {
       session.flash('alert', { type: 'danger', message: i18n.t('rating.flash_invalid') })
-      return response.redirect('back')
+      return response.redirect('back', true)
     }
 
     const visibility = this.resolveVisibility(payload.visibility, auth.user)
@@ -137,15 +138,15 @@ export default class RatingsController {
         visibility,
       })
       session.flash('alert', { type: 'success', message: i18n.t('rating.flash_saved') })
-      return response.redirect('back')
+      return response.redirect('back', true)
     } catch (error: unknown) {
       if (isDomainError(error, 'RATING_NOT_ORDERED')) {
         session.flash('alert', { type: 'danger', message: i18n.t('rating.flash_not_ordered') })
-        return response.status(403).redirect('back')
+        return response.redirect('back', true)
       }
       if (isDomainError(error, 'RATING_WINDOW_CLOSED')) {
         session.flash('alert', { type: 'danger', message: i18n.t('rating.flash_window_closed') })
-        return response.status(403).redirect('back')
+        return response.redirect('back', true)
       }
       throw error
     }
@@ -156,11 +157,11 @@ export default class RatingsController {
     const rating = await ProductRating.find(Number(params.id))
     if (!rating) {
       session.flash('alert', { type: 'danger', message: i18n.t('rating.flash_not_found') })
-      return response.status(404).redirect('back')
+      return response.redirect('back', true)
     }
     if (rating.userId !== auth.user!.id) {
       session.flash('alert', { type: 'danger', message: i18n.t('rating.flash_forbidden') })
-      return response.status(403).redirect('back')
+      return response.redirect('back', true)
     }
 
     const visibility = this.resolveVisibility(payload.visibility, auth.user)
@@ -174,15 +175,15 @@ export default class RatingsController {
         visibility,
       })
       session.flash('alert', { type: 'success', message: i18n.t('rating.flash_saved') })
-      return response.redirect('back')
+      return response.redirect('back', true)
     } catch (error: unknown) {
       if (isDomainError(error, 'RATING_NOT_ORDERED')) {
         session.flash('alert', { type: 'danger', message: i18n.t('rating.flash_not_ordered') })
-        return response.status(403).redirect('back')
+        return response.redirect('back', true)
       }
       if (isDomainError(error, 'RATING_WINDOW_CLOSED')) {
         session.flash('alert', { type: 'danger', message: i18n.t('rating.flash_window_closed') })
-        return response.status(403).redirect('back')
+        return response.redirect('back', true)
       }
       throw error
     }
@@ -195,15 +196,15 @@ export default class RatingsController {
     try {
       await ProductRatingService.deleteRating(Number(params.id), user.id, isAdmin)
       session.flash('alert', { type: 'success', message: i18n.t('rating.flash_deleted') })
-      return response.redirect('back')
+      return response.redirect('back', true)
     } catch (error: unknown) {
       if (isDomainError(error, 'RATING_FORBIDDEN')) {
         session.flash('alert', { type: 'danger', message: i18n.t('rating.flash_forbidden') })
-        return response.status(403).redirect('back')
+        return response.redirect('back', true)
       }
       if (isDomainError(error, 'RATING_NOT_FOUND')) {
         session.flash('alert', { type: 'danger', message: i18n.t('rating.flash_not_found') })
-        return response.status(404).redirect('back')
+        return response.redirect('back', true)
       }
       throw error
     }
@@ -218,19 +219,19 @@ export default class RatingsController {
         publicFeedEnabled: isPublicFeedEnabled(),
         viewerCanSeePrivate: canSeePrivate,
       })
-      return response.redirect('back')
+      return response.redirect('back', true)
     } catch (error: unknown) {
       if (isDomainError(error, 'RATING_SELF_UPVOTE')) {
         session.flash('alert', { type: 'danger', message: i18n.t('rating.flash_self_upvote') })
-        return response.status(403).redirect('back')
+        return response.redirect('back', true)
       }
       if (isDomainError(error, 'RATING_UPVOTE_DISABLED')) {
         session.flash('alert', { type: 'danger', message: i18n.t('rating.flash_forbidden') })
-        return response.status(403).redirect('back')
+        return response.redirect('back', true)
       }
       if (isDomainError(error, 'RATING_NOT_FOUND')) {
         session.flash('alert', { type: 'danger', message: i18n.t('rating.flash_not_found') })
-        return response.status(404).redirect('back')
+        return response.redirect('back', true)
       }
       throw error
     }

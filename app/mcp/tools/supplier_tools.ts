@@ -7,6 +7,7 @@ import InvoiceService from '#services/invoice_service'
 import ProductService from '#services/product_service'
 import AuditService from '#services/audit_service'
 import Product from '#models/product'
+import { withProductKeypadId } from '#services/product_keypad_id'
 import { ok, fail, mapDomainError, pageMeta } from '#mcp/tools/helpers'
 
 /**
@@ -174,10 +175,10 @@ export function registerSupplierTools(server: McpServer, user: User) {
       'in the web UI under Supplier → Products). A keypad ID is assigned automatically. ' +
       'Idempotent by name: if a product with the same name already exists, it is returned instead.',
     {
-      displayName: z.string().min(1).max(100).describe('Product name shown in the shop'),
-      description: z.string().max(500).optional().describe('Short description'),
+      displayName: z.string().min(1).max(255).describe('Product name shown in the shop'),
+      description: z.string().max(1000).optional().describe('Short description'),
       categoryId: z.number().int().positive().describe('Category ID (see list_categories)'),
-      barcode: z.string().max(64).optional().describe('EAN barcode'),
+      barcode: z.string().max(100).optional().describe('EAN barcode'),
       allergenIds: z.array(z.number().int().positive()).optional().describe('Allergen IDs'),
     },
     async ({
@@ -198,20 +199,24 @@ export function registerSupplierTools(server: McpServer, user: User) {
           })
         }
 
-        const maxKeypad = await Product.query().max('keypad_id as max').first()
-        const nextKeypadId = (maxKeypad?.$extras.max ?? 0) + 1
+        const product = await withProductKeypadId(async (trx, nextKeypadId) => {
+          const created = await Product.create(
+            {
+              keypadId: nextKeypadId,
+              displayName,
+              description: description ?? '',
+              categoryId,
+              barcode: barcode || null,
+            },
+            { client: trx }
+          )
 
-        const product = await Product.create({
-          keypadId: nextKeypadId,
-          displayName,
-          description: description ?? '',
-          categoryId,
-          barcode: barcode || null,
+          if (allergenIds && allergenIds.length > 0) {
+            await created.related('allergens').attach(allergenIds, trx)
+          }
+
+          return created
         })
-
-        if (allergenIds && allergenIds.length > 0) {
-          await product.related('allergens').attach(allergenIds)
-        }
 
         await AuditService.log(user.id, 'product.created', 'product', product.id, null, {
           displayName,

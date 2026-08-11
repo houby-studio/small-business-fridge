@@ -6,7 +6,11 @@ import type { InferSharedProps } from '@adonisjs/inertia/types'
 import db from '@adonisjs/lucid/services/db'
 import env from '#start/env'
 import { readFileSync, readdirSync } from 'node:fs'
-import { getCurrencyCode, getCurrencyDisplay } from '#services/currency_service'
+import {
+  applyCurrencyPlaceholder,
+  getCurrencyCode,
+  getCurrencyDisplay,
+} from '#services/currency_service'
 
 type ImpersonationSession = { byId: number; asId: number; asName: string }
 
@@ -20,7 +24,6 @@ function loadTranslations(locale: string): Record<string, Record<string, string>
 
   const langDir = app.languageFilesPath(locale)
   const appName = env.get('APP_NAME', 'Small Business Fridge')
-  const currencyDisplay = getCurrencyDisplay(locale)
 
   try {
     const files = readdirSync(langDir).filter((file) => file.endsWith('.json'))
@@ -28,15 +31,14 @@ function loadTranslations(locale: string): Record<string, Record<string, string>
 
     for (const file of files) {
       const namespace = file.replace('.json', '')
-      translations[namespace] = JSON.parse(readFileSync(`${langDir}/${file}`, 'utf-8'))
+      // The `{currency}` placeholder is resolved from config here, so the client never has
+      // to pass a currency to t() — the same substitution runs server-side in start/i18n.ts.
+      translations[namespace] = applyCurrencyPlaceholder(
+        JSON.parse(readFileSync(`${langDir}/${file}`, 'utf-8')),
+        locale
+      )
       if (namespace === 'common') {
         translations[namespace].app_name = appName
-        translations[namespace].currency = currencyDisplay
-        translations[namespace].price_with_currency = `{price} ${currencyDisplay}`
-        const pieceUnit = translations[namespace].pieces ?? ''
-        translations[namespace].per_piece = pieceUnit
-          ? `{price} ${currencyDisplay}/${pieceUnit}`
-          : `{price} ${currencyDisplay}`
       }
     }
 
@@ -94,6 +96,12 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
           : undefined
       ),
       flash: ctx.inertia.always(ctx.session?.flashMessages.all() ?? {}),
+      /**
+       * Without this, `form.errors` is always empty, so Inertia treats a 302-back
+       * validation failure as a success: onError never fires, onSuccess does, and
+       * forms happily reset themselves over rejected input.
+       */
+      errors: ctx.inertia.always(this.getValidationErrors(ctx)),
       impersonation: ctx.inertia.always(
         impersonation ? { asName: impersonation.asName } : undefined
       ),

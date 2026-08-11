@@ -69,8 +69,17 @@ const McpOauthRegisterController = () => import('#controllers/web/mcp_oauth_regi
 const McpOauthAuthorizeController = () => import('#controllers/web/mcp_oauth_authorize_controller')
 const McpOauthTokenController = () => import('#controllers/web/mcp_oauth_token_controller')
 
-const authThrottleLimit = process.env.NODE_ENV === 'test' ? 1000 : 10
-const mcpThrottleLimit = process.env.NODE_ENV === 'test' ? 1000 : 120
+/**
+ * Throttle limits. The test default is high so unrelated suites are not rate-limited, but
+ * it is overridable so a test can actually exhaust the limit with real requests — pinning
+ * a bucket into the store proves the response shape and nothing about the counting.
+ */
+const authThrottleLimit = Number(
+  process.env.AUTH_THROTTLE_LIMIT ?? (process.env.NODE_ENV === 'test' ? 1000 : 10)
+)
+const mcpThrottleLimit = Number(
+  process.env.MCP_THROTTLE_LIMIT ?? (process.env.NODE_ENV === 'test' ? 1000 : 120)
+)
 
 /*
 |--------------------------------------------------------------------------
@@ -227,8 +236,8 @@ router.get('/auth/:provider/callback', [OidcController, 'callback'])
 router.get('/email/verify/:token', [EmailVerificationController, 'verify'])
 router.get('/profile/iban/verify/:token', [IbanChangeController, 'verify'])
 
-router.get('/logout', [LoginController, 'destroy']).use(middleware.auth()).as('logout.get')
-router.post('/logout', [LoginController, 'destroy']).use(middleware.auth()).as('logout.post')
+// POST only — a GET logout is triggerable cross-site and Shield does not guard safe verbs.
+router.post('/logout', [LoginController, 'destroy']).use(middleware.auth()).as('logout')
 
 // Stop impersonation — requires auth only (impersonation middleware has already run)
 router.post('/impersonate/stop', [AdminImpersonationController, 'destroy']).use(middleware.auth())
@@ -244,6 +253,10 @@ router
     // Shop
     router.get('/shop', [ShopController, 'index'])
     router.post('/shop/purchase', [ShopController, 'purchase'])
+    // Signed GET — clicked from the purchase-confirmation email, verified in the controller.
+    router
+      .get('/shop/favorites/:productId', [ShopController, 'addFavorite'])
+      .as('shop.favorites.add')
 
     // Orders
     router.get('/orders', [OrdersController, 'index'])
@@ -258,7 +271,6 @@ router
     router.get('/profile', [ProfileController, 'show'])
     router.put('/profile', [ProfileController, 'update'])
     router.put('/profile/preferences', [ProfileController, 'updatePreferences'])
-    router.put('/profile/excluded-allergens', [ProfileController, 'updateExcludedAllergens'])
     router.post('/profile/color-mode', [ProfileController, 'toggleColorMode'])
     router.post('/profile/favorites/:id', [ProfileController, 'toggleFavorite'])
 
@@ -391,7 +403,7 @@ router
     router.get('/kiosk/shop', [KioskController, 'shop'])
     router.post('/kiosk/purchase', [KioskController, 'purchase'])
   })
-  .use(middleware.auth())
+  .use([middleware.auth(), middleware.kioskOnly()])
 
 /*
 |--------------------------------------------------------------------------

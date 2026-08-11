@@ -5,6 +5,7 @@ import Category from '#models/category'
 import Allergen from '#models/allergen'
 import db from '@adonisjs/lucid/services/db'
 import InvoiceService from '#services/invoice_service'
+import { revokeLongLivedCredentials } from '#services/credential_revocation'
 import { DateTime } from 'luxon'
 
 export default class AdminService {
@@ -195,7 +196,17 @@ export default class AdminService {
     if (data.isKiosk !== undefined) user.isKiosk = data.isKiosk
     if (data.keypadId !== undefined) user.keypadId = data.keypadId
 
+    const nowDisabled = user.$dirty.isDisabled === true
+
     await user.save()
+
+    // Disabling must take effect immediately: long-lived credentials would otherwise
+    // keep the account usable (remember-me cookies live 2 years, API tokens can be
+    // issued without an expiry).
+    if (nowDisabled) {
+      await revokeLongLivedCredentials(user.id)
+    }
+
     return user
   }
 
@@ -433,9 +444,11 @@ export default class AdminService {
         throw new Error('ORDER_ALREADY_INVOICED')
       }
 
-      // Restore stock
-      order.delivery.amountLeft += 1
-      await order.delivery.useTransaction(trx).save()
+      // Restore stock with an atomic increment rather than read-modify-write. The preloaded
+      // delivery is not row-locked (forUpdate() applies to `orders`), so a concurrent
+      // purchase or storno on the same delivery would otherwise overwrite the other's
+      // amountLeft and quietly lose a unit of stock.
+      await trx.from('deliveries').where('id', order.deliveryId).increment('amount_left', 1)
 
       // Delete the order
       await order.useTransaction(trx).delete()

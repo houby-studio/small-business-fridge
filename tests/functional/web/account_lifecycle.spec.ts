@@ -370,3 +370,87 @@ test.group('Web Auth - Registration and Password Lifecycle', (group) => {
     assert.exists(token)
   })
 })
+
+test.group('Password change revokes long-lived credentials', (group) => {
+  const cleanAll = async () => {
+    await db.from('audit_logs').delete()
+    await db.from('password_reset_tokens').delete()
+    await db.from('auth_access_tokens').delete()
+    await db.from('remember_me_tokens').delete()
+    await db.from('users').delete()
+  }
+
+  group.each.setup(async () => {
+    throttleStore.clear()
+    await cleanAll()
+  })
+  group.each.teardown(cleanAll)
+
+  const seedLongLivedCredentials = async (user: User) => {
+    await User.accessTokens.create(user, ['*'], { name: 'integration' })
+    await db.table('remember_me_tokens').insert({
+      tokenable_id: user.id,
+      hash: `remember-${user.id}`,
+      created_at: new Date(),
+      updated_at: new Date(),
+      expires_at: new Date(Date.now() + 86_400_000),
+    })
+  }
+
+  test('a password reset kills remember-me cookies and API tokens', async ({ client, assert }) => {
+    const user = await UserFactory.merge({ email: 'reset-revoke@example.com' }).create()
+    await seedLongLivedCredentials(user)
+
+    const payload = await new PasswordResetService().createToken(user.email)
+    assert.exists(payload)
+    const token = payload!.resetUrl.split('/').pop()!
+
+    const response = await client
+      .post(`/reset-password/${token}`)
+      .form({ password: 'brand-new-pass-1', passwordConfirmation: 'brand-new-pass-1' })
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    response.assertHeader('location', '/login')
+
+    const apiTokens = await db.from('auth_access_tokens').where('tokenable_id', user.id)
+    const rememberTokens = await db.from('remember_me_tokens').where('tokenable_id', user.id)
+    assert.lengthOf(apiTokens, 0)
+    assert.lengthOf(rememberTokens, 0)
+
+    // And the new password really is in effect.
+    await user.refresh()
+    assert.isTrue(await hash.verify(user.password!, 'brand-new-pass-1'))
+  })
+
+  test('a deliberate password change signs out other devices but keeps API tokens', async ({
+    client,
+    assert,
+  }) => {
+    const user = await UserFactory.merge({ email: 'change-revoke@example.com' }).create()
+    await seedLongLivedCredentials(user)
+
+    const response = await client
+      .put('/profile/password')
+      .loginAs(user)
+      .form({
+        currentPassword: 'password123',
+        newPassword: 'another-new-pass-1',
+        newPasswordConfirmation: 'another-new-pass-1',
+      })
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    const rememberTokens = await db.from('remember_me_tokens').where('tokenable_id', user.id)
+    assert.lengthOf(rememberTokens, 0)
+
+    const apiTokens = await db.from('auth_access_tokens').where('tokenable_id', user.id)
+    assert.lengthOf(apiTokens, 1)
+
+    await user.refresh()
+    assert.isTrue(await hash.verify(user.password!, 'another-new-pass-1'))
+  })
+})

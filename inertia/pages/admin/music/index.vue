@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { Head, router, useForm } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
@@ -40,16 +40,48 @@ const createForm = useForm({
   file: null as File | null,
 })
 
+// Client-side mirror of app/validators/music_track.ts — keep these in step with it.
+const MAX_TRACK_BYTES = 20 * 1024 * 1024
+const ALLOWED_TRACK_EXTENSIONS = ['mp3', 'ogg', 'wav', 'm4a']
+const MAX_NAME_LENGTH = 255
+
+const fileError = ref('')
+
+const nameError = computed(() =>
+  createForm.name.length > MAX_NAME_LENGTH ? t('admin.music_name_too_long') : ''
+)
+
+const createDisabled = computed(
+  () =>
+    createForm.processing ||
+    !createForm.name.trim() ||
+    !createForm.file ||
+    !!fileError.value ||
+    !!nameError.value
+)
+
 function onFileChange(event: Event) {
   const input = event.target as HTMLInputElement
-  createForm.file = input.files?.[0] ?? null
-  if (createForm.file) {
+  const file = input.files?.[0] ?? null
+  fileError.value = ''
+
+  if (file) {
+    const extension = file.name.split('.').pop()?.toLowerCase() ?? ''
+    if (!ALLOWED_TRACK_EXTENSIONS.includes(extension)) {
+      fileError.value = t('admin.music_file_bad_format')
+    } else if (file.size > MAX_TRACK_BYTES) {
+      fileError.value = t('admin.music_file_too_large')
+    }
+  }
+
+  createForm.file = file
+  if (file) {
     createForm.clearErrors('file')
   }
 }
 
 function createTrack() {
-  if (createForm.processing || !createForm.name.trim() || !createForm.file) return
+  if (createDisabled.value) return
   createForm.post('/admin/music', {
     forceFormData: true,
     onSuccess: () => {
@@ -75,6 +107,7 @@ const { editingId, getEditInputId, startEdit, saveEdit, cancelEdit, focusCreateI
     entityPrefix: 'admin-music',
     updatePath: (id) => `/admin/music/${id}`,
     getEditValues: () => ({ name: editName.value }),
+    isValid: () => editName.value.trim().length > 0,
   })
 
 function handleStartEdit(row: TrackRow) {
@@ -202,10 +235,11 @@ function deleteTrack(track: TrackRow) {
             v-model="createForm.name"
             class="w-full"
             :placeholder="t('admin.music_name_placeholder')"
-            :invalid="!!createForm.errors.name"
+            :invalid="!!createForm.errors.name || !!nameError"
             autofocus
             @keyup.enter="createTrack"
           />
+          <small v-if="nameError" class="text-red-600 dark:text-red-400">{{ nameError }}</small>
           <small v-if="createForm.errors.name" class="text-red-600 dark:text-red-400">{{
             createForm.errors.name
           }}</small>
@@ -230,11 +264,12 @@ function deleteTrack(track: TrackRow) {
           }}</label>
           <input
             type="file"
-            accept=".mp3,.ogg,.wav,.m4a,audio/*"
+            accept=".mp3,.ogg,.wav,.m4a"
             class="block w-full text-sm text-gray-900 file:mr-4 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-2 file:text-sm file:font-medium dark:text-zinc-100 dark:file:bg-zinc-700"
             @change="onFileChange"
           />
-          <small v-if="createForm.errors.file" class="text-red-600 dark:text-red-400">{{
+          <small v-if="fileError" class="text-red-600 dark:text-red-400">{{ fileError }}</small>
+          <small v-else-if="createForm.errors.file" class="text-red-600 dark:text-red-400">{{
             createForm.errors.file
           }}</small>
         </div>
@@ -250,7 +285,7 @@ function deleteTrack(track: TrackRow) {
           :label="t('common.create')"
           icon="pi pi-check"
           :loading="createForm.processing"
-          :disabled="!createForm.name || !createForm.file"
+          :disabled="createDisabled"
           @click="createTrack"
         />
       </template>
