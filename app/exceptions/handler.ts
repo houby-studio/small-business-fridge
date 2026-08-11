@@ -21,9 +21,25 @@ export default class HttpExceptionHandler extends ExceptionHandler {
    * Status pages is a collection of error code range and a callback
    * to return the HTML contents to send as a response.
    */
+  /**
+   * `ctx.inertia` is set up by the Inertia middleware, which has to stay in the server
+   * stack precisely because these pages render for requests that never matched a route.
+   * The guard is defence in depth: if it is ever missing, answer plainly instead of
+   * throwing from the error handler and turning every 404 into a 500.
+   */
+  private renderStatusPage(component: string, error: unknown, ctx: HttpContext) {
+    if (!ctx.inertia) {
+      // The status is not on the response yet at this point, so take it from the error.
+      const status = (error as { status?: number } | null)?.status ?? 500
+      return ctx.response.status(status).send(status === 404 ? 'Not found' : 'Server error')
+    }
+
+    return ctx.inertia.render(component, { error })
+  }
+
   protected statusPages: Record<StatusPageRange, StatusPageRenderer> = {
-    '404': (error, { inertia }) => inertia.render('errors/not_found', { error }),
-    '500..599': (error, { inertia }) => inertia.render('errors/server_error', { error }),
+    '404': (error, ctx) => this.renderStatusPage('errors/not_found', error, ctx),
+    '500..599': (error, ctx) => this.renderStatusPage('errors/server_error', error, ctx),
   }
 
   /**
