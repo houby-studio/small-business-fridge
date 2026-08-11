@@ -6,7 +6,6 @@ import { DateTime } from 'luxon'
 import {
   updateProfileValidator,
   toggleColorModeValidator,
-  updateExcludedAllergensValidator,
   updatePreferencesValidator,
 } from '#validators/user'
 import {
@@ -556,6 +555,17 @@ export default class ProfileController {
 
   async createToken({ request, auth, response, session, i18n }: HttpContext) {
     const user = auth.user!
+
+    // `auth.user` is the impersonated target here, so an admin could otherwise mint a
+    // permanent credential for somebody else's account — and see its raw value.
+    if (this.isImpersonating(session)) {
+      session.flash('alert', {
+        type: 'danger',
+        message: i18n.t('messages.sensitive_action_blocked_while_impersonating'),
+      })
+      return response.redirect('/profile')
+    }
+
     const data = await request.validateUsing(createApiTokenValidator)
 
     const expiresIn = data.expiresInDays ? `${data.expiresInDays} days` : undefined
@@ -581,6 +591,15 @@ export default class ProfileController {
 
   async revokeToken({ params, auth, response, session, i18n }: HttpContext) {
     const user = auth.user!
+
+    if (this.isImpersonating(session)) {
+      session.flash('alert', {
+        type: 'danger',
+        message: i18n.t('messages.sensitive_action_blocked_while_impersonating'),
+      })
+      return response.redirect('/profile')
+    }
+
     const tokenId = Number(params.id)
 
     // Verify the token belongs to this user before deleting
@@ -603,31 +622,6 @@ export default class ProfileController {
 
     session.flash('alert', { type: 'success', message: i18n.t('messages.token_revoked') })
     return response.redirect('/profile')
-  }
-
-  async updateExcludedAllergens({ request, auth, response }: HttpContext) {
-    const user = auth.user!
-    const before = await this.getExcludedAllergenIds(user.id)
-    const data = await request.validateUsing(updateExcludedAllergensValidator)
-    await this.syncExcludedAllergenIds(user, data.excludedAllergenIds)
-
-    const after = await this.getExcludedAllergenIds(user.id)
-    if (before.length !== after.length || before.some((id, index) => id !== after[index])) {
-      const allergenIds = [...new Set([...before, ...after])]
-      const allergenRows =
-        allergenIds.length > 0
-          ? await Allergen.query().whereIn('id', allergenIds).select('id', 'name')
-          : []
-      const namesById = new Map(allergenRows.map((a) => [a.id, a.name]))
-      const toLabel = (ids: number[]) =>
-        ids.map((id) => namesById.get(id) ?? `#${id}`).join(', ') || '—'
-
-      await AuditService.log(user.id, 'profile.updated', 'user', user.id, null, {
-        excludedAllergens: { from: toLabel(before), to: toLabel(after) },
-      })
-    }
-
-    return response.redirect().back()
   }
 
   async toggleFavorite({ params, auth, response }: HttpContext) {

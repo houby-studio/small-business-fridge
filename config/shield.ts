@@ -27,6 +27,12 @@ const shieldConfig = defineConfig({
       )
     },
     enableXsrfCookie: true,
+    /**
+     * Unsafe verbs only — Shield validates exactly the methods listed here, so adding
+     * GET/HEAD/OPTIONS would demand a token on every navigation. That makes the list a
+     * gate keyed on `request.method()`, which is why method spoofing stays disabled in
+     * config/app.ts: a spoofed verb would otherwise pick which side of this gate it lands on.
+     */
     methods: ['POST', 'PUT', 'PATCH', 'DELETE'],
   },
 

@@ -5,6 +5,7 @@ import env from '#start/env'
 import User from '#models/user'
 import PasswordResetToken from '#models/password_reset_token'
 import { DomainError } from '#services/domain_error'
+import { revokeLongLivedCredentials } from '#services/credential_revocation'
 
 export default class PasswordResetService {
   private normalizeEmail(email: string) {
@@ -77,6 +78,10 @@ export default class PasswordResetService {
 
       user.password = newPassword
       await user.save()
+
+      // A reset is how a user recovers a compromised account, so every credential that
+      // outlives the session has to die with the old password.
+      await revokeLongLivedCredentials(user.id, { trx })
 
       token.usedAt = DateTime.utc()
       await token.save()

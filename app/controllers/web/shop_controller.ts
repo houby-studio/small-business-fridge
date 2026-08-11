@@ -10,38 +10,9 @@ import Product from '#models/product'
 import PageView from '#models/page_view'
 
 export default class ShopController {
-  async index({ inertia, auth, request, response, session, i18n }: HttpContext) {
+  async index({ inertia, auth, request }: HttpContext) {
     const shopService = new ShopService()
     const user = auth.user!
-
-    // Handle ?add_favorite=X param (used in purchase confirmation email links)
-    const addFavoriteRaw = request.input('add_favorite')
-    if (addFavoriteRaw) {
-      const productId = Number(addFavoriteRaw)
-      if (!Number.isNaN(productId) && productId > 0) {
-        const product = await Product.find(productId)
-        if (product) {
-          const existing = await user
-            .related('favoriteProducts')
-            .query()
-            .where('products.id', productId)
-            .first()
-          if (!existing) {
-            await user.related('favoriteProducts').attach([productId])
-            await AuditService.log(user.id, 'favorite.added', 'product', productId, null, {
-              name: product.displayName,
-            })
-            session.flash('alert', { type: 'success', message: i18n.t('messages.favorite_added') })
-          } else {
-            session.flash('alert', {
-              type: 'info',
-              message: i18n.t('messages.favorite_already_added'),
-            })
-          }
-        }
-      }
-      return response.redirect('/shop')
-    }
 
     // Fire-and-forget page view tracking
     PageView.create({ userId: user.id, channel: 'web' }).catch((err) => {
@@ -79,9 +50,53 @@ export default class ShopController {
     return inertia.render('shop/index', {
       products,
       categories,
-      filters: { category: categoryId ?? '' },
-      excludeAllergens,
+      // Both live under `filters` — that is where the page reads them from, and it is
+      // also what the partial reload on filter changes asks for.
+      filters: { category: categoryId ?? '', excludeAllergens },
     })
+  }
+
+  /**
+   * "Add to favourites" link from the purchase-confirmation email.
+   *
+   * A GET that writes to the database can be triggered cross-site (an <img> tag suffices),
+   * so the link is signed: the email carries a signature bound to this product and user,
+   * and anything without a valid one is refused. It has to stay a GET — it is clicked from
+   * a mail client, which cannot POST.
+   */
+  async addFavorite({ params, request, auth, response, session, i18n }: HttpContext) {
+    if (!request.hasValidSignature('add-favorite')) {
+      session.flash('alert', { type: 'danger', message: i18n.t('messages.action_failed') })
+      return response.redirect('/shop')
+    }
+
+    const user = auth.user!
+    const productId = Number(params.productId)
+    const product = Number.isInteger(productId) ? await Product.find(productId) : null
+
+    if (!product) {
+      session.flash('alert', { type: 'danger', message: i18n.t('messages.not_found') })
+      return response.redirect('/shop')
+    }
+
+    const existing = await user
+      .related('favoriteProducts')
+      .query()
+      .where('products.id', productId)
+      .first()
+
+    if (existing) {
+      session.flash('alert', { type: 'info', message: i18n.t('messages.favorite_already_added') })
+      return response.redirect('/shop')
+    }
+
+    await user.related('favoriteProducts').attach([productId])
+    await AuditService.log(user.id, 'favorite.added', 'product', productId, null, {
+      name: product.displayName,
+    })
+    session.flash('alert', { type: 'success', message: i18n.t('messages.favorite_added') })
+
+    return response.redirect('/shop')
   }
 
   async purchase({ request, auth, response, session, i18n }: HttpContext) {

@@ -426,3 +426,172 @@ test.group('GET /kiosk/customer', (group) => {
     assert.notInclude(body.recommendedIds, blockedProduct.id)
   })
 })
+
+test.group('Kiosk endpoints are restricted to the kiosk account', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  const stockedDelivery = async () => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    return DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountLeft: 5,
+      price: 15,
+    }).create()
+  }
+
+  test('a plain customer cannot order onto another account via purchase-basket', async ({
+    client,
+    assert,
+  }) => {
+    const attacker = await UserFactory.create()
+    const victim = await UserFactory.create()
+    const delivery = await stockedDelivery()
+
+    const response = await client
+      .post('/kiosk/purchase-basket')
+      .header('accept', 'application/json')
+      .json({ customerId: victim.id, items: [{ deliveryId: delivery.id, quantity: 1 }] })
+      .loginAs(attacker)
+      .withCsrfToken()
+
+    response.assertStatus(403)
+
+    const orders = await Order.query().where('buyerId', victim.id)
+    assert.lengthOf(orders, 0)
+  })
+
+  test('a supplier cannot order onto another account via the single-item endpoint', async ({
+    client,
+    assert,
+  }) => {
+    const attacker = await UserFactory.apply('supplier').create()
+    const victim = await UserFactory.create()
+    const delivery = await stockedDelivery()
+
+    const response = await client
+      .post('/kiosk/purchase')
+      .form({ customerId: victim.id, deliveryId: delivery.id })
+      .loginAs(attacker)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    assert.equal(response.header('location'), '/')
+
+    const orders = await Order.query().where('buyerId', victim.id)
+    assert.lengthOf(orders, 0)
+  })
+
+  test('a plain customer cannot enumerate customers via the identify endpoint', async ({
+    client,
+  }) => {
+    const attacker = await UserFactory.create()
+    const victim = await UserFactory.create()
+
+    const response = await client
+      .get(`/kiosk/customer?keypadId=${victim.keypadId}`)
+      .header('accept', 'application/json')
+      .loginAs(attacker)
+
+    response.assertStatus(403)
+  })
+
+  test('the kiosk refuses to order onto a disabled account', async ({ client, assert }) => {
+    const kioskDevice = await UserFactory.apply('kiosk').create()
+    const disabled = await UserFactory.apply('disabled').create()
+    const delivery = await stockedDelivery()
+
+    const response = await client
+      .post('/kiosk/purchase-basket')
+      .header('accept', 'application/json')
+      .json({ customerId: disabled.id, items: [{ deliveryId: delivery.id, quantity: 1 }] })
+      .loginAs(kioskDevice)
+      .withCsrfToken()
+
+    response.assertStatus(404)
+
+    const orders = await Order.query().where('buyerId', disabled.id)
+    assert.lengthOf(orders, 0)
+  })
+})
+
+test.group('POST /kiosk/purchase (single item)', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('the kiosk can buy a single item for a customer', async ({ client, assert }) => {
+    const kioskDevice = await UserFactory.apply('kiosk').create()
+    const customer = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    const delivery = await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountLeft: 2,
+      price: 25,
+    }).create()
+
+    const response = await client
+      .post('/kiosk/purchase')
+      .form({ customerId: customer.id, deliveryId: delivery.id })
+      .loginAs(kioskDevice)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    assert.include(response.header('location')!, 'success=1')
+
+    const orders = await Order.query().where('buyerId', customer.id)
+    assert.lengthOf(orders, 1)
+
+    await delivery.refresh()
+    assert.equal(delivery.amountLeft, 1)
+  })
+
+  test('an out-of-stock item redirects with an error and creates no order', async ({
+    client,
+    assert,
+  }) => {
+    const kioskDevice = await UserFactory.apply('kiosk').create()
+    const customer = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    const delivery = await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountLeft: 0,
+      price: 25,
+    }).create()
+
+    const response = await client
+      .post('/kiosk/purchase')
+      .form({ customerId: customer.id, deliveryId: delivery.id })
+      .loginAs(kioskDevice)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    assert.include(response.header('location')!, 'error=out_of_stock')
+
+    const orders = await Order.query().where('buyerId', customer.id)
+    assert.lengthOf(orders, 0)
+  })
+
+  test('a keypad-disabled customer cannot be identified at the kiosk', async ({ client }) => {
+    const kioskDevice = await UserFactory.apply('kiosk').create()
+    const customer = await UserFactory.merge({ keypadDisabled: true }).create()
+
+    const response = await client
+      .get(`/kiosk/customer?keypadId=${customer.keypadId}`)
+      .header('accept', 'application/json')
+      .loginAs(kioskDevice)
+
+    response.assertStatus(404)
+  })
+})

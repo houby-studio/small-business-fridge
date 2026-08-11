@@ -43,7 +43,16 @@ export function parseTrustProxy(
  */
 export const http = defineConfig({
   generateRequestId: true,
-  allowMethodSpoofing: true,
+
+  /**
+   * Method spoofing is OFF on purpose. Nothing in the app needs it — Inertia issues
+   * real PUT/PATCH/DELETE requests — and leaving it on is a CSRF hazard: spoofing is
+   * resolved from `request.method()`, which Shield also consults when deciding whether
+   * a request needs a CSRF token. Because the bodyparser runs before Shield (but after
+   * routing), a cross-site POST carrying `_method=GET` in its body routes as POST while
+   * Shield sees "GET" — a method absent from `csrf.methods` — and skips validation.
+   */
+  allowMethodSpoofing: false,
 
   /**
    * Trust the X-Forwarded-* headers from the configured proxy tier.

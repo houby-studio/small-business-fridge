@@ -1,5 +1,6 @@
 import '#tests/test_context'
 import { test } from '@japa/runner'
+import router from '@adonisjs/core/services/router'
 import { UserFactory } from '#database/factories/user_factory'
 import { ProductFactory } from '#database/factories/product_factory'
 import { DeliveryFactory } from '#database/factories/delivery_factory'
@@ -370,11 +371,19 @@ test.group('Web Shop - purchase', (group) => {
   })
 })
 
-test.group('Web Shop - add_favorite', (group) => {
+test.group('Web Shop - add to favourites from email', (group) => {
   group.each.setup(cleanAll)
   group.each.teardown(cleanAll)
 
-  test('?add_favorite adds product to favorites and redirects to /shop', async ({
+  /** Builds the same signed link the purchase-confirmation email carries. */
+  const signedFavoriteUrl = (productId: number) =>
+    router.makeSignedUrl(
+      '/shop/favorites/:productId',
+      { productId },
+      { expiresIn: '30 days', purpose: 'add-favorite', disableRouteLookup: true }
+    )
+
+  test('a signed link adds the product to favourites and redirects to /shop', async ({
     client,
     assert,
   }) => {
@@ -382,7 +391,7 @@ test.group('Web Shop - add_favorite', (group) => {
     const category = await CategoryFactory.create()
     const product = await ProductFactory.merge({ categoryId: category.id }).create()
 
-    const response = await client.get(`/shop?add_favorite=${product.id}`).loginAs(user).redirects(0)
+    const response = await client.get(signedFavoriteUrl(product.id)).loginAs(user).redirects(0)
 
     response.assertStatus(302)
     assert.equal(response.header('location'), '/shop')
@@ -403,7 +412,42 @@ test.group('Web Shop - add_favorite', (group) => {
     assert.equal(metadata?.name, product.displayName)
   })
 
-  test('?add_favorite when already a favorite does not duplicate and redirects', async ({
+  test('an unsigned link writes nothing — a GET that mutates must not be forgeable', async ({
+    client,
+    assert,
+  }) => {
+    const user = await UserFactory.create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+
+    const response = await client.get(`/shop/favorites/${product.id}`).loginAs(user).redirects(0)
+
+    response.assertStatus(302)
+
+    const count = await db.from('user_favorites').where('user_id', user.id).count('* as total')
+    assert.equal(Number(count[0].total), 0)
+  })
+
+  test('a tampered signature writes nothing', async ({ client, assert }) => {
+    const user = await UserFactory.create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    const other = await ProductFactory.merge({ categoryId: category.id }).create()
+
+    // Signature issued for one product, replayed against another.
+    const signature = signedFavoriteUrl(other.id).split('signature=')[1]
+    const response = await client
+      .get(`/shop/favorites/${product.id}?signature=${signature}`)
+      .loginAs(user)
+      .redirects(0)
+
+    response.assertStatus(302)
+
+    const rows = await db.from('user_favorites').where('user_id', user.id)
+    assert.lengthOf(rows, 0)
+  })
+
+  test('a signed link for an already-favourite product does not duplicate', async ({
     client,
     assert,
   }) => {
@@ -415,7 +459,7 @@ test.group('Web Shop - add_favorite', (group) => {
       .table('user_favorites')
       .insert({ user_id: user.id, product_id: product.id, created_at: new Date() })
 
-    const response = await client.get(`/shop?add_favorite=${product.id}`).loginAs(user).redirects(0)
+    const response = await client.get(signedFavoriteUrl(product.id)).loginAs(user).redirects(0)
 
     response.assertStatus(302)
 
@@ -423,13 +467,13 @@ test.group('Web Shop - add_favorite', (group) => {
     assert.equal(Number(count[0].total), 1)
   })
 
-  test('?add_favorite with non-existent product redirects gracefully', async ({
+  test('a signed link for a non-existent product redirects gracefully', async ({
     client,
     assert,
   }) => {
     const user = await UserFactory.create()
 
-    const response = await client.get('/shop?add_favorite=999999').loginAs(user).redirects(0)
+    const response = await client.get(signedFavoriteUrl(999999)).loginAs(user).redirects(0)
 
     response.assertStatus(302)
     assert.equal(response.header('location'), '/shop')

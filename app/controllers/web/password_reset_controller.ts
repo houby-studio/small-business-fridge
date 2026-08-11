@@ -11,6 +11,7 @@ import PasswordResetService from '#services/password_reset_service'
 import AuthModeService from '#services/auth_mode_service'
 import ReauthStepupService from '#services/reauth_stepup_service'
 import { isDomainError } from '#services/domain_error'
+import { revokeLongLivedCredentials } from '#services/credential_revocation'
 
 export default class PasswordResetController {
   private resets = new PasswordResetService()
@@ -168,6 +169,10 @@ export default class PasswordResetController {
 
     user.password = data.newPassword
     await user.save()
+
+    // Sign out every other device. API tokens survive — the user created those on purpose
+    // and can revoke them from the profile page.
+    await revokeLongLivedCredentials(user.id, { includeApiTokens: false })
 
     await AuditService.log(user.id, 'user.password_changed', 'user', user.id, null, {
       via: 'profile',

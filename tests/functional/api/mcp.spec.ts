@@ -10,6 +10,8 @@ import { CategoryFactory } from '#database/factories/category_factory'
 import { store as throttleStore } from '#middleware/throttle_middleware'
 import User from '#models/user'
 import McpOauthClient from '#models/mcp_oauth_client'
+import Category from '#models/category'
+import Product from '#models/product'
 
 const MCP_URL = '/mcp'
 
@@ -214,12 +216,15 @@ test.group('API MCP - Authentication', (group) => {
     response.assertStatus(403)
   })
 
-  test('rejects disabled users with 403', async ({ client }) => {
+  test('rejects disabled users at authentication', async ({ client }) => {
     const disabled = await UserFactory.apply('disabled').create()
     const token = await createToken(disabled)
 
+    // 401, not 403: the api guard refuses to authenticate a disabled account at all, so
+    // the request never reaches the MCP role check. Tokens outlive the account state, so
+    // this has to be enforced per request rather than only at issuance.
     const response = await mcpPost(client, token, MCP_INIT)
-    response.assertStatus(403)
+    response.assertStatus(401)
   })
 
   test('answers OPTIONS preflight with permissive CORS headers', async ({ client, assert }) => {
@@ -638,5 +643,38 @@ test.group('API MCP - OAuth server', (group) => {
       .redirects(0)
 
     response.assertStatus(400)
+  })
+})
+
+test.group('API MCP - create_product', (group) => {
+  group.each.setup(async () => {
+    throttleStore.clear()
+    await cleanAll()
+  })
+  group.each.teardown(cleanAll)
+
+  test('a supplier can create a product without an image', async ({ client, assert }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const token = await createToken(supplier)
+    const category = await Category.create({ name: 'MCP kategorie', color: '#123456' })
+
+    const response = await mcpPost(client, token, {
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'tools/call',
+      params: {
+        name: 'create_product',
+        arguments: {
+          displayName: 'Produkt bez obrázku',
+          description: 'Vytvořeno přes MCP',
+          categoryId: category.id,
+        },
+      },
+    })
+
+    response.assertStatus(200)
+    const product = await Product.query().where('displayName', 'Produkt bez obrázku').first()
+    assert.isNotNull(product)
+    assert.isNull(product!.imagePath)
   })
 })

@@ -157,6 +157,11 @@ export default async function globalSetup() {
     await client.query('BEGIN')
 
     for (const user of users) {
+      // The kiosk device really has to be flagged as one: the /kiosk endpoints act on behalf
+      // of an arbitrary customer, so they are restricted to kiosk accounts. Seeding it as a
+      // plain customer would test a path no real kiosk takes.
+      const isKiosk = user.email === 'kiosk@localhost'
+
       await client.query(
         `
       INSERT INTO users (
@@ -166,12 +171,20 @@ export default async function globalSetup() {
         created_at, updated_at
       ) VALUES (
         $1, $2, $3, $4, $5, $6,
-        false, false, false, true,
+        $7, false, false, true,
         true, 'dark', false, NULL, NOW(),
         NOW(), NOW()
       )
     `,
-        [user.email, user.display_name, user.password, user.role, user.keypad_id, user.iban]
+        [
+          user.email,
+          user.display_name,
+          user.password,
+          user.role,
+          user.keypad_id,
+          user.iban,
+          isKiosk,
+        ]
       )
     }
 

@@ -136,7 +136,8 @@ const menuItems = computed(() => {
 })
 
 function logout() {
-  window.location.assign('/logout')
+  // POST, not a plain navigation: signing out is a state change and must carry a CSRF token.
+  router.post('/logout')
 }
 
 function stopImpersonation() {
