@@ -1,18 +1,31 @@
 import '#tests/test_context'
 import { test } from '@japa/runner'
+import type { ApiClient } from '@japa/api-client'
 import { store as throttleStore } from '#middleware/throttle_middleware'
 import { UserFactory } from '#database/factories/user_factory'
 import db from '@adonisjs/lucid/services/db'
 
-/**
- * The bucket key comes from request.ip(), which resolves X-Forwarded-For only through the
- * configured trustProxy tier. In tests requests arrive from loopback with trustProxy at
- * its default, so every request lands in the same bucket regardless of the header — which
- * is exactly the property the last test here pins down.
- */
-const LOOPBACK_KEY = 'throttle:ip:::ffff:127.0.0.1'
+const throttleKeys = () => [...throttleStore.keys()].filter((key) => key.startsWith('throttle:ip:'))
 
-const loopbackKeys = () => [...throttleStore.keys()].filter((key) => key.startsWith('throttle:ip:'))
+/**
+ * Fill this environment's own bucket, discovering its key with one throwaway request.
+ *
+ * The peer address is not portable — loopback surfaces as `127.0.0.1` on some runners and
+ * `::ffff:127.0.0.1` on others — so a hard-coded key fills a bucket nothing ever reads and
+ * the request under test silently is not throttled at all.
+ */
+async function exhaustOwnBucket(client: ApiClient) {
+  throttleStore.clear()
+  await client.get('/api/v1/health')
+
+  const keys = throttleKeys()
+  if (keys.length !== 1) {
+    throw new Error(`expected exactly one throttle bucket, saw: ${keys.join(', ') || '(none)'}`)
+  }
+
+  throttleStore.set(keys[0], { count: 10_000, resetAt: Date.now() + 30_000 })
+  return keys[0]
+}
 
 test.group('Rate Limit Middleware', (group) => {
   group.each.setup(async () => {
@@ -23,11 +36,7 @@ test.group('Rate Limit Middleware', (group) => {
 
   test('Inertia web requests are redirected back with flash when throttled', async ({ client }) => {
     await UserFactory.apply('admin').create()
-
-    // Pre-fill whichever loopback bucket this environment resolves to.
-    for (const key of [LOOPBACK_KEY, 'throttle:ip:127.0.0.1']) {
-      throttleStore.set(key, { count: 10_000, resetAt: Date.now() + 30_000 })
-    }
+    await exhaustOwnBucket(client)
 
     const response = await client
       .post('/login')
@@ -46,9 +55,7 @@ test.group('Rate Limit Middleware', (group) => {
   })
 
   test('API requests still return JSON 429 when throttled', async ({ client, assert }) => {
-    for (const key of [LOOPBACK_KEY, 'throttle:ip:127.0.0.1']) {
-      throttleStore.set(key, { count: 10_000, resetAt: Date.now() + 30_000 })
-    }
+    await exhaustOwnBucket(client)
 
     const response = await client.get('/api/v1/health')
 
@@ -60,12 +67,12 @@ test.group('Rate Limit Middleware', (group) => {
 
   test('the counter really increments per request', async ({ client, assert }) => {
     await client.get('/api/v1/health')
-    const afterFirst = loopbackKeys()
-    assert.lengthOf(afterFirst, 1)
-    const countAfterFirst = throttleStore.get(afterFirst[0])!.count
+    const keys = throttleKeys()
+    assert.lengthOf(keys, 1)
+    const countAfterFirst = throttleStore.get(keys[0])!.count
 
     await client.get('/api/v1/health')
-    const countAfterSecond = throttleStore.get(afterFirst[0])!.count
+    const countAfterSecond = throttleStore.get(keys[0])!.count
 
     assert.equal(countAfterSecond, countAfterFirst + 1)
   })
@@ -74,7 +81,7 @@ test.group('Rate Limit Middleware', (group) => {
    * Buckets follow request.ip(), which resolves X-Forwarded-For only through the configured
    * trustProxy tier — the middleware no longer reads the header itself. Verified by running
    * this suite with TRUST_PROXY=false, where every forwarded address collapses into the
-   * single loopback bucket instead of minting one per header value.
+   * single peer bucket instead of minting one per header value.
    */
   test('a trusted proxy chain still separates real clients', async ({ client, assert }) => {
     // trustProxy defaults to "loopback", and tests arrive from loopback, so a well-formed
@@ -83,8 +90,7 @@ test.group('Rate Limit Middleware', (group) => {
     await client.get('/api/v1/health').header('X-Forwarded-For', '203.0.113.1')
     await client.get('/api/v1/health').header('X-Forwarded-For', '203.0.113.2')
 
-    const keys = loopbackKeys()
-    assert.includeMembers(keys, ['throttle:ip:203.0.113.1', 'throttle:ip:203.0.113.2'])
+    assert.includeMembers(throttleKeys(), ['throttle:ip:203.0.113.1', 'throttle:ip:203.0.113.2'])
     assert.equal(throttleStore.get('throttle:ip:203.0.113.1')!.count, 1)
   })
 })
