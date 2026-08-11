@@ -29,6 +29,17 @@ server.use([
   () => import('@adonisjs/cors/cors_middleware'),
   () => import('@adonisjs/vite/vite_middleware'),
   () => import('@adonisjs/static/static_middleware'),
+  /**
+   * Must live in the SERVER stack, not the router stack: the exception handler renders its
+   * status pages through `ctx.inertia`, and those fire for requests that never matched a
+   * route — where router middleware does not run at all. Registered any deeper, every 404
+   * turned into a 500 from the error handler itself.
+   *
+   * The cost is that dispose() runs after the session commit, so its reflash on a 409
+   * (stale asset version) is a no-op and a flash message can be lost across that forced
+   * reload. A lost flash beats an unrenderable error page.
+   */
+  () => import('#middleware/inertia_middleware'),
 ])
 
 /**
@@ -38,14 +49,6 @@ server.use([
 router.use([
   () => import('@adonisjs/core/bodyparser_middleware'),
   () => import('@adonisjs/session/session_middleware'),
-  /**
-   * Sits *inside* the session middleware on purpose. Its dispose() step reflashes
-   * messages when it turns a stale-asset request into a 409, and that only survives if
-   * it runs before the session is committed. Registered in the server stack (where the
-   * adapter's docs put it) dispose() would run after the commit and the reflash would be
-   * a silent no-op, losing the flash message across the forced reload.
-   */
-  () => import('#middleware/inertia_middleware'),
   () => import('#middleware/cache_guard_middleware'),
   () => import('@adonisjs/shield/shield_middleware'),
   () => import('@adonisjs/auth/initialize_auth_middleware'),
