@@ -64,6 +64,7 @@
   "payments_no_invoices": "Zatím nemáte žádné faktury.",
   "payments_filter_status": "Stav",
   "payments_filter_customer": "Zákazník",
+  "payments_order_hint": "Faktury jsou seřazeny podle stavu: nejdřív čekající na schválení, pak nezaplacené a nakonec zaplacené. Řazení podle sloupce platí uvnitř každé skupiny.",
   "deliveries_filter_product": "Filtrovat produkt",
   "products_search": "Hledat produkt",
   "products_filter_category": "Kategorie",

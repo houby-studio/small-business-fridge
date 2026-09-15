@@ -64,6 +64,7 @@
   "payments_no_invoices": "You don't have any invoices yet.",
   "payments_filter_status": "Status",
   "payments_filter_customer": "Customer",
+  "payments_order_hint": "Invoices are ordered by status: awaiting approval first, then unpaid, then paid. Column sorting applies within each group.",
   "deliveries_filter_product": "Filter by product",
   "products_search": "Search product",
   "products_filter_category": "Category",

@@ -135,6 +135,11 @@ export default class InvoiceService {
 
   /**
    * Get invoices issued by a supplier (supplier payment view) with optional status, sort, and buyer filters.
+   *
+   * Rows are always grouped by what the supplier still has to do with them: payment requests
+   * waiting for approval come first, then unpaid invoices, then paid ones. The caller-selected
+   * sort (issue date, newest first, by default) only orders rows inside each group, and the
+   * buyer's name breaks the remaining ties so one customer's invoices sit next to each other.
    */
   async getInvoicesForSupplier(
     supplierId: number,
@@ -142,17 +147,31 @@ export default class InvoiceService {
     perPage: number = 20,
     filters?: { status?: string; sortBy?: string; sortOrder?: string; buyerId?: number }
   ) {
-    const sortByWhitelist = ['createdAt', 'totalCost']
-    const sortBy = sortByWhitelist.includes(filters?.sortBy ?? '') ? filters!.sortBy! : 'createdAt'
+    // Both tables carry `id` and `created_at`, so every ORDER BY column must be qualified.
+    const sortByMap: Record<string, string> = {
+      createdAt: 'invoices.created_at',
+      totalCost: 'invoices.total_cost',
+    }
+    const sortColumn = sortByMap[filters?.sortBy ?? ''] ?? sortByMap.createdAt
     const sortOrder = filters?.sortOrder === 'asc' ? 'asc' : 'desc'
 
     const query = Invoice.query()
+      // The join is only there for the buyer-name tiebreaker; `invoices.*` keeps the joined
+      // `users.id` / `users.created_at` from overwriting the invoice's own columns.
+      .join('users as buyers', 'buyers.id', 'invoices.buyer_id')
+      .select('invoices.*')
       .where('supplierId', supplierId)
       .preload('buyer')
       .preload('orders', (q) => {
         q.preload('delivery', (dq) => dq.preload('product'))
       })
-      .orderBy(sortBy, sortOrder)
+      // Status rank: 0 = awaiting approval, 1 = unpaid, 2 = paid.
+      .orderByRaw(
+        'CASE WHEN invoices.is_paid THEN 2 WHEN invoices.is_payment_requested THEN 0 ELSE 1 END ASC'
+      )
+      .orderBy(sortColumn, sortOrder)
+      .orderBy('buyers.display_name', 'asc')
+      .orderBy('invoices.id', 'desc')
 
     if (filters?.status === 'paid') {
       query.where('isPaid', true)
