@@ -152,6 +152,41 @@ test.group('NotificationService - sendUnpaidInvoiceReminders', (group) => {
 
     assert.equal(fakeMailer.messages.sent().length, 2)
   })
+
+  test('embeds QR payment code when supplier has an IBAN', async ({ assert }) => {
+    const buyer = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').apply('withIban').create()
+
+    await InvoiceFactory.merge({
+      buyerId: buyer.id,
+      supplierId: supplier.id,
+      createdAt: DateTime.now().minus({ days: 4 }),
+    }).create()
+
+    await notificationService.sendUnpaidInvoiceReminders()
+
+    const [message] = fakeMailer.messages.sent()
+    const html = String(message.nodeMailerMessage.html)
+    assert.include(html, 'src="data:image/png;base64,', 'reminder should embed the QR image')
+    assert.include(html, supplier.iban!, 'reminder should still list the IBAN as fallback')
+  })
+
+  test('omits QR payment code when supplier has no IBAN', async ({ assert }) => {
+    const buyer = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').merge({ iban: null }).create()
+
+    await InvoiceFactory.merge({
+      buyerId: buyer.id,
+      supplierId: supplier.id,
+      createdAt: DateTime.now().minus({ days: 4 }),
+    }).create()
+
+    await notificationService.sendUnpaidInvoiceReminders()
+
+    const [message] = fakeMailer.messages.sent()
+    const html = String(message.nodeMailerMessage.html)
+    assert.notInclude(html, 'data:image/png;base64,')
+  })
 })
 
 test.group('NotificationService - sendPendingApprovalReminders', (group) => {

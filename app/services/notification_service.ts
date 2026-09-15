@@ -162,18 +162,7 @@ export default class NotificationService {
     })
 
     const buyer = invoice.buyer
-
-    let qrImageData: string | null = null
-    if (invoice.supplier.iban) {
-      const qrService = new QrPaymentService()
-      const qr = await qrService.generate({
-        iban: invoice.supplier.iban,
-        amount: invoice.totalCost,
-        receiverName: invoice.supplier.displayName,
-        payerName: buyer.displayName,
-      })
-      qrImageData = qr.imageData
-    }
+    const qrImageData = await this.buildPaymentQr(invoice)
 
     await mail.send((message) => {
       message
@@ -316,6 +305,10 @@ export default class NotificationService {
       const buyer = invoice.buyer
       if (buyer.isDisabled) continue
 
+      // Same QR payment code as in the original invoice notice, so the buyer can pay
+      // straight from the reminder instead of digging up the first email.
+      const qrImageData = await this.buildPaymentQr(invoice)
+
       await mail.send((message) => {
         message
           .to(buyer.email)
@@ -332,6 +325,7 @@ export default class NotificationService {
             invoiceId: invoice.id,
             totalCost: invoice.totalCost,
             supplierIban: invoice.supplier.iban,
+            qrImageData,
             appUrl: this.appUrl,
             appName: this.appName,
           })
@@ -581,6 +575,23 @@ export default class NotificationService {
           appName: this.appName,
         })
     })
+  }
+
+  /**
+   * Build the SPD QR payment code (PNG data URL) for an invoice, or null when the
+   * supplier has no IBAN. Expects `invoice.buyer` and `invoice.supplier` to be loaded.
+   */
+  private async buildPaymentQr(invoice: Invoice): Promise<string | null> {
+    const supplierIban = invoice.supplier.iban
+    if (!supplierIban) return null
+
+    const qr = await new QrPaymentService().generate({
+      iban: supplierIban,
+      amount: invoice.totalCost,
+      receiverName: invoice.supplier.displayName,
+      payerName: invoice.buyer.displayName,
+    })
+    return qr.imageData
   }
 
   /**

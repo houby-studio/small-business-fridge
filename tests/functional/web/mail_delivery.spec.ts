@@ -214,4 +214,32 @@ test.group('Mail Delivery - unpaid invoice reminder', (group) => {
       'HTML body should contain the app URL for invoices link'
     )
   })
+
+  test('unpaid reminder email embeds the QR payment code when supplier has an IBAN', async ({
+    assert,
+  }) => {
+    if (!isMailpitAvailable()) return
+
+    const buyer = await UserFactory.merge({ email: 'reminder-qr@mailtest.local' }).create()
+    const supplier = await UserFactory.apply('supplier').apply('withIban').create()
+
+    await InvoiceFactory.merge({
+      buyerId: buyer.id,
+      supplierId: supplier.id,
+      createdAt: DateTime.now().minus({ days: 5 }),
+    }).create()
+
+    await notificationService.sendUnpaidInvoiceReminders()
+
+    const summary = await waitForMessageTo('reminder-qr@mailtest.local')
+    assert.isNotNull(summary)
+
+    const message = await getMessage(summary!.ID)
+    assert.include(
+      message.HTML,
+      'data:image/png;base64,',
+      'HTML body should embed the SPD QR payment image'
+    )
+    assert.include(message.HTML, supplier.iban!, 'HTML body should still list the IBAN')
+  })
 })

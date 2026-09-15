@@ -10,6 +10,24 @@
     <p>
       {{ i18n.t('emails.unpaid_reminder_intro', { buyerName, id: invoiceId, supplierName, amount: totalCost }) }}
     </p>
+
+    @if(qrImageData)
+      <div
+        style="text-align: center; margin: 24px 0; padding: 16px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 6px;"
+      >
+        <p style="margin: 0 0 12px; font-weight: bold;">
+          {{ i18n.t('emails.invoice_qr_heading') }}
+        </p>
+        <img
+          src="{{ qrImageData }}"
+          alt="QR platba"
+          width="220"
+          height="220"
+          style="display: block; margin: 0 auto;"
+        />
+      </div>
+    @end
+    
     @if(supplierIban)
       <p>
         {{ i18n.t('emails.unpaid_reminder_iban') }} <strong>{{ supplierIban }}</strong>
