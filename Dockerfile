@@ -6,6 +6,8 @@ FROM node:24-alpine AS base
 FROM base AS deps
 WORKDIR /app
 COPY package*.json ./
+# patch-package (postinstall) needs the patches before the first npm ci
+COPY patches ./patches
 RUN npm ci
 
 # ----------------------------

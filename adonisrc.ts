@@ -133,6 +133,12 @@ export default defineConfig({
       pattern: 'resources/lang/**/*.{json,yaml,yml}',
       reloadServer: false,
     },
+    {
+      // patch-package runs on `npm ci` inside the build output (Docker production
+      // stage), so the patches must ship with it.
+      pattern: 'patches/**',
+      reloadServer: false,
+    },
   ],
 
   hooks: {

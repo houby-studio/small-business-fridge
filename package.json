@@ -6,6 +6,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "prepare": "npm run hooks:install",
+    "postinstall": "patch-package",
     "start": "node bin/server.js",
     "build": "node ace build",
     "dev": "node ace serve --hmr",
@@ -106,6 +107,7 @@
     "luxon": "^3.7.2",
     "mongodb": "^7.1.0",
     "openai": "^6.47.0",
+    "patch-package": "^8.0.1",
     "pg": "^8.18.0",
     "primeicons": "^7.0.0",
     "primevue": "^4.5.4",
