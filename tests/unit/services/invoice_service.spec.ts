@@ -1,5 +1,6 @@
 import '#tests/test_context'
 import { test } from '@japa/runner'
+import { DateTime } from 'luxon'
 import { UserFactory } from '#database/factories/user_factory'
 import { DeliveryFactory } from '#database/factories/delivery_factory'
 import { InvoiceFactory } from '#database/factories/invoice_factory'
@@ -599,5 +600,156 @@ test.group('InvoiceService - getUninvoicedSummary', (group) => {
 
     const summary = await invoiceService.getUninvoicedSummary(supplier.id)
     assert.lengthOf(summary, 0)
+  })
+})
+
+test.group('InvoiceService - getInvoicesForSupplier ordering', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('lists invoices awaiting approval first, then unpaid, then paid', async ({ assert }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+    const now = DateTime.now()
+
+    // The paid invoice is deliberately the newest and the awaiting one the oldest, so a plain
+    // createdAt desc sort would list them in exactly the opposite order.
+    const paid = await InvoiceFactory.apply('paid')
+      .merge({ buyerId: buyer.id, supplierId: supplier.id, createdAt: now })
+      .create()
+    const unpaid = await InvoiceFactory.merge({
+      buyerId: buyer.id,
+      supplierId: supplier.id,
+      createdAt: now.minus({ days: 1 }),
+    }).create()
+    const awaiting = await InvoiceFactory.apply('paymentRequested')
+      .merge({ buyerId: buyer.id, supplierId: supplier.id, createdAt: now.minus({ days: 2 }) })
+      .create()
+
+    const result = await invoiceService.getInvoicesForSupplier(supplier.id)
+    assert.deepEqual(
+      result.all().map((i) => i.id),
+      [awaiting.id, unpaid.id, paid.id]
+    )
+  })
+
+  test('sorts by issue date inside each status group, newest first by default', async ({
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+    const now = DateTime.now()
+    const base = { buyerId: buyer.id, supplierId: supplier.id }
+
+    const awaitingOld = await InvoiceFactory.apply('paymentRequested')
+      .merge({ ...base, createdAt: now.minus({ days: 5 }) })
+      .create()
+    const awaitingNew = await InvoiceFactory.apply('paymentRequested')
+      .merge({ ...base, createdAt: now.minus({ days: 1 }) })
+      .create()
+    const paidOld = await InvoiceFactory.apply('paid')
+      .merge({ ...base, createdAt: now.minus({ days: 6 }) })
+      .create()
+    const paidNew = await InvoiceFactory.apply('paid')
+      .merge({ ...base, createdAt: now })
+      .create()
+
+    const byDefault = await invoiceService.getInvoicesForSupplier(supplier.id)
+    assert.deepEqual(
+      byDefault.all().map((i) => i.id),
+      [awaitingNew.id, awaitingOld.id, paidNew.id, paidOld.id]
+    )
+
+    const ascending = await invoiceService.getInvoicesForSupplier(supplier.id, 1, 20, {
+      sortBy: 'createdAt',
+      sortOrder: 'asc',
+    })
+    assert.deepEqual(
+      ascending.all().map((i) => i.id),
+      [awaitingOld.id, awaitingNew.id, paidOld.id, paidNew.id]
+    )
+  })
+
+  test('breaks ties inside a status group by buyer name', async ({ assert }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const zuzana = await UserFactory.merge({ displayName: 'Zuzana' }).create()
+    const adam = await UserFactory.merge({ displayName: 'Adam' }).create()
+    const marie = await UserFactory.merge({ displayName: 'Marie' }).create()
+    const issuedAt = DateTime.fromISO('2026-09-01T10:00:00.000Z')
+
+    for (const buyer of [zuzana, adam, marie]) {
+      await InvoiceFactory.apply('paymentRequested')
+        .merge({ buyerId: buyer.id, supplierId: supplier.id, createdAt: issuedAt })
+        .create()
+    }
+
+    const result = await invoiceService.getInvoicesForSupplier(supplier.id)
+    assert.deepEqual(
+      result.all().map((i) => i.buyer.displayName),
+      ['Adam', 'Marie', 'Zuzana']
+    )
+  })
+
+  test('keeps the status grouping when sorting by total cost', async ({ assert }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+    const base = { buyerId: buyer.id, supplierId: supplier.id }
+
+    const paidCheap = await InvoiceFactory.apply('paid')
+      .merge({ ...base, totalCost: 10 })
+      .create()
+    const unpaidMid = await InvoiceFactory.merge({ ...base, totalCost: 200 }).create()
+    const awaitingExpensive = await InvoiceFactory.apply('paymentRequested')
+      .merge({ ...base, totalCost: 500 })
+      .create()
+    const awaitingCheap = await InvoiceFactory.apply('paymentRequested')
+      .merge({ ...base, totalCost: 50 })
+      .create()
+
+    const result = await invoiceService.getInvoicesForSupplier(supplier.id, 1, 20, {
+      sortBy: 'totalCost',
+      sortOrder: 'asc',
+    })
+    assert.deepEqual(
+      result.all().map((i) => i.id),
+      [awaitingCheap.id, awaitingExpensive.id, unpaidMid.id, paidCheap.id]
+    )
+  })
+
+  test('buyer join leaves invoice columns, preloads, filters and pagination intact', async ({
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+    const otherBuyer = await UserFactory.create()
+    const issuedAt = DateTime.fromISO('2026-08-15T08:30:00.000Z')
+
+    const awaiting = await InvoiceFactory.apply('paymentRequested')
+      .merge({ buyerId: buyer.id, supplierId: supplier.id, createdAt: issuedAt })
+      .create()
+    await InvoiceFactory.merge({ buyerId: otherBuyer.id, supplierId: supplier.id }).create()
+    await InvoiceFactory.apply('paid')
+      .merge({ buyerId: buyer.id, supplierId: supplier.id })
+      .create()
+
+    const all = await invoiceService.getInvoicesForSupplier(supplier.id, 1, 2)
+    assert.equal(all.getMeta().total, 3)
+    assert.equal(all.getMeta().lastPage, 2)
+    assert.lengthOf(all.all(), 2)
+
+    // `users.id` / `users.created_at` from the join must not leak into the invoice rows.
+    const row = all.all()[0]
+    assert.equal(row.id, awaiting.id)
+    assert.equal(row.buyerId, buyer.id)
+    assert.equal(row.buyer.id, buyer.id)
+    assert.equal(row.createdAt.toMillis(), issuedAt.toMillis())
+
+    const filtered = await invoiceService.getInvoicesForSupplier(supplier.id, 1, 20, {
+      status: 'unpaid',
+      buyerId: otherBuyer.id,
+    })
+    assert.lengthOf(filtered.all(), 1)
+    assert.equal(filtered.all()[0].buyerId, otherBuyer.id)
+    assert.isFalse(filtered.all()[0].isPaymentRequested)
   })
 })

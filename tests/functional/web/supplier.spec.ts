@@ -1,5 +1,6 @@
 import '#tests/test_context'
 import { test } from '@japa/runner'
+import { DateTime } from 'luxon'
 import { UserFactory } from '#database/factories/user_factory'
 import { ProductFactory } from '#database/factories/product_factory'
 import { DeliveryFactory } from '#database/factories/delivery_factory'
@@ -642,6 +643,74 @@ test.group('Web Supplier - payments (approve/reject)', (group) => {
     // Invoice should not have changed
     await invoice.refresh()
     assert.isFalse(invoice.isPaid)
+  })
+})
+
+test.group('Web Supplier - payments ordering and redirect', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('payments page lists awaiting, then unpaid, then paid invoices', async ({
+    client,
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+    const now = DateTime.now()
+
+    const paid = await InvoiceFactory.apply('paid')
+      .merge({ buyerId: buyer.id, supplierId: supplier.id, createdAt: now })
+      .create()
+    const unpaid = await InvoiceFactory.merge({
+      buyerId: buyer.id,
+      supplierId: supplier.id,
+      createdAt: now.minus({ days: 1 }),
+    }).create()
+    const awaiting = await InvoiceFactory.apply('paymentRequested')
+      .merge({ buyerId: buyer.id, supplierId: supplier.id, createdAt: now.minus({ days: 2 }) })
+      .create()
+
+    const response = await client
+      .get('/supplier/payments')
+      .loginAs(supplier)
+      .header('X-Inertia', 'true')
+      .header('X-Inertia-Version', '1')
+    response.assertStatus(200)
+
+    const rows: any[] = response.body().props.invoices.data
+    assert.deepEqual(
+      rows.map((row) => row.id),
+      [awaiting.id, unpaid.id, paid.id]
+    )
+    // Buyer preload must survive the users join used for the name tiebreaker.
+    assert.equal(rows[0].buyer.id, buyer.id)
+    assert.equal(rows[0].buyer.displayName, buyer.displayName)
+  })
+
+  test('approving from a filtered, paginated list redirects back to that exact list', async ({
+    client,
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+    const invoice = await InvoiceFactory.apply('paymentRequested')
+      .merge({ buyerId: buyer.id, supplierId: supplier.id })
+      .create()
+    const listUrl = '/supplier/payments?status=awaiting&sortBy=totalCost&sortOrder=asc&page=2'
+
+    const response = await client
+      .post(`/supplier/payments/${invoice.id}`)
+      .loginAs(supplier)
+      .withCsrfToken()
+      .header('referer', listUrl)
+      .json({ action: 'approve' })
+      .redirects(0)
+
+    response.assertStatus(302)
+    assert.equal(response.header('location'), listUrl)
+
+    await invoice.refresh()
+    assert.isTrue(invoice.isPaid)
   })
 })
 

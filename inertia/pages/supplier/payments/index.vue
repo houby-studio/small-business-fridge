@@ -100,12 +100,15 @@ onMounted(() => {
   }
 })
 
+// The server redirects back to the referer, so filters and the current page survive the
+// action; preserveScroll keeps the viewport where the supplier was working instead of
+// jumping back to the top of the list.
 function approve(id: number) {
-  router.post(`/supplier/payments/${id}`, { action: 'approve' })
+  router.post(`/supplier/payments/${id}`, { action: 'approve' }, { preserveScroll: true })
 }
 
 function reject(id: number) {
-  router.post(`/supplier/payments/${id}`, { action: 'reject' })
+  router.post(`/supplier/payments/${id}`, { action: 'reject' }, { preserveScroll: true })
 }
 
 function buildFilterParams() {
@@ -144,9 +147,12 @@ function onSort(event: any) {
     <Head :title="t('supplier.payments_title')" />
     <ConfirmDialog />
 
-    <h1 class="mb-6 text-2xl font-bold text-gray-900 dark:text-zinc-100">
+    <h1 class="mb-2 text-2xl font-bold text-gray-900 dark:text-zinc-100">
       {{ t('supplier.payments_heading') }}
     </h1>
+    <p class="mb-6 text-sm text-gray-500 dark:text-zinc-400" data-testid="payments-order-hint">
+      {{ t('supplier.payments_order_hint') }}
+    </p>
 
     <!-- Filter bar -->
     <FilterBar @apply="applyFilters" @clear="clearFilters">
