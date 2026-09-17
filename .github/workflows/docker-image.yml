@@ -22,14 +22,29 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # `latest` must only ever move on master. Feature branches still get an
+      # immutable commit-SHA tag plus a branch alias, so they can be deployed
+      # deliberately without turning `latest` into whatever built most recently.
+      - name: Compute image tags
+        id: tags
+        run: |
+          set -euo pipefail
+          tags="houbystudio/sbf:${GITHUB_SHA}"
+          if [ "${GITHUB_REF}" = "refs/heads/master" ]; then
+            tags="${tags},houbystudio/sbf:master,houbystudio/sbf:latest"
+          else
+            alias="$(printf '%s' "${GITHUB_REF_NAME}" | tr '/' '-')"
+            tags="${tags},houbystudio/sbf:${alias}"
+          fi
+          echo "tags=${tags}" >> "$GITHUB_OUTPUT"
+          echo "Tagging as: ${tags}"
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
           push: true
-          tags: |
-            houbystudio/sbf:latest
-            houbystudio/sbf:${{ github.sha }}
+          tags: ${{ steps.tags.outputs.tags }}
           cache-from: type=registry,ref=houbystudio/sbf:buildcache
           cache-to: type=registry,ref=houbystudio/sbf:buildcache,mode=max
