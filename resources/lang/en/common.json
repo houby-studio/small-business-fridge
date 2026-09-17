@@ -79,5 +79,6 @@
   "guest_tagline": "Shared drinks and snacks",
   "page_not_found": "Page not found.",
   "server_error": "Server error.",
-  "back_to_home": "Back to home"
+  "back_to_home": "Back to home",
+  "version": "Version"
 }

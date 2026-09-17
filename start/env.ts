@@ -132,6 +132,17 @@ export default await Env.create(new URL('../', import.meta.url), {
 
   /*
   |----------------------------------------------------------
+  | Build metadata
+  |----------------------------------------------------------
+  | Baked into the image at build time by the release workflow; never set by hand.
+  | Absent in local development, where the app reports itself as `dev`.
+  */
+  APP_VERSION: Env.schema.string.optional(),
+  GIT_SHA: Env.schema.string.optional(),
+  BUILD_DATE: Env.schema.string.optional(),
+
+  /*
+  |----------------------------------------------------------
   | OpenAI integration
   |----------------------------------------------------------
   */

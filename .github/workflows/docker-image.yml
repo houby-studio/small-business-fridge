@@ -5,6 +5,9 @@ permissions:
 on:
   push:
     branches: ['feat/*', 'master']
+    # Releases are cut by pushing a bare semver tag (1.0.0 … 3.0.0), matching the tags
+    # this repo already carries. `npm version` produces them thanks to .npmrc.
+    tags: ['[0-9]+.[0-9]+.[0-9]+']
 
 jobs:
   build:
@@ -22,14 +25,71 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # `latest` means "newest release", because that is what a fresh `docker compose up -d`
+      # pulls with the default tag in compose.yaml. It must never point at a branch build.
+      - name: Compute image tags and build metadata
+        id: meta
+        run: |
+          set -euo pipefail
+          tags="houbystudio/sbf:${GITHUB_SHA}"
+          version="dev"
+
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            version="${GITHUB_REF_NAME}"
+            tags="${tags},houbystudio/sbf:${version},houbystudio/sbf:latest"
+          elif [ "${GITHUB_REF}" = "refs/heads/master" ]; then
+            tags="${tags},houbystudio/sbf:master"
+          else
+            alias="$(printf '%s' "${GITHUB_REF_NAME}" | tr '/' '-')"
+            tags="${tags},houbystudio/sbf:${alias}"
+          fi
+
+          {
+            echo "tags=${tags}"
+            echo "version=${version}"
+            echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } >> "$GITHUB_OUTPUT"
+          echo "Tagging as: ${tags} (version ${version})"
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
           push: true
-          tags: |
-            houbystudio/sbf:latest
-            houbystudio/sbf:${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            APP_VERSION=${{ steps.meta.outputs.version }}
+            GIT_SHA=${{ github.sha }}
+            BUILD_DATE=${{ steps.meta.outputs.build_date }}
           cache-from: type=registry,ref=houbystudio/sbf:buildcache
           cache-to: type=registry,ref=houbystudio/sbf:buildcache,mode=max
+
+  release:
+    # Only tags produce a GitHub Release, and only once the image is actually published,
+    # so a release never advertises a version nobody can pull.
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          body: |
+            Docker image:
+
+            ```
+            docker pull houbystudio/sbf:${{ github.ref_name }}
+            ```
+
+            Pin this tag in production rather than `latest`, so a rollback is deterministic.

@@ -30,11 +30,20 @@ export interface Impersonation {
   asName: string
 }
 
+/** Which build of the app is running. Mirrors `app/services/build_info.ts`. */
+export interface BuildInfo {
+  version: string
+  commit: string | null
+  commitShort: string | null
+  buildDate: string | null
+}
+
 export interface SharedProps {
   user: User | undefined
   flash: FlashMessages
   impersonation: Impersonation | undefined
   appName: string
+  build?: BuildInfo
   currencyCode?: string
   currency?: string
   [key: string]: unknown
