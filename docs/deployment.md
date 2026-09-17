@@ -129,6 +129,56 @@ result with the `image:` name (`houbystudio/sbf:latest`).
 
 ---
 
+## Cutting a release
+
+Releases are plain semver git tags (`1.0.0`, `2.2.0`, `3.0.0`). Everything downstream is
+automated; you only choose the number.
+
+```bash
+npm version patch   # or minor / major
+git push --follow-tags
+```
+
+`npm version` bumps `package.json`, commits, and creates the tag. `.npmrc` keeps the tag
+bare so it matches the tags this repo already carries.
+
+Pushing the tag triggers `docker-image.yml`, which:
+
+1. builds the image and pushes `houbystudio/sbf:<version>`, `:latest` and `:<commit sha>`,
+2. bakes the version, commit and build date into the image as env vars and OCI labels,
+3. creates a GitHub Release with notes generated from the merged pull requests.
+
+### What `latest` means
+
+`latest` is the newest **release**, never the tip of a branch. That is what a fresh
+`docker compose up -d` pulls with the default tag in `compose.yaml`. Branch builds get
+`:master` or `:<branch-name>` instead, plus an immutable `:<commit sha>`.
+
+In production, pin the version tag rather than `latest`, so a rollback is deterministic:
+
+```bash
+DOCKER_IMAGE_TAG=3.0.0
+```
+
+### Which build is running
+
+Three ways, no guessing:
+
+```bash
+# from the image, without starting anything
+docker inspect --format '{{index .Config.Labels "org.opencontainers.image.version"}}' houbystudio/sbf:latest
+
+# from a running container
+docker exec <container> printenv APP_VERSION GIT_SHA BUILD_DATE
+```
+
+Signed-in users see it in the footer of every page. It is deliberately **not** on
+`/api/v1/health`, which is unauthenticated and usually internet-facing.
+
+A build that was not produced by the release workflow reports itself as `dev`.
+
+---
+
 ## Environment variable reference
 
 | Variable                                | Required | Secret | Default                 | Description                                                       |

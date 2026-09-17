@@ -29,6 +29,23 @@ FROM base AS production
 WORKDIR /app
 ENV NODE_ENV=production
 
+# Which build this is. Supplied by the release workflow; `dev` for a plain local build.
+# The same values go into OCI labels so `docker inspect` can answer without the app running.
+ARG APP_VERSION=dev
+ARG GIT_SHA=""
+ARG BUILD_DATE=""
+ENV APP_VERSION=${APP_VERSION} \
+    GIT_SHA=${GIT_SHA} \
+    BUILD_DATE=${BUILD_DATE}
+
+LABEL org.opencontainers.image.title="Small Business Fridge" \
+      org.opencontainers.image.description="Office fridge shop: colleagues buy drinks and snacks at cost." \
+      org.opencontainers.image.source="https://github.com/houby-studio/small-business-fridge" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.version="${APP_VERSION}" \
+      org.opencontainers.image.revision="${GIT_SHA}" \
+      org.opencontainers.image.created="${BUILD_DATE}"
+
 COPY --from=build /app/swagger.json ./
 COPY --from=build /app/swagger.yml ./
 COPY --from=build /app/build ./

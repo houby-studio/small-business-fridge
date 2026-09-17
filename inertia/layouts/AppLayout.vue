@@ -16,6 +16,23 @@ const user = computed(() => page.props.user)
 const impersonation = computed(() => page.props.impersonation)
 const appName = computed(() => page.props.appName ?? 'Small Business Fridge')
 
+// Which build is running. Handy when someone reports a bug: the version is right there
+// instead of having to ask. `dev` means an unreleased local build.
+const build = computed(() => page.props.build)
+const buildLabel = computed(() => {
+  const b = build.value
+  if (!b) return null
+  return b.commitShort ? `${b.version} · ${b.commitShort}` : b.version
+})
+const buildTitle = computed(() => {
+  const b = build.value
+  if (!b) return undefined
+  const parts = [`${t('common.version')} ${b.version}`]
+  if (b.commit) parts.push(b.commit)
+  if (b.buildDate) parts.push(new Date(b.buildDate).toLocaleString())
+  return parts.join(' · ')
+})
+
 const isSupplier = computed(() => user.value?.role === 'supplier' || user.value?.role === 'admin')
 const isAdmin = computed(() => user.value?.role === 'admin')
 
@@ -273,5 +290,16 @@ onUnmounted(() => {
     <main class="sbf-main mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       <slot />
     </main>
+
+    <!-- Build footer: deliberately quiet, but always reachable for bug reports -->
+    <footer
+      v-if="buildLabel"
+      class="mx-auto max-w-7xl px-4 pb-6 text-center sm:px-6 lg:px-8"
+      data-testid="app-build-info"
+    >
+      <span class="text-xs text-slate-400 dark:text-zinc-600" :title="buildTitle">
+        {{ appName }} {{ buildLabel }}
+      </span>
+    </footer>
   </div>
 </template>

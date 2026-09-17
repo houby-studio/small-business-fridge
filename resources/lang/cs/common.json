@@ -79,5 +79,6 @@
   "guest_tagline": "Sdílení nápojů a svačin",
   "page_not_found": "Stránka nebyla nalezena.",
   "server_error": "Chyba serveru.",
-  "back_to_home": "Zpět na úvod"
+  "back_to_home": "Zpět na úvod",
+  "version": "Verze"
 }

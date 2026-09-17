@@ -5,6 +5,7 @@ import BaseInertiaMiddleware from '@adonisjs/inertia/inertia_middleware'
 import type { InferSharedProps } from '@adonisjs/inertia/types'
 import db from '@adonisjs/lucid/services/db'
 import env from '#start/env'
+import buildInfo from '#services/build_info'
 import { readFileSync, readdirSync } from 'node:fs'
 import {
   applyCurrencyPlaceholder,
@@ -107,6 +108,11 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
       ),
       locale,
       appName: env.get('APP_NAME', 'Small Business Fridge'),
+      /**
+       * Plain value, not `always()`, so it rides along with the first render and is then
+       * excluded from partial reloads like every other piece of static shared data.
+       */
+      build: buildInfo,
       currencyCode,
       currency,
       translations: loadTranslations(locale),
