@@ -1,3 +1,4 @@
+import { HttpContext } from '@adonisjs/core/http'
 import AuditLog from '#models/audit_log'
 import db from '@adonisjs/lucid/services/db'
 
@@ -14,6 +15,16 @@ export default class AuditService {
     metadata: Record<string, any> | null = null
   ): Promise<void> {
     try {
+      // While an admin impersonates someone, the recorded actor is the impersonated user —
+      // keep the real one too, or the log would claim the user did it themselves.
+      const impersonator = HttpContext.get()?.impersonator
+      if (impersonator && impersonator.id !== userId) {
+        metadata = {
+          ...metadata,
+          impersonatedBy: { id: impersonator.id, name: impersonator.displayName },
+        }
+      }
+
       // Use raw query builder for writes to avoid any model mapping issues
       await db.table('audit_logs').insert({
         user_id: userId,

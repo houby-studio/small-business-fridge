@@ -59,5 +59,7 @@
   "action_delivery_corrected": "Delivery corrected",
   "action_delivery_voided": "Delivery voided",
   "actor": "Who",
-  "actor_you": "You"
+  "actor_you": "You",
+  "actor_impersonated": "{name} on your behalf",
+  "impersonated_by": "actually {name} (impersonating)"
 }

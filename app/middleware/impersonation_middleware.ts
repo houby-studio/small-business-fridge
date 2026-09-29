@@ -27,6 +27,8 @@ export default class ImpersonationMiddleware {
       const target = await User.find(impersonation.asId)
 
       if (target && !target.isDisabled) {
+        // Remember who is really acting, so the audit log can say so (AuditService).
+        ctx.impersonator = { id: ctx.auth.user.id, displayName: ctx.auth.user.displayName }
         // Override the effective user — all downstream middleware and controllers
         // will see the impersonated user as auth.user.
         ;(ctx.auth.use('web') as unknown as { user: User }).user = target
@@ -37,5 +39,12 @@ export default class ImpersonationMiddleware {
     }
 
     return next()
+  }
+}
+
+declare module '@adonisjs/core/http' {
+  interface HttpContext {
+    /** The admin actually behind this request while they impersonate another user. */
+    impersonator?: { id: number; displayName: string }
   }
 }

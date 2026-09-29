@@ -25,6 +25,8 @@ export default class AuditController {
           // Entries where someone else acted on this user's records (e.g. an admin
           // correcting their delivery) must say who did it.
           actorIsMe: log.userId === auth.user!.id,
+          // Set when an admin acted while impersonating this user.
+          impersonatedBy: log.metadata?.impersonatedBy?.name ?? null,
           targetUser: log.targetUser ? { displayName: log.targetUser.displayName } : null,
           createdAt: log.createdAt.toISO(),
         })),

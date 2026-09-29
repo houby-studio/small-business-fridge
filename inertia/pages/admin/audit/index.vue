@@ -80,7 +80,7 @@ function actionLabel(action: string | undefined) {
 function formatMetadata(meta: Record<string, any> | null): string {
   if (!meta) return ''
   return Object.entries(meta)
-    .filter(([, v]) => v !== null && v !== undefined)
+    .filter(([k, v]) => v !== null && v !== undefined && k !== 'impersonatedBy')
     .map(([k, v]) => {
       if (typeof v === 'object' && !Array.isArray(v) && v !== null) {
         if ('from' in v && 'to' in v) return `${k}: ${v.from ?? '—'} → ${v.to ?? '—'}`
@@ -190,7 +190,16 @@ function onSort(event: any) {
         <template #body="{ data }">{{ formatDateTime(data.createdAt) }}</template>
       </Column>
       <Column :header="t('audit.user')">
-        <template #body="{ data }">{{ data.user?.displayName ?? '—' }}</template>
+        <template #body="{ data }">
+          <div>{{ data.user?.displayName ?? '—' }}</div>
+          <div
+            v-if="data.metadata?.impersonatedBy"
+            class="text-xs text-amber-700 dark:text-amber-300"
+            data-testid="audit-impersonated-by"
+          >
+            {{ t('audit.impersonated_by', { name: data.metadata.impersonatedBy.name }) }}
+          </div>
+        </template>
       </Column>
       <Column :header="t('audit.action')" headerClass="sbf-col-tight" bodyClass="sbf-col-tight">
         <template #body="{ data }">

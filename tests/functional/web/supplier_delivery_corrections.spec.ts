@@ -477,3 +477,59 @@ test.group('Supplier is told when someone else changes their records', (group) =
     assert.isTrue(corrections.some((row) => row.actorIsMe))
   })
 })
+
+test.group('Audit records the real admin behind an impersonated action', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('a correction made while impersonating the supplier names the admin', async ({
+    client,
+    assert,
+  }) => {
+    const { supplier, delivery } = await setup({ amount: 10, price: 5 })
+    const admin = await UserFactory.apply('admin').create()
+    const impersonation = {
+      __impersonation: { byId: admin.id, asId: supplier.id, asName: supplier.displayName },
+    }
+
+    const response = await client
+      .put(`/supplier/deliveries/${delivery.id}`)
+      .loginAs(admin)
+      .withSession(impersonation)
+      .withCsrfToken()
+      .json({ amount: 8, price: 5, reason: 'Fixed while impersonating' })
+      .redirects(0)
+    response.assertStatus(302)
+
+    // The action is recorded as the supplier's (they are the effective user) …
+    const log = await db.from('audit_logs').where('action', 'delivery.corrected').firstOrFail()
+    assert.equal(log.user_id, supplier.id)
+    // … but the admin who really did it is kept.
+    assert.deepEqual(log.metadata.impersonatedBy, { id: admin.id, name: admin.displayName })
+
+    // The supplier's own activity page shows it was done on their behalf.
+    const activity = await client
+      .get('/audit')
+      .loginAs(supplier)
+      .header('X-Inertia', 'true')
+      .header('X-Inertia-Version', '1')
+    const row = (activity.body().props.logs.data as any[]).find(
+      (r) => r.action === 'delivery.corrected'
+    )
+    assert.equal(row.impersonatedBy, admin.displayName)
+  })
+
+  test('an ordinary action carries no impersonation marker', async ({ client, assert }) => {
+    const { supplier, delivery } = await setup({ amount: 10, price: 5 })
+
+    await client
+      .put(`/supplier/deliveries/${delivery.id}`)
+      .loginAs(supplier)
+      .withCsrfToken()
+      .json({ amount: 8, price: 5, reason: 'Own fix' })
+      .redirects(0)
+
+    const log = await db.from('audit_logs').where('action', 'delivery.corrected').firstOrFail()
+    assert.notProperty(log.metadata, 'impersonatedBy')
+  })
+})
