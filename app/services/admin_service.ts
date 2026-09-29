@@ -29,10 +29,9 @@ export default class AdminService {
       // Order stats
       db
         .from('orders')
-        .join('deliveries', 'orders.delivery_id', 'deliveries.id')
         .select(
           db.rawQuery('COUNT(*)::int as total_orders'),
-          db.rawQuery('COALESCE(SUM(deliveries.price), 0)::numeric as total_revenue'),
+          db.rawQuery('COALESCE(SUM(orders.unit_price), 0)::numeric as total_revenue'),
           db.rawQuery(
             "COUNT(*) FILTER (WHERE orders.created_at >= NOW() - INTERVAL '7 days')::int as orders_last_week"
           ),
@@ -92,7 +91,7 @@ export default class AdminService {
         createdAt: o.createdAt.toISO(),
         buyerName: o.buyer?.displayName ?? '—',
         productName: o.delivery?.product?.displayName ?? '—',
-        price: o.delivery?.price ?? 0,
+        price: o.unitPrice,
         supplierName: o.delivery?.supplier?.displayName ?? '—',
       })),
     }
@@ -365,6 +364,7 @@ export default class AdminService {
         q.preload('product')
         q.preload('supplier')
       })
+      .preload('priceCorrection')
       .orderBy(safeSort, sortDir)
 
     if (filters?.channel) {

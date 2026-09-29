@@ -8,5 +8,13 @@
   "filter_channel": "Kanál",
   "filter_invoiced": "Fakturováno",
   "filter_invoiced_yes": "Fakturováno",
-  "filter_invoiced_no": "Nefakturováno"
+  "filter_invoiced_no": "Nefakturováno",
+  "price_corrected": "Cena opravena",
+  "price_original": "původně {price} {currency}",
+  "price_correction_detail": "Detail opravy ceny",
+  "price_correction_title": "Oprava ceny",
+  "price_correction_original": "Původní cena",
+  "price_correction_current": "Opravená cena",
+  "price_correction_reason": "Důvod",
+  "price_correction_date": "Opraveno"
 }

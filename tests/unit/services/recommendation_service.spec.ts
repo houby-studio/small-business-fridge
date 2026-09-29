@@ -28,6 +28,7 @@ function orderRow(buyerId: number, deliveryId: number) {
     buyer_id: buyerId,
     delivery_id: deliveryId,
     channel: 'web',
+    unit_price: 10,
     created_at: now,
     updated_at: now,
   }

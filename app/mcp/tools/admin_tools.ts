@@ -125,7 +125,7 @@ export function registerAdminTools(server: McpServer, user: User) {
             buyerId: o.buyerId,
             product: o.delivery?.product?.displayName ?? null,
             supplier: o.delivery?.supplier?.displayName ?? null,
-            price: o.delivery?.price ?? null,
+            price: o.unitPrice,
             channel: o.channel,
             invoiced: o.invoiceId !== null && o.invoiceId !== undefined,
             createdAt: o.createdAt?.toISO() ?? null,

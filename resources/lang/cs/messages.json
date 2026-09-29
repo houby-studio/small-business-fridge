@@ -92,5 +92,15 @@
   "oidc_already_linked": "Tento externí účet je již propojen s jiným uživatelem.",
   "too_many_requests": "Příliš mnoho požadavků. Zkuste to prosím znovu za {retryAfter} sekund.",
   "barcode_taken": "Tento čárový kód už používá jiný produkt.",
-  "name_taken": "Tento název už je použitý."
+  "name_taken": "Tento název už je použitý.",
+  "delivery_corrected": "Naskladnění bylo opraveno.",
+  "delivery_corrected_repriced": "Naskladnění bylo opraveno. Cena se změnila u {count} nevyfakturovaných nákupů, kupující dostanou e-mail.",
+  "delivery_voided": "Naskladnění bylo stornováno.",
+  "delivery_correction_not_found": "Naskladnění nebylo nalezeno.",
+  "delivery_correction_forbidden": "Toto naskladnění může opravit jen jeho dodavatel nebo administrátor.",
+  "delivery_correction_voided": "Stornované naskladnění už nelze upravit.",
+  "delivery_correction_amount_below_sold": "Množství nemůže být nižší než počet už prodaných kusů.",
+  "delivery_correction_no_change": "Množství ani cena se nezměnily.",
+  "delivery_void_has_orders": "Z naskladnění už někdo nakoupil, proto ho nelze stornovat. Snižte množství na počet prodaných kusů.",
+  "delivery_correction_amount_increase": "Množství v opravě nelze navýšit. Chybějící kusy naskladněte jako novou dodávku."
 }

@@ -11,6 +11,8 @@ import { useListFilters } from '~/composables/use_list_filters'
 import { useSelectEnterKey } from '~/composables/use_select_enter_key'
 import FilterBar from '~/components/FilterBar.vue'
 import PaginatedDataTable from '~/components/PaginatedDataTable.vue'
+import DeliveryCorrectionDialog from '~/components/DeliveryCorrectionDialog.vue'
+import type { CorrectableDelivery } from '~/components/DeliveryCorrectionDialog.vue'
 
 interface ProductOption {
   id: number
@@ -25,7 +27,22 @@ interface DeliveryRow {
   amountLeft: number
   price: number
   createdAt: string
+  voidedAt: string | null
   product: { displayName: string; category?: { name: string } }
+  supplierName: string
+  soldCount: number
+  invoicedCount: number
+  uninvoicedCount: number
+  uninvoicedBuyerCount: number
+  correctionCount: number
+  lastCorrection: {
+    kind: 'update' | 'void'
+    reason: string
+    createdAt: string
+    oldAmountSupplied: number
+    oldPrice: number
+  } | null
+  canCorrect: boolean
 }
 
 interface PaginatedDeliveries {
@@ -36,7 +53,7 @@ interface PaginatedDeliveries {
 const props = defineProps<{
   products: ProductOption[]
   recentDeliveries: PaginatedDeliveries
-  filters: { productId: string; sortBy: string; sortOrder: string }
+  filters: { productId: string; sortBy: string; sortOrder: string; scope: string }
   preselect: number | null
 }>()
 
@@ -46,11 +63,17 @@ const ALL = '__all__'
 const filterProductId = ref(props.filters.productId || ALL)
 const filterSortBy = ref(props.filters.sortBy || 'createdAt')
 const filterSortOrder = ref(props.filters.sortOrder || 'desc')
+const filterScope = ref(props.filters.scope === 'store' ? 'store' : 'mine')
 const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
 
 const productFilterOptions = computed(() => [
   { label: t('common.all'), value: ALL },
   ...props.products.map((p) => ({ label: p.displayName, value: String(p.id) })),
+])
+
+const scopeOptions = computed(() => [
+  { label: t('supplier.deliveries_scope_mine'), value: 'mine' },
+  { label: t('supplier.deliveries_scope_store'), value: 'store' },
 ])
 
 const productFilterSelect = ref<any>(null)
@@ -72,6 +95,7 @@ function buildFilterParams() {
     productId: filterProductId.value === ALL ? undefined : filterProductId.value,
     sortBy: filterSortBy.value || undefined,
     sortOrder: filterSortOrder.value || undefined,
+    scope: filterScope.value === 'mine' ? undefined : filterScope.value,
   }
 }
 
@@ -86,6 +110,7 @@ function clearFilters() {
   filterProductId.value = ALL
   filterSortBy.value = 'createdAt'
   filterSortOrder.value = 'desc'
+  filterScope.value = 'mine'
   navigateClear()
 }
 
@@ -93,6 +118,26 @@ function onSort(event: any) {
   filterSortBy.value = event.sortField
   filterSortOrder.value = event.sortOrder === 1 ? 'asc' : 'desc'
   navigateSort()
+}
+
+const correctionVisible = ref(false)
+const correctionMode = ref<'edit' | 'void'>('edit')
+const correctionTarget = ref<CorrectableDelivery | null>(null)
+
+function openCorrection(row: DeliveryRow, mode: 'edit' | 'void') {
+  correctionTarget.value = {
+    id: row.id,
+    productName: row.product?.displayName ?? '—',
+    amountSupplied: row.amountSupplied,
+    amountLeft: row.amountLeft,
+    price: row.price,
+    soldCount: row.soldCount,
+    invoicedCount: row.invoicedCount,
+    uninvoicedCount: row.uninvoicedCount,
+    uninvoicedBuyerCount: row.uninvoicedBuyerCount,
+  }
+  correctionMode.value = mode
+  correctionVisible.value = true
 }
 </script>
 
@@ -115,6 +160,19 @@ function onSort(event: any) {
 
     <!-- Filter bar -->
     <FilterBar @apply="applyFilters" @clear="clearFilters">
+      <div>
+        <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300">{{
+          t('supplier.stock_scope')
+        }}</label>
+        <Select
+          v-model="filterScope"
+          :options="scopeOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="w-48"
+          data-testid="deliveries-scope"
+        />
+      </div>
       <div>
         <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
           t('supplier.deliveries_filter_product')
@@ -150,7 +208,24 @@ function onSort(event: any) {
         <template #body="{ data }">{{ formatDate(data.createdAt) }}</template>
       </Column>
       <Column :header="t('common.product')">
-        <template #body="{ data }">{{ data.product?.displayName ?? '—' }}</template>
+        <template #body="{ data }">
+          <div>{{ data.product?.displayName ?? '—' }}</div>
+          <div
+            v-if="data.lastCorrection"
+            class="text-xs text-gray-500 dark:text-zinc-400"
+            data-testid="delivery-last-correction"
+          >
+            {{
+              t('supplier.deliveries_last_correction', {
+                date: formatDate(data.lastCorrection.createdAt),
+                reason: data.lastCorrection.reason,
+              })
+            }}
+          </div>
+        </template>
+      </Column>
+      <Column v-if="filterScope === 'store'" :header="t('common.supplier')">
+        <template #body="{ data }">{{ data.supplierName }}</template>
       </Column>
       <Column
         :header="t('supplier.deliveries_amount')"
@@ -178,11 +253,59 @@ function onSort(event: any) {
         }}</template>
       </Column>
 
+      <Column :header="t('common.status')">
+        <template #body="{ data }">
+          <span
+            v-if="data.voidedAt"
+            class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800 dark:bg-zinc-700 dark:text-zinc-200"
+            data-testid="delivery-status-voided"
+            >{{ t('supplier.deliveries_status_voided') }}</span
+          >
+          <span
+            v-else-if="data.correctionCount > 0"
+            class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-200"
+            data-testid="delivery-status-corrected"
+            >{{ t('supplier.deliveries_status_corrected') }}</span
+          >
+        </template>
+      </Column>
+      <Column :header="t('common.actions')" headerClass="sbf-col-action" bodyClass="sbf-col-action">
+        <template #body="{ data }">
+          <div v-if="data.canCorrect && !data.voidedAt" class="flex gap-1">
+            <Button
+              icon="pi pi-pencil"
+              severity="info"
+              text
+              size="small"
+              :aria-label="t('supplier.correction_edit')"
+              data-testid="delivery-correct"
+              @click="openCorrection(data, 'edit')"
+            />
+            <Button
+              v-if="data.soldCount === 0"
+              icon="pi pi-trash"
+              severity="danger"
+              text
+              size="small"
+              :aria-label="t('supplier.correction_void')"
+              data-testid="delivery-void"
+              @click="openCorrection(data, 'void')"
+            />
+          </div>
+        </template>
+      </Column>
+
       <template #empty>
         <div class="py-8 text-center text-gray-500 dark:text-zinc-400">
           {{ t('supplier.deliveries_none') }}
         </div>
       </template>
     </PaginatedDataTable>
+
+    <DeliveryCorrectionDialog
+      v-model:visible="correctionVisible"
+      :delivery="correctionTarget"
+      :mode="correctionMode"
+    />
   </AppLayout>
 </template>

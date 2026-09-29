@@ -14,6 +14,7 @@ import { useListFilters } from '~/composables/use_list_filters'
 import { useSelectEnterKey } from '~/composables/use_select_enter_key'
 import FilterBar from '~/components/FilterBar.vue'
 import PaginatedDataTable from '~/components/PaginatedDataTable.vue'
+import OrderPrice from '~/components/OrderPrice.vue'
 
 interface OrderRow {
   id: number
@@ -21,6 +22,9 @@ interface OrderRow {
   createdAt: string
   invoiceId: number | null
   buyer: { displayName: string }
+  unitPrice: number
+  originalUnitPrice: number | null
+  priceCorrection: { reason: string; createdAt: string } | null
   delivery: {
     price: number
     product: { displayName: string }
@@ -246,9 +250,13 @@ function storno(orderId: number) {
         <template #body="{ data }">{{ data.delivery?.product?.displayName ?? '—' }}</template>
       </Column>
       <Column :header="t('common.price')" headerClass="sbf-col-price" bodyClass="sbf-col-price">
-        <template #body="{ data }">{{
-          t('common.price_with_currency', { price: data.delivery?.price ?? 0 })
-        }}</template>
+        <template #body="{ data }">
+          <OrderPrice
+            :unitPrice="data.unitPrice"
+            :originalUnitPrice="data.originalUnitPrice"
+            :correction="data.priceCorrection"
+          />
+        </template>
       </Column>
       <Column :header="t('common.supplier')">
         <template #body="{ data }">{{ data.delivery?.supplier?.displayName ?? '—' }}</template>

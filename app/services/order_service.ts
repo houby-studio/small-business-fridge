@@ -47,6 +47,7 @@ export default class OrderService {
           buyerId,
           deliveryId,
           channel,
+          unitPrice: delivery.price,
         },
         { client: trx }
       )
@@ -170,7 +171,10 @@ export default class OrderService {
         await delivery.save()
 
         for (let q = 0; q < quantity; q++) {
-          const order = await Order.create({ buyerId, deliveryId, channel }, { client: trx })
+          const order = await Order.create(
+            { buyerId, deliveryId, channel, unitPrice: delivery.price },
+            { client: trx }
+          )
           orders.push(order)
           await AuditService.log(buyerId, 'order.created', 'order', order.id, delivery.supplierId, {
             productId: delivery.productId,
@@ -203,6 +207,7 @@ export default class OrderService {
         q.preload('product')
         q.preload('supplier')
       })
+      .preload('priceCorrection')
       .orderBy(sortBy, sortOrder)
 
     if (filters?.channel) {
@@ -220,12 +225,11 @@ export default class OrderService {
     const buildStatsQuery = () =>
       Order.query()
         .where('buyerId', userId)
-        .join('deliveries', 'orders.delivery_id', 'deliveries.id')
         .select(
           db.rawQuery('COUNT(*)::int as total_orders'),
-          db.rawQuery('COALESCE(SUM(deliveries.price), 0)::numeric as total_spend'),
+          db.rawQuery('COALESCE(SUM(orders.unit_price), 0)::numeric as total_spend'),
           db.rawQuery(
-            'COALESCE(SUM(CASE WHEN orders.invoice_id IS NULL THEN deliveries.price ELSE 0 END), 0)::numeric as total_uninvoiced'
+            'COALESCE(SUM(CASE WHEN orders.invoice_id IS NULL THEN orders.unit_price ELSE 0 END), 0)::numeric as total_uninvoiced'
           )
         )
 

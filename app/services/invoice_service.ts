@@ -35,7 +35,7 @@ export default class InvoiceService {
       const invoices: Invoice[] = []
 
       for (const [buyerId, orders] of byBuyer) {
-        const totalCost = orders.reduce((sum, o) => sum + o.delivery.price, 0)
+        const totalCost = orders.reduce((sum, o) => sum + o.unitPrice, 0)
 
         // Self-invoice (supplier buying from themselves) — auto-mark as paid
         const isSelfInvoice = buyerId === supplierId
@@ -88,7 +88,7 @@ export default class InvoiceService {
         'users.id as buyer_id',
         'users.display_name as buyer_name',
         db.rawQuery('COUNT(*)::int as order_count'),
-        db.rawQuery('COALESCE(SUM(deliveries.price), 0)::numeric as total_cost')
+        db.rawQuery('COALESCE(SUM(orders.unit_price), 0)::numeric as total_cost')
       )
       .groupBy('users.id', 'users.display_name')
       .orderBy('total_cost', 'desc')
@@ -319,7 +319,7 @@ export default class InvoiceService {
         return null
       }
 
-      const totalCost = orders.reduce((sum, o) => sum + o.delivery.price, 0)
+      const totalCost = orders.reduce((sum, o) => sum + o.unitPrice, 0)
       const isSelfInvoice = buyerId === supplierId
 
       const invoice = await Invoice.create(
@@ -377,7 +377,7 @@ export default class InvoiceService {
       const invoices: Invoice[] = []
 
       for (const [supplierId, orders] of bySupplier) {
-        const totalCost = orders.reduce((sum, o) => sum + o.delivery.price, 0)
+        const totalCost = orders.reduce((sum, o) => sum + o.unitPrice, 0)
         const isSelfInvoice = buyerId === supplierId
 
         const invoice = await Invoice.create(

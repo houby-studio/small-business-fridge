@@ -123,6 +123,7 @@ export function registerSupplierTools(server: McpServer, user: User) {
             amountSupplied: d.amountSupplied,
             amountLeft: d.amountLeft,
             unitPrice: d.price,
+            voided: d.voidedAt !== null && d.voidedAt !== undefined,
             createdAt: d.createdAt?.toISO() ?? null,
           })),
         })

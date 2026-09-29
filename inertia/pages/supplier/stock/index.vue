@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted } from 'vue'
-import { Head, Link, router } from '@inertiajs/vue3'
+import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
@@ -9,6 +9,7 @@ import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Select from 'primevue/select'
 import InputNumber from 'primevue/inputnumber'
+import Dialog from 'primevue/dialog'
 import { useI18n } from '~/composables/use_i18n'
 import { useListFilters } from '~/composables/use_list_filters'
 import { useSelectEnterKey } from '~/composables/use_select_enter_key'
@@ -71,6 +72,20 @@ interface RecentDeliveryRow {
   price: number
   productName: string
   supplierName: string
+  voidedAt: string | null
+}
+
+interface DeliveryWarning {
+  duplicate: { amount: number; price: number; minutesAgo: number } | null
+  unusualPrice: {
+    lastPrice: number
+    lastSupplierId: number
+    lastSupplierName: string
+    lastCreatedAt: string
+  } | null
+  productId: number
+  amount: number
+  price: number
 }
 
 const props = defineProps<{
@@ -246,7 +261,59 @@ function onSort(event: any) {
   )
 }
 
-function submitQuickDelivery() {
+const deliveryWarning = ref<DeliveryWarning | null>(null)
+const warningVisible = ref(false)
+
+const warningProductName = computed(
+  () =>
+    props.products.find((p) => Number(p.id) === deliveryWarning.value?.productId)?.displayName ?? ''
+)
+
+const warningItems = computed(() => {
+  const warning = deliveryWarning.value
+  if (!warning) return []
+
+  const items: Array<{ kind: 'duplicate' | 'price'; title: string; detail: string; hint: string }> =
+    []
+
+  if (warning.duplicate) {
+    items.push({
+      kind: 'duplicate',
+      title: t('supplier.warning_duplicate_title'),
+      detail: t('supplier.warning_duplicate_detail', {
+        minutes: warning.duplicate.minutesAgo,
+        amount: warning.duplicate.amount,
+        price: warning.duplicate.price,
+      }),
+      hint: t('supplier.warning_duplicate_hint'),
+    })
+  }
+  if (warning.unusualPrice) {
+    items.push({
+      kind: 'price',
+      title: t('supplier.warning_price_title'),
+      detail: t('supplier.warning_price_detail', {
+        price: warning.unusualPrice.lastPrice,
+        supplier:
+          warning.unusualPrice.lastSupplierId === currentUserId.value
+            ? t('supplier.warning_price_you')
+            : warning.unusualPrice.lastSupplierName,
+        // Keep the date on one line on narrow screens.
+        date: formatDate(warning.unusualPrice.lastCreatedAt).replace(/ /g, '\u00a0'),
+      }),
+      hint: t('supplier.warning_price_hint'),
+    })
+  }
+  return items
+})
+
+const page = usePage()
+const currentUserId = computed(() => (page.props.user as { id: number } | undefined)?.id)
+
+function submitQuickDelivery(confirmWarnings = false) {
+  // Enter in the price field bypasses the disabled button, so guard here too — a second
+  // Enter while the first request is in flight used to stock the delivery twice.
+  if (submitting.value) return
   if (!selectedProduct.value || !amount.value || !price.value) return
 
   submitting.value = true
@@ -256,9 +323,22 @@ function submitQuickDelivery() {
       productId: selectedProduct.value,
       amount: amount.value,
       price: price.value,
+      ...(confirmWarnings ? { confirmWarnings: true } : {}),
     },
     {
-      onSuccess: () => {
+      preserveState: true,
+      preserveScroll: true,
+      onSuccess: (page) => {
+        const warning = (page.props.flash as Record<string, unknown> | undefined)
+          ?.deliveryWarning as DeliveryWarning | undefined
+        if (warning) {
+          // Nothing was stored — keep the form as typed and ask for confirmation.
+          deliveryWarning.value = warning
+          warningVisible.value = true
+          return
+        }
+        warningVisible.value = false
+        deliveryWarning.value = null
         selectedProduct.value = null
         amount.value = null
         price.value = null
@@ -281,6 +361,16 @@ function onPriceEnter() {
   if (selectedProduct.value && amount.value && price.value) {
     submitQuickDelivery()
   }
+}
+
+function confirmWarningDelivery() {
+  submitQuickDelivery(true)
+}
+
+function cancelWarningDelivery() {
+  warningVisible.value = false
+  deliveryWarning.value = null
+  nextTick(() => focusPriceField())
 }
 
 function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
@@ -319,7 +409,7 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
     <Card class="mb-6">
       <template #content>
         <form
-          @submit.prevent="submitQuickDelivery"
+          @submit.prevent="submitQuickDelivery()"
           class="grid grid-cols-1 items-end gap-2 lg:grid-cols-12"
         >
           <div class="min-w-0 lg:col-span-6">
@@ -373,12 +463,70 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
               :label="t('supplier.deliveries_submit')"
               icon="pi pi-plus"
               :loading="submitting"
-              :disabled="!selectedProduct || !amount || !price"
+              :disabled="!selectedProduct || !amount || !price || submitting"
             />
           </div>
         </form>
       </template>
     </Card>
+
+    <Dialog
+      v-model:visible="warningVisible"
+      :header="t('supplier.warning_title')"
+      :style="{ width: '28rem', maxWidth: 'calc(100vw - 2rem)' }"
+      modal
+      :draggable="false"
+      data-testid="delivery-warning-dialog"
+    >
+      <div v-if="deliveryWarning" class="space-y-5">
+        <p class="text-sm text-gray-700 dark:text-zinc-300" data-testid="delivery-warning-summary">
+          <span class="text-gray-500 dark:text-zinc-400">{{ t('supplier.warning_now') }}:</span>
+          {{ warningProductName }} ·
+          {{ t('supplier.warning_amount', { amount: deliveryWarning.amount }) }}
+          <span
+            :class="
+              deliveryWarning.unusualPrice
+                ? 'font-semibold text-amber-700 dark:text-amber-300'
+                : 'font-medium text-gray-900 dark:text-zinc-100'
+            "
+            >{{ t('supplier.warning_unit_price', { price: deliveryWarning.price }) }}</span
+          >
+        </p>
+        <section
+          v-for="item in warningItems"
+          :key="item.kind"
+          class="flex gap-3"
+          :data-testid="`delivery-warning-${item.kind}`"
+        >
+          <span
+            class="pi pi-exclamation-triangle mt-0.5 text-lg text-amber-600 dark:text-amber-400"
+            aria-hidden="true"
+          />
+          <div class="min-w-0 flex-1 space-y-1">
+            <p class="font-semibold text-gray-900 dark:text-zinc-100">{{ item.title }}</p>
+            <p class="text-sm text-gray-700 dark:text-zinc-300">{{ item.detail }}</p>
+            <p class="text-sm text-gray-500 dark:text-zinc-400">{{ item.hint }}</p>
+          </div>
+        </section>
+      </div>
+      <template #footer>
+        <Button
+          autofocus
+          :label="t('supplier.warning_edit')"
+          severity="secondary"
+          text
+          data-testid="delivery-warning-edit"
+          @click="cancelWarningDelivery"
+        />
+        <Button
+          :label="t('supplier.warning_confirm')"
+          :disabled="submitting"
+          :loading="submitting"
+          data-testid="delivery-warning-confirm"
+          @click="confirmWarningDelivery"
+        />
+      </template>
+    </Dialog>
 
     <!-- Summary cards (totals across all filtered results) -->
     <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -607,7 +755,14 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
             <template #body="{ data }">{{ formatDate(data.createdAt) }}</template>
           </Column>
           <Column :header="t('common.product')">
-            <template #body="{ data }">{{ data.productName }}</template>
+            <template #body="{ data }">
+              {{ data.productName }}
+              <span
+                v-if="data.voidedAt"
+                class="ml-1 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800 dark:bg-zinc-700 dark:text-zinc-200"
+                >{{ t('supplier.deliveries_status_voided') }}</span
+              >
+            </template>
           </Column>
           <Column
             v-if="filterScope === 'store'"

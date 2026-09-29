@@ -65,6 +65,8 @@ export interface OrderResponse {
   deliveryId: number
   invoiceId: number | null
   channel: string
+  /** Price of this unit — fixed once invoiced, may be corrected by the supplier before. */
+  unitPrice: number
   createdAt: string | null
   updatedAt: string | null
 }
