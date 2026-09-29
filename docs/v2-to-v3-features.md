@@ -1,53 +1,39 @@
-Critical / High Priority
+# v2 → v3 Feature Parity
 
-~~Gap: Restock notifications not triggered~~ ✓ FIXED — DeliveriesController.store() calls NotificationService.sendRestockNotification() on each new delivery
-────────────────────────────────────────  
- Gap: ESL Integration (AIMS/JAMES)  
- Details: Env var ESL_AIMS_ENABLED referenced but no scheduled sync tasks or actual integration logic; /admin/esl-mapping route is a
-stub
-────────────────────────────────────────
-Gap: Scanner hardware APIs
-Details: Old /api/scannerAuthUser, /api/scannerProduct, /api/scannerOrder, /api/scannerValidate are gone — embedded device firmware
-needs updating
-────────────────────────────────────────
-Gap: Customer Insights API
-Details: CustomersController.show() and .insights() are stubs returning null (was used for voice bot)
-────────────────────────────────────────
-Gap: Database backups
-Details: Old codebase had a daily-backup.js scheduled task; NEW has no PostgreSQL backup task (needs external setup)
+> Status of the old Express/MongoDB stack's features in the AdonisJS/PostgreSQL rewrite.
+> Last reviewed: 2026-09-23 (against v3.0.0).
 
-Medium Priority
+## Closed gaps
 
-┌──────────────────────────┬─────────────────────────────────────────────────────────────────────────────────────────────┐
-│ Gap │ Details │
-├──────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────┤
-│ GPT product descriptions │ POST /api/promptGpt existed for AI-generated product slogans — not implemented in new stack │
-├──────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────┤
-│ productList API │ Old /api/productList returned all products for voice bot — no equivalent │
-├──────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────┤
-│ System alert emails │ No mechanism to email admin on critical errors │
-├──────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────┤
-│ About/Docs pages │ Old had /docs, /about routes — new has neither │
-├──────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────┤
-│ Daily phone sync task │ daily-user-phones.js scheduled task had an unknown purpose (possibly webhook sync) │
-└──────────────────────────┴─────────────────────────────────────────────────────────────────────────────────────────────┘
+These were listed as missing in earlier revisions of this document and are now implemented:
 
-Low Priority
+| Feature                | Where it lives now                                                              |
+| ---------------------- | ------------------------------------------------------------------------------- |
+| Restock notifications  | `DeliveriesController.store()` → `NotificationService.sendRestockNotification()` |
+| Customer insights API  | `GET /api/v1/customers/:id/insights` (`CustomersController.insights()`)          |
+| Product list API       | `GET /api/v1/products`, `GET /api/v1/products/:barcode`                          |
+| API documentation page | `GET /docs` (Scalar UI over the generated OpenAPI spec)                          |
+| Database backups       | Handled by the host, not the app: nightly `pg_dump` + upload archive, GFS        |
 
-┌─────────────────┬─────────────────────────────────────────────────────────────────────────────────────────────┐
-│ Gap │ Details │
-├─────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────┤
-│ Theme selection │ Old had theme enum (happy/angry/shocked) on User model; new only has colorMode (light/dark) │
-└─────────────────┴─────────────────────────────────────────────────────────────────────────────────────────────┘
+## Open gaps
 
----
+| Gap                     | Priority | Detail                                                                                                                     |
+| ----------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Scanner device firmware | Medium   | Old `/api/scanner*` endpoints are gone. Equivalents exist under `/api/v1`, but embedded firmware must be repointed.         |
+| System alert emails     | Medium   | No mechanism to email an admin when a critical error occurs. Logs are the only signal.                                      |
+| Daily phone sync task   | Low      | `daily-user-phones.js` existed in v2 with an unclear purpose (possibly webhook sync). Not reimplemented; no known need.     |
+| Theme selection         | Low      | v2 had a `theme` enum (happy/angry/shocked) on the user. v3 only has `colorMode` (light/dark).                              |
 
-New Enhancements (not in old)
+## Deliberately not carried over
 
-The rewrite also added things the old didn't have: TypeScript, 184 tests, RecommendationService with daily ML-based suggestions,
-personal API tokens, structured AuditLog model, PageView tracking, ImpersonationMiddleware, and proper kiosk session model.
+| Feature              | Decision                                                                                                       |
+| -------------------- | -------------------------------------------------------------------------------------------------------------- |
+| ESL integration      | AIMS/JAMES shelf labels. Config stubs were removed in 3.1.0 — no hardware in use. To be built fresh when needed. |
+| GPT product slogans  | v2 had `POST /api/promptGpt` for AI-generated product descriptions. Not planned.                                |
 
----
+## Added in v3 (no v2 equivalent)
 
-Most impactful items to implement next would be: restock notification trigger in DeliveryService, ESL integration, and the customer
-insights API stub completion — in that order.
+TypeScript throughout, 575 unit/functional tests plus 79 Playwright e2e tests, `RecommendationService`
+with nightly statistical suggestions, personal API tokens, structured `AuditLog`, `PageView` tracking,
+impersonation, a proper kiosk session model, allergen tracking, product ratings, invite-based local
+accounts, and an [MCP server](mcp.md) exposing the fridge to AI assistants.

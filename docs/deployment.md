@@ -224,18 +224,6 @@ A build that was not produced by the release workflow reports itself as `dev`.
 | `CRON_UNPAID_REMINDER`                  | No       | No     | `0 9 * * 1-5`           | Cron for unpaid invoice reminders                                 |
 | `CRON_PENDING_APPROVAL`                 | No       | No     | `0 9 * * 1-5`           | Cron for pending approval notifications                           |
 | `UNPAID_REMINDER_MIN_AGE_DAYS`          | No       | No     | `3`                     | Min invoice age (days) before reminder sent                       |
-| `OPENAI_API_KEY`                        | No       | Yes    | —                       | OpenAI API key                                                    |
-| `ESL_AIMS_ENABLED`                      | No       | No     | `false`                 | Enable AIMS ESL integration                                       |
-| `ESL_AIMS_BASE_URL`                     | No       | No     | —                       | AIMS base URL                                                     |
-| `ESL_AIMS_STORE`                        | No       | No     | —                       | AIMS store identifier                                             |
-| `ESL_AIMS_CRON`                         | No       | No     | —                       | AIMS sync cron expression                                         |
-| `ESL_AIMS_VERIFY_TLS`                   | No       | No     | `true`                  | Verify TLS for AIMS                                               |
-| `ESL_JAMES_ENABLED`                     | No       | No     | `false`                 | Enable JAMES ESL integration                                      |
-| `ESL_JAMES_BASE_URL`                    | No       | No     | —                       | JAMES base URL                                                    |
-| `ESL_JAMES_STORE`                       | No       | No     | —                       | JAMES store identifier                                            |
-| `ESL_JAMES_API_KEY`                     | No       | Yes    | —                       | JAMES API key                                                     |
-| `ESL_JAMES_CRON`                        | No       | No     | —                       | JAMES sync cron expression                                        |
-| `ESL_JAMES_VERIFY_TLS`                  | No       | No     | `true`                  | Verify TLS for JAMES                                              |
 
 ---
 

@@ -106,30 +106,6 @@ x-app-env: &app-env
   # ---------------------------------------------------------------------------
   RATINGS_PUBLIC_FEED_ENABLED: ${RATINGS_PUBLIC_FEED_ENABLED:-false} # customers see each other's public ratings
 
-  # ---------------------------------------------------------------------------
-  # OpenAI integration (optional)
-  # ---------------------------------------------------------------------------
-  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-
-  # ---------------------------------------------------------------------------
-  # ESL — AIMS electronic shelf labels (optional)
-  # ---------------------------------------------------------------------------
-  ESL_AIMS_ENABLED: ${ESL_AIMS_ENABLED:-false}
-  ESL_AIMS_BASE_URL: ${ESL_AIMS_BASE_URL:-}
-  ESL_AIMS_STORE: ${ESL_AIMS_STORE:-}
-  ESL_AIMS_CRON: ${ESL_AIMS_CRON:-}
-  ESL_AIMS_VERIFY_TLS: ${ESL_AIMS_VERIFY_TLS:-true}
-
-  # ---------------------------------------------------------------------------
-  # ESL — JAMES electronic shelf labels (optional)
-  # ---------------------------------------------------------------------------
-  ESL_JAMES_ENABLED: ${ESL_JAMES_ENABLED:-false}
-  ESL_JAMES_BASE_URL: ${ESL_JAMES_BASE_URL:-}
-  ESL_JAMES_STORE: ${ESL_JAMES_STORE:-}
-  ESL_JAMES_API_KEY: ${ESL_JAMES_API_KEY:-}
-  ESL_JAMES_CRON: ${ESL_JAMES_CRON:-}
-  ESL_JAMES_VERIFY_TLS: ${ESL_JAMES_VERIFY_TLS:-true}
-
 services:
   app:
     image: houbystudio/sbf:${DOCKER_IMAGE_TAG:-latest}
