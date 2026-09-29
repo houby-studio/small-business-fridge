@@ -92,7 +92,9 @@ test.group('ShopService', (group) => {
     assert.lengthOf(products, 0)
   })
 
-  test('getProducts picks cheapest delivery price', async ({ assert }) => {
+  test('getProducts shows the oldest in-stock lot (strict FIFO), not the cheapest', async ({
+    assert,
+  }) => {
     const category = await CategoryFactory.create()
     const supplier = await UserFactory.apply('supplier').create()
     const product = await ProductFactory.merge({ categoryId: category.id }).create()
@@ -115,7 +117,7 @@ test.group('ShopService', (group) => {
 
     assert.lengthOf(products, 1)
     assert.equal(products[0].stockSum, 5) // 3 + 2
-    assert.equal(products[0].price, 12) // cheapest
+    assert.equal(products[0].price, 20) // the older lot is sold first
   })
 
   test('getKioskProducts returns FIFO delivery lots and first FIFO price', async ({ assert }) => {

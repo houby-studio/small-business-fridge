@@ -8,7 +8,6 @@ import InvoiceService from '#services/invoice_service'
 import QrPaymentService from '#services/qr_payment_service'
 import RecommendationService from '#services/recommendation_service'
 import NotificationService from '#services/notification_service'
-import Delivery from '#models/delivery'
 import Invoice from '#models/invoice'
 import Product from '#models/product'
 import logger from '@adonisjs/core/services/logger'
@@ -25,8 +24,9 @@ export function registerCustomerTools(server: McpServer, user: User) {
     'list_products',
     'List products in the fridge shop with current stock and price. ' +
       'Results respect your allergen preferences and favorites (favorites first). ' +
-      'Each product includes `deliveryId` — the cheapest in-stock delivery lot, ' +
-      'which is what you pass to buy_product. By default only in-stock products are returned.',
+      'Each product includes `deliveryId` and `price` of the delivery lot sold next — stock is ' +
+      'sold strictly first-in-first-out (oldest lot first). Pass `deliveryId` to buy_product. ' +
+      'By default only in-stock products are returned.',
     {
       showOutOfStock: z
         .boolean()
@@ -80,9 +80,10 @@ export function registerCustomerTools(server: McpServer, user: User) {
   server.tool(
     'buy_product',
     'Buy a product from the fridge (1-click purchase, pay later via invoice). ' +
-      'Pass either deliveryId (from list_products) or productId (the cheapest in-stock ' +
-      'delivery lot is chosen automatically). Each unit creates one order. ' +
-      'Quantity defaults to 1 (max 10 per call).',
+      'Pass either deliveryId (from list_products) or productId. Units always come from the ' +
+      'oldest in-stock delivery lot (strict FIFO); if that lot has a different price than the ' +
+      'deliveryId you passed, the purchase stops with PRICE_CHANGED. Each unit creates one ' +
+      'order. Quantity defaults to 1 (max 10 per call).',
     {
       deliveryId: z
         .number()
@@ -95,7 +96,7 @@ export function registerCustomerTools(server: McpServer, user: User) {
         .int()
         .positive()
         .optional()
-        .describe('Product to buy — cheapest in-stock delivery lot is used'),
+        .describe('Product to buy — the oldest in-stock delivery lot is used (FIFO)'),
       quantity: z.number().int().min(1).max(10).optional().describe('Units to buy (default 1)'),
     },
     async ({ deliveryId, productId, quantity }): Promise<CallToolResult> => {
@@ -106,11 +107,7 @@ export function registerCustomerTools(server: McpServer, user: User) {
 
         let resolvedDeliveryId = deliveryId
         if (!resolvedDeliveryId) {
-          const delivery = await Delivery.query()
-            .where('productId', productId!)
-            .where('amountLeft', '>', 0)
-            .orderBy('price', 'asc')
-            .first()
+          const delivery = await new OrderService().getFifoLot(productId!)
           if (!delivery) {
             return fail('The product is out of stock (error code: OUT_OF_STOCK).')
           }
@@ -122,6 +119,7 @@ export function registerCustomerTools(server: McpServer, user: User) {
         const count = quantity ?? 1
         const orderIds: number[] = []
         let price = 0
+        let totalCost = 0
 
         for (let i = 0; i < count; i++) {
           try {
@@ -133,14 +131,19 @@ export function registerCustomerTools(server: McpServer, user: User) {
             if (price === 0) {
               price = order.unitPrice
             }
+            totalCost += order.unitPrice
           } catch (err) {
             if (orderIds.length > 0) {
+              const priceChanged = err instanceof Error && err.message === 'PRICE_CHANGED'
               return ok({
                 orderIds,
                 purchased: orderIds.length,
                 requested: count,
                 unitPrice: price,
-                warning: `Only ${orderIds.length} of ${count} units purchased — the rest is out of stock.`,
+                totalCost,
+                warning: priceChanged
+                  ? `Only ${orderIds.length} of ${count} units purchased — the next delivery lot has a different price; list the product again and confirm the new price.`
+                  : `Only ${orderIds.length} of ${count} units purchased — the rest is out of stock.`,
               })
             }
             return mapDomainError(err, 'Purchase failed')
@@ -151,7 +154,7 @@ export function registerCustomerTools(server: McpServer, user: User) {
           orderIds,
           purchased: orderIds.length,
           unitPrice: price,
-          totalCost: price * orderIds.length,
+          totalCost,
           note: 'Purchase confirmed. Payment happens later via invoice (see get_my_invoices).',
         })
       } catch (err) {

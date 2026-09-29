@@ -17,7 +17,7 @@ export const evalToolDefinitions: EvalToolDefinition[] = [
       name: 'list_products',
       description:
         'List products in the fridge shop with current stock and price. ' +
-        'Each product includes deliveryId — the cheapest in-stock delivery lot, ' +
+        'Each product includes deliveryId — the delivery lot sold next (strict FIFO), ' +
         'which is what you pass to buy_product. By default only in-stock products are returned.',
       parameters: {
         type: 'object',
@@ -36,13 +36,13 @@ export const evalToolDefinitions: EvalToolDefinition[] = [
       name: 'buy_product',
       description:
         'Buy a product from the fridge (1-click purchase, pay later via invoice). ' +
-        'Pass either deliveryId (from list_products) or productId (cheapest lot chosen ' +
+        'Pass either deliveryId (from list_products) or productId (oldest lot used ' +
         'automatically). Quantity defaults to 1 (max 10 per call).',
       parameters: {
         type: 'object',
         properties: {
           deliveryId: { type: 'number', description: 'Delivery lot to buy from (preferred)' },
-          productId: { type: 'number', description: 'Product to buy (cheapest lot used)' },
+          productId: { type: 'number', description: 'Product to buy (oldest lot used, FIFO)' },
           quantity: { type: 'number', description: 'Units to buy (default 1, max 10)' },
         },
       },

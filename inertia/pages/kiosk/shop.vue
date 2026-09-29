@@ -126,6 +126,14 @@ function purchase(product: ProductItem) {
       >
         {{ t('kiosk.purchase_out_of_stock') }}
       </Message>
+      <Message
+        v-if="$page.url.includes('error=price_changed')"
+        severity="warn"
+        :closable="false"
+        class="mb-6"
+      >
+        {{ t('kiosk.purchase_price_changed') }}
+      </Message>
 
       <!-- Products grid -->
       <div
