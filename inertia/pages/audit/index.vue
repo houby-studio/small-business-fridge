@@ -20,6 +20,7 @@ interface AuditRow {
   metadata: Record<string, any> | null
   user: { displayName: string } | null
   actorIsMe: boolean
+  impersonatedBy: string | null
   targetUser: { displayName: string } | null
   createdAt: string
 }
@@ -49,7 +50,7 @@ function actionLabel(action: string | undefined) {
 function formatMetadata(meta: Record<string, any> | null): string {
   if (!meta) return ''
   return Object.entries(meta)
-    .filter(([, v]) => v !== null && v !== undefined)
+    .filter(([k, v]) => v !== null && v !== undefined && k !== 'impersonatedBy')
     .map(([k, v]) => {
       if (typeof v === 'object' && !Array.isArray(v) && v !== null) {
         if ('from' in v && 'to' in v) return `${k}: ${v.from ?? '—'} → ${v.to ?? '—'}`
@@ -129,7 +130,13 @@ function onSort(event: any) {
       </Column>
       <Column :header="t('audit.actor')" headerClass="sbf-col-tight" bodyClass="sbf-col-tight">
         <template #body="{ data }">
-          <span v-if="data.actorIsMe" class="text-gray-500 dark:text-zinc-400">{{
+          <span
+            v-if="data.impersonatedBy"
+            class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-amber-800 dark:bg-amber-900/30 dark:text-amber-200"
+            data-testid="audit-impersonated-actor"
+            >{{ t('audit.actor_impersonated', { name: data.impersonatedBy }) }}</span
+          >
+          <span v-else-if="data.actorIsMe" class="text-gray-500 dark:text-zinc-400">{{
             t('audit.actor_you')
           }}</span>
           <span

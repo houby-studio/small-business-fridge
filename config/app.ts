@@ -63,8 +63,11 @@ export const http = defineConfig({
   /**
    * Enabling async local storage will let you access HTTP context
    * from anywhere inside your application.
+   *
+   * Enabled so AuditService can record the real admin behind an impersonated action
+   * (ctx.impersonator) without threading the context through every one of its callers.
    */
-  useAsyncLocalStorage: false,
+  useAsyncLocalStorage: true,
 
   /**
    * Manage cookies configuration. The settings for the session id cookie are
