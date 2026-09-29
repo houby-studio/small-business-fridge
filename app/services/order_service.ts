@@ -1,4 +1,5 @@
 import Delivery from '#models/delivery'
+import { PUBLIC_USER_COLUMNS } from '#helpers/public_user'
 import Order from '#models/order'
 import db from '@adonisjs/lucid/services/db'
 import AuditService from '#services/audit_service'
@@ -245,9 +246,10 @@ export default class OrderService {
       .where('buyerId', userId)
       .preload('delivery', (q) => {
         q.preload('product')
-        q.preload('supplier')
+        // Buyers only ever see the supplier's name — never their email, IBAN or keypad ID.
+        q.preload('supplier', PUBLIC_USER_COLUMNS)
       })
-      .preload('priceCorrection')
+      .preload('priceCorrection', (q) => q.select('id', 'reason', 'created_at'))
       .orderBy(sortBy, sortOrder)
 
     if (filters?.channel) {

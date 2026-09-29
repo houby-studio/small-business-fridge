@@ -107,6 +107,7 @@ router
   .post('/oauth/register', [McpOauthRegisterController, 'store'])
   .use(middleware.throttle({ maxRequests: authThrottleLimit, windowMs: 60_000 }))
 router.get('/oauth/authorize', [McpOauthAuthorizeController, 'show'])
+router.post('/oauth/authorize', [McpOauthAuthorizeController, 'store'])
 router
   .post('/oauth/token', [McpOauthTokenController, 'store'])
   .use(middleware.throttle({ maxRequests: authThrottleLimit, windowMs: 60_000 }))

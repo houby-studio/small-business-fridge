@@ -124,7 +124,7 @@
   "void_submit": "Void",
   "warning_title": "Check the delivery",
   "warning_confirm": "Stock anyway",
-  "correction_price_hint": "The price must be a whole number of at least 1.",
+  "correction_price_hint": "The price must be a whole number from 1 to {max}.",
   "warning_duplicate_title": "You stocked this product a moment ago",
   "warning_price_title": "The price differs a lot from the last delivery",
   "warning_now": "You are entering",

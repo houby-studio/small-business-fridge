@@ -124,7 +124,7 @@
   "void_submit": "Stornovat",
   "warning_title": "Zkontrolujte naskladnění",
   "warning_confirm": "Přesto naskladnit",
-  "correction_price_hint": "Cena musí být celé číslo, alespoň 1.",
+  "correction_price_hint": "Cena musí být celé číslo od 1 do {max}.",
   "warning_duplicate_title": "Tento produkt jste už nedávno naskladnili",
   "warning_price_title": "Cena se výrazně liší od posledního naskladnění",
   "warning_now": "Zadáváte",

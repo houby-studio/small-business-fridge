@@ -368,7 +368,7 @@ export default class AdminService {
         q.preload('product')
         q.preload('supplier')
       })
-      .preload('priceCorrection')
+      .preload('priceCorrection', (q) => q.select('id', 'reason', 'created_at'))
       .orderBy(safeSort, sortDir)
 
     if (filters?.channel) {

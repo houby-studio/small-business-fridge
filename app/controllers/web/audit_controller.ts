@@ -20,13 +20,16 @@ export default class AuditController {
           action: log.action,
           entityType: log.entityType,
           entityId: log.entityId,
-          metadata: log.metadata,
+          // impersonatedBy is only this user's business — other parties listed on the
+          // entry (e.g. the supplier of an order) must not learn about the impersonation.
+          metadata: withoutImpersonation(log.metadata),
           user: log.user ? { displayName: log.user.displayName } : null,
           // Entries where someone else acted on this user's records (e.g. an admin
           // correcting their delivery) must say who did it.
           actorIsMe: log.userId === auth.user!.id,
           // Set when an admin acted while impersonating this user.
-          impersonatedBy: log.metadata?.impersonatedBy?.name ?? null,
+          impersonatedBy:
+            log.userId === auth.user!.id ? (log.metadata?.impersonatedBy?.name ?? null) : null,
           targetUser: log.targetUser ? { displayName: log.targetUser.displayName } : null,
           createdAt: log.createdAt.toISO(),
         })),
@@ -35,4 +38,11 @@ export default class AuditController {
       filters: { action: action || '', sortOrder: sortOrder || 'desc' },
     })
   }
+}
+
+function withoutImpersonation(metadata: Record<string, any> | null) {
+  if (!metadata || !('impersonatedBy' in metadata)) return metadata
+  const rest = { ...metadata }
+  delete rest.impersonatedBy
+  return rest
 }

@@ -1,4 +1,5 @@
 import Invoice from '#models/invoice'
+import { PUBLIC_USER_COLUMNS } from '#helpers/public_user'
 import Order from '#models/order'
 import db from '@adonisjs/lucid/services/db'
 import AuditService from '#services/audit_service'
@@ -116,7 +117,8 @@ export default class InvoiceService {
 
     const query = Invoice.query()
       .where('buyerId', buyerId)
-      .preload('supplier')
+      // Buyers only ever see the supplier's name — never their email, IBAN or keypad ID.
+      .preload('supplier', PUBLIC_USER_COLUMNS)
       .preload('orders', (q) => {
         q.preload('delivery', (dq) => dq.preload('product'))
       })
@@ -161,7 +163,8 @@ export default class InvoiceService {
       .join('users as buyers', 'buyers.id', 'invoices.buyer_id')
       .select('invoices.*')
       .where('supplierId', supplierId)
-      .preload('buyer')
+      // Suppliers only ever see the buyer's name — never their email, IBAN or keypad ID.
+      .preload('buyer', PUBLIC_USER_COLUMNS)
       .preload('orders', (q) => {
         q.preload('delivery', (dq) => dq.preload('product'))
       })

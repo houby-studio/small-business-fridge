@@ -6,8 +6,8 @@ import { ensureLoginPage, fillLoginForm } from './helpers/auth'
  * E2E: MCP OAuth 2.1 flow through the real browser login.
  *
  * Covers: dynamic client registration → /oauth/authorize redirects an anonymous
- * user to /login?returnTo=... → after logging in the authorization code is issued
- * and delivered to the registered redirect_uri → the code exchanges for an access
+ * user to /login?returnTo=... → after logging in the consent page is shown → only after
+ * "Allow" the authorization code is issued and delivered to the registered redirect_uri → the code exchanges for an access
  * token that authenticates at /mcp.
  */
 test.describe('MCP OAuth flow', () => {
@@ -38,9 +38,15 @@ test.describe('MCP OAuth flow', () => {
       /\/login\?returnTo=%2Foauth%2Fauthorize|\/login\?returnTo=\/oauth\/authorize/
     )
 
-    // 4. Log in through the real form — the flow resumes and lands on redirect_uri?code=...
+    // 4. Log in through the real form — the flow resumes on the consent page; nothing is
+    //    issued until the user explicitly allows the client.
     await ensureLoginPage(page)
     await fillLoginForm(page, 'customer@localhost', 'customer123')
+    const consent = page.getByTestId('oauth-consent')
+    await expect(consent).toBeVisible({ timeout: 10_000 })
+    await expect(consent).toContainText('E2E MCP Client')
+    await expect(page).not.toHaveURL(/code=/)
+    await page.getByTestId('oauth-approve').click()
     await page.waitForURL(/\/profile\?.*code=/, { timeout: 10_000 })
 
     const url = new URL(page.url())
