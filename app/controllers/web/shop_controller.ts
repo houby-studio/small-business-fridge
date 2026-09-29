@@ -100,11 +100,11 @@ export default class ShopController {
   }
 
   async purchase({ request, auth, response, session, i18n }: HttpContext) {
-    const { deliveryId } = await request.validateUsing(purchaseValidator)
+    const { deliveryId, expectedPrice } = await request.validateUsing(purchaseValidator)
     const orderService = new OrderService()
 
     try {
-      const order = await orderService.purchase(auth.user!.id, deliveryId, 'web')
+      const order = await orderService.purchase(auth.user!.id, deliveryId, 'web', expectedPrice)
       session.flash('alert', { type: 'success', message: i18n.t('messages.purchase_success') })
 
       // Send email notification (fire-and-forget)

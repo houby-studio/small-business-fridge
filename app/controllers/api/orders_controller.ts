@@ -19,11 +19,11 @@ export default class OrdersController {
    * @responseBody 500 - <ApiErrorResponse>
    */
   async store({ request, auth, response }: HttpContext) {
-    const { deliveryId, channel } = await request.validateUsing(apiOrderValidator)
+    const { deliveryId, channel, expectedPrice } = await request.validateUsing(apiOrderValidator)
     const orderService = new OrderService()
 
     try {
-      const order = await orderService.purchase(auth.user!.id, deliveryId, channel)
+      const order = await orderService.purchase(auth.user!.id, deliveryId, channel, expectedPrice)
 
       // Send email notification (fire-and-forget)
       const notificationService = new NotificationService()

@@ -518,7 +518,11 @@ async function submitBasket() {
       },
       body: JSON.stringify({
         customerId: customer.value.id,
-        items: basket.value.map((i) => ({ deliveryId: i.deliveryId, quantity: i.quantity })),
+        items: basket.value.map((i) => ({
+          deliveryId: i.deliveryId,
+          quantity: i.quantity,
+          expectedPrice: i.price,
+        })),
       }),
     })
     const data = await res.json()
@@ -537,6 +541,14 @@ async function submitBasket() {
         summary: t('kiosk.item_out_of_stock_other_buyer'),
         life: 4000,
       })
+    } else if (data.error === 'price_changed') {
+      outOfStockDeliveryId.value = null
+      // Show the current price in the basket, so the next confirm is for what is charged.
+      basket.value = basket.value.map((line) =>
+        line.deliveryId === data.deliveryId ? { ...line, price: data.price } : line
+      )
+      toast.add({ severity: 'warn', summary: t('kiosk.item_price_changed'), life: 5000 })
+      refreshProducts()
     } else if (data.error === 'fifo_violation') {
       outOfStockDeliveryId.value = null
       toast.add({

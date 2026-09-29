@@ -18,7 +18,9 @@ export default class InvoiceService {
           q.where('supplierId', supplierId)
         })
         .preload('delivery')
-        .orderBy('buyerId')
+        // Lock orders by id everywhere (corrections do too) so concurrent runs cannot
+        // take the same rows in opposite orders and deadlock. Grouping by buyer is done below.
+        .orderBy('id', 'asc')
         .forUpdate()
 
       if (groups.length === 0) {
@@ -316,6 +318,7 @@ export default class InvoiceService {
           q.where('supplierId', supplierId)
         })
         .preload('delivery')
+        .orderBy('id', 'asc')
         .forUpdate()
 
       if (orders.length === 0) {
@@ -363,6 +366,7 @@ export default class InvoiceService {
         .whereNull('invoiceId')
         .where('buyerId', buyerId)
         .preload('delivery')
+        .orderBy('id', 'asc')
         .forUpdate()
 
       if (allOrders.length === 0) {

@@ -39,11 +39,17 @@ export default class OrderService {
    * client (or a cheaper, newer delivery) could jump the queue while older stock sits
    * unsold and its supplier waits for their money.
    *
-   * The buyer confirmed the price of the lot they saw. If the FIFO lot is a different one
-   * at a different price (e.g. the page was stale), nothing is bought: PriceChangedError
-   * carries the current price so the client can ask again.
+   * The buyer confirmed a price. Clients send it as `expectedPrice`; if the lot sold next
+   * costs anything else — a stale page, a newer lot, or a price corrected in the meantime —
+   * nothing is bought and PriceChangedError carries the current price so the client can
+   * ask again. Without `expectedPrice` the requested lot's price stands in for it.
    */
-  async purchase(buyerId: number, deliveryId: number, channel: OrderChannel): Promise<Order> {
+  async purchase(
+    buyerId: number,
+    deliveryId: number,
+    channel: OrderChannel,
+    expectedPrice?: number
+  ): Promise<Order> {
     return db.transaction(async (trx) => {
       const requested = await Delivery.query({ client: trx }).where('id', deliveryId).first()
       if (!requested) {
@@ -64,7 +70,10 @@ export default class OrderService {
       if (!delivery) {
         throw new Error('OUT_OF_STOCK')
       }
-      if (delivery.id !== requested.id && delivery.price !== requested.price) {
+      // Compare against the price the buyer was shown when the client sends it; otherwise
+      // (older clients) at least against the lot they named.
+      const shownPrice = expectedPrice ?? requested.price
+      if (delivery.price !== shownPrice) {
         throw new PriceChangedError(delivery.id, delivery.price)
       }
 
@@ -111,31 +120,51 @@ export default class OrderService {
    */
   async purchaseBasket(
     buyerId: number,
-    items: Array<{ deliveryId: number; quantity: number }>,
+    items: Array<{ deliveryId: number; quantity: number; expectedPrice?: number }>,
     channel: OrderChannel
   ): Promise<Order[]> {
     return db.transaction(async (trx) => {
       const orders: Order[] = []
 
       const requestedByDelivery = new Map<number, number>()
+      const expectedPriceByDelivery = new Map<number, number>()
       for (const item of items) {
         requestedByDelivery.set(
           item.deliveryId,
           (requestedByDelivery.get(item.deliveryId) ?? 0) + item.quantity
         )
+        if (item.expectedPrice !== undefined) {
+          expectedPriceByDelivery.set(item.deliveryId, item.expectedPrice)
+        }
       }
 
+      // Lock every lot of the requested products in one statement, in the same order
+      // purchase() uses (created_at, id per product). Locking the requested lots first and
+      // the FIFO lots second took the same rows in two different orders, which could
+      // deadlock against a concurrent single purchase.
       const requestedDeliveryIds = [...requestedByDelivery.keys()]
-      const requestedDeliveries = await Delivery.query({ client: trx })
+      const productRows = await Delivery.query({ client: trx })
         .whereIn('id', requestedDeliveryIds)
+        .select('id', 'product_id')
+      const lockedLots = await Delivery.query({ client: trx })
+        .whereIn('productId', [...new Set(productRows.map((row) => row.productId))])
+        .orderBy('productId', 'asc')
+        .orderBy('createdAt', 'asc')
+        .orderBy('id', 'asc')
         .forUpdate()
 
-      const deliveryMap = new Map(requestedDeliveries.map((d) => [d.id, d]))
+      const deliveryMap = new Map(lockedLots.map((d) => [d.id, d]))
 
       for (const [deliveryId, quantity] of requestedByDelivery) {
         const delivery = deliveryMap.get(deliveryId)
         if (!delivery || delivery.amountLeft < quantity) {
           throw new OutOfStockError(deliveryId)
+        }
+        // The basket was built from what the kiosk showed; a price corrected since then
+        // must not be charged silently.
+        const expected = expectedPriceByDelivery.get(deliveryId)
+        if (expected !== undefined && expected !== delivery.price) {
+          throw new PriceChangedError(delivery.id, delivery.price)
         }
       }
 
@@ -155,13 +184,7 @@ export default class OrderService {
       }
 
       const requestedProductIds = [...requestedByProduct.keys()]
-      const fifoDeliveries = await Delivery.query({ client: trx })
-        .whereIn('productId', requestedProductIds)
-        .where('amountLeft', '>', 0)
-        .orderBy('productId', 'asc')
-        .orderBy('createdAt', 'asc')
-        .orderBy('id', 'asc')
-        .forUpdate()
+      const fifoDeliveries = lockedLots.filter((d) => d.amountLeft > 0)
 
       const fifoByProduct = new Map<number, Delivery[]>()
       for (const delivery of fifoDeliveries) {

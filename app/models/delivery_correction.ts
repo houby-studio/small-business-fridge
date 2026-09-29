@@ -16,6 +16,10 @@ export default class DeliveryCorrection extends BaseModel {
   @column()
   declare actorId: number
 
+  /** The admin really behind the change when they acted while impersonating the actor. */
+  @column()
+  declare impersonatorId: number | null
+
   @column()
   declare kind: DeliveryCorrectionKind
 
@@ -47,4 +51,7 @@ export default class DeliveryCorrection extends BaseModel {
 
   @belongsTo(() => User, { foreignKey: 'actorId' })
   declare actor: BelongsTo<typeof User>
+
+  @belongsTo(() => User, { foreignKey: 'impersonatorId' })
+  declare impersonator: BelongsTo<typeof User>
 }

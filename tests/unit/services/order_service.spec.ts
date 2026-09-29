@@ -237,6 +237,60 @@ test.group('OrderService', (group) => {
     const next = await orderService.getFifoLot(older.productId)
     assert.equal(next?.id, newer.id)
   })
+
+  test('a price corrected on the lot the buyer saw is not charged silently', async ({ assert }) => {
+    const { buyer, older } = await twoLots({ olderPrice: 20, newerPrice: 20 })
+    await older.merge({ price: 35 }).save()
+
+    // Same lot as shown, but it no longer costs what the buyer confirmed.
+    await assert.rejects(
+      () => orderService.purchase(buyer.id, older.id, 'web', 20),
+      'PRICE_CHANGED'
+    )
+    const order = await orderService.purchase(buyer.id, older.id, 'web', 35)
+    assert.equal(order.unitPrice, 35)
+  })
+
+  test('a basket built at an old price is refused and nothing is bought', async ({ assert }) => {
+    const { buyer, older } = await twoLots({ olderPrice: 20, newerPrice: 20 })
+    await older.merge({ price: 25 }).save()
+
+    await assert.rejects(
+      () =>
+        orderService.purchaseBasket(
+          buyer.id,
+          [{ deliveryId: older.id, quantity: 1, expectedPrice: 20 }],
+          'kiosk'
+        ),
+      'PRICE_CHANGED'
+    )
+    assert.lengthOf(await Order.all(), 0)
+    await older.refresh()
+    assert.equal(older.amountLeft, 2)
+  })
+
+  test('concurrent single purchases and a basket on one product never deadlock', async ({
+    assert,
+  }) => {
+    const { buyer, older, newer } = await twoLots({ olderPrice: 20, newerPrice: 20 })
+
+    const results = await Promise.allSettled([
+      orderService.purchase(buyer.id, older.id, 'web', 20),
+      orderService.purchaseBasket(
+        buyer.id,
+        [{ deliveryId: older.id, quantity: 1, expectedPrice: 20 }],
+        'kiosk'
+      ),
+      orderService.purchase(buyer.id, newer.id, 'web', 20),
+    ])
+
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        // FIFO / stock errors are fine under contention — a deadlock is not.
+        assert.notInclude(String(result.reason), 'deadlock')
+      }
+    }
+  })
 })
 
 async function twoLots(prices: { olderPrice: number; newerPrice: number }) {

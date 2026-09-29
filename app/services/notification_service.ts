@@ -553,6 +553,7 @@ export default class NotificationService {
     const correction = await DeliveryCorrection.query()
       .where('id', correctionId)
       .preload('actor')
+      .preload('impersonator')
       .preload('delivery', (q) => {
         q.preload('product')
         q.preload('supplier')
@@ -587,20 +588,24 @@ export default class NotificationService {
     }
     rows.push({ label: t('emails.price_correction_reason'), value: correction.reason })
 
-    await this.sendSupplierChangeNotice(delivery.supplier, correction.actor, {
-      subject: t(
-        isVoid
-          ? 'emails.supplier_change_subject_voided'
-          : 'emails.supplier_change_subject_corrected',
-        { productName: delivery.product.displayName }
-      ),
-      heading: t(
-        isVoid
-          ? 'emails.supplier_change_heading_voided'
-          : 'emails.supplier_change_heading_corrected'
-      ),
-      rows,
-    })
+    await this.sendSupplierChangeNotice(
+      delivery.supplier,
+      correction.impersonator ?? correction.actor,
+      {
+        subject: t(
+          isVoid
+            ? 'emails.supplier_change_subject_voided'
+            : 'emails.supplier_change_subject_corrected',
+          { productName: delivery.product.displayName }
+        ),
+        heading: t(
+          isVoid
+            ? 'emails.supplier_change_heading_voided'
+            : 'emails.supplier_change_heading_corrected'
+        ),
+        rows,
+      }
+    )
   }
 
   /**
@@ -663,18 +668,26 @@ export default class NotificationService {
    * Tell every buyer whose uninvoiced purchases were repriced by a delivery correction what
    * changed, who changed it and why. One email per buyer, covering all their units.
    */
-  async sendPriceCorrectionNotifications(correctionId: number) {
+  async sendPriceCorrectionNotifications(correctionId: number, orderIds?: number[]) {
     const correction = await DeliveryCorrection.query()
       .where('id', correctionId)
       .preload('actor')
+      .preload('impersonator')
       .preload('delivery', (q) => {
         q.preload('product')
         q.preload('supplier')
       })
       .firstOrFail()
 
+    // Use the orders captured inside the correction's transaction when given: a second
+    // correction right after this one re-points price_correction_id, and this email would
+    // otherwise find no orders at all.
     const orders = await Order.query()
-      .where('priceCorrectionId', correction.id)
+      .if(
+        orderIds !== undefined,
+        (q) => q.whereIn('id', orderIds ?? []),
+        (q) => q.where('priceCorrectionId', correction.id)
+      )
       .preload('buyer')
       .orderBy('id', 'asc')
 
@@ -707,7 +720,8 @@ export default class NotificationService {
             name: buyer.displayName,
             productName: correction.delivery.product.displayName,
             supplierName: correction.delivery.supplier.displayName,
-            actorName: correction.actor.displayName,
+            // The admin really behind the change when they impersonated the supplier.
+            actorName: (correction.impersonator ?? correction.actor).displayName,
             reason: correction.reason,
             oldPrice: correction.oldPrice,
             newPrice: correction.newPrice,

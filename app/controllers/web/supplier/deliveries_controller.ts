@@ -150,21 +150,23 @@ export default class DeliveriesController {
     return response.redirect(deliveryReturnUrl(request))
   }
 
-  async update({ params, request, response, auth, session, i18n }: HttpContext) {
+  async update(ctx: HttpContext) {
+    const { params, request, response, auth, session, i18n } = ctx
     const data = await request.validateUsing(correctDeliveryValidator)
 
     try {
-      const { delivery, correction } = await new DeliveryService().correctDelivery(
-        auth.user!,
-        Number(params.id),
-        data
-      )
+      const { delivery, correction, repricedOrderIds } =
+        await new DeliveryService().correctDelivery(auth.user!, Number(params.id), data, {
+          impersonatorId: ctx.impersonator?.id,
+        })
 
       const notifications = new NotificationService()
       if (correction.repricedOrderCount > 0) {
-        notifications.sendPriceCorrectionNotifications(correction.id).catch((err) => {
-          logger.error({ err }, `Failed to send price correction emails for #${correction.id}`)
-        })
+        notifications
+          .sendPriceCorrectionNotifications(correction.id, repricedOrderIds)
+          .catch((err) => {
+            logger.error({ err }, `Failed to send price correction emails for #${correction.id}`)
+          })
       }
       this.notifySupplierOfForeignChange(notifications, delivery.supplierId, correction)
 
@@ -184,14 +186,16 @@ export default class DeliveriesController {
     return response.redirect(deliveryReturnUrl(request))
   }
 
-  async destroy({ params, request, response, auth, session, i18n }: HttpContext) {
+  async destroy(ctx: HttpContext) {
+    const { params, request, response, auth, session, i18n } = ctx
     const data = await request.validateUsing(voidDeliveryValidator)
 
     try {
       const { delivery, correction } = await new DeliveryService().voidDelivery(
         auth.user!,
         Number(params.id),
-        data.reason
+        data.reason,
+        { impersonatorId: ctx.impersonator?.id }
       )
       this.notifySupplierOfForeignChange(new NotificationService(), delivery.supplierId, correction)
       session.flash('alert', { type: 'success', message: i18n.t('messages.delivery_voided') })
@@ -208,7 +212,8 @@ export default class DeliveriesController {
     supplierId: number,
     correction: DeliveryCorrection
   ) {
-    if (correction.actorId === supplierId) return
+    // Their own change — unless an admin made it while impersonating them.
+    if (correction.actorId === supplierId && !correction.impersonatorId) return
     notifications.sendDeliveryCorrectionToSupplier(correction.id).catch((err) => {
       logger.error({ err }, `Failed to notify supplier about correction #${correction.id}`)
     })
