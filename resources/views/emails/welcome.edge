@@ -4,24 +4,16 @@
     <meta charset="utf-8" />
   </head>
   <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <h2 style="color: #cf112a;">
-      {{ i18n.t('emails.welcome_heading', { app_name: appName }) }}
-    </h2>
-    <p>
-      {{ i18n.t('emails.welcome_intro', { name }) }}
-    </p>
+    <h2 style="color: #cf112a;">{{ i18n.t('emails.welcome_heading', { app_name: appName }) }}</h2>
+    <p>{{ i18n.t('emails.welcome_intro', { name }) }}</p>
     <p
       style="margin: 24px 0; padding: 16px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 6px; font-size: 18px; text-align: center;"
     >
       <strong>{{ i18n.t('emails.welcome_keypad_label', { keypadId }) }}</strong>
     </p>
-    <p>
-      {{ i18n.t('emails.welcome_note') }}
-    </p>
+    <p>{{ i18n.t('emails.welcome_note') }}</p>
     @if(emailVerificationUrl)
-      <p>
-        {{ i18n.t('emails.welcome_verify_intro') }}
-      </p>
+      <p>{{ i18n.t('emails.welcome_verify_intro') }}</p>
       <p style="margin: 24px 0; text-align: center;">
         <a
           href="{{ emailVerificationUrl }}"
@@ -30,7 +22,8 @@
           {{ i18n.t('emails.welcome_verify_action') }}
         </a>
       </p>
-    @endif
+    @end
+
     <p style="margin: 24px 0; text-align: center;">
       <a
         href="{{ appUrl }}"
@@ -40,7 +33,10 @@
       </a>
     </p>
     <p style="color: #666; font-size: 12px;">
-      — <a href="{{ appUrl }}" style="color: #cf112a; text-decoration: none;">{{ i18n.t('common.app_name', { app_name: appName }) }}</a>
+      —
+      <a href="{{ appUrl }}" style="color: #cf112a; text-decoration: none;">
+        {{ i18n.t('common.app_name', { app_name: appName }) }}
+      </a>
     </p>
   </body>
 </html>

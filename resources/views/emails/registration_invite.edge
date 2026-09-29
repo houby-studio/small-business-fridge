@@ -4,28 +4,20 @@
     <meta charset="utf-8" />
   </head>
   <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <h2 style="color: #cf112a;">
-      {{ i18n.t('emails.registration_invite_heading') }}
-    </h2>
-    <p>
-      {{ i18n.t('emails.registration_invite_intro', { app_name: appName }) }}
-    </p>
+    <h2 style="color: #cf112a;">{{ i18n.t('emails.registration_invite_heading') }}</h2>
+    <p>{{ i18n.t('emails.registration_invite_intro', { app_name: appName }) }}</p>
     <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
       <tr style="background: #f5f5f5;">
         <td style="padding: 10px; border: 1px solid #ddd;">
           <strong>{{ i18n.t('emails.registration_invite_role_label') }}</strong>
         </td>
-        <td style="padding: 10px; border: 1px solid #ddd;">
-          {{ i18n.t(`common.role_${role}`) }}
-        </td>
+        <td style="padding: 10px; border: 1px solid #ddd;">{{ i18n.t(`common.role_${role}`) }}</td>
       </tr>
       <tr>
         <td style="padding: 10px; border: 1px solid #ddd;">
           <strong>{{ i18n.t('emails.registration_invite_expiry_label') }}</strong>
         </td>
-        <td style="padding: 10px; border: 1px solid #ddd;">
-          {{ expiresAt }}
-        </td>
+        <td style="padding: 10px; border: 1px solid #ddd;">{{ expiresAt }}</td>
       </tr>
     </table>
     <p style="margin: 20px 0;">
@@ -36,11 +28,12 @@
         {{ i18n.t('emails.registration_invite_accept') }}
       </a>
     </p>
-    <p>
-      {{ i18n.t('emails.registration_invite_note') }}
-    </p>
+    <p>{{ i18n.t('emails.registration_invite_note') }}</p>
     <p style="color: #666; font-size: 12px;">
-      — <a href="{{ appUrl }}" style="color: #cf112a; text-decoration: none;">{{ i18n.t('common.app_name', { app_name: appName }) }}</a>
+      —
+      <a href="{{ appUrl }}" style="color: #cf112a; text-decoration: none;">
+        {{ i18n.t('common.app_name', { app_name: appName }) }}
+      </a>
     </p>
   </body>
 </html>

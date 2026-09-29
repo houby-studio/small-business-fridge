@@ -37,7 +37,7 @@ npm run test:e2e         # Playwright end-to-end suite
 
 ## Project Stack
 
-- **Runtime**: AdonisJS 7 (Node.js 22+), ESM modules
+- **Runtime**: AdonisJS 7 (Node.js 24+), ESM modules
 - **Database**: PostgreSQL 18 via Lucid ORM
 - **Frontend**: Vue 3 + Inertia.js + PrimeVue
 - **Auth**: Session-based web + token-based API

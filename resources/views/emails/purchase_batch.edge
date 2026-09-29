@@ -4,25 +4,27 @@
     <meta charset="utf-8" />
   </head>
   <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <h2 style="color: #cf112a;">
-      {{ i18n.t('emails.purchase_batch_heading') }}
-    </h2>
-    <p>
-      {{ i18n.t('emails.purchase_batch_intro', { name: buyerName }) }}
-    </p>
+    <h2 style="color: #cf112a;">{{ i18n.t('emails.purchase_batch_heading') }}</h2>
+    <p>{{ i18n.t('emails.purchase_batch_intro', { name: buyerName }) }}</p>
     <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
       <thead>
         <tr style="background: #f5f5f5;">
           <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">
             {{ i18n.t('emails.purchase_batch_product') }}
           </th>
-          <th style="padding: 10px; border: 1px solid #ddd; text-align: center; white-space: nowrap;">
+          <th
+            style="padding: 10px; border: 1px solid #ddd; text-align: center; white-space: nowrap;"
+          >
             {{ i18n.t('emails.purchase_batch_qty') }}
           </th>
-          <th style="padding: 10px; border: 1px solid #ddd; text-align: right; white-space: nowrap;">
+          <th
+            style="padding: 10px; border: 1px solid #ddd; text-align: right; white-space: nowrap;"
+          >
             {{ i18n.t('emails.purchase_batch_unit_price') }}
           </th>
-          <th style="padding: 10px; border: 1px solid #ddd; text-align: right; white-space: nowrap;">
+          <th
+            style="padding: 10px; border: 1px solid #ddd; text-align: right; white-space: nowrap;"
+          >
             {{ i18n.t('emails.purchase_batch_subtotal') }}
           </th>
         </tr>
@@ -30,14 +32,16 @@
       <tbody>
         @each(item in items)
           <tr>
-            <td style="padding: 10px; border: 1px solid #ddd;">
-              {{ item.productName }}
-            </td>
+            <td style="padding: 10px; border: 1px solid #ddd;">{{ item.productName }}</td>
             <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">
               {{ item.quantity }}
             </td>
             <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">
-              {{ i18n.t('common.price_with_currency', { price: item.unitPrice }) }}
+              {{
+                i18n.t('common.price_with_currency', {
+                  price: item.unitPrice,
+                })
+              }}
             </td>
             <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">
               {{ i18n.t('common.price_with_currency', { price: item.subtotal }) }}
@@ -55,14 +59,21 @@
           </td>
         </tr>
         <tr>
-          <td colspan="4" style="padding: 10px; border: 1px solid #ddd; color: #666; font-size: 12px;">
-            {{ i18n.t('emails.purchase_batch_date') }}: {{ date }}
+          <td
+            colspan="4"
+            style="padding: 10px; border: 1px solid #ddd; color: #666; font-size: 12px;"
+          >
+            {{ i18n.t('emails.purchase_batch_date') }}:
+            {{ date }}
           </td>
         </tr>
       </tfoot>
     </table>
     <p style="color: #666; font-size: 12px; margin-top: 24px;">
-      — <a href="{{ appUrl }}" style="color: #cf112a; text-decoration: none;">{{ i18n.t('common.app_name', { app_name: appName }) }}</a>
+      —
+      <a href="{{ appUrl }}" style="color: #cf112a; text-decoration: none;">
+        {{ i18n.t('common.app_name', { app_name: appName }) }}
+      </a>
     </p>
   </body>
 </html>
