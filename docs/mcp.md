@@ -174,7 +174,8 @@ Every tool call is recorded in the `mcp_tool_calls` table (user, tool, arguments
 All tools return structured responses. When an operation fails, the tool returns `isError: true` with a descriptive message including a machine-readable code:
 
 - **OUT_OF_STOCK** — the product/delivery has no stock left
+- **PRICE_CHANGED** — stock is sold first-in-first-out and the lot sold next costs something other than the price you expected (or than the lot you named); list the product again and confirm the new price
 - **FORBIDDEN** — the record does not belong to you
 - **ALREADY_PAID** — the invoice is already paid
 - **ORDER_ALREADY_INVOICED** — storno is not possible after invoicing
-- **LAST_ACTIVE_ADMIN_REQUIRED / USER_HAS_UNINVOICED_ORDERS / KEYPAD_ID_TAKEN** — user-management constraints
+- **LAST_ACTIVE_ADMIN_REQUIRED / USER_HAS_UNINVOICED_ORDERS / KEYPAD_ID_TAKEN / KEYPAD_ID_RESERVED** — user-management constraints

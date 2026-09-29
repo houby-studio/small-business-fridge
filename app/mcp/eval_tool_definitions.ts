@@ -37,13 +37,19 @@ export const evalToolDefinitions: EvalToolDefinition[] = [
       description:
         'Buy a product from the fridge (1-click purchase, pay later via invoice). ' +
         'Pass either deliveryId (from list_products) or productId (oldest lot used ' +
-        'automatically). Quantity defaults to 1 (max 10 per call).',
+        'automatically). Units always come from the oldest in-stock lot (strict FIFO); if it ' +
+        'costs something other than expectedPrice (or the deliveryId you passed), the purchase ' +
+        'stops with PRICE_CHANGED. Quantity defaults to 1 (max 10 per call).',
       parameters: {
         type: 'object',
         properties: {
           deliveryId: { type: 'number', description: 'Delivery lot to buy from (preferred)' },
           productId: { type: 'number', description: 'Product to buy (oldest lot used, FIFO)' },
           quantity: { type: 'number', description: 'Units to buy (default 1, max 10)' },
+          expectedPrice: {
+            type: 'number',
+            description: 'Unit price you showed the user; a different price → PRICE_CHANGED',
+          },
         },
       },
     },

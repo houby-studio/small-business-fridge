@@ -177,6 +177,23 @@ Signed-in users see it in the footer of every page. It is deliberately **not** o
 
 A build that was not produced by the release workflow reports itself as `dev`.
 
+### Upgrading to 3.1
+
+- **Back up the database first.** `add_unit_price_to_orders` backfills a price onto every
+  existing order. The 3.1 migrations are forward-only in practice: rolling them back drops the
+  per-order price, and the 3.0 code would then read corrected delivery prices into invoices
+  that were already issued.
+- **Keypad IDs:** users are never assigned `666` (kiosk easter egg) or a numeric
+  `KIOSK_LOGOUT_CODE` any more, but existing assignments are not changed. Check once:
+  `SELECT id, display_name, keypad_id FROM users WHERE keypad_id = 666;` and reassign.
+- **Behaviour changes for API clients** (scanner firmware, integrations):
+  - `POST /api/v1/orders` sells from the **oldest** in-stock lot of the product, whichever
+    `deliveryId` is sent. Send `expectedPrice` (the price shown to the buyer): if the lot
+    sold next costs anything else, nothing is bought and `409` is returned.
+  - Order responses carry `unitPrice` — what that unit cost. `delivery.price` is the lot's
+    current price, which a supplier may have corrected since.
+- **MCP clients** (e.g. Claude) show a consent page the first time they connect.
+
 ---
 
 ## Environment variable reference

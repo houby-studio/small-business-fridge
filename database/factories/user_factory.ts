@@ -1,12 +1,13 @@
 import factory from '@adonisjs/lucid/factories'
 import { DateTime } from 'luxon'
 import User from '#models/user'
+import { reservedUserKeypadIds } from '#helpers/kiosk_codes'
 
 let keypadCounter = 100
 
-// Codes the kiosk intercepts before looking a customer up (easter egg; the default logout
-// code 000000 is never reached). A test user holding one could never be identified.
-const RESERVED_KEYPAD_IDS = new Set([666])
+// Codes the kiosk intercepts before looking a customer up. A test user holding one could
+// never be identified at the kiosk.
+const RESERVED_KEYPAD_IDS = new Set(reservedUserKeypadIds())
 
 function nextKeypadId() {
   while (RESERVED_KEYPAD_IDS.has(keypadCounter)) keypadCounter++

@@ -93,6 +93,7 @@ export interface OrderDeliveryRef {
   productId: number
   amountSupplied: number
   amountLeft: number
+  /** The lot's current price — what this order cost is `unitPrice` on the order. */
   price: number
   createdAt: string | null
   product: OrderProductRef | null
@@ -105,6 +106,8 @@ export interface OrderWithDeliveryResponse {
   deliveryId: number
   invoiceId: number | null
   channel: string
+  /** Price of this unit — fixed once invoiced, may be corrected by the supplier before. */
+  unitPrice: number
   createdAt: string | null
   updatedAt: string | null
   delivery: OrderDeliveryRef | null

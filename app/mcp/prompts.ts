@@ -24,11 +24,14 @@ function buildWorkflowGuide(isSupplier: boolean, isAdmin: boolean): string {
   s.push('  Results already respect the user’s allergen preferences; favorites sort first.')
   s.push('')
   s.push('### Buy (1-click, pay later)')
-  s.push('  buy_product(deliveryId?:number, productId?:number, quantity?:1..10)')
+  s.push(
+    '  buy_product(deliveryId?:number, productId?:number, quantity?:1..10, expectedPrice?:number)'
+  )
   s.push('  ↳ Pass deliveryId from list_products when you have it; productId alone also works')
   s.push('    (the oldest in-stock lot is used). One order row per unit.')
   s.push('  → {orderIds[], purchased, unitPrice, totalCost}')
-  s.push('  Errors: OUT_OF_STOCK.')
+  s.push('  ↳ Pass expectedPrice = the price you told the user; a different price → PRICE_CHANGED.')
+  s.push('  Errors: OUT_OF_STOCK, PRICE_CHANGED (list the product again, confirm the new price).')
   s.push('  Examples:')
   s.push('    "kup mi kofolu" → list_products() → find Kofola → buy_product(deliveryId:X)')
   s.push('    "vezmu si 3 tyčinky" → buy_product(productId:Y, quantity:3)')

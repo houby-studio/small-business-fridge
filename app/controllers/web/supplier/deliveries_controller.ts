@@ -92,13 +92,7 @@ export default class DeliveriesController {
             uninvoicedBuyerCount: stats?.uninvoicedBuyerCount ?? 0,
             correctionCount: d.corrections.length,
             lastCorrection: lastCorrection
-              ? {
-                  kind: lastCorrection.kind,
-                  reason: lastCorrection.reason,
-                  createdAt: lastCorrection.createdAt.toISO(),
-                  oldAmountSupplied: lastCorrection.oldAmountSupplied,
-                  oldPrice: lastCorrection.oldPrice,
-                }
+              ? { reason: lastCorrection.reason, createdAt: lastCorrection.createdAt.toISO() }
               : null,
             canCorrect: user.isAdmin || d.supplierId === user.id,
           }

@@ -94,7 +94,7 @@
   "barcode_taken": "Tento čárový kód už používá jiný produkt.",
   "name_taken": "Tento název už je použitý.",
   "delivery_corrected": "Naskladnění bylo opraveno.",
-  "delivery_corrected_repriced": "Naskladnění bylo opraveno. Cena se změnila u {count} nevyfakturovaných nákupů, kupující dostanou e-mail.",
+  "delivery_corrected_repriced": "Naskladnění bylo opraveno. {count, plural, one {Cena se změnila u {count} nevyfakturovaného nákupu} other {Cena se změnila u {count} nevyfakturovaných nákupů}}, kupující dostanou e-mail.",
   "delivery_voided": "Naskladnění bylo stornováno.",
   "delivery_correction_not_found": "Naskladnění nebylo nalezeno.",
   "delivery_correction_forbidden": "Toto naskladnění může opravit jen jeho dodavatel nebo administrátor.",

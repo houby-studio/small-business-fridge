@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { router } from '@inertiajs/vue3'
+import { router, usePage } from '@inertiajs/vue3'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import InputNumber from 'primevue/inputnumber'
@@ -32,7 +32,25 @@ const props = defineProps<{
 
 const visible = defineModel<boolean>('visible', { required: true })
 
-const { t } = useI18n()
+const { t, tp } = useI18n()
+const page = usePage()
+
+// Field errors from a server-side validation failure (Inertia shares them as `errors`).
+function serverError(field: 'amount' | 'price' | 'reason'): string | null {
+  const value = (page.props.errors as Record<string, string | string[]> | undefined)?.[field]
+  return (Array.isArray(value) ? value[0] : value) ?? null
+}
+const amountMessage = computed(() => amountError.value ?? serverError('amount'))
+const priceMessage = computed(() => priceError.value ?? serverError('price'))
+const reasonMessage = computed(() => reasonError.value ?? serverError('reason'))
+
+// Why "Save" is disabled, shown as text rather than a tooltip (touch, screen readers).
+const submitHint = computed(() => {
+  if (isVoid.value) return null
+  if (noChange.value) return t('supplier.correction_no_change_hint')
+  if (reasonEmpty.value) return t('supplier.correction_reason_required')
+  return null
+})
 
 const form = ref<DeliveryCorrectionFormState>({ amount: null, price: null, reason: '' })
 const submitting = ref(false)
@@ -103,7 +121,7 @@ const impact = computed(() => {
 
   const invoiced =
     d.invoicedCount > 0
-      ? t('supplier.correction_impact_invoiced', { count: d.invoicedCount, price: d.price })
+      ? tp('supplier.correction_impact_invoiced', d.invoicedCount, { price: d.price })
       : ''
 
   if (d.uninvoicedCount > 0) {
@@ -111,13 +129,10 @@ const impact = computed(() => {
       priceDiffTotal.value > 0
         ? 'supplier.correction_impact_more'
         : 'supplier.correction_impact_less',
-      {
-        count: d.uninvoicedCount,
-        diff: Math.abs(priceDiffTotal.value),
-        buyers: d.uninvoicedBuyerCount,
-      }
+      { count: d.uninvoicedCount, diff: Math.abs(priceDiffTotal.value) }
     )
-    return { reachesBuyers: true, text: [repriced, invoiced].filter(Boolean).join(' ') }
+    const email = tp('supplier.correction_impact_email', d.uninvoicedBuyerCount)
+    return { reachesBuyers: true, text: [repriced, email, invoiced].filter(Boolean).join(' ') }
   }
 
   const stock =
@@ -137,6 +152,17 @@ function close() {
   visible.value = false
 }
 
+/**
+ * A refused correction (e.g. someone bought from the delivery meanwhile) comes back as a
+ * plain redirect with a danger flash, which Inertia reports as success. Keep the dialog —
+ * and the typed reason — open; the parent refreshes the delivery's numbers.
+ */
+function closeUnlessRefused(props: Record<string, unknown>) {
+  const alert = (props.flash as { alert?: { type?: string } } | undefined)?.alert
+  if (alert?.type === 'danger') return
+  close()
+}
+
 function submit() {
   if (!props.delivery) return
 
@@ -146,7 +172,7 @@ function submit() {
     router.delete(`/supplier/deliveries/${props.delivery.id}`, {
       data: { reason: form.value.reason.trim() },
       preserveScroll: true,
-      onSuccess: () => close(),
+      onSuccess: (response) => closeUnlessRefused(response.props),
       onFinish: () => {
         submitting.value = false
       },
@@ -165,7 +191,7 @@ function submit() {
     },
     {
       preserveScroll: true,
-      onSuccess: () => close(),
+      onSuccess: (response) => closeUnlessRefused(response.props),
       onFinish: () => {
         submitting.value = false
       },
@@ -208,13 +234,13 @@ function submit() {
               :max="delivery.amountSupplied"
               :disabled="allSold"
               :suffix="' ' + t('common.pieces')"
-              :invalid="!!amountError"
+              :invalid="!!amountMessage"
               data-testid="correction-amount"
             />
             <small
-              v-if="amountError"
+              v-if="amountMessage"
               class="mt-1 block text-xs leading-snug text-red-500 dark:text-red-400"
-              >{{ amountError }}</small
+              >{{ amountMessage }}</small
             >
             <small
               v-else
@@ -235,13 +261,13 @@ function submit() {
               :min="1"
               :max="DELIVERY_MAX_PRICE"
               :suffix="' ' + t('common.currency')"
-              :invalid="!!priceError"
+              :invalid="!!priceMessage"
               data-testid="correction-price"
             />
             <small
-              v-if="priceError"
+              v-if="priceMessage"
               class="mt-1 block text-xs leading-snug text-red-500 dark:text-red-400"
-              >{{ priceError }}</small
+              >{{ priceMessage }}</small
             >
           </div>
         </div>
@@ -274,14 +300,22 @@ function submit() {
               ? t('supplier.void_reason_placeholder')
               : t('supplier.correction_reason_placeholder')
           "
-          :invalid="!!reasonError"
+          :invalid="!!reasonMessage"
           data-testid="correction-reason"
         />
         <div class="flex justify-between gap-2">
-          <small v-if="reasonError" class="text-red-500 dark:text-red-400">{{ reasonError }}</small>
+          <small v-if="reasonMessage" class="text-red-500 dark:text-red-400">{{
+            reasonMessage
+          }}</small>
           <small v-else-if="isVoid" class="text-gray-500 dark:text-zinc-400">{{
             t('supplier.void_reason_help')
           }}</small>
+          <small
+            v-else-if="submitHint"
+            class="text-gray-500 dark:text-zinc-400"
+            data-testid="correction-submit-hint"
+            >{{ submitHint }}</small
+          >
           <span v-else />
           <small
             v-if="form.reason.length > REASON_COUNTER_FROM"
@@ -306,7 +340,6 @@ function submit() {
       <Button
         v-else
         :label="t('supplier.correction_submit')"
-        :title="noChange ? t('supplier.correction_no_change_hint') : undefined"
         :disabled="!isValid || submitting"
         :loading="submitting"
         data-testid="correction-submit"

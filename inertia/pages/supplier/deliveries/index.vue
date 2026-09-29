@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import Select from 'primevue/select'
@@ -35,13 +35,7 @@ interface DeliveryRow {
   uninvoicedCount: number
   uninvoicedBuyerCount: number
   correctionCount: number
-  lastCorrection: {
-    kind: 'update' | 'void'
-    reason: string
-    createdAt: string
-    oldAmountSupplied: number
-    oldPrice: number
-  } | null
+  lastCorrection: { reason: string; createdAt: string } | null
   canCorrect: boolean
 }
 
@@ -71,9 +65,10 @@ const productFilterOptions = computed(() => [
   ...props.products.map((p) => ({ label: p.displayName, value: String(p.id) })),
 ])
 
+// Same labels and order as the stock page; only the default differs (history = own).
 const scopeOptions = computed(() => [
-  { label: t('supplier.deliveries_scope_mine'), value: 'mine' },
-  { label: t('supplier.deliveries_scope_store'), value: 'store' },
+  { label: t('supplier.stock_scope_store'), value: 'store' },
+  { label: t('supplier.stock_scope_mine'), value: 'mine' },
 ])
 
 const productFilterSelect = ref<any>(null)
@@ -124,8 +119,8 @@ const correctionVisible = ref(false)
 const correctionMode = ref<'edit' | 'void'>('edit')
 const correctionTarget = ref<CorrectableDelivery | null>(null)
 
-function openCorrection(row: DeliveryRow, mode: 'edit' | 'void') {
-  correctionTarget.value = {
+function toCorrectable(row: DeliveryRow): CorrectableDelivery {
+  return {
     id: row.id,
     productName: row.product?.displayName ?? '—',
     amountSupplied: row.amountSupplied,
@@ -136,9 +131,23 @@ function openCorrection(row: DeliveryRow, mode: 'edit' | 'void') {
     uninvoicedCount: row.uninvoicedCount,
     uninvoicedBuyerCount: row.uninvoicedBuyerCount,
   }
+}
+
+function openCorrection(row: DeliveryRow, mode: 'edit' | 'void') {
+  correctionTarget.value = toCorrectable(row)
   correctionMode.value = mode
   correctionVisible.value = true
 }
+
+// A refused correction keeps the dialog open; show it the delivery's fresh numbers.
+watch(
+  () => props.recentDeliveries.data,
+  (rows) => {
+    if (!correctionVisible.value || !correctionTarget.value) return
+    const fresh = rows.find((row) => row.id === correctionTarget.value!.id)
+    if (fresh) correctionTarget.value = toCorrectable(fresh)
+  }
+)
 </script>
 
 <template>
@@ -174,7 +183,7 @@ function openCorrection(row: DeliveryRow, mode: 'edit' | 'void') {
         />
       </div>
       <div>
-        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
+        <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300">{{
           t('supplier.deliveries_filter_product')
         }}</label>
         <Select
@@ -224,7 +233,7 @@ function openCorrection(row: DeliveryRow, mode: 'edit' | 'void') {
           </div>
         </template>
       </Column>
-      <Column v-if="filterScope === 'store'" :header="t('common.supplier')">
+      <Column v-if="filters.scope === 'store'" :header="t('common.supplier')">
         <template #body="{ data }">{{ data.supplierName }}</template>
       </Column>
       <Column

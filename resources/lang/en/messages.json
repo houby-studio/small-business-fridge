@@ -94,7 +94,7 @@
   "barcode_taken": "That barcode already belongs to another product.",
   "name_taken": "That name is already taken.",
   "delivery_corrected": "The delivery has been corrected.",
-  "delivery_corrected_repriced": "The delivery has been corrected. The price changed on {count} uninvoiced purchases; buyers will get an email.",
+  "delivery_corrected_repriced": "The delivery has been corrected. {count, plural, one {The price changed on {count} uninvoiced purchase} other {The price changed on {count} uninvoiced purchases}}; buyers will get an email.",
   "delivery_voided": "The delivery has been voided.",
   "delivery_correction_not_found": "Delivery not found.",
   "delivery_correction_forbidden": "Only the delivery's supplier or an administrator can correct it.",

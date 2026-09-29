@@ -26,7 +26,6 @@ interface OrderRow {
   originalUnitPrice: number | null
   priceCorrection: { reason: string; createdAt: string } | null
   delivery: {
-    price: number
     product: { displayName: string }
     supplier: { displayName: string }
   }

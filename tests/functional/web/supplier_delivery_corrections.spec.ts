@@ -626,3 +626,46 @@ test.group('Corrections under contention and impersonation', (group) => {
     }
   })
 })
+
+test.group('Controllers trigger the notifications', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('an admin correction over HTTP triggers the supplier notice and buyer emails', async ({
+    client,
+    assert,
+  }) => {
+    const { delivery } = await setup({ amount: 10, price: 5 })
+    const admin = await UserFactory.apply('admin').create()
+    const buyer = await UserFactory.create()
+    await new OrderService().purchase(buyer.id, delivery.id, 'web')
+
+    // Record the calls instead of sending: the tests above cover the email contents.
+    const calls: string[] = []
+    const proto = NotificationService.prototype
+    const original = {
+      supplier: proto.sendDeliveryCorrectionToSupplier,
+      buyers: proto.sendPriceCorrectionNotifications,
+    }
+    proto.sendDeliveryCorrectionToSupplier = async () => {
+      calls.push('supplier')
+    }
+    proto.sendPriceCorrectionNotifications = async () => {
+      calls.push('buyers')
+    }
+    try {
+      const response = await client
+        .put(`/supplier/deliveries/${delivery.id}`)
+        .loginAs(admin)
+        .withCsrfToken()
+        .json({ amount: 10, price: 6, reason: 'Admin fix' })
+        .redirects(0)
+      response.assertStatus(302)
+    } finally {
+      proto.sendDeliveryCorrectionToSupplier = original.supplier
+      proto.sendPriceCorrectionNotifications = original.buyers
+    }
+
+    assert.sameMembers(calls, ['supplier', 'buyers'])
+  })
+})

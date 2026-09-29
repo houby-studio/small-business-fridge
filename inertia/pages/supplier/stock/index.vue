@@ -341,8 +341,9 @@ function submitQuickDelivery(confirmWarnings = false) {
           warningVisible.value = true
           return
         }
-        warningVisible.value = false
+        // Clear the warning first so the dialog's hide handler does not refocus the price.
         deliveryWarning.value = null
+        warningVisible.value = false
         selectedProduct.value = null
         amount.value = null
         price.value = null
@@ -375,6 +376,11 @@ function cancelWarningDelivery() {
   warningVisible.value = false
   deliveryWarning.value = null
   nextTick(() => focusPriceField())
+}
+
+/** Esc and the close icon hide the dialog without going through "Edit values". */
+function onWarningHide() {
+  if (deliveryWarning.value) cancelWarningDelivery()
 }
 
 function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
@@ -417,7 +423,7 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
           class="grid grid-cols-1 items-end gap-2 lg:grid-cols-12"
         >
           <div class="min-w-0 lg:col-span-6">
-            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
+            <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300">{{
               t('supplier.deliveries_product')
             }}</label>
             <Select
@@ -436,7 +442,7 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
             />
           </div>
           <div class="min-w-0 lg:col-span-2" @keydown.enter.prevent="onAmountEnter">
-            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
+            <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300">{{
               t('supplier.deliveries_amount')
             }}</label>
             <InputNumber
@@ -449,7 +455,7 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
             />
           </div>
           <div class="lg:col-span-2" @keydown.enter.prevent="onPriceEnter">
-            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
+            <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300">{{
               t('supplier.deliveries_price')
             }}</label>
             <InputNumber
@@ -483,6 +489,7 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
       modal
       :draggable="false"
       data-testid="delivery-warning-dialog"
+      @hide="onWarningHide"
     >
       <div v-if="deliveryWarning" class="space-y-5">
         <p class="text-sm text-gray-700 dark:text-zinc-300" data-testid="delivery-warning-summary">
@@ -771,7 +778,7 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
             </template>
           </Column>
           <Column
-            v-if="filterScope === 'store'"
+            v-if="filters.scope === 'store'"
             :header="t('common.supplier')"
             style="width: 180px"
           >

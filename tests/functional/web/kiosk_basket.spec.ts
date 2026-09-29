@@ -595,3 +595,63 @@ test.group('POST /kiosk/purchase (single item)', (group) => {
     response.assertStatus(404)
   })
 })
+
+test.group('Kiosk refuses a price the customer was not shown', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  async function stocked(price: number) {
+    const kioskDevice = await UserFactory.apply('kiosk').create()
+    const customer = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    const delivery = await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountLeft: 3,
+      price,
+    }).create()
+    return { kioskDevice, customer, delivery }
+  }
+
+  test('single item: a changed price redirects with price_changed', async ({ client, assert }) => {
+    const { kioskDevice, customer, delivery } = await stocked(30)
+
+    const response = await client
+      .post('/kiosk/purchase')
+      .form({ customerId: customer.id, deliveryId: delivery.id, expectedPrice: 25 })
+      .loginAs(kioskDevice)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    assert.include(response.header('location')!, 'error=price_changed')
+    assert.lengthOf(await Order.query().where('buyerId', customer.id), 0)
+  })
+
+  test('basket: a changed price returns price_changed with the current price', async ({
+    client,
+    assert,
+  }) => {
+    const { kioskDevice, customer, delivery } = await stocked(30)
+
+    const response = await client
+      .post('/kiosk/purchase-basket')
+      .json({
+        customerId: customer.id,
+        items: [{ deliveryId: delivery.id, quantity: 1, expectedPrice: 25 }],
+      })
+      .loginAs(kioskDevice)
+      .withCsrfToken()
+
+    response.assertStatus(200)
+    assert.deepEqual(response.body(), {
+      ok: false,
+      error: 'price_changed',
+      deliveryId: delivery.id,
+      price: 30,
+    })
+    assert.lengthOf(await Order.query().where('buyerId', customer.id), 0)
+  })
+})
