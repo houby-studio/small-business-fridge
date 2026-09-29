@@ -1,6 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import User from '#models/user'
 import ShopService from '#services/shop_service'
+import { KIOSK_EASTER_EGG_CODE, kioskLogoutCode } from '#helpers/kiosk_codes'
 import OrderService, {
   PriceChangedError,
   FifoViolationError,
@@ -13,7 +14,6 @@ import logger from '@adonisjs/core/services/logger'
 import KioskSession from '#models/kiosk_session'
 import db from '@adonisjs/lucid/services/db'
 import { purchaseBasketValidator } from '#validators/order'
-import env from '#start/env'
 
 export default class KioskController {
   /**
@@ -42,12 +42,11 @@ export default class KioskController {
       return response.status(400).json({ error: 'missing_keypad_id' })
     }
 
-    const kioskLogoutCode = env.get('KIOSK_LOGOUT_CODE', '000000')
-    if (normalizedKeypadId === kioskLogoutCode) {
+    if (normalizedKeypadId === kioskLogoutCode()) {
       return response.json({ action: 'logout' })
     }
 
-    if (normalizedKeypadId === '666') {
+    if (normalizedKeypadId === KIOSK_EASTER_EGG_CODE) {
       return response.json({
         action: 'easter_egg',
         message: i18n.t('kiosk.easter_egg_666'),

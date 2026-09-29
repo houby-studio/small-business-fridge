@@ -528,6 +528,30 @@ test.group('Admin - generate invoice for user', (group) => {
     assert.equal(occupant.keypadId, 555)
   })
 
+  test('admin cannot assign a keypadId the kiosk reserves for a special code', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const target = await UserFactory.create()
+    const originalKeypadId = target.keypadId
+
+    const response = await client
+      .put(`/admin/users/${target.id}`)
+      .header('x-inertia', 'true')
+      .header('x-inertia-version', '1')
+      .header('referer', '/admin/users')
+      .loginAs(admin)
+      .withCsrfToken()
+      .json({ keypadId: 666 })
+      .redirects(1)
+
+    response.assertStatus(200)
+    assert.equal(response.body().props.flash.alert.type, 'danger')
+    await target.refresh()
+    assert.equal(target.keypadId, originalKeypadId)
+  })
+
   test('customer cannot call generate invoice for user endpoint', async ({ client }) => {
     const customer = await UserFactory.create()
     const buyer = await UserFactory.create()
