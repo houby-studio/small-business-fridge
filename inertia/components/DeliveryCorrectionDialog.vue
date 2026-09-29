@@ -9,6 +9,7 @@ import { useI18n } from '~/composables/use_i18n'
 import {
   useDeliveryCorrectionValidation,
   CORRECTION_REASON_MAX_LENGTH,
+  DELIVERY_MAX_PRICE,
   type DeliveryCorrectionFormState,
 } from '~/composables/use_delivery_correction_validation'
 
@@ -232,6 +233,7 @@ function submit() {
               fluid
               highlightOnFocus
               :min="1"
+              :max="DELIVERY_MAX_PRICE"
               :suffix="' ' + t('common.currency')"
               :invalid="!!priceError"
               data-testid="correction-price"

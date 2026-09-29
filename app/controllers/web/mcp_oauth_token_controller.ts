@@ -84,7 +84,8 @@ export default class McpOauthTokenController {
     await authCode.save()
 
     const user = await User.find(authCode.userId)
-    if (!user) {
+    // A code issued before the account was disabled must not turn into a token.
+    if (!user || user.isDisabled) {
       return response
         .status(400)
         .json({ error: 'invalid_grant', error_description: 'User not found' })

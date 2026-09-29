@@ -6,6 +6,8 @@ import { useI18n } from '~/composables/use_i18n'
 // Update both sides together.
 export const CORRECTION_REASON_MIN_LENGTH = 3
 export const CORRECTION_REASON_MAX_LENGTH = 500
+export const DELIVERY_MAX_PRICE = 100_000
+export const DELIVERY_MAX_AMOUNT = 10_000
 
 export interface DeliveryCorrectionFormState {
   amount: number | null
@@ -40,7 +42,9 @@ export function useDeliveryCorrectionValidation(
 
   const priceError = computed(() => {
     const v = form.value.price
-    if (v === null || !Number.isInteger(v) || v < 1) return t('supplier.correction_price_hint')
+    if (v === null || !Number.isInteger(v) || v < 1 || v > DELIVERY_MAX_PRICE) {
+      return t('supplier.correction_price_hint', { max: DELIVERY_MAX_PRICE })
+    }
     return null
   })
 

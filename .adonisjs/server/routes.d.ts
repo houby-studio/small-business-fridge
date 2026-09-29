@@ -10,6 +10,7 @@ export type ScannedRoutes = {
     'api_mcp_oauth_meta.authorization_server': { paramsTuple?: []; params?: {} }
     'mcp_oauth_register.store': { paramsTuple?: []; params?: {} }
     'mcp_oauth_authorize.show': { paramsTuple?: []; params?: {} }
+    'mcp_oauth_authorize.store': { paramsTuple?: []; params?: {} }
     'mcp_oauth_token.store': { paramsTuple?: []; params?: {} }
     'api_mcp': { paramsTuple?: []; params?: {} }
     'bootstrap.show': { paramsTuple?: []; params?: {} }
@@ -211,6 +212,7 @@ export type ScannedRoutes = {
   }
   POST: {
     'mcp_oauth_register.store': { paramsTuple?: []; params?: {} }
+    'mcp_oauth_authorize.store': { paramsTuple?: []; params?: {} }
     'mcp_oauth_token.store': { paramsTuple?: []; params?: {} }
     'api_mcp': { paramsTuple?: []; params?: {} }
     'bootstrap.store': { paramsTuple?: []; params?: {} }

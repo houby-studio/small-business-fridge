@@ -10,6 +10,7 @@ import { CategoryFactory } from '#database/factories/category_factory'
 import { store as throttleStore } from '#middleware/throttle_middleware'
 import User from '#models/user'
 import McpOauthClient from '#models/mcp_oauth_client'
+import McpOauthCode from '#models/mcp_oauth_code'
 import Category from '#models/category'
 import Product from '#models/product'
 
@@ -156,6 +157,38 @@ async function createStockedDelivery() {
     price: 20,
   }).create()
   return { category, supplier, product, delivery }
+}
+
+const OAUTH_REDIRECT = 'https://claude.ai/api/mcp/auth_callback'
+
+async function registerClient(client: ApiClient): Promise<string> {
+  const registration = await client
+    .post('/oauth/register')
+    .json({ client_name: 'Claude', redirect_uris: [OAUTH_REDIRECT] })
+  return registration.body().client_id
+}
+
+function authorizeQs(clientId: string) {
+  return {
+    client_id: clientId,
+    redirect_uri: OAUTH_REDIRECT,
+    response_type: 'code',
+    code_challenge: 'abc',
+    code_challenge_method: 'S256',
+  }
+}
+
+/** GET shows the consent page (and stores the request in the session); POST approves it. */
+async function authorizeWithConsent(client: ApiClient, user: User, qs: Record<string, string>) {
+  const show = await client.get('/oauth/authorize').qs(qs).loginAs(user).redirects(0)
+  show.assertStatus(200)
+  return client
+    .post('/oauth/authorize')
+    .loginAs(user)
+    .withSession({ mcpOauthConsent: show.session().mcpOauthConsent })
+    .withCsrfToken()
+    .json({ decision: 'approve' })
+    .redirects(0)
 }
 
 test.group('API MCP - Authentication', (group) => {
@@ -533,18 +566,14 @@ test.group('API MCP - OAuth server', (group) => {
     const codeVerifier = randomBytes(32).toString('base64url')
     const codeChallenge = createHash('sha256').update(codeVerifier).digest('base64url')
 
-    const authorize = await client
-      .get('/oauth/authorize')
-      .qs({
-        client_id: clientId,
-        redirect_uri: redirectUri,
-        response_type: 'code',
-        code_challenge: codeChallenge,
-        code_challenge_method: 'S256',
-        state: 'xyz',
-      })
-      .loginAs(user)
-      .redirects(0)
+    const authorize = await authorizeWithConsent(client, user, {
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      code_challenge: codeChallenge,
+      code_challenge_method: 'S256',
+      state: 'xyz',
+    })
 
     authorize.assertStatus(302)
     const location = authorize.header('location') as string
@@ -589,17 +618,13 @@ test.group('API MCP - OAuth server', (group) => {
     const clientId = registration.body().client_id
 
     const codeChallenge = createHash('sha256').update('correct-verifier').digest('base64url')
-    const authorize = await client
-      .get('/oauth/authorize')
-      .qs({
-        client_id: clientId,
-        redirect_uri: redirectUri,
-        response_type: 'code',
-        code_challenge: codeChallenge,
-        code_challenge_method: 'S256',
-      })
-      .loginAs(user)
-      .redirects(0)
+    const authorize = await authorizeWithConsent(client, user, {
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      code_challenge: codeChallenge,
+      code_challenge_method: 'S256',
+    })
     const code = new URL(authorize.header('location') as string).searchParams.get('code')!
 
     const tokenResponse = await client.post('/oauth/token').json({
@@ -635,6 +660,108 @@ test.group('API MCP - OAuth server', (group) => {
 
     response.assertStatus(302)
     assert.include(response.header('location') as string, '/login?returnTo=/oauth/authorize')
+  })
+
+  test('authorize shows a consent page and issues nothing on GET', async ({ client, assert }) => {
+    const user = await UserFactory.create()
+    const clientId = await registerClient(client)
+
+    const response = await client
+      .get('/oauth/authorize')
+      .qs(authorizeQs(clientId))
+      .loginAs(user)
+      .redirects(0)
+
+    response.assertStatus(200)
+    assert.isUndefined(response.header('location'))
+    assert.include(response.text(), 'auth/oauth_consent')
+    assert.lengthOf(await McpOauthCode.all(), 0)
+  })
+
+  test('denying consent redirects back with access_denied and issues no code', async ({
+    client,
+    assert,
+  }) => {
+    const user = await UserFactory.create()
+    const clientId = await registerClient(client)
+
+    const show = await client
+      .get('/oauth/authorize')
+      .qs(authorizeQs(clientId))
+      .loginAs(user)
+      .redirects(0)
+    const deny = await client
+      .post('/oauth/authorize')
+      .loginAs(user)
+      .withSession({ mcpOauthConsent: show.session().mcpOauthConsent })
+      .withCsrfToken()
+      .json({ decision: 'deny' })
+      .redirects(0)
+
+    deny.assertStatus(302)
+    const url = new URL(deny.header('location') as string)
+    assert.equal(url.searchParams.get('error'), 'access_denied')
+    assert.isNull(url.searchParams.get('code'))
+    assert.lengthOf(await McpOauthCode.all(), 0)
+  })
+
+  test('approving without a pending request is refused', async ({ client, assert }) => {
+    const user = await UserFactory.create()
+
+    const response = await client
+      .post('/oauth/authorize')
+      .loginAs(user)
+      .withCsrfToken()
+      .json({ decision: 'approve' })
+      .redirects(0)
+
+    response.assertStatus(400)
+    assert.lengthOf(await McpOauthCode.all(), 0)
+  })
+
+  test('authorize is refused while an admin impersonates the user', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const target = await UserFactory.create()
+    const clientId = await registerClient(client)
+
+    const response = await client
+      .get('/oauth/authorize')
+      .qs(authorizeQs(clientId))
+      .loginAs(admin)
+      .withSession({
+        __impersonation: { byId: admin.id, asId: target.id, asName: target.displayName },
+      })
+      .redirects(0)
+
+    response.assertStatus(403)
+    assert.lengthOf(await McpOauthCode.all(), 0)
+  })
+
+  test('a code issued before the account was disabled yields no token', async ({
+    client,
+    assert,
+  }) => {
+    const user = await UserFactory.create()
+    const clientId = await registerClient(client)
+    const codeVerifier = randomBytes(32).toString('base64url')
+    const codeChallenge = createHash('sha256').update(codeVerifier).digest('base64url')
+
+    const authorize = await authorizeWithConsent(client, user, {
+      ...authorizeQs(clientId),
+      code_challenge: codeChallenge,
+    })
+    const code = new URL(authorize.header('location') as string).searchParams.get('code')!
+    await user.merge({ isDisabled: true }).save()
+
+    const tokenResponse = await client.post('/oauth/token').json({
+      grant_type: 'authorization_code',
+      code,
+      code_verifier: codeVerifier,
+      redirect_uri: OAUTH_REDIRECT,
+      client_id: clientId,
+    })
+    tokenResponse.assertStatus(400)
+    assert.equal(tokenResponse.body().error, 'invalid_grant')
   })
 
   test('authorize rejects an unregistered redirect_uri', async ({ client }) => {

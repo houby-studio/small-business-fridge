@@ -6,21 +6,36 @@ import { DateTime } from 'luxon'
 import logger from '@adonisjs/core/services/logger'
 
 const SESSION_KEY = 'mcpOauthPendingParams'
+/** Validated request waiting for the user's decision on the consent page. */
+const CONSENT_KEY = 'mcpOauthConsent'
+
+interface ConsentRequest {
+  clientId: string
+  redirectUri: string
+  codeChallenge: string
+  state?: string
+  userId: number
+}
 
 /**
- * GET /oauth/authorize — OAuth 2.1 Authorization Endpoint.
+ * OAuth 2.1 Authorization Endpoint.
  *
- * Flow:
+ * GET /oauth/authorize
  * 1. Validate client_id, redirect_uri, code_challenge (PKCE S256 required).
  * 2. If user is NOT logged in via web session:
  *    - Store all OAuth params in session.
  *    - Redirect to /login with ?returnTo=/oauth/authorize (params re-read from session).
- * 3. If user IS logged in:
- *    - Issue a short-lived authorization code.
- *    - Redirect to redirect_uri?code=...&state=...
+ * 3. If user IS logged in: show a consent page naming the client and where it redirects.
+ *    Nothing is issued on a GET — clients register themselves, so a link alone must never
+ *    be enough to hand a long-lived token to whoever controls the redirect URI.
+ *
+ * POST /oauth/authorize (CSRF-protected) — the user's decision. Parameters come from the
+ * session, never from the form, so they cannot be swapped between showing and approving.
+ * Refused while an admin impersonates: a token minted then would outlive the impersonation
+ * and carry the target's identity.
  */
 export default class McpOauthAuthorizeController {
-  async show({ request, response, auth, session }: HttpContext) {
+  async show({ request, response, auth, session, inertia }: HttpContext) {
     const {
       client_id: clientId,
       redirect_uri: redirectUri,
@@ -78,25 +93,73 @@ export default class McpOauthAuthorizeController {
       return response.redirect('/login?returnTo=/oauth/authorize')
     }
 
-    const authUser = auth.use('web').user!
-    const code = randomBytes(32).toString('hex')
+    if (session.has('__impersonation')) {
+      return response.status(403).send('Authorization is not available while impersonating')
+    }
 
-    await McpOauthCode.create({
-      code,
+    const authUser = auth.use('web').user!
+    const consent: ConsentRequest = {
       clientId: effectiveClientId,
-      userId: authUser.id,
       redirectUri: effectiveRedirectUri,
       codeChallenge: effectiveCodeChallenge,
+      state: effectiveState,
+      userId: authUser.id,
+    }
+    session.put(CONSENT_KEY, consent)
+
+    return inertia.render('auth/oauth_consent', {
+      clientName: client.clientName || effectiveClientId,
+      redirectHost: new URL(effectiveRedirectUri).host,
+    })
+  }
+
+  async store({ request, response, auth, session, inertia }: HttpContext) {
+    const consent = session.pull(CONSENT_KEY) as ConsentRequest | undefined
+    const authUser = auth.use('web').user
+
+    if (!consent || !authUser || consent.userId !== authUser.id) {
+      return response.status(400).send('No pending authorization request')
+    }
+    if (session.has('__impersonation')) {
+      return response.status(403).send('Authorization is not available while impersonating')
+    }
+
+    const redirectUrl = new URL(consent.redirectUri)
+    if (consent.state) redirectUrl.searchParams.set('state', consent.state)
+
+    if (request.input('decision') !== 'approve') {
+      redirectUrl.searchParams.set('error', 'access_denied')
+      logger.info({ type: 'mcp_oauth_denied', clientId: consent.clientId, userId: authUser.id })
+      return this.redirectOut(request, response, inertia, redirectUrl)
+    }
+
+    const code = randomBytes(32).toString('hex')
+    await McpOauthCode.create({
+      code,
+      clientId: consent.clientId,
+      userId: authUser.id,
+      redirectUri: consent.redirectUri,
+      codeChallenge: consent.codeChallenge,
       used: false,
       expiresAt: DateTime.now().plus({ minutes: 5 }),
     })
 
-    logger.info({ type: 'mcp_oauth_code_issued', clientId: effectiveClientId, userId: authUser.id })
+    logger.info({ type: 'mcp_oauth_code_issued', clientId: consent.clientId, userId: authUser.id })
 
-    const redirectUrl = new URL(effectiveRedirectUri)
     redirectUrl.searchParams.set('code', code)
-    if (effectiveState) redirectUrl.searchParams.set('state', effectiveState)
+    return this.redirectOut(request, response, inertia, redirectUrl)
+  }
 
-    return response.redirect(redirectUrl.toString())
+  /** The consent form posts through Inertia, which needs a hard location for another origin. */
+  private redirectOut(
+    request: HttpContext['request'],
+    response: HttpContext['response'],
+    inertia: HttpContext['inertia'],
+    url: URL
+  ) {
+    if (request.header('x-inertia')) {
+      return inertia.location(url.toString())
+    }
+    return response.redirect(url.toString())
   }
 }

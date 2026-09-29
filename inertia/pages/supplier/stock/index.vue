@@ -15,6 +15,10 @@ import { useListFilters } from '~/composables/use_list_filters'
 import { useSelectEnterKey } from '~/composables/use_select_enter_key'
 import { formatDate } from '~/composables/use_format_date'
 import FilterBar from '~/components/FilterBar.vue'
+import {
+  DELIVERY_MAX_AMOUNT,
+  DELIVERY_MAX_PRICE,
+} from '~/composables/use_delivery_correction_validation'
 import PaginatedDataTable from '~/components/PaginatedDataTable.vue'
 
 interface StockRow {
@@ -440,6 +444,7 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
               v-model="amount"
               fluid
               :min="1"
+              :max="DELIVERY_MAX_AMOUNT"
               :placeholder="t('common.pieces')"
             />
           </div>
@@ -452,6 +457,7 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
               v-model="price"
               fluid
               :min="1"
+              :max="DELIVERY_MAX_PRICE"
               :suffix="' ' + t('common.currency')"
               :placeholder="t('common.currency')"
             />
