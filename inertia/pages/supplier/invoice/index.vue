@@ -8,7 +8,7 @@ import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Message from 'primevue/message'
 import ConfirmDialog from 'primevue/confirmdialog'
-import { useConfirm } from 'primevue/useconfirm'
+import { useAppConfirm } from '~/composables/use_app_confirm'
 import { useI18n } from '~/composables/use_i18n'
 
 interface UninvoicedGroup {
@@ -19,7 +19,7 @@ interface UninvoicedGroup {
 }
 
 const props = defineProps<{ uninvoiced: UninvoicedGroup[] }>()
-const confirm = useConfirm()
+const confirm = useAppConfirm()
 const { t } = useI18n()
 
 const totalOrders = computed(() => props.uninvoiced.reduce((s, g) => s + g.orderCount, 0))

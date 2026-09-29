@@ -11,7 +11,7 @@ import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
 import ConfirmDialog from 'primevue/confirmdialog'
 import Paginator from 'primevue/paginator'
-import { useConfirm } from 'primevue/useconfirm'
+import { useAppConfirm } from '~/composables/use_app_confirm'
 import { useToast } from 'primevue/usetoast'
 import { useI18n } from '~/composables/use_i18n'
 import { useListFilters } from '~/composables/use_list_filters'
@@ -69,7 +69,7 @@ const { t } = useI18n()
 const toast = useToast()
 const page = usePage<SharedProps>()
 const currentUserId = computed(() => page.props.user?.id)
-const confirm = useConfirm()
+const confirm = useAppConfirm()
 const ALL = '__all__'
 
 const filterRole = ref(props.filters.role || ALL)

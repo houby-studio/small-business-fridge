@@ -10,7 +10,7 @@ import ToggleSwitch from 'primevue/toggleswitch'
 import Select from 'primevue/select'
 import Dialog from 'primevue/dialog'
 import ConfirmDialog from 'primevue/confirmdialog'
-import { useConfirm } from 'primevue/useconfirm'
+import { useAppConfirm } from '~/composables/use_app_confirm'
 import { useI18n } from '~/composables/use_i18n'
 import { useInlineEdit } from '~/composables/use_inline_edit'
 
@@ -25,7 +25,7 @@ interface TrackRow {
 
 const props = defineProps<{ tracks: TrackRow[] }>()
 const { t } = useI18n()
-const confirm = useConfirm()
+const confirm = useAppConfirm()
 
 const accessLevelOptions = [
   { label: t('admin.music_access_public'), value: 'public' },
@@ -123,7 +123,7 @@ function deleteTrack(track: TrackRow) {
     icon: 'pi pi-exclamation-triangle',
     acceptLabel: t('admin.music_delete_accept'),
     rejectLabel: t('common.cancel'),
-    acceptClass: 'p-button-danger',
+    destructive: true,
     accept: () => {
       router.delete(`/admin/music/${track.id}`)
     },

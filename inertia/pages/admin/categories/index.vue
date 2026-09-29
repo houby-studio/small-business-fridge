@@ -11,7 +11,7 @@ import ToggleSwitch from 'primevue/toggleswitch'
 import Tag from 'primevue/tag'
 import Dialog from 'primevue/dialog'
 import ConfirmDialog from 'primevue/confirmdialog'
-import { useConfirm } from 'primevue/useconfirm'
+import { useAppConfirm } from '~/composables/use_app_confirm'
 import { useI18n } from '~/composables/use_i18n'
 import { useInlineEdit } from '~/composables/use_inline_edit'
 
@@ -25,7 +25,7 @@ interface CategoryRow {
 
 const props = defineProps<{ categories: CategoryRow[] }>()
 const { t } = useI18n()
-const confirm = useConfirm()
+const confirm = useAppConfirm()
 
 const showCreateDialog = ref(false)
 const newName = ref('')
@@ -79,7 +79,7 @@ function deleteCategory(category: CategoryRow) {
     icon: 'pi pi-exclamation-triangle',
     acceptLabel: t('admin.categories_delete_accept'),
     rejectLabel: t('common.cancel'),
-    acceptClass: 'p-button-danger',
+    destructive: true,
     accept: () => {
       router.delete(`/admin/categories/${category.id}`)
     },
