@@ -1,6 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import ShopService from '#services/shop_service'
-import OrderService from '#services/order_service'
+import OrderService, { PriceChangedError } from '#services/order_service'
 import NotificationService from '#services/notification_service'
 import RecommendationService from '#services/recommendation_service'
 import AuditService from '#services/audit_service'
@@ -113,7 +113,13 @@ export default class ShopController {
         logger.error({ err }, 'Failed to send purchase confirmation email')
       })
     } catch (error) {
-      if (error instanceof Error && error.message === 'OUT_OF_STOCK') {
+      if (error instanceof PriceChangedError) {
+        // The page showed a lot that is no longer next in line (FIFO) — nothing was bought.
+        session.flash('alert', {
+          type: 'warn',
+          message: i18n.t('messages.purchase_price_changed', { price: error.price }),
+        })
+      } else if (error instanceof Error && error.message === 'OUT_OF_STOCK') {
         session.flash('alert', {
           type: 'danger',
           message: i18n.t('messages.purchase_out_of_stock'),

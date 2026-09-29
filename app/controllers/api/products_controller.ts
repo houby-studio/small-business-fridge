@@ -29,7 +29,7 @@ export default class ProductsController {
   /**
    * @show
    * @summary Get product by barcode
-   * @description Returns a single product with current stock and cheapest delivery price.
+   * @description Returns a single product with current stock and the price of the delivery lot sold next (oldest in stock — strict FIFO).
    * @tag Products
    * @paramPath barcode - Product barcode (EAN) - @type(string) @required
    * @responseBody 200 - <ProductBarcodeResponse>
@@ -49,7 +49,10 @@ export default class ProductsController {
     }
 
     const stockSum = product.deliveries.reduce((sum, d) => sum + d.amountLeft, 0)
-    const cheapest = product.deliveries.sort((a, b) => a.price - b.price)[0]
+    // Strict FIFO: the oldest in-stock lot is the one a purchase will use.
+    const nextLot = product.deliveries.sort(
+      (a, b) => a.createdAt.toMillis() - b.createdAt.toMillis() || a.id - b.id
+    )[0]
 
     const payload: ProductBarcodeResponse = {
       data: {
@@ -60,8 +63,8 @@ export default class ProductsController {
         category: product.category.name,
         allergens: product.allergens.map((a) => ({ id: a.id, name: a.name })),
         stockSum,
-        price: cheapest?.price ?? null,
-        deliveryId: cheapest?.id ?? null,
+        price: nextLot?.price ?? null,
+        deliveryId: nextLot?.id ?? null,
       },
     }
     return response.json(payload)

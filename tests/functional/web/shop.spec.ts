@@ -371,6 +371,56 @@ test.group('Web Shop - purchase', (group) => {
   })
 })
 
+test.group('Web Shop - strict FIFO', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('a stale page naming a cheaper newer lot buys nothing and shows the new price', async ({
+    client,
+    assert,
+  }) => {
+    const buyer = await UserFactory.create()
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    const older = await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountLeft: 2,
+      price: 25,
+    }).create()
+    const newer = await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountLeft: 2,
+      price: 10,
+    }).create()
+    await db
+      .from('deliveries')
+      .where('id', older.id)
+      .update({ created_at: new Date('2026-01-10T10:00:00.000Z') })
+
+    const response = await client
+      .post('/shop/purchase')
+      .header('x-inertia', 'true')
+      .header('x-inertia-version', '1')
+      .loginAs(buyer)
+      .withCsrfToken()
+      .json({ deliveryId: newer.id })
+      .redirects(1)
+
+    response.assertStatus(200)
+    const alert = response.body().props.flash.alert
+    assert.equal(alert.type, 'warn')
+    assert.include(alert.message, '25')
+    assert.lengthOf(await Order.query().where('buyerId', buyer.id), 0)
+
+    // The shop itself offers the older lot, so a fresh page buys it at its price.
+    const products = response.body().props.products as Array<{ id: number; deliveryId: number }>
+    assert.equal(products.find((p) => p.id === product.id)?.deliveryId, older.id)
+  })
+})
+
 test.group('Web Shop - add to favourites from email', (group) => {
   group.each.setup(cleanAll)
   group.each.teardown(cleanAll)

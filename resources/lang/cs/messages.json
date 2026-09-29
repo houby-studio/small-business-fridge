@@ -102,5 +102,6 @@
   "delivery_correction_amount_below_sold": "Množství nemůže být nižší než počet už prodaných kusů.",
   "delivery_correction_no_change": "Množství ani cena se nezměnily.",
   "delivery_void_has_orders": "Z naskladnění už někdo nakoupil, proto ho nelze stornovat. Snižte množství na počet prodaných kusů.",
-  "delivery_correction_amount_increase": "Množství v opravě nelze navýšit. Chybějící kusy naskladněte jako novou dodávku."
+  "delivery_correction_amount_increase": "Množství v opravě nelze navýšit. Chybějící kusy naskladněte jako novou dodávku.",
+  "purchase_price_changed": "Cena produktu se mezitím změnila na {price} {currency}. Nic se nekoupilo – zkontrolujte cenu a nakupte znovu."
 }

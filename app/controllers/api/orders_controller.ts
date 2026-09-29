@@ -1,5 +1,5 @@
 import type { HttpContext } from '@adonisjs/core/http'
-import OrderService from '#services/order_service'
+import OrderService, { PriceChangedError } from '#services/order_service'
 import NotificationService from '#services/notification_service'
 import { apiOrderValidator } from '#validators/order'
 import logger from '@adonisjs/core/services/logger'
@@ -10,7 +10,7 @@ export default class OrdersController {
   /**
    * @store
    * @summary Create an order (purchase a product)
-   * @description Purchases a product by delivery ID. Optionally specify a channel (e.g. "kiosk", "scanner").
+   * @description Purchases one unit of the product the delivery ID belongs to. Stock is sold strictly first-in-first-out: the unit always comes from the oldest in-stock lot. If that lot has a different price than the requested one, nothing is bought and 409 is returned. Optionally specify a channel (e.g. "kiosk", "scanner").
    * @tag Orders
    * @requestBody <OrderCreateRequest>
    * @responseBody 201 - <OrderCreatedResponse>
@@ -34,6 +34,12 @@ export default class OrdersController {
       const payload: OrderCreatedResponse = { data: serializeOrder(order) }
       return response.created(payload)
     } catch (error) {
+      if (error instanceof PriceChangedError) {
+        // Strict FIFO sells the oldest lot; it is not the one requested and costs differently.
+        return response.conflict({
+          error: `The delivery lot sold next has a different price (${error.price}). Fetch the product again and retry with its current deliveryId.`,
+        })
+      }
       if (error instanceof Error && error.message === 'OUT_OF_STOCK') {
         return response.conflict({ error: 'Product is out of stock.' })
       }

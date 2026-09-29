@@ -62,23 +62,68 @@ test.group('API Orders', (group) => {
     assert.isString(order.createdAt)
   })
 
-  test('store returns 409 when the delivery is out of stock', async ({ client }) => {
+  test('store returns 409 when the product is out of stock', async ({ client }) => {
     const user = await UserFactory.create()
     const token = await User.accessTokens.create(user, ['*'])
-    const { supplier, product } = await createStockedDelivery()
-    const emptyDelivery = await DeliveryFactory.merge({
+    const { delivery } = await createStockedDelivery()
+    await delivery.merge({ amountLeft: 0 }).save()
+
+    const response = await client
+      .post('/api/v1/orders')
+      .header('Authorization', `Bearer ${token.value!.release()}`)
+      .json({ deliveryId: delivery.id, channel: 'scanner' })
+
+    response.assertStatus(409)
+  })
+
+  test('store sells from the oldest lot even when a newer one is requested', async ({
+    client,
+    assert,
+  }) => {
+    const user = await UserFactory.create()
+    const token = await User.accessTokens.create(user, ['*'])
+    const { supplier, product, delivery: oldest } = await createStockedDelivery()
+    const newer = await DeliveryFactory.merge({
       supplierId: supplier.id,
       productId: product.id,
-      amountLeft: 0,
+      amountLeft: 5,
       price: 15,
     }).create()
 
     const response = await client
       .post('/api/v1/orders')
       .header('Authorization', `Bearer ${token.value!.release()}`)
-      .json({ deliveryId: emptyDelivery.id, channel: 'scanner' })
+      .json({ deliveryId: newer.id, channel: 'scanner' })
+
+    response.assertStatus(201)
+    assert.equal(response.body().data.deliveryId, oldest.id)
+  })
+
+  test('store refuses with 409 when the FIFO lot has a different price', async ({
+    client,
+    assert,
+  }) => {
+    const user = await UserFactory.create()
+    const token = await User.accessTokens.create(user, ['*'])
+    const { supplier, product, delivery: oldest } = await createStockedDelivery()
+    const cheaperNewer = await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountLeft: 5,
+      price: 9,
+    }).create()
+
+    const response = await client
+      .post('/api/v1/orders')
+      .header('Authorization', `Bearer ${token.value!.release()}`)
+      .json({ deliveryId: cheaperNewer.id, channel: 'scanner' })
 
     response.assertStatus(409)
+    assert.include(response.body().error, 'different price')
+    await oldest.refresh()
+    await cheaperNewer.refresh()
+    assert.equal(oldest.amountLeft, 5)
+    assert.equal(cheaperNewer.amountLeft, 5)
   })
 
   test('latest returns recent orders with pagination meta and delivery detail', async ({

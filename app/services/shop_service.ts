@@ -136,14 +136,13 @@ export default class ShopService {
     const result = products
       .map((product) => {
         const mapped = this.mapProductBase(product, favoriteIds)
-        const cheapestDelivery = product.deliveries
-          .filter((d) => d.amountLeft > 0)
-          .sort((a, b) => a.price - b.price)[0]
+        // Strict FIFO: show (and sell) the oldest in-stock lot, not the cheapest one.
+        const nextLot = this.mapDeliveryLots(product)[0]
 
         return {
           ...mapped,
-          price: cheapestDelivery?.price ?? null,
-          deliveryId: cheapestDelivery?.id ?? null,
+          price: nextLot?.price ?? null,
+          deliveryId: nextLot?.deliveryId ?? null,
         }
       })
       .filter((p) => options.showAll || p.stockSum > 0)

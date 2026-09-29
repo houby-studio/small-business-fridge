@@ -4,6 +4,15 @@ import User from '#models/user'
 
 let keypadCounter = 100
 
+// Codes the kiosk intercepts before looking a customer up (easter egg; the default logout
+// code 000000 is never reached). A test user holding one could never be identified.
+const RESERVED_KEYPAD_IDS = new Set([666])
+
+function nextKeypadId() {
+  while (RESERVED_KEYPAD_IDS.has(keypadCounter)) keypadCounter++
+  return keypadCounter++
+}
+
 export const UserFactory = factory
   .define(User, ({ faker }) => {
     return {
@@ -14,7 +23,7 @@ export const UserFactory = factory
       pendingIban: null,
       ibanVerifiedAt: null,
       password: 'password123',
-      keypadId: keypadCounter++,
+      keypadId: nextKeypadId(),
       role: 'customer' as const,
       isKiosk: false,
       isDisabled: false,

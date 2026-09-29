@@ -12,6 +12,16 @@ export class OutOfStockError extends Error {
   }
 }
 
+export class PriceChangedError extends Error {
+  constructor(
+    public readonly deliveryId: number,
+    public readonly price: number
+  ) {
+    super('PRICE_CHANGED')
+    this.name = 'PriceChangedError'
+  }
+}
+
 export class FifoViolationError extends Error {
   constructor(public readonly productId: number) {
     super('FIFO_VIOLATION')
@@ -21,38 +31,55 @@ export class FifoViolationError extends Error {
 
 export default class OrderService {
   /**
-   * Unified purchase logic for ALL channels.
-   * Uses a database transaction to ensure stock consistency.
+   * Single-unit purchase for every channel (web shop, kiosk, REST API, MCP).
+   *
+   * Strict FIFO: the unit always comes from the oldest in-stock delivery of the product,
+   * whichever lot the client named — the client only tells us *which product*. Otherwise a
+   * client (or a cheaper, newer delivery) could jump the queue while older stock sits
+   * unsold and its supplier waits for their money.
+   *
+   * The buyer confirmed the price of the lot they saw. If the FIFO lot is a different one
+   * at a different price (e.g. the page was stale), nothing is bought: PriceChangedError
+   * carries the current price so the client can ask again.
    */
   async purchase(buyerId: number, deliveryId: number, channel: OrderChannel): Promise<Order> {
     return db.transaction(async (trx) => {
-      // Lock the delivery row for update to prevent race conditions
-      const delivery = await Delivery.query({ client: trx })
-        .where('id', deliveryId)
+      const requested = await Delivery.query({ client: trx }).where('id', deliveryId).first()
+      if (!requested) {
+        throw new Error('OUT_OF_STOCK')
+      }
+
+      // Lock every in-stock lot of the product (as purchaseBasket does) and pick the oldest
+      // in JS: FOR UPDATE with LIMIT can come back empty under contention even though a
+      // later lot still has stock.
+      const lots = await Delivery.query({ client: trx })
+        .where('productId', requested.productId)
         .where('amountLeft', '>', 0)
+        .orderBy('createdAt', 'asc')
+        .orderBy('id', 'asc')
         .forUpdate()
-        .first()
+      const delivery = lots[0]
 
       if (!delivery) {
         throw new Error('OUT_OF_STOCK')
       }
+      if (delivery.id !== requested.id && delivery.price !== requested.price) {
+        throw new PriceChangedError(delivery.id, delivery.price)
+      }
 
-      // Decrement stock
       delivery.amountLeft -= 1
       await delivery.save()
 
-      // Create order
       const order = await Order.create(
         {
           buyerId,
-          deliveryId,
+          deliveryId: delivery.id,
           channel,
           unitPrice: delivery.price,
         },
         { client: trx }
       )
 
-      // Audit log (fire-and-forget, outside transaction)
       await AuditService.log(buyerId, 'order.created', 'order', order.id, delivery.supplierId, {
         productId: delivery.productId,
         price: delivery.price,
@@ -61,6 +88,19 @@ export default class OrderService {
 
       return order
     })
+  }
+
+  /**
+   * The oldest in-stock delivery of a product — the one strict FIFO sells next. Used to show
+   * the price and lot a purchase will actually use.
+   */
+  async getFifoLot(productId: number): Promise<Delivery | null> {
+    return Delivery.query()
+      .where('productId', productId)
+      .where('amountLeft', '>', 0)
+      .orderBy('createdAt', 'asc')
+      .orderBy('id', 'asc')
+      .first()
   }
 
   /**

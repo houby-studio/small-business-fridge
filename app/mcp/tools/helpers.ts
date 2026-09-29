@@ -20,6 +20,8 @@ export function mapDomainError(err: unknown, fallback: string): CallToolResult {
   const message = err instanceof Error ? err.message : String(err)
   const known: Record<string, string> = {
     OUT_OF_STOCK: 'The product is out of stock (error code: OUT_OF_STOCK).',
+    PRICE_CHANGED:
+      'The delivery lot sold next has a different price than the one requested — list the product again to see the current price (error code: PRICE_CHANGED).',
     FORBIDDEN: 'You are not allowed to perform this action on this record (error code: FORBIDDEN).',
     ALREADY_PAID: 'The invoice is already paid (error code: ALREADY_PAID).',
     ORDER_ALREADY_INVOICED:

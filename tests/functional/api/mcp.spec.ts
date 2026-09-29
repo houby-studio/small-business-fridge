@@ -355,19 +355,35 @@ test.group('API MCP - Tool calls', (group) => {
 
   test('buy_product reports out of stock as tool error', async ({ client, assert }) => {
     const user = await UserFactory.create()
-    const { supplier, product } = await createStockedDelivery()
-    const empty = await DeliveryFactory.merge({
-      supplierId: supplier.id,
-      productId: product.id,
-      amountLeft: 0,
-      price: 20,
-    }).create()
+    const { delivery } = await createStockedDelivery()
+    await delivery.merge({ amountLeft: 0 }).save()
 
     const result = await callTool(client, await createToken(user), 'buy_product', {
-      deliveryId: empty.id,
+      deliveryId: delivery.id,
     })
     assert.isTrue(result.isError)
     assert.include(result.raw, 'OUT_OF_STOCK')
+  })
+
+  test('buy_product by productId takes the oldest lot, not the cheapest', async ({
+    client,
+    assert,
+  }) => {
+    const user = await UserFactory.create()
+    const { supplier, product, delivery: oldest } = await createStockedDelivery()
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountLeft: 5,
+      price: 5,
+    }).create()
+
+    const result = await callTool(client, await createToken(user), 'buy_product', {
+      productId: product.id,
+    })
+    assert.isFalse(result.isError)
+    await oldest.refresh()
+    assert.equal(oldest.amountLeft, 4)
   })
 
   test('supplier invoicing flow: buy → uninvoiced_summary → generate_invoices', async ({

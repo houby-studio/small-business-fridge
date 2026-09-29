@@ -43,5 +43,6 @@
   "max_stock_reached": "Maximální množství v košíku",
   "thank_you": "Díky, {name}!",
   "purchase_done": "Dobrý výběr! Nashledanou.",
-  "easter_egg_666": "Kód 666 odemčen: tentokrát jen easter egg."
+  "easter_egg_666": "Kód 666 odemčen: tentokrát jen easter egg.",
+  "purchase_price_changed": "Cena produktu se mezitím změnila. Nic se nekoupilo – zkontrolujte novou cenu a zkuste to znovu."
 }

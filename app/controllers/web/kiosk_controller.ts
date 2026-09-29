@@ -1,7 +1,11 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import User from '#models/user'
 import ShopService from '#services/shop_service'
-import OrderService, { FifoViolationError, OutOfStockError } from '#services/order_service'
+import OrderService, {
+  PriceChangedError,
+  FifoViolationError,
+  OutOfStockError,
+} from '#services/order_service'
 import NotificationService from '#services/notification_service'
 import RecommendationService from '#services/recommendation_service'
 import MusicService from '#services/music_service'
@@ -219,8 +223,9 @@ export default class KioskController {
       })
 
       return response.redirect(`/kiosk/shop?keypadId=${customer.keypadId ?? ''}&success=1`)
-    } catch {
-      return response.redirect(`/kiosk/shop?keypadId=${customer.keypadId ?? ''}&error=out_of_stock`)
+    } catch (error) {
+      const code = error instanceof PriceChangedError ? 'price_changed' : 'out_of_stock'
+      return response.redirect(`/kiosk/shop?keypadId=${customer.keypadId ?? ''}&error=${code}`)
     }
   }
 }

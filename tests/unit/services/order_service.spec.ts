@@ -188,4 +188,83 @@ test.group('OrderService', (group) => {
       'FIFO_VIOLATION'
     )
   })
+
+  test('single purchase always sells from the oldest lot (strict FIFO)', async ({ assert }) => {
+    const { buyer, older, newer } = await twoLots({ olderPrice: 20, newerPrice: 20 })
+
+    // The client names the newer lot (e.g. a stale page) — the older one is sold anyway.
+    const order = await orderService.purchase(buyer.id, newer.id, 'web')
+
+    assert.equal(order.deliveryId, older.id)
+    assert.equal(order.unitPrice, 20)
+    await older.refresh()
+    await newer.refresh()
+    assert.equal(older.amountLeft, 1)
+    assert.equal(newer.amountLeft, 3)
+  })
+
+  test('a cheaper newer lot cannot jump the queue', async ({ assert }) => {
+    const { buyer, older, newer } = await twoLots({ olderPrice: 20, newerPrice: 12 })
+
+    await assert.rejects(() => orderService.purchase(buyer.id, newer.id, 'web'), 'PRICE_CHANGED')
+
+    await older.refresh()
+    await newer.refresh()
+    assert.equal(older.amountLeft, 2)
+    assert.equal(newer.amountLeft, 3)
+    assert.lengthOf(await Order.all(), 0)
+  })
+
+  test('once the oldest lot is sold out the next one is used', async ({ assert }) => {
+    const { buyer, older, newer } = await twoLots({ olderPrice: 20, newerPrice: 20 })
+
+    const first = await orderService.purchase(buyer.id, older.id, 'web')
+    const second = await orderService.purchase(buyer.id, older.id, 'web')
+    const third = await orderService.purchase(buyer.id, older.id, 'web')
+
+    assert.deepEqual(
+      [first.deliveryId, second.deliveryId, third.deliveryId],
+      [older.id, older.id, newer.id]
+    )
+  })
+
+  test('getFifoLot returns the oldest in-stock lot', async ({ assert }) => {
+    const { older, newer } = await twoLots({ olderPrice: 20, newerPrice: 12 })
+
+    const first = await orderService.getFifoLot(older.productId)
+    assert.equal(first?.id, older.id)
+    await older.merge({ amountLeft: 0 }).save()
+    const next = await orderService.getFifoLot(older.productId)
+    assert.equal(next?.id, newer.id)
+  })
 })
+
+async function twoLots(prices: { olderPrice: number; newerPrice: number }) {
+  const buyer = await UserFactory.create()
+  const supplier = await UserFactory.apply('supplier').create()
+  const category = await CategoryFactory.create()
+  const product = await ProductFactory.merge({ categoryId: category.id }).create()
+  const older = await DeliveryFactory.merge({
+    supplierId: supplier.id,
+    productId: product.id,
+    amountSupplied: 2,
+    amountLeft: 2,
+    price: prices.olderPrice,
+  }).create()
+  const newer = await DeliveryFactory.merge({
+    supplierId: supplier.id,
+    productId: product.id,
+    amountSupplied: 3,
+    amountLeft: 3,
+    price: prices.newerPrice,
+  }).create()
+  await db
+    .from('deliveries')
+    .where('id', older.id)
+    .update({ created_at: new Date('2026-01-10T10:00:00.000Z') })
+  await db
+    .from('deliveries')
+    .where('id', newer.id)
+    .update({ created_at: new Date('2026-01-11T10:00:00.000Z') })
+  return { buyer, supplier, product, older, newer }
+}
