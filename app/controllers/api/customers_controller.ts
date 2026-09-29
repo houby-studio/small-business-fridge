@@ -70,13 +70,12 @@ export default class CustomersController {
 
     const orderStats = await db
       .from('orders')
-      .join('deliveries', 'orders.delivery_id', 'deliveries.id')
       .where('orders.buyer_id', id)
       .select(
         db.rawQuery('COUNT(*)::int as order_count'),
-        db.rawQuery('COALESCE(SUM(deliveries.price), 0)::numeric as total_spend'),
+        db.rawQuery('COALESCE(SUM(orders.unit_price), 0)::numeric as total_spend'),
         db.rawQuery(
-          'COALESCE(SUM(CASE WHEN orders.invoice_id IS NULL THEN deliveries.price ELSE 0 END), 0)::numeric as uninvoiced_spend'
+          'COALESCE(SUM(CASE WHEN orders.invoice_id IS NULL THEN orders.unit_price ELSE 0 END), 0)::numeric as uninvoiced_spend'
         ),
         db.rawQuery('MAX(orders.created_at) as last_order_at')
       )

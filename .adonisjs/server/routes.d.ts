@@ -59,6 +59,8 @@ export type ScannedRoutes = {
     'audit.index': { paramsTuple?: []; params?: {} }
     'supplier_deliveries.index': { paramsTuple?: []; params?: {} }
     'supplier_deliveries.store': { paramsTuple?: []; params?: {} }
+    'supplier_deliveries.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'supplier_deliveries.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'supplier_invoice.index': { paramsTuple?: []; params?: {} }
     'supplier_invoice.generate': { paramsTuple?: []; params?: {} }
     'supplier_invoice.generate_for_buyer': { paramsTuple: [ParamValue]; params: {'buyerId': ParamValue} }
@@ -262,6 +264,7 @@ export type ScannedRoutes = {
     'profile.update_preferences': { paramsTuple?: []; params?: {} }
     'password_reset.change_authenticated': { paramsTuple?: []; params?: {} }
     'ratings.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'supplier_deliveries.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'supplier_products.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin_users.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin_categories.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -275,6 +278,7 @@ export type ScannedRoutes = {
     'api_mcp': { paramsTuple?: []; params?: {} }
     'profile.revoke_token': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'ratings.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'supplier_deliveries.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin_categories.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin_allergens.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin_music_tracks.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }

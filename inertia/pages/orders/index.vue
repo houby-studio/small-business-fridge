@@ -11,11 +11,15 @@ import { formatDate } from '~/composables/use_format_date'
 import { useListFilters } from '~/composables/use_list_filters'
 import FilterBar from '~/components/FilterBar.vue'
 import PaginatedDataTable from '~/components/PaginatedDataTable.vue'
+import OrderPrice from '~/components/OrderPrice.vue'
 
 interface OrderRow {
   id: number
   channel: string
   createdAt: string
+  unitPrice: number
+  originalUnitPrice: number | null
+  priceCorrection: { reason: string; createdAt: string } | null
   delivery: {
     price: number
     product: { displayName: string }
@@ -253,9 +257,12 @@ function channelLabel(channel: string) {
       </Column>
       <Column :header="t('common.price')" headerClass="sbf-col-price" bodyClass="sbf-col-price">
         <template #body="{ data }">
-          <span class="font-semibold">{{
-            t('common.price_with_currency', { price: data.delivery?.price ?? '—' })
-          }}</span>
+          <OrderPrice
+            :unitPrice="data.unitPrice"
+            :originalUnitPrice="data.originalUnitPrice"
+            :correction="data.priceCorrection"
+            bold
+          />
         </template>
       </Column>
       <Column :header="t('common.supplier')">

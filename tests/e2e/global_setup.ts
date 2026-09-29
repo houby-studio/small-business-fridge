@@ -474,8 +474,8 @@ export default async function globalSetup() {
       ])
 
       const result = await client.query(
-        `INSERT INTO orders (buyer_id, delivery_id, channel, created_at, updated_at)
-       VALUES ($1, $2, $3, ${createdAt}, ${createdAt})
+        `INSERT INTO orders (buyer_id, delivery_id, channel, unit_price, created_at, updated_at)
+       VALUES ($1, $2, $3, (SELECT price FROM deliveries WHERE id = $2), ${createdAt}, ${createdAt})
        RETURNING id`,
         [item.buyerId, deliveryId, item.channel]
       )

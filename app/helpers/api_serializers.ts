@@ -19,6 +19,7 @@ export function serializeOrder(order: Order): OrderResponse {
     // normalize undefined to null so the key is always present in the JSON.
     invoiceId: order.invoiceId ?? null,
     channel: order.channel,
+    unitPrice: order.unitPrice,
     createdAt: order.createdAt?.toISO() ?? null,
     updatedAt: order.updatedAt?.toISO() ?? null,
   }

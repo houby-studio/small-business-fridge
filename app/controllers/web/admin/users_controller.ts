@@ -186,6 +186,10 @@ export default class UsersController {
         notificationService.sendInvoiceNotice(invoice).catch((err) => {
           logger.error({ err }, `Failed to send invoice notice for invoice #${invoice.id}`)
         })
+        // Issued in the supplier's name by an admin — tell the supplier.
+        notificationService.sendInvoiceGeneratedToSupplier(invoice, auth.user!).catch((err) => {
+          logger.error({ err }, `Failed to notify supplier about invoice #${invoice.id}`)
+        })
       }
     }
 

@@ -19,6 +19,7 @@ interface AuditRow {
   entityId: number | null
   metadata: Record<string, any> | null
   user: { displayName: string } | null
+  actorIsMe: boolean
   targetUser: { displayName: string } | null
   createdAt: string
 }
@@ -125,6 +126,19 @@ function onSort(event: any) {
         bodyClass="sbf-col-date"
       >
         <template #body="{ data }">{{ formatDateTime(data.createdAt) }}</template>
+      </Column>
+      <Column :header="t('audit.actor')" headerClass="sbf-col-tight" bodyClass="sbf-col-tight">
+        <template #body="{ data }">
+          <span v-if="data.actorIsMe" class="text-gray-500 dark:text-zinc-400">{{
+            t('audit.actor_you')
+          }}</span>
+          <span
+            v-else
+            class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-blue-800 dark:bg-blue-900/30 dark:text-blue-200"
+            data-testid="audit-foreign-actor"
+            >{{ data.user?.displayName ?? '—' }}</span
+          >
+        </template>
       </Column>
       <Column :header="t('audit.action')" headerClass="sbf-col-tight" bodyClass="sbf-col-tight">
         <template #body="{ data }">

@@ -8,5 +8,13 @@
   "filter_channel": "Channel",
   "filter_invoiced": "Invoiced",
   "filter_invoiced_yes": "Invoiced",
-  "filter_invoiced_no": "Not invoiced"
+  "filter_invoiced_no": "Not invoiced",
+  "price_corrected": "Price corrected",
+  "price_original": "originally {price} {currency}",
+  "price_correction_detail": "Price correction details",
+  "price_correction_title": "Price correction",
+  "price_correction_original": "Original price",
+  "price_correction_current": "Corrected price",
+  "price_correction_reason": "Reason",
+  "price_correction_date": "Corrected on"
 }

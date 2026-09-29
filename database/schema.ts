@@ -86,7 +86,7 @@ export class CategorySchema extends BaseModel {
 }
 
 export class DeliverySchema extends BaseModel {
-  static $columns = ['amountLeft', 'amountSupplied', 'createdAt', 'id', 'price', 'productId', 'supplierId', 'updatedAt'] as const
+  static $columns = ['amountLeft', 'amountSupplied', 'createdAt', 'id', 'price', 'productId', 'supplierId', 'updatedAt', 'voidedAt'] as const
   $columns = DeliverySchema.$columns
   @column()
   declare amountLeft: number
@@ -104,6 +104,35 @@ export class DeliverySchema extends BaseModel {
   declare supplierId: number
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
+  @column.dateTime()
+  declare voidedAt: DateTime | null
+}
+
+export class DeliveryCorrectionSchema extends BaseModel {
+  static $columns = ['actorId', 'createdAt', 'deliveryId', 'id', 'kind', 'newAmountSupplied', 'newPrice', 'oldAmountSupplied', 'oldPrice', 'reason', 'repricedOrderCount'] as const
+  $columns = DeliveryCorrectionSchema.$columns
+  @column()
+  declare actorId: number
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare deliveryId: number
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare kind: string
+  @column()
+  declare newAmountSupplied: number
+  @column()
+  declare newPrice: number
+  @column()
+  declare oldAmountSupplied: number
+  @column()
+  declare oldPrice: number
+  @column()
+  declare reason: string
+  @column()
+  declare repricedOrderCount: number
 }
 
 export class EmailVerificationTokenSchema extends BaseModel {
@@ -327,7 +356,7 @@ export class MusicTrackSchema extends BaseModel {
 }
 
 export class OrderSchema extends BaseModel {
-  static $columns = ['buyerId', 'channel', 'createdAt', 'deliveryId', 'id', 'invoiceId', 'updatedAt'] as const
+  static $columns = ['buyerId', 'channel', 'createdAt', 'deliveryId', 'id', 'invoiceId', 'originalUnitPrice', 'priceCorrectionId', 'unitPrice', 'updatedAt'] as const
   $columns = OrderSchema.$columns
   @column()
   declare buyerId: number
@@ -341,6 +370,12 @@ export class OrderSchema extends BaseModel {
   declare id: number
   @column()
   declare invoiceId: number | null
+  @column()
+  declare originalUnitPrice: number | null
+  @column()
+  declare priceCorrectionId: number | null
+  @column()
+  declare unitPrice: number
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
 }

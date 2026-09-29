@@ -37,6 +37,10 @@ export default class StornoController {
         notificationService.sendStornoNotification(order).catch((err) => {
           logger.error({ err }, `Failed to send storno email for order #${params.id}`)
         })
+        // The order came out of a supplier's stock — they should know it was cancelled.
+        notificationService.sendStornoToSupplier(order, auth.user!).catch((err) => {
+          logger.error({ err }, `Failed to notify supplier about storno of order #${params.id}`)
+        })
       }
 
       session.flash('alert', {

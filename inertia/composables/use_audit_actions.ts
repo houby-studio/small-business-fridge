@@ -6,6 +6,8 @@ export const AUDIT_ACTION_I18N_KEYS: Record<string, string> = {
   'payment.approved': 'audit.action_payment_approved',
   'payment.rejected': 'audit.action_payment_rejected',
   'delivery.created': 'audit.action_delivery_created',
+  'delivery.corrected': 'audit.action_delivery_corrected',
+  'delivery.voided': 'audit.action_delivery_voided',
   'product.created': 'audit.action_product_created',
   'product.updated': 'audit.action_product_updated',
   'allergen.created': 'audit.action_allergen_created',

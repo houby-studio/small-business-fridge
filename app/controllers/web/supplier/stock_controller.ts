@@ -36,6 +36,7 @@ export default class StockController {
         price: d.price,
         productName: d.product?.displayName ?? '—',
         supplierName: d.supplier?.displayName ?? '—',
+        voidedAt: d.voidedAt?.toISO() ?? null,
       })),
       categories: categories.map((c) => ({ id: c.id, name: c.name, color: c.color })),
       products: products.map((p) => ({ id: p.id, displayName: p.displayName })),

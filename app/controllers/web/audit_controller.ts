@@ -22,6 +22,9 @@ export default class AuditController {
           entityId: log.entityId,
           metadata: log.metadata,
           user: log.user ? { displayName: log.user.displayName } : null,
+          // Entries where someone else acted on this user's records (e.g. an admin
+          // correcting their delivery) must say who did it.
+          actorIsMe: log.userId === auth.user!.id,
           targetUser: log.targetUser ? { displayName: log.targetUser.displayName } : null,
           createdAt: log.createdAt.toISO(),
         })),

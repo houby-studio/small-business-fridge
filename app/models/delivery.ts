@@ -4,6 +4,7 @@ import type { BelongsTo, HasMany } from '@adonisjs/lucid/types/relations'
 import User from '#models/user'
 import Product from '#models/product'
 import Order from '#models/order'
+import DeliveryCorrection from '#models/delivery_correction'
 
 export default class Delivery extends BaseModel {
   @column({ isPrimary: true })
@@ -24,6 +25,10 @@ export default class Delivery extends BaseModel {
   @column()
   declare price: number
 
+  /** Set when the delivery was voided (nothing sold from it); its amounts are then zero. */
+  @column.dateTime()
+  declare voidedAt: DateTime | null
+
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
 
@@ -40,4 +45,7 @@ export default class Delivery extends BaseModel {
 
   @hasMany(() => Order)
   declare orders: HasMany<typeof Order>
+
+  @hasMany(() => DeliveryCorrection)
+  declare corrections: HasMany<typeof DeliveryCorrection>
 }

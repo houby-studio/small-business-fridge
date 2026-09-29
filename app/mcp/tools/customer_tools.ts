@@ -131,8 +131,7 @@ export function registerCustomerTools(server: McpServer, user: User) {
               logger.error({ err }, 'Failed to send purchase confirmation email')
             })
             if (price === 0) {
-              const delivery = await Delivery.find(resolvedDeliveryId)
-              price = delivery?.price ?? 0
+              price = order.unitPrice
             }
           } catch (err) {
             if (orderIds.length > 0) {
@@ -185,7 +184,7 @@ export function registerCustomerTools(server: McpServer, user: User) {
             orderId: o.id,
             product: o.delivery?.product?.displayName ?? null,
             supplier: o.delivery?.supplier?.displayName ?? null,
-            price: o.delivery?.price ?? null,
+            price: o.unitPrice,
             channel: o.channel,
             invoiced: o.invoiceId !== null && o.invoiceId !== undefined,
             invoiceId: o.invoiceId ?? null,

@@ -7,6 +7,7 @@ import User from '#models/user'
 import Order from '#models/order'
 import Invoice from '#models/invoice'
 import type Delivery from '#models/delivery'
+import DeliveryCorrection from '#models/delivery_correction'
 import QrPaymentService from '#services/qr_payment_service'
 import db from '@adonisjs/lucid/services/db'
 
@@ -68,7 +69,7 @@ export default class NotificationService {
           orderId: order.id,
           buyerName: buyer.displayName,
           productName: order.delivery.product.displayName,
-          price: order.delivery.price,
+          price: order.unitPrice,
           supplierName: order.delivery.supplier.displayName,
           date: order.createdAt.toFormat('dd.MM.yyyy HH:mm'),
           addFavoriteUrl,
@@ -117,10 +118,10 @@ export default class NotificationService {
           productName: order.delivery.product.displayName,
           supplierName: order.delivery.supplier.displayName,
           quantity: 1,
-          unitPrice: order.delivery.price,
+          unitPrice: order.unitPrice,
         })
       }
-      totalCost += order.delivery.price
+      totalCost += order.unitPrice
     }
 
     const items = Array.from(itemMap.values()).map((i) => ({
@@ -178,7 +179,7 @@ export default class NotificationService {
           totalCost: invoice.totalCost,
           orders: invoice.orders.map((o) => ({
             productName: o.delivery.product.displayName,
-            price: o.delivery.price,
+            price: o.unitPrice,
             date: o.createdAt.toFormat('dd.MM.yyyy'),
           })),
           supplierIban: invoice.supplier.iban,
@@ -260,7 +261,7 @@ export default class NotificationService {
 
       if (todayOrders.length === 0) continue
 
-      const totalSpent = todayOrders.reduce((sum, o) => sum + o.delivery.price, 0)
+      const totalSpent = todayOrders.reduce((sum, o) => sum + o.unitPrice, 0)
 
       await mail.send((message) => {
         message
@@ -276,7 +277,7 @@ export default class NotificationService {
             userName: user.displayName,
             orders: todayOrders.map((o) => ({
               productName: o.delivery.product.displayName,
-              price: o.delivery.price,
+              price: o.unitPrice,
               time: o.createdAt.toFormat('HH:mm'),
             })),
             totalSpent,
@@ -403,7 +404,7 @@ export default class NotificationService {
           orderId: order.id,
           productName: order.delivery.product.displayName,
           supplierName: order.delivery.supplier.displayName,
-          price: order.delivery.price,
+          price: order.unitPrice,
           appUrl: this.appUrl,
           appName: this.appName,
         })
@@ -510,6 +511,216 @@ export default class NotificationService {
           resetUrl: params.resetUrl,
         })
     })
+  }
+
+  /**
+   * A supplier's records (their deliveries, orders from their stock, invoices in their name)
+   * were changed by someone else — typically an admin. The supplier learns what happened,
+   * who did it and why, so nothing about their goods changes behind their back.
+   */
+  private async sendSupplierChangeNotice(
+    supplier: User,
+    actor: User,
+    notice: { subject: string; heading: string; rows: Array<{ label: string; value: string }> }
+  ) {
+    if (supplier.id === actor.id || supplier.isDisabled || !supplier.email) return
+
+    await mail.send((message) => {
+      message
+        .to(supplier.email)
+        .subject(notice.subject)
+        .htmlView('emails/supplier_change_notice', {
+          i18n: this.i18n,
+          name: supplier.displayName,
+          heading: notice.heading,
+          rows: [
+            ...notice.rows,
+            { label: this.i18n.t('emails.supplier_change_row_actor'), value: actor.displayName },
+          ],
+          ctaUrl: `${this.appUrl}/audit`,
+          appUrl: this.appUrl,
+          appName: this.appName,
+        })
+    })
+  }
+
+  private formatChange(from: string | number, to: string | number) {
+    return from === to ? String(to) : `${from} → ${to}`
+  }
+
+  /** Delivery corrected or voided by someone other than its supplier. */
+  async sendDeliveryCorrectionToSupplier(correctionId: number) {
+    const correction = await DeliveryCorrection.query()
+      .where('id', correctionId)
+      .preload('actor')
+      .preload('delivery', (q) => {
+        q.preload('product')
+        q.preload('supplier')
+      })
+      .firstOrFail()
+
+    const { delivery } = correction
+    const t = (key: string, params?: Record<string, unknown>) => this.i18n.t(key, params)
+    const money = (price: number) => t('emails.price_correction_amount', { price })
+    const pieces = (count: number) => t('emails.price_correction_pieces', { count })
+    const isVoid = correction.kind === 'void'
+
+    const rows = [
+      { label: t('emails.purchase_product'), value: delivery.product.displayName },
+      {
+        label: t('emails.supplier_change_row_amount'),
+        value: this.formatChange(
+          pieces(correction.oldAmountSupplied),
+          pieces(correction.newAmountSupplied)
+        ),
+      },
+      {
+        label: t('emails.supplier_change_row_price'),
+        value: this.formatChange(money(correction.oldPrice), money(correction.newPrice)),
+      },
+    ]
+    if (!isVoid && correction.repricedOrderCount > 0) {
+      rows.push({
+        label: t('emails.supplier_change_row_repriced'),
+        value: pieces(correction.repricedOrderCount),
+      })
+    }
+    rows.push({ label: t('emails.price_correction_reason'), value: correction.reason })
+
+    await this.sendSupplierChangeNotice(delivery.supplier, correction.actor, {
+      subject: t(
+        isVoid
+          ? 'emails.supplier_change_subject_voided'
+          : 'emails.supplier_change_subject_corrected',
+        { productName: delivery.product.displayName }
+      ),
+      heading: t(
+        isVoid
+          ? 'emails.supplier_change_heading_voided'
+          : 'emails.supplier_change_heading_corrected'
+      ),
+      rows,
+    })
+  }
+
+  /**
+   * Admin storno of a purchase from the supplier's stock.
+   * Call with a pre-loaded order (buyer, delivery.product, delivery.supplier).
+   */
+  async sendStornoToSupplier(order: Order, actor: User) {
+    const t = (key: string, params?: Record<string, unknown>) => this.i18n.t(key, params)
+    await this.sendSupplierChangeNotice(order.delivery.supplier, actor, {
+      subject: t('emails.supplier_change_subject_storno', { id: order.id }),
+      heading: t('emails.supplier_change_heading_storno'),
+      rows: [
+        { label: t('emails.supplier_change_row_order'), value: `#${order.id}` },
+        { label: t('emails.purchase_product'), value: order.delivery.product.displayName },
+        { label: t('emails.supplier_change_row_buyer'), value: order.buyer.displayName },
+        {
+          label: t('emails.supplier_change_row_price'),
+          value: t('emails.price_correction_amount', { price: order.unitPrice }),
+        },
+        {
+          label: t('emails.supplier_change_row_note'),
+          value: t('emails.supplier_change_storno_note'),
+        },
+      ],
+    })
+  }
+
+  /** Invoice issued in the supplier's name by someone else (admin invoicing a user). */
+  async sendInvoiceGeneratedToSupplier(invoiceRef: Invoice, actor: User) {
+    // Load a private copy: the caller hands the same instance to sendInvoiceNotice(), which
+    // runs concurrently — reloading relations on the shared instance would clobber its
+    // preloaded orders and break the buyer's invoice email.
+    const invoice = await Invoice.query()
+      .where('id', invoiceRef.id)
+      .preload('supplier')
+      .preload('buyer')
+      .preload('orders')
+      .firstOrFail()
+    const t = (key: string, params?: Record<string, unknown>) => this.i18n.t(key, params)
+
+    await this.sendSupplierChangeNotice(invoice.supplier, actor, {
+      subject: t('emails.supplier_change_subject_invoice', { id: invoice.id }),
+      heading: t('emails.supplier_change_heading_invoice'),
+      rows: [
+        { label: t('emails.supplier_change_row_invoice'), value: `#${invoice.id}` },
+        { label: t('emails.supplier_change_row_buyer'), value: invoice.buyer.displayName },
+        {
+          label: t('emails.supplier_change_row_items'),
+          value: t('emails.price_correction_pieces', { count: invoice.orders.length }),
+        },
+        {
+          label: t('emails.supplier_change_row_total'),
+          value: t('emails.price_correction_amount', { price: invoice.totalCost }),
+        },
+      ],
+    })
+  }
+
+  /**
+   * Tell every buyer whose uninvoiced purchases were repriced by a delivery correction what
+   * changed, who changed it and why. One email per buyer, covering all their units.
+   */
+  async sendPriceCorrectionNotifications(correctionId: number) {
+    const correction = await DeliveryCorrection.query()
+      .where('id', correctionId)
+      .preload('actor')
+      .preload('delivery', (q) => {
+        q.preload('product')
+        q.preload('supplier')
+      })
+      .firstOrFail()
+
+    const orders = await Order.query()
+      .where('priceCorrectionId', correction.id)
+      .preload('buyer')
+      .orderBy('id', 'asc')
+
+    const byBuyer = new Map<number, Order[]>()
+    for (const order of orders) {
+      const list = byBuyer.get(order.buyerId) ?? []
+      list.push(order)
+      byBuyer.set(order.buyerId, list)
+    }
+
+    for (const buyerOrders of byBuyer.values()) {
+      const buyer = buyerOrders[0].buyer
+      if (buyer.isDisabled || !buyer.email) continue
+
+      const count = buyerOrders.length
+      const oldTotal = count * correction.oldPrice
+      const newTotal = count * correction.newPrice
+      const difference = newTotal - oldTotal
+
+      await mail.send((message) => {
+        message
+          .to(buyer.email)
+          .subject(
+            this.i18n.t('emails.price_correction_subject', {
+              productName: correction.delivery.product.displayName,
+            })
+          )
+          .htmlView('emails/price_correction', {
+            i18n: this.i18n,
+            name: buyer.displayName,
+            productName: correction.delivery.product.displayName,
+            supplierName: correction.delivery.supplier.displayName,
+            actorName: correction.actor.displayName,
+            reason: correction.reason,
+            oldPrice: correction.oldPrice,
+            newPrice: correction.newPrice,
+            count,
+            oldTotal,
+            newTotal,
+            difference: difference > 0 ? `+${difference}` : String(difference),
+            ordersUrl: `${this.appUrl}/orders`,
+            appUrl: this.appUrl,
+            appName: this.appName,
+          })
+      })
+    }
   }
 
   /**

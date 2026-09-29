@@ -307,6 +307,8 @@ router
     // Deliveries (add stock)
     router.get('/deliveries', [SupplierDeliveriesController, 'index'])
     router.post('/deliveries', [SupplierDeliveriesController, 'store'])
+    router.put('/deliveries/:id', [SupplierDeliveriesController, 'update']).where('id', /^\d+$/)
+    router.delete('/deliveries/:id', [SupplierDeliveriesController, 'destroy']).where('id', /^\d+$/)
 
     // Invoice generation
     router.get('/invoice', [SupplierInvoiceController, 'index'])
