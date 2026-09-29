@@ -8,7 +8,7 @@ import Button from 'primevue/button'
 import Select from 'primevue/select'
 import Dialog from 'primevue/dialog'
 import ConfirmDialog from 'primevue/confirmdialog'
-import { useConfirm } from 'primevue/useconfirm'
+import { useAppConfirm } from '~/composables/use_app_confirm'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDate } from '~/composables/use_format_date'
 import { useListFilters } from '~/composables/use_list_filters'
@@ -43,7 +43,7 @@ const props = defineProps<{
 }>()
 
 const { t } = useI18n()
-const confirm = useConfirm()
+const confirm = useAppConfirm()
 const ALL = '__all__'
 
 const filterStatus = ref(props.filters.status || ALL)

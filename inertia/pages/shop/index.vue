@@ -5,7 +5,7 @@ import AppLayout from '~/layouts/AppLayout.vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import ConfirmDialog from 'primevue/confirmdialog'
-import { useConfirm } from 'primevue/useconfirm'
+import { useAppConfirm } from '~/composables/use_app_confirm'
 import { useI18n } from '~/composables/use_i18n'
 
 interface ShopProduct {
@@ -37,7 +37,7 @@ const props = defineProps<{
 }>()
 
 const page = usePage()
-const confirm = useConfirm()
+const confirm = useAppConfirm()
 const { t, locale } = useI18n()
 const ALL = '__all__'
 

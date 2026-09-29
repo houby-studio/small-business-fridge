@@ -10,7 +10,7 @@ import ToggleSwitch from 'primevue/toggleswitch'
 import Tag from 'primevue/tag'
 import Dialog from 'primevue/dialog'
 import ConfirmDialog from 'primevue/confirmdialog'
-import { useConfirm } from 'primevue/useconfirm'
+import { useAppConfirm } from '~/composables/use_app_confirm'
 import { useI18n } from '~/composables/use_i18n'
 import { useInlineEdit } from '~/composables/use_inline_edit'
 
@@ -23,7 +23,7 @@ interface AllergenRow {
 
 const props = defineProps<{ allergens: AllergenRow[] }>()
 const { t } = useI18n()
-const confirm = useConfirm()
+const confirm = useAppConfirm()
 
 const showCreateDialog = ref(false)
 const newName = ref('')
@@ -73,7 +73,7 @@ function deleteAllergen(allergen: AllergenRow) {
     icon: 'pi pi-exclamation-triangle',
     acceptLabel: t('admin.allergens_delete_accept'),
     rejectLabel: t('common.cancel'),
-    acceptClass: 'p-button-danger',
+    destructive: true,
     accept: () => {
       router.delete(`/admin/allergens/${allergen.id}`)
     },

@@ -422,6 +422,11 @@ Always use this combination (not just `dateFormat` alone):
 
 If you catch yourself reaching for `window.confirm`, stop and build a `Dialog` instead — the storno dialog in `inertia/pages/admin/orders/index.vue` is a good reference.
 
+For a simple yes/no confirmation use `useAppConfirm()` (`~/composables/use_app_confirm`) with
+`<ConfirmDialog />` — never PrimeVue's `useConfirm()` directly. It applies the button standard
+(Cancel = secondary text, action = the only filled button); pass `destructive: true` for an
+irreversible or deleting action to make it red. The kiosk touch UI is the only exception.
+
 ### Dialogs — Two Standard Sizes
 
 Choose based on content, always add `modal :draggable="false"`:

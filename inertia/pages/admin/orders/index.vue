@@ -7,7 +7,7 @@ import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import Select from 'primevue/select'
 import ConfirmDialog from 'primevue/confirmdialog'
-import { useConfirm } from 'primevue/useconfirm'
+import { useAppConfirm } from '~/composables/use_app_confirm'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDate } from '~/composables/use_format_date'
 import { useListFilters } from '~/composables/use_list_filters'
@@ -50,7 +50,7 @@ const props = defineProps<{
   buyers: { id: number; displayName: string }[]
   suppliers: { id: number; displayName: string }[]
 }>()
-const confirm = useConfirm()
+const confirm = useAppConfirm()
 const { t } = useI18n()
 const ALL = '__all__'
 
@@ -148,7 +148,7 @@ function storno(orderId: number) {
     icon: 'pi pi-exclamation-triangle',
     acceptLabel: t('admin.orders_storno_accept'),
     rejectLabel: t('common.cancel'),
-    acceptClass: 'p-button-danger',
+    destructive: true,
     accept: () => {
       router.post(`/admin/storno/${orderId}`)
     },
