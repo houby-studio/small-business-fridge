@@ -126,6 +126,13 @@ export default class UsersController {
       if (err instanceof Error && err.message === 'USER_HAS_UNINVOICED_ORDERS') {
         return response.redirect(listRedirectUrl(request, '/admin/users'))
       }
+      if (err instanceof Error && err.message === 'KEYPAD_ID_RESERVED') {
+        session.flash('alert', {
+          type: 'danger',
+          message: i18n.t('messages.keypad_id_reserved'),
+        })
+        return response.redirect(listRedirectUrl(request, '/admin/users'))
+      }
       if (err instanceof Error && err.message === 'KEYPAD_ID_TAKEN') {
         session.flash('alert', {
           type: 'danger',

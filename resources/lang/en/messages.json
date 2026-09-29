@@ -103,5 +103,6 @@
   "delivery_correction_no_change": "Neither the amount nor the price changed.",
   "delivery_void_has_orders": "Someone has already bought from this delivery, so it cannot be voided. Reduce the amount to the number of sold pieces instead.",
   "delivery_correction_amount_increase": "A correction cannot increase the amount. Stock the missing pieces as a new delivery.",
-  "purchase_price_changed": "The product price has changed to {price} {currency} in the meantime. Nothing was bought – check the price and buy again."
+  "purchase_price_changed": "The product price has changed to {price} {currency} in the meantime. Nothing was bought – check the price and buy again.",
+  "keypad_id_reserved": "This keypad ID is reserved for a special kiosk code and cannot be assigned to a user."
 }

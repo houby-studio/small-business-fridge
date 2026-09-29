@@ -30,6 +30,8 @@ export function mapDomainError(err: unknown, fallback: string): CallToolResult {
       'Cannot demote or disable the last active admin (error code: LAST_ACTIVE_ADMIN_REQUIRED).',
     USER_HAS_UNINVOICED_ORDERS:
       'User has uninvoiced orders or unpaid invoices and cannot be disabled (error code: USER_HAS_UNINVOICED_ORDERS).',
+    KEYPAD_ID_RESERVED:
+      'The keypad ID is reserved for a kiosk code (easter egg or logout) and cannot be assigned to a user (error code: KEYPAD_ID_RESERVED).',
     KEYPAD_ID_TAKEN:
       'The keypad ID is already taken by another user (error code: KEYPAD_ID_TAKEN).',
     E_ROW_NOT_FOUND: 'Record not found (error code: NOT_FOUND).',

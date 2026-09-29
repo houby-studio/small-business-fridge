@@ -1,4 +1,5 @@
 import User from '#models/user'
+import { isReservedUserKeypadId } from '#helpers/kiosk_codes'
 import Order from '#models/order'
 import Invoice from '#models/invoice'
 import Category from '#models/category'
@@ -178,6 +179,9 @@ export default class AdminService {
     }
 
     if (data.keypadId !== undefined && data.keypadId !== user.keypadId) {
+      if (isReservedUserKeypadId(data.keypadId)) {
+        throw new Error('KEYPAD_ID_RESERVED')
+      }
       const conflict = await User.query()
         .where('keypadId', data.keypadId)
         .whereNot('id', user.id)

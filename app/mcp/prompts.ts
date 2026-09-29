@@ -97,7 +97,9 @@ function buildWorkflowGuide(isSupplier: boolean, isAdmin: boolean): string {
     s.push('  dashboard_stats() → global overview.')
     s.push('  list_users(role?, disabled?, page?, perPage?)')
     s.push('  update_user(userId, role?, isDisabled?, keypadId?)')
-    s.push('  Errors: LAST_ACTIVE_ADMIN_REQUIRED, USER_HAS_UNINVOICED_ORDERS, KEYPAD_ID_TAKEN.')
+    s.push(
+      '  Errors: LAST_ACTIVE_ADMIN_REQUIRED, USER_HAS_UNINVOICED_ORDERS, KEYPAD_ID_TAKEN, KEYPAD_ID_RESERVED.'
+    )
     s.push('  ↳ Before disabling a user with debts: generate_invoices_for_user(buyerId),')
     s.push('    wait until invoices are paid, then update_user(userId, isDisabled:true).')
     s.push('')
