@@ -8,7 +8,7 @@ Colleagues browse available products, buy with one click, then pay later via QR 
 
 ## Stack
 
-- **Backend**: AdonisJS 7 (Node.js 22+), PostgreSQL 18, Lucid ORM
+- **Backend**: AdonisJS 7 (Node.js 24+), PostgreSQL 18, Lucid ORM
 - **Frontend**: Vue 3 + Inertia.js + PrimeVue
 - **Auth**: Session-based (web) + token-based (API), optional OIDC (Microsoft Entra ID)
 - **Language**: TypeScript throughout, Czech (cs) primary / English (en) secondary
@@ -46,6 +46,11 @@ wget https://raw.githubusercontent.com/houby-studio/small-business-fridge/refs/h
 # 3. Start
 docker compose up -d
 ```
+
+## Migrating from v2
+
+Coming from the old MongoDB-based v2? The supported path is v2 `2.2.0` → v3 `3.0.0`, then a
+normal upgrade — see [docs/migration-from-v2.md](docs/migration-from-v2.md).
 
 ## Features
 

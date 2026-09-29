@@ -140,29 +140,4 @@ export default await Env.create(new URL('../', import.meta.url), {
   APP_VERSION: Env.schema.string.optional(),
   GIT_SHA: Env.schema.string.optional(),
   BUILD_DATE: Env.schema.string.optional(),
-
-  /*
-  |----------------------------------------------------------
-  | OpenAI integration
-  |----------------------------------------------------------
-  */
-  OPENAI_API_KEY: Env.schema.string.optional(),
-
-  /*
-  |----------------------------------------------------------
-  | ESL integration
-  |----------------------------------------------------------
-  */
-  ESL_AIMS_ENABLED: Env.schema.boolean.optional(),
-  ESL_AIMS_BASE_URL: Env.schema.string.optional({ format: 'url', tld: false }),
-  ESL_AIMS_STORE: Env.schema.string.optional(),
-  ESL_AIMS_CRON: Env.schema.string.optional(),
-  ESL_AIMS_VERIFY_TLS: Env.schema.boolean.optional(),
-
-  ESL_JAMES_ENABLED: Env.schema.boolean.optional(),
-  ESL_JAMES_BASE_URL: Env.schema.string.optional({ format: 'url', tld: false }),
-  ESL_JAMES_STORE: Env.schema.string.optional(),
-  ESL_JAMES_API_KEY: Env.schema.string.optional(),
-  ESL_JAMES_CRON: Env.schema.string.optional(),
-  ESL_JAMES_VERIFY_TLS: Env.schema.boolean.optional(),
 })

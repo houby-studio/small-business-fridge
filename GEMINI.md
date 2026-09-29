@@ -13,7 +13,7 @@ I have been configured with the following MCP servers:
 
 ## Project Stack Reference
 
-- **Backend**: AdonisJS 7 (Node.js 22+)
+- **Backend**: AdonisJS 7 (Node.js 24+)
 - **Frontend**: Vue 3 + Inertia.js + PrimeVue
 - **Database**: PostgreSQL (Port 5432 in dev)
 - **Style**: TailwindCSS 4 + PrimeVue Styled Mode
