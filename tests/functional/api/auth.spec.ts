@@ -9,6 +9,7 @@ test.group('API Auth - Token', (group) => {
 
   group.each.setup(async () => {
     throttleStore.clear()
+    await db.from('audit_logs').delete()
     await db.from('auth_access_tokens').delete()
     await db.from('users').delete()
     delete process.env.AUTH_EMAIL_VERIFICATION_REQUIRED
@@ -33,6 +34,42 @@ test.group('API Auth - Token', (group) => {
     response.assertStatus(200)
     assert.exists(response.body().token)
     assert.exists(response.body().user)
+  })
+
+  test('issuing a token is recorded in the audit log', async ({ client, assert }) => {
+    const user = await UserFactory.merge({
+      email: 'audited@example.com',
+      password: 'password123',
+    }).create()
+
+    const response = await client.post('/api/v1/auth/token').json({
+      email: 'audited@example.com',
+      password: 'password123',
+    })
+    response.assertStatus(200)
+
+    const token = await db.from('auth_access_tokens').where('tokenable_id', user.id).firstOrFail()
+    const log = await db
+      .from('audit_logs')
+      .where('action', 'profile.token.created')
+      .where('user_id', user.id)
+      .firstOrFail()
+    assert.equal(log.metadata.tokenId, token.id)
+    assert.equal(log.metadata.tokenName, 'api-token')
+    assert.equal(log.metadata.via, 'api_login')
+    assert.equal(log.metadata.expiresInDays, 30)
+  })
+
+  test('a failed token request records nothing', async ({ client, assert }) => {
+    await UserFactory.merge({ email: 'nope@example.com', password: 'password123' }).create()
+
+    const response = await client.post('/api/v1/auth/token').json({
+      email: 'nope@example.com',
+      password: 'wrong-password',
+    })
+    response.assertStatus(401)
+
+    assert.notExists(await db.from('audit_logs').where('action', 'profile.token.created').first())
   })
 
   test('returns 401 with wrong password', async ({ client }) => {

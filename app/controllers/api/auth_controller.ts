@@ -3,6 +3,7 @@ import User from '#models/user'
 import { apiTokenLoginValidator, apiKeypadLoginValidator } from '#validators/auth'
 import env from '#start/env'
 import EmailVerificationService from '#services/email_verification_service'
+import AuditService from '#services/audit_service'
 import type { KioskTokenResponse, TokenResponse } from '#interfaces/api_responses'
 
 export default class AuthController {
@@ -90,6 +91,16 @@ export default class AuthController {
       const token = await User.accessTokens.create(user, ['*'], {
         name: 'api-token',
         expiresIn: '30 days',
+      })
+
+      // A password sign-in that yields a 30-day credential — as worth recording as a login.
+      await AuditService.log(user.id, 'profile.token.created', 'user', user.id, null, {
+        tokenId: Number(token.identifier),
+        tokenName: 'api-token',
+        via: 'api_login',
+        expiresInDays: 30,
+        ip: request.ip(),
+        ua: request.header('user-agent') ?? null,
       })
 
       const payload: TokenResponse = {

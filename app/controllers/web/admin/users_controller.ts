@@ -102,19 +102,11 @@ export default class UsersController {
   async update({ params, request, response, session, i18n, auth }: HttpContext) {
     const data = await request.validateUsing(updateUserValidator)
 
-    const userBefore = await User.findOrFail(params.id)
-    const before = {
-      role: userBefore.role,
-      isDisabled: userBefore.isDisabled,
-      isKiosk: userBefore.isKiosk,
-      keypadId: userBefore.keypadId,
-    }
-
     const service = new AdminService()
 
     let user: User
     try {
-      user = await service.updateUser(params.id, data)
+      user = await service.updateUser(params.id, data, auth.user!.id)
     } catch (err) {
       if (err instanceof Error && err.message === 'LAST_ACTIVE_ADMIN_REQUIRED') {
         session.flash('alert', {
@@ -142,22 +134,6 @@ export default class UsersController {
       }
       throw err
     }
-
-    const changes: Record<string, { from: unknown; to: unknown }> = {}
-    for (const key of ['role', 'isDisabled', 'isKiosk', 'keypadId'] as const) {
-      if (data[key] !== undefined && before[key] !== data[key]) {
-        changes[key] = { from: before[key], to: data[key] }
-      }
-    }
-
-    await AuditService.log(
-      auth.user!.id,
-      'user.updated',
-      'user',
-      user.id,
-      user.id,
-      Object.keys(changes).length ? changes : null
-    )
 
     session.flash('alert', {
       type: 'success',

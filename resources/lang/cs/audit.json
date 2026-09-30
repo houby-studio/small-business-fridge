@@ -66,6 +66,7 @@
   "action_product_rating_unvoted": "Palec odebrán",
   "action_profile_iban_verified": "IBAN ověřen",
   "action_profile_email_verified": "E-mail ověřen",
+  "action_user_anonymized": "Účet anonymizován",
   "impersonation_started": "Začal vás zastupovat",
   "impersonation_ended": "Přestal vás zastupovat",
   "impersonation_ended_logout": "Přestal vás zastupovat (odhlásil se)",

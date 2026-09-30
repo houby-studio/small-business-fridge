@@ -7,6 +7,7 @@ import Allergen from '#models/allergen'
 import db from '@adonisjs/lucid/services/db'
 import InvoiceService from '#services/invoice_service'
 import { revokeLongLivedCredentials } from '#services/credential_revocation'
+import AuditService from '#services/audit_service'
 import { DateTime } from 'luxon'
 
 export default class AdminService {
@@ -136,7 +137,7 @@ export default class AdminService {
   }
 
   /**
-   * Update user properties (role, disabled status, etc.).
+   * Update user properties (role, disabled status, etc.) and audit the change as `actorId`.
    * Throws 'USER_HAS_UNINVOICED_ORDERS' if trying to disable a user with pending financial items.
    */
   async updateUser(
@@ -146,9 +147,16 @@ export default class AdminService {
       isDisabled?: boolean
       isKiosk?: boolean
       keypadId?: number
-    }
+    },
+    actorId: number
   ) {
     const user = await User.findOrFail(userId)
+    const before = {
+      role: user.role,
+      isDisabled: user.isDisabled,
+      isKiosk: user.isKiosk,
+      keypadId: user.keypadId,
+    }
     const nextRole = data.role ?? user.role
     const nextIsDisabled = data.isDisabled ?? user.isDisabled
 
@@ -210,6 +218,25 @@ export default class AdminService {
       await revokeLongLivedCredentials(user.id)
     }
 
+    const changes: Record<string, unknown> = {}
+    for (const key of ['role', 'isDisabled', 'isKiosk', 'keypadId'] as const) {
+      if (before[key] !== user[key]) {
+        changes[key] = { from: before[key], to: user[key] }
+      }
+    }
+    // Remember-me and API tokens (MCP connections included) vanish with this — say so, or
+    // the token list and the log disagree about where they went.
+    if (nowDisabled) changes.credentialsRevoked = true
+
+    await AuditService.log(
+      actorId,
+      'user.updated',
+      'user',
+      user.id,
+      user.id,
+      Object.keys(changes).length ? changes : null
+    )
+
     return user
   }
 
@@ -223,8 +250,14 @@ export default class AdminService {
   /**
    * Create a new category.
    */
-  async createCategory(name: string, color: string) {
-    return Category.create({ name, color, isDisabled: false })
+  async createCategory(name: string, color: string, actorId: number) {
+    const category = await Category.create({ name, color, isDisabled: false })
+    await AuditService.log(actorId, 'category.created', 'category', category.id, null, {
+      name: category.name,
+      color: category.color,
+      isDisabled: category.isDisabled,
+    })
+    return category
   }
 
   /**
@@ -436,7 +469,7 @@ export default class AdminService {
   /**
    * Storno (cancel) an order — restore stock and remove the order.
    */
-  async stornoOrder(orderId: number) {
+  async stornoOrder(orderId: number, actorId: number) {
     return db.transaction(async (trx) => {
       // Lock order: delivery first, then the order — the same order a delivery correction
       // takes (delivery, then its orders). Locking the order first deadlocked against a
@@ -465,6 +498,23 @@ export default class AdminService {
 
       // Delete the order
       await order.useTransaction(trx).delete()
+
+      // The order row is gone after this — the log is the only record of what was cancelled.
+      await AuditService.log(
+        actorId,
+        'order.storno',
+        'order',
+        order.id,
+        order.buyerId,
+        {
+          productId: order.delivery.productId,
+          deliveryId: order.deliveryId,
+          supplierId: order.delivery.supplierId,
+          price: order.unitPrice,
+          channel: order.channel,
+        },
+        { client: trx }
+      )
 
       return order
     })

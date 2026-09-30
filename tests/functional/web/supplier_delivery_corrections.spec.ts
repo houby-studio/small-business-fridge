@@ -549,13 +549,13 @@ test.group('Corrections under contention and impersonation', (group) => {
     )
 
     const results = await Promise.allSettled([
-      new AdminService().stornoOrder(orders[0].id),
+      new AdminService().stornoOrder(orders[0].id, supplier.id),
       new DeliveryService().correctDelivery(supplier, delivery.id, {
         amount: 10,
         price: 7,
         reason: 'Concurrent fix',
       }),
-      new AdminService().stornoOrder(orders[1].id),
+      new AdminService().stornoOrder(orders[1].id, supplier.id),
     ])
 
     for (const result of results) {

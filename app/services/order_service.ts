@@ -90,11 +90,15 @@ export default class OrderService {
         { client: trx }
       )
 
-      await AuditService.log(buyerId, 'order.created', 'order', order.id, delivery.supplierId, {
-        productId: delivery.productId,
-        price: delivery.price,
-        channel,
-      })
+      await AuditService.log(
+        buyerId,
+        'order.created',
+        'order',
+        order.id,
+        delivery.supplierId,
+        { productId: delivery.productId, price: delivery.price, channel },
+        { client: trx }
+      )
 
       return order
     })
@@ -240,11 +244,15 @@ export default class OrderService {
             { client: trx }
           )
           orders.push(order)
-          await AuditService.log(buyerId, 'order.created', 'order', order.id, delivery.supplierId, {
-            productId: delivery.productId,
-            price: delivery.price,
-            channel,
-          })
+          await AuditService.log(
+            buyerId,
+            'order.created',
+            'order',
+            order.id,
+            delivery.supplierId,
+            { productId: delivery.productId, price: delivery.price, channel },
+            { client: trx }
+          )
         }
       }
 

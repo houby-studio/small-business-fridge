@@ -65,10 +65,15 @@ export default class InvoiceService {
 
         invoices.push(invoice)
 
-        await AuditService.log(supplierId, 'invoice.generated', 'invoice', invoice.id, buyerId, {
-          total: totalCost,
-          orderCount: orders.length,
-        })
+        await AuditService.log(
+          supplierId,
+          'invoice.generated',
+          'invoice',
+          invoice.id,
+          buyerId,
+          { total: totalCost, orderCount: orders.length },
+          { client: trx }
+        )
       }
 
       return invoices
@@ -347,10 +352,15 @@ export default class InvoiceService {
         .whereIn('id', orderIds)
         .update({ invoiceId: invoice.id })
 
-      await AuditService.log(supplierId, 'invoice.generated', 'invoice', invoice.id, buyerId, {
-        total: totalCost,
-        orderCount: orders.length,
-      })
+      await AuditService.log(
+        supplierId,
+        'invoice.generated',
+        'invoice',
+        invoice.id,
+        buyerId,
+        { total: totalCost, orderCount: orders.length },
+        { client: trx }
+      )
 
       return invoice
     })
@@ -408,11 +418,15 @@ export default class InvoiceService {
 
         invoices.push(invoice)
 
-        await AuditService.log(actorId, 'invoice.generated', 'invoice', invoice.id, buyerId, {
-          total: totalCost,
-          orderCount: orders.length,
-          supplierId,
-        })
+        await AuditService.log(
+          actorId,
+          'invoice.generated',
+          'invoice',
+          invoice.id,
+          buyerId,
+          { total: totalCost, orderCount: orders.length, supplierId },
+          { client: trx }
+        )
       }
 
       return invoices

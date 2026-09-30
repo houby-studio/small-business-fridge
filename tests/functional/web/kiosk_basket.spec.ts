@@ -10,6 +10,7 @@ import MusicTrack from '#models/music_track'
 import db from '@adonisjs/lucid/services/db'
 
 const cleanAll = async () => {
+  await db.from('audit_logs').delete()
   await db.from('recommendations').delete()
   await db.from('kiosk_sessions').delete()
   await db.from('orders').delete()
@@ -67,6 +68,14 @@ test.group('POST /kiosk/purchase-basket', (group) => {
     // 3 order rows created (2 + 1)
     const count = await Order.query().where('buyerId', customer.id).count('* as total')
     assert.equal(Number(count[0].$extras.total), 3)
+
+    // The customer is the actor; the terminal that took the order is recorded alongside.
+    const logs = await db.from('audit_logs').where('action', 'order.created')
+    assert.lengthOf(logs, 3)
+    for (const log of logs) {
+      assert.equal(log.user_id, customer.id)
+      assert.deepEqual(log.metadata.kiosk, { id: kioskDevice.id, name: kioskDevice.displayName })
+    }
   })
 
   test('returns out_of_stock and rolls back when a delivery has insufficient stock', async ({

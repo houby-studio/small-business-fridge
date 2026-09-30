@@ -431,6 +431,17 @@ test.group('Admin - generate invoice for user', (group) => {
 
     await buyer.refresh()
     assert.isTrue(buyer.isDisabled)
+
+    const log = await db
+      .from('audit_logs')
+      .where('action', 'user.updated')
+      .where('entity_id', buyer.id)
+      .firstOrFail()
+    assert.equal(log.user_id, admin.id)
+    assert.deepEqual(log.metadata, {
+      isDisabled: { from: false, to: true },
+      credentialsRevoked: true,
+    })
   })
 
   test('cannot disable the last active admin', async ({ client, assert }) => {
@@ -1255,8 +1266,16 @@ test.group('Admin - storno over HTTP', (group) => {
       .from('audit_logs')
       .where('action', 'order.storno')
       .where('entity_id', order.id)
-      .first()
-    assert.exists(log)
+      .firstOrFail()
+    // The order row is deleted — the entry must say what was cancelled.
+    assert.equal(log.user_id, admin.id)
+    assert.equal(log.target_user_id, order.buyerId)
+    assert.deepInclude(log.metadata, {
+      productId: delivery.productId,
+      deliveryId: delivery.id,
+      supplierId: delivery.supplierId,
+      price: order.unitPrice,
+    })
   })
 
   test('an invoiced order cannot be stornoed and nothing changes', async ({ client, assert }) => {

@@ -142,40 +142,7 @@ export default class ProductsController {
     await product.load('category')
     await product.load('allergens')
 
-    const changes: Record<string, { from: unknown; to: unknown }> = {}
-    if (beforeProduct.displayName !== product.displayName) {
-      changes.name = { from: beforeProduct.displayName, to: product.displayName }
-    }
-    if (beforeProduct.description !== product.description) {
-      changes.description = {
-        from: beforeProduct.description ?? '—',
-        to: product.description ?? '—',
-      }
-    }
-    if (beforeProduct.barcode !== product.barcode) {
-      changes.barcode = { from: beforeProduct.barcode ?? '—', to: product.barcode ?? '—' }
-    }
-    if (beforeProduct.categoryId !== product.categoryId) {
-      changes.category = {
-        from: beforeProduct.category?.name ?? `#${beforeProduct.categoryId}`,
-        to: product.category?.name ?? `#${product.categoryId}`,
-      }
-    }
-    if (beforeProduct.imagePath !== product.imagePath) {
-      changes.image = { from: beforeProduct.imagePath ?? '—', to: product.imagePath ?? '—' }
-    }
-
-    const beforeAllergens = beforeProduct.allergens
-      .map((a) => a.name)
-      .sort((a, b) => a.localeCompare(b))
-      .join(', ')
-    const afterAllergens = product.allergens
-      .map((a) => a.name)
-      .sort((a, b) => a.localeCompare(b))
-      .join(', ')
-    if (beforeAllergens !== afterAllergens) {
-      changes.allergens = { from: beforeAllergens || '—', to: afterAllergens || '—' }
-    }
+    const changes = ProductService.auditChanges(beforeProduct, product)
 
     await AuditService.log(
       auth.user!.id,

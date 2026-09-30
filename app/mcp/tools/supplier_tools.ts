@@ -220,9 +220,7 @@ export function registerSupplierTools(server: McpServer, user: User) {
         })
 
         await AuditService.log(user.id, 'product.created', 'product', product.id, null, {
-          displayName,
-          categoryId,
-          via: 'mcp',
+          name: product.displayName,
         })
 
         return ok({
@@ -253,6 +251,8 @@ export function registerSupplierTools(server: McpServer, user: User) {
     },
     async ({ productId, displayName, description, categoryId, barcode, allergenIds }) => {
       try {
+        const service = new ProductService()
+        const before = await service.getProduct(productId)
         const product = await Product.findOrFail(productId)
 
         if (displayName !== undefined) product.displayName = displayName
@@ -265,9 +265,18 @@ export function registerSupplierTools(server: McpServer, user: User) {
           await product.related('allergens').sync(allergenIds)
         }
 
-        await AuditService.log(user.id, 'product.updated', 'product', product.id, null, {
-          via: 'mcp',
-        })
+        await product.load('category')
+        await product.load('allergens')
+        const changes = ProductService.auditChanges(before, product)
+
+        await AuditService.log(
+          user.id,
+          'product.updated',
+          'product',
+          product.id,
+          null,
+          Object.keys(changes).length ? changes : null
+        )
 
         return ok({ productId: product.id, displayName: product.displayName })
       } catch (err) {

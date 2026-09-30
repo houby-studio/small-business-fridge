@@ -837,6 +837,20 @@ test.group('API MCP - OAuth server', (group) => {
 
       const token = await db.from('auth_access_tokens').where('tokenable_id', user.id).first()
       assert.equal(token.name, 'MCP: Claude')
+
+      // Connecting a tool is as visible in the audit trail as creating a token by hand.
+      const log = await db
+        .from('audit_logs')
+        .where('action', 'profile.token.created')
+        .where('user_id', user.id)
+        .firstOrFail()
+      assert.deepEqual(log.metadata, {
+        tokenId: token.id,
+        tokenName: 'MCP: Claude',
+        via: 'mcp_oauth',
+        clientId,
+        clientName: 'Claude',
+      })
       await new Promise((resolve) => setTimeout(resolve, 50))
       fakeMailer.messages.assertSent((message) => message.hasTo(user.email))
     } finally {
@@ -945,5 +959,96 @@ test.group('API MCP - create_product', (group) => {
     const product = await Product.query().where('displayName', 'Produkt bez obrázku').first()
     assert.isNotNull(product)
     assert.isNull(product!.imagePath)
+  })
+})
+
+test.group('API MCP - audit log', (group) => {
+  group.each.setup(async () => {
+    throttleStore.clear()
+    await cleanAll()
+  })
+  group.each.teardown(cleanAll)
+
+  const auditRow = (action: string) => db.from('audit_logs').where('action', action).firstOrFail()
+
+  test('a purchase made through MCP is marked as such', async ({ client, assert }) => {
+    const buyer = await UserFactory.create()
+    const { delivery } = await createStockedDelivery()
+
+    const result = await callTool(client, await createToken(buyer), 'buy_product', {
+      deliveryId: delivery.id,
+    })
+    assert.isFalse(result.isError)
+
+    const log = await auditRow('order.created')
+    assert.equal(log.user_id, buyer.id)
+    assert.equal(log.metadata.via, 'mcp')
+  })
+
+  test('update_user records what changed, like the web form', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const target = await UserFactory.create()
+
+    const result = await callTool(client, await createToken(admin), 'update_user', {
+      userId: target.id,
+      role: 'supplier',
+    })
+    assert.isFalse(result.isError)
+
+    const log = await auditRow('user.updated')
+    assert.equal(log.user_id, admin.id)
+    assert.deepEqual(log.metadata, { via: 'mcp', role: { from: 'customer', to: 'supplier' } })
+  })
+
+  test('storno_order records the cancelled item', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const buyer = await UserFactory.create()
+    const { delivery } = await createStockedDelivery()
+    await callTool(client, await createToken(buyer), 'buy_product', { deliveryId: delivery.id })
+    const order = await db.from('orders').where('buyer_id', buyer.id).firstOrFail()
+
+    const result = await callTool(client, await createToken(admin), 'storno_order', {
+      orderId: order.id,
+    })
+    assert.isFalse(result.isError)
+
+    const log = await auditRow('order.storno')
+    assert.equal(log.user_id, admin.id)
+    assert.equal(log.target_user_id, buyer.id)
+    assert.deepInclude(log.metadata, {
+      via: 'mcp',
+      productId: delivery.productId,
+      deliveryId: delivery.id,
+      supplierId: delivery.supplierId,
+      price: 20,
+    })
+  })
+
+  test('create_product and update_product log the same shape as the web UI', async ({
+    client,
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const token = await createToken(supplier)
+    const category = await Category.create({ name: 'Audit kategorie', color: '#123456' })
+
+    const created = await callTool(client, token, 'create_product', {
+      displayName: 'Auditovaný produkt',
+      categoryId: category.id,
+    })
+    assert.isFalse(created.isError)
+    const createdLog = await auditRow('product.created')
+    assert.deepEqual(createdLog.metadata, { via: 'mcp', name: 'Auditovaný produkt' })
+
+    const updated = await callTool(client, token, 'update_product', {
+      productId: created.data.productId,
+      displayName: 'Přejmenovaný produkt',
+    })
+    assert.isFalse(updated.isError)
+    const updatedLog = await auditRow('product.updated')
+    assert.deepEqual(updatedLog.metadata, {
+      via: 'mcp',
+      name: { from: 'Auditovaný produkt', to: 'Přejmenovaný produkt' },
+    })
   })
 })
