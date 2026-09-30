@@ -576,7 +576,10 @@ export default class ProfileController {
     })
 
     await AuditService.log(user.id, 'profile.token.created', 'user', user.id, null, {
+      tokenId: Number(token.identifier),
       tokenName: data.name,
+      via: 'profile',
+      expiresInDays: data.expiresInDays ?? null,
     })
 
     // Flash the raw token ONCE — it will never be shown again
@@ -617,6 +620,7 @@ export default class ProfileController {
     await User.accessTokens.delete(user, tokenId)
 
     await AuditService.log(user.id, 'profile.token.revoked', 'user', user.id, null, {
+      tokenId,
       tokenName: owned.name,
     })
 

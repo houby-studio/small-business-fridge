@@ -197,6 +197,18 @@ await user.load((loader) => loader.load('orders'))
 | Throttle keys                  | Derive from `request.ip()` (honours `trustProxy`), never from the `X-Forwarded-For` header directly.                                                                          |
 | Token lifetime                 | Remember-me (2y) and API tokens outlive sessions — revoke them when an account is disabled or its password is reset (`#services/credential_revocation`).                      |
 
+### Audit Log (`AuditService.log`)
+
+- Every state change a user or admin would ask "who did this?" about gets an entry — including
+  credentials (tokens issued by the profile, the API or the MCP OAuth flow).
+- An operation reachable from more than one channel (web, MCP, REST API) logs **in the service**,
+  so every channel writes the same action and metadata shape. Controllers/tools only log what is
+  theirs alone.
+- Inside a transaction pass `{ client: trx }` — the entry then rolls back with the change.
+- Do not add `via: 'mcp'` / impersonation / kiosk-terminal markers by hand: `AuditService` derives
+  them from the request. A system job logs with `userId = null` and the affected user as target.
+- A new action needs a label in `inertia/composables/use_audit_actions.ts` and both `audit.json`.
+
 ### Vue / Inertia Patterns
 
 ```typescript

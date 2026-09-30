@@ -30,4 +30,15 @@ test.describe('Audit action translations', () => {
     await expect(page.getByText('Skladba vytvořena').first()).toBeVisible()
     await assertNoRawAuditActionTokens(page)
   })
+
+  test('admin audit page labels system entries and names nested references', async ({ page }) => {
+    // Other specs keep adding entries, so filter down to the seeded ones (oldest first).
+    await page.goto('/admin/audit?action=user.anonymized&sortOrder=asc')
+    await expect(page.getByText('Účet anonymizován').first()).toBeVisible()
+
+    await page.goto('/admin/audit?action=order.created&sortOrder=asc')
+    // A nested { id, name } is shown by its name, not dumped as JSON.
+    await expect(page.getByText('kiosk: E2E Kiosk Terminal').first()).toBeVisible()
+    await expect(page.getByText('{"id":1')).toHaveCount(0)
+  })
 })

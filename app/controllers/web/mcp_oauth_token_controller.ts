@@ -4,6 +4,7 @@ import McpOauthCode from '#models/mcp_oauth_code'
 import User from '#models/user'
 import McpOauthClient from '#models/mcp_oauth_client'
 import NotificationService from '#services/notification_service'
+import AuditService from '#services/audit_service'
 import logger from '@adonisjs/core/services/logger'
 
 /**
@@ -104,6 +105,16 @@ export default class McpOauthTokenController {
     })
 
     logger.info({ type: 'mcp_oauth_token_issued', clientId, userId: user.id })
+
+    // This is the longest-lived credential the app hands out, so it belongs in the user's
+    // audit trail next to tokens created by hand — same action, so it pairs with the revoke.
+    await AuditService.log(user.id, 'profile.token.created', 'user', user.id, null, {
+      tokenId: Number(token.identifier),
+      tokenName: token.name,
+      via: 'mcp_oauth',
+      clientId: authCode.clientId,
+      clientName,
+    })
 
     // Tell the owner a tool now has lasting access — the safety net if they did not start
     // the connection themselves.

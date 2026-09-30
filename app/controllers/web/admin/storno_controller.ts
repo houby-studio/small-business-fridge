@@ -1,7 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import { listRedirectUrl } from '#helpers/list_redirect'
 import AdminService from '#services/admin_service'
-import AuditService from '#services/audit_service'
 import NotificationService from '#services/notification_service'
 import Order from '#models/order'
 import logger from '@adonisjs/core/services/logger'
@@ -21,15 +20,7 @@ export default class StornoController {
         })
         .first()
 
-      await service.stornoOrder(params.id)
-
-      await AuditService.log(
-        auth.user!.id,
-        'order.storno',
-        'order',
-        Number(params.id),
-        order?.buyerId ?? null
-      )
+      await service.stornoOrder(params.id, auth.user!.id)
 
       // Notify buyer that their order was cancelled (fire-and-forget)
       if (order) {

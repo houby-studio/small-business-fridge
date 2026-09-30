@@ -66,6 +66,7 @@
   "action_product_rating_unvoted": "Upvote removed",
   "action_profile_iban_verified": "IBAN verified",
   "action_profile_email_verified": "Email verified",
+  "action_user_anonymized": "Account anonymized",
   "impersonation_started": "Started acting on your behalf",
   "impersonation_ended": "Stopped acting on your behalf",
   "impersonation_ended_logout": "Stopped acting on your behalf (logged out)",

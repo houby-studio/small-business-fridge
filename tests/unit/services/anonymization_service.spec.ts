@@ -144,7 +144,9 @@ test.group('AnonymizationService', (group) => {
     assert.equal(byEmail.kind, 'not_found')
   })
 
-  test('writes user.anonymized audit log entry', async ({ assert }) => {
+  test('writes user.anonymized audit log entry with the user as target, not actor', async ({
+    assert,
+  }) => {
     const user = await UserFactory.apply('disabled').create()
     user.disabledAt = DateTime.utc().minus({ days: 30 })
     await user.save()
@@ -153,10 +155,11 @@ test.group('AnonymizationService', (group) => {
 
     const entry = await db
       .from('audit_logs')
-      .where('user_id', user.id)
+      .where('target_user_id', user.id)
       .where('action', 'user.anonymized')
       .first()
     assert.isNotNull(entry)
+    assert.isNull(entry.user_id)
     assert.equal(Number(entry.entity_id), user.id)
   })
 })

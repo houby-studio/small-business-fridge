@@ -78,7 +78,8 @@ export default class AnonymizationService {
     if (result.anonymized) {
       // Audit insert holds an FK against users.id; running it after the
       // transaction commits avoids contending with the row lock we held above.
-      await AuditService.log(userId, 'user.anonymized', 'user', userId, null, {
+      // A scheduled job does this, not the user: no actor, the user is the target.
+      await AuditService.log(null, 'user.anonymized', 'user', userId, userId, {
         disabledAt: result.disabledAtIso,
       })
     }

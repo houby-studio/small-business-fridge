@@ -28,9 +28,8 @@ export default class CategoriesController {
     const data = await request.validateUsing(createCategoryValidator)
 
     const service = new AdminService()
-    let category: Category
     try {
-      category = await service.createCategory(data.name, data.color)
+      await service.createCategory(data.name, data.color, auth.user!.id)
     } catch (err) {
       if (isUniqueViolation(err, 'name')) {
         session.flash('alert', { type: 'danger', message: i18n.t('messages.name_taken') })
@@ -38,21 +37,6 @@ export default class CategoriesController {
       }
       throw err
     }
-
-    const metadata = {
-      name: category.name,
-      color: category.color,
-      isDisabled: category.isDisabled,
-    }
-
-    await AuditService.log(
-      auth.user!.id,
-      'category.created',
-      'category',
-      category.id,
-      null,
-      metadata
-    )
 
     session.flash('alert', {
       type: 'success',

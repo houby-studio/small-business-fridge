@@ -79,6 +79,48 @@ export default class ProductService {
   }
 
   /**
+   * The `{ from, to }` map for a `product.updated` audit entry. Both products need
+   * `category` and `allergens` preloaded; category and allergens are logged by name.
+   */
+  static auditChanges(
+    before: Product,
+    after: Product
+  ): Record<string, { from: unknown; to: unknown }> {
+    const changes: Record<string, { from: unknown; to: unknown }> = {}
+    if (before.displayName !== after.displayName) {
+      changes.name = { from: before.displayName, to: after.displayName }
+    }
+    if (before.description !== after.description) {
+      changes.description = { from: before.description ?? '—', to: after.description ?? '—' }
+    }
+    if (before.barcode !== after.barcode) {
+      changes.barcode = { from: before.barcode ?? '—', to: after.barcode ?? '—' }
+    }
+    if (before.categoryId !== after.categoryId) {
+      changes.category = {
+        from: before.category?.name ?? `#${before.categoryId}`,
+        to: after.category?.name ?? `#${after.categoryId}`,
+      }
+    }
+    if (before.imagePath !== after.imagePath) {
+      changes.image = { from: before.imagePath ?? '—', to: after.imagePath ?? '—' }
+    }
+
+    const allergenNames = (product: Product) =>
+      product.allergens
+        .map((a) => a.name)
+        .sort((a, b) => a.localeCompare(b))
+        .join(', ')
+    const beforeAllergens = allergenNames(before)
+    const afterAllergens = allergenNames(after)
+    if (beforeAllergens !== afterAllergens) {
+      changes.allergens = { from: beforeAllergens || '—', to: afterAllergens || '—' }
+    }
+
+    return changes
+  }
+
+  /**
    * Get all products with category info.
    */
   async getAllProducts() {

@@ -84,6 +84,7 @@ function formatMetadata(meta: Record<string, any> | null): string {
     .map(([k, v]) => {
       if (typeof v === 'object' && !Array.isArray(v) && v !== null) {
         if ('from' in v && 'to' in v) return `${k}: ${v.from ?? '—'} → ${v.to ?? '—'}`
+        if ('name' in v) return `${k}: ${v.name}`
         return `${k}: ${JSON.stringify(v)}`
       }
       return `${k}: ${v}`

@@ -75,14 +75,11 @@ export function registerAdminTools(server: McpServer, user: User) {
     },
     async ({ userId, role, isDisabled, keypadId }): Promise<CallToolResult> => {
       try {
-        const updated = await new AdminService().updateUser(userId, { role, isDisabled, keypadId })
-
-        await AuditService.log(user.id, 'user.updated', 'user', updated.id, updated.id, {
-          role,
-          isDisabled,
-          keypadId,
-          via: 'mcp',
-        })
+        const updated = await new AdminService().updateUser(
+          userId,
+          { role, isDisabled, keypadId },
+          user.id
+        )
 
         return ok({
           userId: updated.id,
@@ -182,12 +179,7 @@ export function registerAdminTools(server: McpServer, user: User) {
     },
     async ({ orderId }): Promise<CallToolResult> => {
       try {
-        const order = await new AdminService().stornoOrder(orderId)
-
-        await AuditService.log(user.id, 'order.storno', 'order', orderId, order.buyerId, {
-          deliveryId: order.deliveryId,
-          via: 'mcp',
-        })
+        await new AdminService().stornoOrder(orderId, user.id)
 
         return ok({ orderId, status: 'cancelled', note: 'Stock restored.' })
       } catch (err) {
@@ -234,11 +226,7 @@ export function registerAdminTools(server: McpServer, user: User) {
     },
     async ({ name, color }): Promise<CallToolResult> => {
       try {
-        const category = await new AdminService().createCategory(name, color)
-        await AuditService.log(user.id, 'category.created', 'category', category.id, null, {
-          name,
-          via: 'mcp',
-        })
+        const category = await new AdminService().createCategory(name, color, user.id)
         return ok({ categoryId: category.id, name: category.name, color: category.color })
       } catch (err) {
         return mapDomainError(err, 'Creating category failed')

@@ -45,6 +45,7 @@ export const AUDIT_ACTION_I18N_KEYS: Record<string, string> = {
   'product_rating.unvoted': 'audit.action_product_rating_unvoted',
   'profile.iban_verified': 'audit.action_profile_iban_verified',
   'profile.email_verified': 'audit.action_profile_email_verified',
+  'user.anonymized': 'audit.action_user_anonymized',
 }
 
 export type TranslateFn = (key: string) => string

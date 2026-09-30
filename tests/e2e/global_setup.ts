@@ -553,6 +553,14 @@ export default async function globalSetup() {
      VALUES ($1, 'music.created', 'music', 1, NULL, '{"name":"E2E Public Track"}'::jsonb, NOW())`,
       [adminId]
     )
+    // A system entry (no actor) and one carrying a nested { id, name } reference, for the
+    // audit rendering assertions.
+    await client.query(
+      `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, target_user_id, metadata, created_at)
+     VALUES (NULL, 'user.anonymized', 'user', $1, $1, '{"disabledAt":"2026-01-01T00:00:00.000Z"}'::jsonb, NOW() - INTERVAL '1 minute'),
+            ($2, 'order.created', 'order', 1, NULL, '{"price":15,"channel":"kiosk","kiosk":{"id":1,"name":"E2E Kiosk Terminal"}}'::jsonb, NOW() - INTERVAL '2 minutes')`,
+      [customer2Id, adminId]
+    )
 
     await client.query('COMMIT')
   } catch (error) {
