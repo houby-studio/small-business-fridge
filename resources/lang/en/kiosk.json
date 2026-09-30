@@ -44,5 +44,6 @@
   "thank_you": "Thank you, {name}!",
   "purchase_done": "Great choice! See you next time.",
   "easter_egg_666": "Code 666 unlocked: nice try, only an easter egg this time.",
-  "purchase_price_changed": "The product price has changed in the meantime. Nothing was bought – check the new price and try again."
+  "purchase_price_changed": "The product price has changed in the meantime. Nothing was bought – check the new price and try again.",
+  "item_price_changed": "An item price has changed in the meantime. Check the basket with the new price and try again."
 }

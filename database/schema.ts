@@ -109,7 +109,7 @@ export class DeliverySchema extends BaseModel {
 }
 
 export class DeliveryCorrectionSchema extends BaseModel {
-  static $columns = ['actorId', 'createdAt', 'deliveryId', 'id', 'kind', 'newAmountSupplied', 'newPrice', 'oldAmountSupplied', 'oldPrice', 'reason', 'repricedOrderCount'] as const
+  static $columns = ['actorId', 'createdAt', 'deliveryId', 'id', 'impersonatorId', 'kind', 'newAmountSupplied', 'newPrice', 'oldAmountSupplied', 'oldPrice', 'reason', 'repricedOrderCount'] as const
   $columns = DeliveryCorrectionSchema.$columns
   @column()
   declare actorId: number
@@ -119,6 +119,8 @@ export class DeliveryCorrectionSchema extends BaseModel {
   declare deliveryId: number
   @column({ isPrimary: true })
   declare id: number
+  @column()
+  declare impersonatorId: number | null
   @column()
   declare kind: string
   @column()

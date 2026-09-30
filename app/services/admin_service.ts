@@ -438,6 +438,15 @@ export default class AdminService {
    */
   async stornoOrder(orderId: number) {
     return db.transaction(async (trx) => {
+      // Lock order: delivery first, then the order — the same order a delivery correction
+      // takes (delivery, then its orders). Locking the order first deadlocked against a
+      // correction of the same delivery.
+      const { deliveryId } = await Order.query({ client: trx })
+        .where('id', orderId)
+        .select('delivery_id')
+        .firstOrFail()
+      await trx.from('deliveries').where('id', deliveryId).forUpdate().first()
+
       const order = await Order.query({ client: trx })
         .where('id', orderId)
         .preload('delivery')

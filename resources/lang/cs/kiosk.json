@@ -44,5 +44,6 @@
   "thank_you": "Díky, {name}!",
   "purchase_done": "Dobrý výběr! Nashledanou.",
   "easter_egg_666": "Kód 666 odemčen: tentokrát jen easter egg.",
-  "purchase_price_changed": "Cena produktu se mezitím změnila. Nic se nekoupilo – zkontrolujte novou cenu a zkuste to znovu."
+  "purchase_price_changed": "Cena produktu se mezitím změnila. Nic se nekoupilo – zkontrolujte novou cenu a zkuste to znovu.",
+  "item_price_changed": "Cena položky se mezitím změnila. Zkontrolujte košík s novou cenou a zkuste to znovu."
 }

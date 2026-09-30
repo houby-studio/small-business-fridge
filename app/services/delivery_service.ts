@@ -41,9 +41,16 @@ export interface StockWarnings {
 export interface DeliveryCorrectionResult {
   delivery: Delivery
   correction: DeliveryCorrection
+  /** Orders whose price this correction changed — captured inside the transaction. */
+  repricedOrderIds: number[]
 }
 
 type CorrectionActor = Pick<User, 'id' | 'role'>
+
+export interface CorrectionOptions {
+  /** The admin really acting, when they impersonate `actor` (set by the controller). */
+  impersonatorId?: number
+}
 
 export default class DeliveryService {
   /**
@@ -145,7 +152,8 @@ export default class DeliveryService {
   async correctDelivery(
     actor: CorrectionActor,
     deliveryId: number,
-    input: { amount: number; price: number; reason: string }
+    input: { amount: number; price: number; reason: string },
+    options: CorrectionOptions = {}
   ): Promise<DeliveryCorrectionResult> {
     const result = await db.transaction(async (trx) => {
       const delivery = await this.lockForCorrection(actor, deliveryId, trx)
@@ -167,6 +175,7 @@ export default class DeliveryService {
         {
           deliveryId: delivery.id,
           actorId: actor.id,
+          impersonatorId: options.impersonatorId ?? null,
           kind: 'update',
           reason: input.reason,
           oldAmountSupplied: delivery.amountSupplied,
@@ -178,11 +187,15 @@ export default class DeliveryService {
         { client: trx }
       )
 
+      let repricedOrderIds: number[] = []
       if (priceChanged) {
         const uninvoiced = await trx
           .from('orders')
           .where('delivery_id', delivery.id)
           .whereNull('invoice_id')
+          // Orders are always locked by id, as invoice generation does — any other order
+          // could deadlock against it.
+          .orderBy('id', 'asc')
           .forUpdate()
           .select('id')
 
@@ -200,6 +213,7 @@ export default class DeliveryService {
               price_correction_id: correction.id,
               updated_at: new Date(),
             })
+          repricedOrderIds = uninvoiced.map((row) => Number(row.id))
           correction.repricedOrderCount = Array.isArray(repriced)
             ? repriced.length
             : Number(repriced)
@@ -212,7 +226,7 @@ export default class DeliveryService {
       delivery.price = input.price
       await delivery.save()
 
-      return { delivery, correction }
+      return { delivery, correction, repricedOrderIds }
     })
 
     const { delivery, correction } = result
@@ -247,7 +261,8 @@ export default class DeliveryService {
   async voidDelivery(
     actor: CorrectionActor,
     deliveryId: number,
-    reason: string
+    reason: string,
+    options: CorrectionOptions = {}
   ): Promise<DeliveryCorrectionResult> {
     const result = await db.transaction(async (trx) => {
       const delivery = await this.lockForCorrection(actor, deliveryId, trx)
@@ -265,6 +280,7 @@ export default class DeliveryService {
         {
           deliveryId: delivery.id,
           actorId: actor.id,
+          impersonatorId: options.impersonatorId ?? null,
           kind: 'void',
           reason,
           oldAmountSupplied: delivery.amountSupplied,
@@ -281,7 +297,7 @@ export default class DeliveryService {
       delivery.voidedAt = DateTime.now()
       await delivery.save()
 
-      return { delivery, correction }
+      return { delivery, correction, repricedOrderIds: [] }
     })
 
     const { delivery, correction } = result

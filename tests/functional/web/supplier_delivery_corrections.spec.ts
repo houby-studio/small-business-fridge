@@ -8,6 +8,7 @@ import { CategoryFactory } from '#database/factories/category_factory'
 import OrderService from '#services/order_service'
 import DeliveryService from '#services/delivery_service'
 import InvoiceService from '#services/invoice_service'
+import AdminService from '#services/admin_service'
 import NotificationService from '#services/notification_service'
 import DeliveryCorrection from '#models/delivery_correction'
 import db from '@adonisjs/lucid/services/db'
@@ -531,5 +532,97 @@ test.group('Audit records the real admin behind an impersonated action', (group)
 
     const log = await db.from('audit_logs').where('action', 'delivery.corrected').firstOrFail()
     assert.notProperty(log.metadata, 'impersonatedBy')
+  })
+})
+
+test.group('Corrections under contention and impersonation', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('a storno and a price correction of the same delivery do not deadlock', async ({
+    assert,
+  }) => {
+    const { supplier, delivery } = await setup({ amount: 10, price: 5 })
+    const buyer = await UserFactory.create()
+    const orders = await Promise.all(
+      [1, 2, 3].map(() => new OrderService().purchase(buyer.id, delivery.id, 'web'))
+    )
+
+    const results = await Promise.allSettled([
+      new AdminService().stornoOrder(orders[0].id),
+      new DeliveryService().correctDelivery(supplier, delivery.id, {
+        amount: 10,
+        price: 7,
+        reason: 'Concurrent fix',
+      }),
+      new AdminService().stornoOrder(orders[1].id),
+    ])
+
+    for (const result of results) {
+      assert.equal(result.status, 'fulfilled', String((result as PromiseRejectedResult).reason))
+    }
+    await delivery.refresh()
+    assert.equal(delivery.amountLeft, 9)
+  })
+
+  test('two quick corrections still email the buyers of the first one', async () => {
+    const fakeMailer = mail.fake()
+    try {
+      const { supplier, delivery } = await setup({ amount: 10, price: 20 })
+      const buyer = await UserFactory.create()
+      await new OrderService().purchase(buyer.id, delivery.id, 'web')
+
+      const first = await new DeliveryService().correctDelivery(supplier, delivery.id, {
+        amount: 10,
+        price: 25,
+        reason: 'First',
+      })
+      await new DeliveryService().correctDelivery(supplier, delivery.id, {
+        amount: 10,
+        price: 30,
+        reason: 'Second',
+      })
+
+      // The first email runs after the second correction already re-pointed the orders.
+      await new NotificationService().sendPriceCorrectionNotifications(
+        first.correction.id,
+        first.repricedOrderIds
+      )
+      fakeMailer.messages.assertSent((message) => message.hasTo(buyer.email))
+    } finally {
+      mail.restore()
+    }
+  })
+
+  test('a correction made while impersonating names the admin and notifies the supplier', async ({
+    client,
+    assert,
+  }) => {
+    const fakeMailer = mail.fake()
+    try {
+      const { supplier, delivery } = await setup({ amount: 10, price: 5 })
+      const admin = await UserFactory.apply('admin').create()
+
+      await client
+        .put(`/supplier/deliveries/${delivery.id}`)
+        .loginAs(admin)
+        .withSession({
+          __impersonation: { byId: admin.id, asId: supplier.id, asName: supplier.displayName },
+        })
+        .withCsrfToken()
+        .json({ amount: 9, price: 5, reason: 'Admin as supplier' })
+        .redirects(0)
+
+      const correction = await DeliveryCorrection.findByOrFail('deliveryId', delivery.id)
+      assert.equal(correction.actorId, supplier.id)
+      assert.equal(correction.impersonatorId, admin.id)
+
+      await new NotificationService().sendDeliveryCorrectionToSupplier(correction.id)
+      const notice = fakeMailer.messages.sent().find((message) => message.hasTo(supplier.email))
+      assert.exists(notice)
+      assert.include(JSON.stringify(notice!.toJSON()), admin.displayName)
+    } finally {
+      mail.restore()
+    }
   })
 })

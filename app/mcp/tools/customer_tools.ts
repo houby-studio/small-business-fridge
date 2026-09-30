@@ -98,8 +98,16 @@ export function registerCustomerTools(server: McpServer, user: User) {
         .optional()
         .describe('Product to buy — the oldest in-stock delivery lot is used (FIFO)'),
       quantity: z.number().int().min(1).max(10).optional().describe('Units to buy (default 1)'),
+      expectedPrice: z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe(
+          'Unit price you showed the user (from list_products). If the lot sold next costs anything else, nothing is bought (PRICE_CHANGED).'
+        ),
     },
-    async ({ deliveryId, productId, quantity }): Promise<CallToolResult> => {
+    async ({ deliveryId, productId, quantity, expectedPrice }): Promise<CallToolResult> => {
       try {
         if (!deliveryId && !productId) {
           return fail('Pass deliveryId or productId.')
@@ -123,7 +131,7 @@ export function registerCustomerTools(server: McpServer, user: User) {
 
         for (let i = 0; i < count; i++) {
           try {
-            const order = await orders.purchase(user.id, resolvedDeliveryId, 'web')
+            const order = await orders.purchase(user.id, resolvedDeliveryId, 'web', expectedPrice)
             orderIds.push(order.id)
             notifications.sendPurchaseConfirmation(order).catch((err) => {
               logger.error({ err }, 'Failed to send purchase confirmation email')

@@ -11,6 +11,11 @@ export interface OrderCreateRequest {
   deliveryId: number
   /** Purchase channel. */
   channel: 'kiosk' | 'scanner'
+  /**
+   * Unit price the buyer was shown. Stock is sold first-in-first-out; if the lot sold next
+   * costs anything else, nothing is bought and 409 is returned. Recommended.
+   */
+  expectedPrice?: number
 }
 
 export interface TokenLoginRequest {

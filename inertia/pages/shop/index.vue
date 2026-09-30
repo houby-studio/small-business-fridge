@@ -133,7 +133,11 @@ function purchase(product: ShopProduct) {
     acceptLabel: t('shop.confirm_accept'),
     rejectLabel: t('common.cancel'),
     accept: () => {
-      router.post('/shop/purchase', { deliveryId: product.deliveryId })
+      router.post('/shop/purchase', {
+        deliveryId: product.deliveryId,
+        // The price the buyer just confirmed — the server refuses if it no longer holds.
+        expectedPrice: product.price,
+      })
     },
   })
 }

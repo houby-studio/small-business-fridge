@@ -127,6 +127,14 @@ export default class KioskController {
       if (err instanceof FifoViolationError) {
         return response.json({ ok: false, error: 'fifo_violation', productId: err.productId })
       }
+      if (err instanceof PriceChangedError) {
+        return response.json({
+          ok: false,
+          error: 'price_changed',
+          deliveryId: err.deliveryId,
+          price: err.price,
+        })
+      }
       logger.error({ err }, 'Basket purchase failed')
       return response.json({ ok: false, error: 'failed' })
     }
@@ -200,6 +208,11 @@ export default class KioskController {
   async purchase({ request, response }: HttpContext) {
     const customerId = request.input('customerId')
     const deliveryId = request.input('deliveryId')
+    const rawExpectedPrice = request.input('expectedPrice')
+    const expectedPrice =
+      rawExpectedPrice === undefined || rawExpectedPrice === null || rawExpectedPrice === ''
+        ? undefined
+        : Number(rawExpectedPrice)
 
     if (!customerId || !deliveryId) {
       return response.redirect('/kiosk')
@@ -214,7 +227,12 @@ export default class KioskController {
     const orderService = new OrderService()
 
     try {
-      const order = await orderService.purchase(customerId, deliveryId, 'kiosk')
+      const order = await orderService.purchase(
+        customerId,
+        deliveryId,
+        'kiosk',
+        Number.isFinite(expectedPrice) ? expectedPrice : undefined
+      )
 
       const notificationService = new NotificationService()
       notificationService.sendPurchaseConfirmation(order).catch((err) => {

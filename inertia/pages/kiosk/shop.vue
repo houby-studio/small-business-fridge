@@ -79,6 +79,7 @@ function purchase(product: ProductItem) {
       router.post('/kiosk/purchase', {
         customerId: props.customer!.id,
         deliveryId: firstLot.deliveryId,
+        expectedPrice: firstLot.price,
       })
     },
   })
