@@ -5,6 +5,7 @@ import AppLayout from '~/layouts/AppLayout.vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import ConfirmDialog from 'primevue/confirmdialog'
+import Dialog from 'primevue/dialog'
 import { useAppConfirm } from '~/composables/use_app_confirm'
 import { useI18n } from '~/composables/use_i18n'
 
@@ -142,6 +143,43 @@ function purchase(product: ShopProduct) {
   })
 }
 
+interface PriceChange {
+  deliveryId: number
+  price: number
+  previousPrice: number | null
+  productName: string
+}
+
+// Set by the server when the price the buyer confirmed no longer holds (nothing was bought).
+const priceChange = ref<PriceChange | null>(null)
+const priceChangeVisible = ref(false)
+const priceChangeSubmitting = ref(false)
+
+watch(
+  () => (page.props.flash as Record<string, unknown> | undefined)?.priceChanged,
+  (value) => {
+    if (!value) return
+    priceChange.value = value as PriceChange
+    priceChangeVisible.value = true
+  },
+  { immediate: true }
+)
+
+function buyAtNewPrice() {
+  if (!priceChange.value || priceChangeSubmitting.value) return
+  priceChangeSubmitting.value = true
+  router.post(
+    '/shop/purchase',
+    { deliveryId: priceChange.value.deliveryId, expectedPrice: priceChange.value.price },
+    {
+      onFinish: () => {
+        priceChangeSubmitting.value = false
+        priceChangeVisible.value = false
+      },
+    }
+  )
+}
+
 function toggleFavorite(productId: number) {
   router.post(`/profile/favorites/${productId}`, {}, { preserveScroll: true })
 }
@@ -162,6 +200,58 @@ function categoryButtonStyle(isSelected: boolean, color?: string): Record<string
   <AppLayout>
     <Head :title="t('shop.title')" />
     <ConfirmDialog />
+    <Dialog
+      v-model:visible="priceChangeVisible"
+      :header="t('shop.price_changed_title')"
+      :style="{ width: '28rem', maxWidth: 'calc(100vw - 2rem)' }"
+      modal
+      :draggable="false"
+      data-testid="price-changed-dialog"
+    >
+      <div v-if="priceChange" class="flex gap-3">
+        <span
+          class="pi pi-exclamation-triangle mt-0.5 text-lg text-amber-600 dark:text-amber-400"
+          aria-hidden="true"
+        />
+        <div class="space-y-2 text-gray-700 dark:text-zinc-300">
+          <p>
+            {{
+              priceChange.previousPrice !== null
+                ? t('shop.price_changed_message', {
+                    name: priceChange.productName,
+                    old: priceChange.previousPrice,
+                    price: priceChange.price,
+                  })
+                : t('shop.price_changed_message_unknown', {
+                    name: priceChange.productName,
+                    price: priceChange.price,
+                  })
+            }}
+          </p>
+          <p class="font-semibold text-gray-900 dark:text-zinc-100">
+            {{ t('shop.price_changed_nothing_bought') }}
+          </p>
+        </div>
+      </div>
+      <template #footer>
+        <Button
+          autofocus
+          :label="t('common.cancel')"
+          severity="secondary"
+          text
+          data-testid="price-changed-cancel"
+          @click="priceChangeVisible = false"
+        />
+        <Button
+          v-if="priceChange"
+          :label="t('shop.price_changed_buy', { price: priceChange.price })"
+          :loading="priceChangeSubmitting"
+          :disabled="priceChangeSubmitting"
+          data-testid="price-changed-buy"
+          @click="buyAtNewPrice"
+        />
+      </template>
+    </Dialog>
 
     <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <h1 class="text-2xl font-bold text-gray-900 dark:text-zinc-100">{{ t('shop.title') }}</h1>

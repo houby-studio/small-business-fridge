@@ -87,4 +87,46 @@ test.describe('Delivery review follow-ups', () => {
     const row = page.locator('tbody tr', { hasText: 'Storno naskladnění' }).first()
     await expect(row.getByTestId('audit-foreign-actor')).toHaveText('Admin User')
   })
+
+  test('a price changed while the shop was open is confirmed in a modal, not a toast', async ({
+    page,
+    browser,
+  }) => {
+    await loginAs(page, 'supplier')
+    const productName = `E2E Modal ${Date.now()}`
+    const productId = await createProduct(page, productName)
+    await stock(page, '3', '20')
+    await expect(page.getByText('Naskladněno 3 ks za 20 Kč/ks.')).toBeVisible()
+
+    // The customer opens the shop and sees the product at 20 Kč.
+    const customerContext = await browser.newContext()
+    const customer = await customerContext.newPage()
+    await loginAs(customer, 'customer')
+    await customer.goto('/shop')
+    await customer.getByPlaceholder('Hledat...').fill(productName)
+    await expect(customer.getByText('20 Kč')).toBeVisible()
+
+    // Meanwhile the supplier corrects the price.
+    await page.goto(`/supplier/deliveries?productId=${productId}`)
+    await page.getByRole('button', { name: 'Opravit naskladnění' }).first().click()
+    const correction = page.getByTestId('delivery-correction-dialog')
+    await page.keyboard.type('22')
+    await correction.getByTestId('correction-reason').fill('Nová cena')
+    await correction.getByRole('button', { name: 'Uložit opravu' }).click()
+    await expect(page.getByText(/Naskladnění bylo opraveno/)).toBeVisible()
+
+    // The customer buys from the stale page: nothing is bought, a modal asks.
+    await customer.getByRole('button', { name: 'Koupit' }).first().click()
+    await customer.locator('.p-confirmdialog').getByRole('button', { name: 'Koupit' }).click()
+    const modal = customer.getByTestId('price-changed-dialog')
+    await expect(modal).toBeVisible()
+    await expect(modal).toContainText('z 20 Kč na 22 Kč')
+    await expect(modal.getByTestId('price-changed-cancel')).toBeFocused()
+
+    await modal.getByTestId('price-changed-buy').click()
+    await expect(modal).toBeHidden()
+    await customer.goto('/orders')
+    await expect(customer.locator('tbody tr', { hasText: productName })).toContainText('22 Kč')
+    await customerContext.close()
+  })
 })

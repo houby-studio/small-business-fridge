@@ -3,6 +3,8 @@ import { test } from '@japa/runner'
 import type { ApiClient } from '@japa/api-client'
 import { createHash, randomBytes } from 'node:crypto'
 import db from '@adonisjs/lucid/services/db'
+import env from '#start/env'
+import mail from '@adonisjs/mail/services/main'
 import { UserFactory } from '#database/factories/user_factory'
 import { ProductFactory } from '#database/factories/product_factory'
 import { DeliveryFactory } from '#database/factories/delivery_factory'
@@ -806,6 +808,86 @@ test.group('API MCP - OAuth server', (group) => {
     })
     tokenResponse.assertStatus(400)
     assert.equal(tokenResponse.body().error, 'invalid_grant')
+  })
+
+  test('the issued token is named after the client and the owner is emailed', async ({
+    client,
+    assert,
+  }) => {
+    const fakeMailer = mail.fake()
+    try {
+      const user = await UserFactory.create()
+      const clientId = await registerClient(client)
+      const codeVerifier = randomBytes(32).toString('base64url')
+      const codeChallenge = createHash('sha256').update(codeVerifier).digest('base64url')
+      const authorize = await authorizeWithConsent(client, user, {
+        ...authorizeQs(clientId),
+        code_challenge: codeChallenge,
+      })
+      const code = new URL(authorize.header('location') as string).searchParams.get('code')!
+
+      const tokenResponse = await client.post('/oauth/token').json({
+        grant_type: 'authorization_code',
+        code,
+        code_verifier: codeVerifier,
+        redirect_uri: OAUTH_REDIRECT,
+        client_id: clientId,
+      })
+      tokenResponse.assertStatus(200)
+
+      const token = await db.from('auth_access_tokens').where('tokenable_id', user.id).first()
+      assert.equal(token.name, 'MCP: Claude')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      fakeMailer.messages.assertSent((message) => message.hasTo(user.email))
+    } finally {
+      mail.restore()
+    }
+  })
+
+  test('an external client gets no flash; returning into the app shows the outcome', async ({
+    client,
+    assert,
+  }) => {
+    const user = await UserFactory.create()
+    const external = await authorizeWithConsent(
+      client,
+      user,
+      authorizeQs(await registerClient(client))
+    )
+    assert.notProperty(external.flashMessages(), 'alert')
+
+    const ownRedirect = `${env.get('APP_URL')}/profile`
+    const registration = await client
+      .post('/oauth/register')
+      .json({ client_name: 'Local tool', redirect_uris: [ownRedirect] })
+    const own = await authorizeWithConsent(client, user, {
+      ...authorizeQs(registration.body().client_id),
+      redirect_uri: ownRedirect,
+    })
+    const alert = own.flashMessages().alert as { type: string; message: string }
+    assert.equal(alert.type, 'success')
+    assert.include(alert.message, 'Local tool')
+  })
+
+  test('while impersonating the consent page explains why and offers to stop', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const target = await UserFactory.create()
+    const clientId = await registerClient(client)
+
+    const response = await client
+      .get('/oauth/authorize')
+      .qs(authorizeQs(clientId))
+      .loginAs(admin)
+      .withSession({
+        __impersonation: { byId: admin.id, asId: target.id, asName: target.displayName },
+      })
+      .headers({ 'X-Inertia': 'true', 'X-Inertia-Version': '1' })
+
+    response.assertStatus(403)
+    assert.equal(response.body().props.blocked, 'impersonating')
   })
 
   test('authorize rejects an unregistered redirect_uri', async ({ client }) => {

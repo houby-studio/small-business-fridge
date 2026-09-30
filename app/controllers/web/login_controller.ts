@@ -65,6 +65,10 @@ export default class LoginController {
         return response.redirect('/login')
       }
 
+      // A fresh login never resumes an impersonation left in this browser's session.
+
+      session.forget('__impersonation')
+
       await auth.use('web').login(user, !!rememberMe)
       logger.info({ userId: user.id, email }, 'Password login success')
       await AuditService.log(user.id, 'user.login', 'user', user.id, null, {
@@ -88,8 +92,32 @@ export default class LoginController {
     }
   }
 
-  async destroy({ auth, request, response }: HttpContext) {
-    const userId = auth.user?.id ?? null
+  async destroy(ctx: HttpContext) {
+    const { auth, request, response, session } = ctx
+    let userId = auth.user?.id ?? null
+
+    // Logging out while impersonating ends the impersonation and logs out the *admin* — the
+    // impersonated user stays signed in wherever they are. Record it that way, and put the
+    // admin back as the guard's user so logout() deletes the admin's remember-me token.
+    const impersonator = ctx.impersonator
+    if (impersonator) {
+      const targetId = userId
+      await AuditService.log(
+        impersonator.id,
+        'admin.impersonate.stop',
+        'user',
+        targetId,
+        targetId,
+        { reason: 'logout' }
+      )
+      session.forget('__impersonation')
+      const admin = await User.find(impersonator.id)
+      if (admin) {
+        ;(auth.use('web') as unknown as { user: User }).user = admin
+      }
+      userId = impersonator.id
+    }
+
     await auth.use('web').logout()
     if (userId) {
       await AuditService.log(userId, 'user.logout', 'user', userId, null, {

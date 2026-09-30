@@ -1,4 +1,5 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import Delivery from '#models/delivery'
 import ShopService from '#services/shop_service'
 import OrderService, { PriceChangedError } from '#services/order_service'
 import NotificationService from '#services/notification_service'
@@ -114,10 +115,18 @@ export default class ShopController {
       })
     } catch (error) {
       if (error instanceof PriceChangedError) {
-        // The page showed a lot that is no longer next in line (FIFO) — nothing was bought.
-        session.flash('alert', {
-          type: 'warn',
-          message: i18n.t('messages.purchase_price_changed', { price: error.price }),
+        // Nothing was bought. A toast is too easy to miss — the buyer might take the item
+        // believing it was paid for — so the shop asks explicitly, in a modal, whether to buy
+        // at the new price (see pages/shop/index.vue).
+        const delivery = await Delivery.query()
+          .where('id', error.deliveryId)
+          .preload('product')
+          .first()
+        session.flash('priceChanged', {
+          deliveryId: error.deliveryId,
+          price: error.price,
+          previousPrice: expectedPrice ?? null,
+          productName: delivery?.product?.displayName ?? '',
         })
       } else if (error instanceof Error && error.message === 'OUT_OF_STOCK') {
         session.flash('alert', {

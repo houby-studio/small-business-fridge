@@ -7,5 +7,10 @@
   "favorite": "Oblíbené",
   "forYou": "Doporučeno pro vás",
   "exclude_allergens": "Vyloučit alergeny",
-  "allergens_filter_placeholder": "Vyberte alergeny, které chcete vyloučit"
+  "allergens_filter_placeholder": "Vyberte alergeny, které chcete vyloučit",
+  "price_changed_title": "Cena se změnila",
+  "price_changed_message": "Cena produktu {name} se mezitím změnila z {old} {currency} na {price} {currency}.",
+  "price_changed_message_unknown": "Cena produktu {name} se mezitím změnila na {price} {currency}.",
+  "price_changed_nothing_bought": "Nic jsme zatím nekoupili. Chcete produkt koupit za novou cenu?",
+  "price_changed_buy": "Koupit za {price} {currency}"
 }

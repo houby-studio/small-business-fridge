@@ -14,7 +14,7 @@ type TonePartSpec = {
 }
 
 type EventToneSpec = {
-  name: 'loginSuccess' | 'loginError' | 'purchaseConfirmed' | 'purchaseCancelled'
+  name: 'loginSuccess' | 'loginError' | 'purchaseConfirmed' | 'priceChanged' | 'purchaseCancelled'
   description: string
   fileName: string
   parts: TonePartSpec[]
@@ -96,6 +96,25 @@ const EVENT_TONE_SPECS: EventToneSpec[] = [
       { durationMs: 280, frequenciesHz: [784, 1175, 1568, 2352], amplitudeScale: 0.94 },
       { durationMs: 40, frequenciesHz: [], amplitudeScale: 0 },
       { durationMs: 460, frequenciesHz: [523, 784, 1046, 1568, 2093], amplitudeScale: 1 },
+    ],
+  },
+  {
+    name: 'priceChanged',
+    description:
+      'Insistent two-tone alert, three times: the basket price changed, nothing was bought',
+    fileName: 'price-changed.wav',
+    parts: [
+      { durationMs: 120, frequenciesHz: [988], amplitudeScale: 1 },
+      { durationMs: 20, frequenciesHz: [], amplitudeScale: 0 },
+      { durationMs: 120, frequenciesHz: [740], amplitudeScale: 1 },
+      { durationMs: 60, frequenciesHz: [], amplitudeScale: 0 },
+      { durationMs: 120, frequenciesHz: [988], amplitudeScale: 1 },
+      { durationMs: 20, frequenciesHz: [], amplitudeScale: 0 },
+      { durationMs: 120, frequenciesHz: [740], amplitudeScale: 1 },
+      { durationMs: 60, frequenciesHz: [], amplitudeScale: 0 },
+      { durationMs: 120, frequenciesHz: [988], amplitudeScale: 1 },
+      { durationMs: 20, frequenciesHz: [], amplitudeScale: 0 },
+      { durationMs: 220, frequenciesHz: [740], amplitudeScale: 1 },
     ],
   },
   {

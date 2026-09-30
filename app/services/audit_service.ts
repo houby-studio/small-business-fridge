@@ -87,7 +87,10 @@ export default class AuditService {
     }
     if (filters?.userId) {
       query.where((q) => {
-        q.where('userId', filters.userId!).orWhere('targetUserId', filters.userId!)
+        q.where('userId', filters.userId!)
+          .orWhere('targetUserId', filters.userId!)
+          // Actions an admin took while impersonating someone belong to the admin too.
+          .orWhereRaw("(metadata->'impersonatedBy'->>'id')::int = ?", [filters.userId!])
       })
     }
 

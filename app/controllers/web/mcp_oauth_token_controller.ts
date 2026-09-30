@@ -2,6 +2,8 @@ import type { HttpContext } from '@adonisjs/core/http'
 import { createHash } from 'node:crypto'
 import McpOauthCode from '#models/mcp_oauth_code'
 import User from '#models/user'
+import McpOauthClient from '#models/mcp_oauth_client'
+import NotificationService from '#services/notification_service'
 import logger from '@adonisjs/core/services/logger'
 
 /**
@@ -91,14 +93,23 @@ export default class McpOauthTokenController {
         .json({ error: 'invalid_grant', error_description: 'User not found' })
     }
 
+    // Named after the client the user approved, so it is recognisable in Profile → API tokens.
+    const client = await McpOauthClient.find(authCode.clientId)
+    const clientName = client?.clientName || authCode.clientId.slice(0, 8)
     const token = await User.accessTokens.create(user, ['*'], {
-      name: `MCP OAuth (${authCode.clientId.slice(0, 8)})`,
+      name: `MCP: ${clientName}`.slice(0, 255),
       // No expiry — Claude Web would need a manual re-login every month otherwise,
       // since the web session (7d) expires before the token (30d) does.
       // Users can revoke from Profile → API Tokens at any time.
     })
 
     logger.info({ type: 'mcp_oauth_token_issued', clientId, userId: user.id })
+
+    // Tell the owner a tool now has lasting access — the safety net if they did not start
+    // the connection themselves.
+    new NotificationService().sendMcpConnectedNotification(user, clientName).catch((err) => {
+      logger.error({ err }, 'Failed to send MCP connection email')
+    })
 
     return response.header('Cache-Control', 'no-store').json({
       access_token: token.value!.release(),

@@ -1,6 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import type { NextFn } from '@adonisjs/core/types/http'
 import User from '#models/user'
+import AuditService from '#services/audit_service'
 
 export interface ImpersonationData {
   byId: number
@@ -33,8 +34,17 @@ export default class ImpersonationMiddleware {
         // will see the impersonated user as auth.user.
         ;(ctx.auth.use('web') as unknown as { user: User }).user = target
       } else {
-        // Target user no longer valid — cancel impersonation silently
+        // Target user no longer valid — end the impersonation, and say so in the audit log
+        // so the start entry is not left without an end.
         ctx.session.forget('__impersonation')
+        await AuditService.log(
+          impersonation.byId,
+          'admin.impersonate.stop',
+          'user',
+          impersonation.asId,
+          impersonation.asId,
+          { reason: 'target_invalid' }
+        )
       }
     }
 

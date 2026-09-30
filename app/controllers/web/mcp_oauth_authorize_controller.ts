@@ -4,6 +4,7 @@ import McpOauthClient from '#models/mcp_oauth_client'
 import McpOauthCode from '#models/mcp_oauth_code'
 import { DateTime } from 'luxon'
 import logger from '@adonisjs/core/services/logger'
+import env from '#start/env'
 
 const SESSION_KEY = 'mcpOauthPendingParams'
 /** Validated request waiting for the user's decision on the consent page. */
@@ -11,6 +12,7 @@ const CONSENT_KEY = 'mcpOauthConsent'
 
 interface ConsentRequest {
   clientId: string
+  clientName: string
   redirectUri: string
   codeChallenge: string
   state?: string
@@ -94,12 +96,15 @@ export default class McpOauthAuthorizeController {
     }
 
     if (session.has('__impersonation')) {
-      return response.status(403).send('Authorization is not available while impersonating')
+      response.status(403)
+      return inertia.render('auth/oauth_consent', { blocked: 'impersonating' })
     }
 
     const authUser = auth.use('web').user!
+    const clientName = client.clientName || effectiveClientId
     const consent: ConsentRequest = {
       clientId: effectiveClientId,
+      clientName,
       redirectUri: effectiveRedirectUri,
       codeChallenge: effectiveCodeChallenge,
       state: effectiveState,
@@ -108,12 +113,15 @@ export default class McpOauthAuthorizeController {
     session.put(CONSENT_KEY, consent)
 
     return inertia.render('auth/oauth_consent', {
-      clientName: client.clientName || effectiveClientId,
+      clientName,
       redirectHost: new URL(effectiveRedirectUri).host,
+      returnsToApp: this.isOwnOrigin(request, effectiveRedirectUri),
+      role: authUser.role,
+      account: { displayName: authUser.displayName, email: authUser.email },
     })
   }
 
-  async store({ request, response, auth, session, inertia }: HttpContext) {
+  async store({ request, response, auth, session, inertia, i18n }: HttpContext) {
     const consent = session.pull(CONSENT_KEY) as ConsentRequest | undefined
     const authUser = auth.use('web').user
 
@@ -121,15 +129,26 @@ export default class McpOauthAuthorizeController {
       return response.status(400).send('No pending authorization request')
     }
     if (session.has('__impersonation')) {
-      return response.status(403).send('Authorization is not available while impersonating')
+      response.status(403)
+      return inertia.render('auth/oauth_consent', { blocked: 'impersonating' })
     }
 
+    // Only when the client sends the user back into this app does a flash make sense —
+    // an external client (claude.ai) shows the outcome itself, and a flash would otherwise
+    // pop up at some unrelated later visit.
+    const returnsToApp = this.isOwnOrigin(request, consent.redirectUri)
     const redirectUrl = new URL(consent.redirectUri)
     if (consent.state) redirectUrl.searchParams.set('state', consent.state)
 
     if (request.input('decision') !== 'approve') {
       redirectUrl.searchParams.set('error', 'access_denied')
       logger.info({ type: 'mcp_oauth_denied', clientId: consent.clientId, userId: authUser.id })
+      if (returnsToApp) {
+        session.flash('alert', {
+          type: 'info',
+          message: i18n.t('messages.mcp_connect_declined', { client: consent.clientName }),
+        })
+      }
       return this.redirectOut(request, response, inertia, redirectUrl)
     }
 
@@ -147,7 +166,24 @@ export default class McpOauthAuthorizeController {
     logger.info({ type: 'mcp_oauth_code_issued', clientId: consent.clientId, userId: authUser.id })
 
     redirectUrl.searchParams.set('code', code)
+    if (returnsToApp) {
+      session.flash('alert', {
+        type: 'success',
+        message: i18n.t('messages.mcp_connect_approved', { client: consent.clientName }),
+      })
+    }
     return this.redirectOut(request, response, inertia, redirectUrl)
+  }
+
+  /** Whether the client sends the user back into this app (APP_URL, else the request host). */
+  private isOwnOrigin(request: HttpContext['request'], redirectUri: string): boolean {
+    try {
+      const appUrl = env.get('APP_URL')
+      const ownHost = appUrl ? new URL(appUrl).host : request.host()
+      return new URL(redirectUri).host === ownHost
+    } catch {
+      return false
+    }
   }
 
   /** The consent form posts through Inertia, which needs a hard location for another origin. */

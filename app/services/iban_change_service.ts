@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto'
+import AuditService from '#services/audit_service'
 import { DateTime } from 'luxon'
 import env from '#start/env'
 import type User from '#models/user'
@@ -75,10 +76,16 @@ export default class IbanChangeService {
       return { ok: false, reason: 'invalid' }
     }
 
+    const previousIban = user.iban
     user.iban = pending
     user.pendingIban = null
     user.ibanVerifiedAt = DateTime.utc()
     await user.save()
+
+    // The payout account changed — this must be on the record.
+    await AuditService.log(user.id, 'profile.iban_verified', 'user', user.id, null, {
+      iban: { from: previousIban, to: pending },
+    })
 
     token.usedAt = DateTime.utc()
     await token.save()

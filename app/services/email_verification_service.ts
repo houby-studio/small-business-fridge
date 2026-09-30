@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto'
+import AuditService from '#services/audit_service'
 import { DateTime } from 'luxon'
 import User from '#models/user'
 import EmailVerificationToken from '#models/email_verification_token'
@@ -93,10 +94,15 @@ export default class EmailVerificationService {
         return { ok: false, reason: 'email_taken' }
       }
 
+      const previousEmail = user.email
       user.email = tokenEmail
       user.pendingEmail = null
       user.emailVerifiedAt = DateTime.utc()
       await user.save()
+
+      await AuditService.log(user.id, 'profile.email_verified', 'user', user.id, null, {
+        email: { from: previousEmail, to: tokenEmail },
+      })
 
       token.usedAt = DateTime.utc()
       await token.save()

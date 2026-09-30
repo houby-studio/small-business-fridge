@@ -8,6 +8,7 @@ const service = new IbanChangeService()
 
 test.group('IbanChangeService', (group) => {
   group.each.setup(async () => {
+    await db.from('audit_logs').delete()
     await db.from('iban_change_tokens').delete()
     await db.from('users').delete()
   })
@@ -27,6 +28,13 @@ test.group('IbanChangeService', (group) => {
     assert.equal(user.iban, 'CZ6508000000192000145400')
     assert.isNull(user.pendingIban)
     assert.isNotNull(user.ibanVerifiedAt)
+
+    // A payout account change must be on the record.
+    const log = await db.from('audit_logs').where('action', 'profile.iban_verified').firstOrFail()
+    assert.deepEqual(log.metadata.iban, {
+      from: 'CZ6508000000192000145399',
+      to: 'CZ6508000000192000145400',
+    })
   })
 
   test('createForPendingIban returns null when nothing is pending', async ({ assert }) => {

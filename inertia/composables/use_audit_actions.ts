@@ -41,6 +41,10 @@ export const AUDIT_ACTION_I18N_KEYS: Record<string, string> = {
   'product_rating.created': 'audit.action_product_rating_created',
   'product_rating.updated': 'audit.action_product_rating_updated',
   'product_rating.deleted': 'audit.action_product_rating_deleted',
+  'product_rating.upvoted': 'audit.action_product_rating_upvoted',
+  'product_rating.unvoted': 'audit.action_product_rating_unvoted',
+  'profile.iban_verified': 'audit.action_profile_iban_verified',
+  'profile.email_verified': 'audit.action_profile_email_verified',
 }
 
 export type TranslateFn = (key: string) => string

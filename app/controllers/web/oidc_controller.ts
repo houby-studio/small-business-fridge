@@ -523,6 +523,8 @@ export default class OidcController {
     await this.externalProfileSync.syncAfterExternalLogin(user, { phone })
 
     // Always remember for external providers.
+    // A fresh login never resumes an impersonation left in this browser's session.
+    session.forget('__impersonation')
     await auth.use('web').login(user, true)
     logger.info({ provider, userId: user.id, email }, 'External login success')
     await AuditService.log(user.id, 'user.login', 'user', user.id, null, {
