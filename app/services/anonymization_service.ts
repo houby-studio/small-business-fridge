@@ -93,16 +93,7 @@ export default class AnonymizationService {
    * not stop the nightly batch.
    */
   async anonymizeDisabledUsers(graceDays: number): Promise<AnonymizationSummary> {
-    const safeGrace = Number.isFinite(graceDays) && graceDays >= 0 ? graceDays : 0
-    const cutoff = DateTime.utc().minus({ days: safeGrace }).toJSDate()
-
-    const candidates = await User.query()
-      .where('isDisabled', true)
-      .whereNull('anonymizedAt')
-      .where((q) => {
-        q.where('disabledAt', '<=', cutoff).orWhereNull('disabledAt')
-      })
-      .select('id')
+    const candidates = await this.dueQuery(graceDays).select('id')
 
     let anonymized = 0
     let failed = 0
@@ -117,5 +108,26 @@ export default class AnonymizationService {
     }
 
     return { candidates: candidates.length, anonymized, failed }
+  }
+
+  /**
+   * How many disabled accounts are past the grace period and still hold personal data —
+   * what the sweep would anonymize if it ran now.
+   */
+  async countDue(graceDays: number): Promise<number> {
+    const row = await this.dueQuery(graceDays).count('* as total').first()
+    return Number(row?.$extras.total ?? 0)
+  }
+
+  private dueQuery(graceDays: number) {
+    const safeGrace = Number.isFinite(graceDays) && graceDays >= 0 ? graceDays : 0
+    const cutoff = DateTime.utc().minus({ days: safeGrace }).toJSDate()
+
+    return User.query()
+      .where('isDisabled', true)
+      .whereNull('anonymizedAt')
+      .where((q) => {
+        q.where('disabledAt', '<=', cutoff).orWhereNull('disabledAt')
+      })
   }
 }

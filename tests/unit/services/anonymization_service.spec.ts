@@ -144,6 +144,21 @@ test.group('AnonymizationService', (group) => {
     assert.equal(byEmail.kind, 'not_found')
   })
 
+  test('countDue counts exactly the accounts the sweep would anonymize', async ({ assert }) => {
+    const due = await UserFactory.apply('disabled').create()
+    due.disabledAt = DateTime.utc().minus({ days: 30 })
+    await due.save()
+    const inGrace = await UserFactory.apply('disabled').create()
+    inGrace.disabledAt = DateTime.utc().minus({ days: 2 })
+    await inGrace.save()
+    await UserFactory.create()
+
+    assert.equal(await service.countDue(7), 1)
+
+    await service.anonymizeDisabledUsers(7)
+    assert.equal(await service.countDue(7), 0)
+  })
+
   test('writes user.anonymized audit log entry with the user as target, not actor', async ({
     assert,
   }) => {

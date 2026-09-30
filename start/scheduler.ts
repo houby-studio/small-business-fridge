@@ -81,12 +81,22 @@ scheduler
  */
 scheduler
   .call(async () => {
-    if (env.get('ANONYMIZE_DISABLED_USERS') !== true) {
-      logger.debug('Anonymization cron skipped (ANONYMIZE_DISABLED_USERS not enabled)')
-      return
-    }
     const graceDays = env.get('ANONYMIZE_GRACE_DAYS') ?? AnonymizationService.DEFAULT_GRACE_DAYS
     const service = new AnonymizationService()
+    if (env.get('ANONYMIZE_DISABLED_USERS') !== true) {
+      // Skipping is the default, so a production instance can silently keep personal data of
+      // people who left for months. Say so whenever it actually matters.
+      const due = await service.countDue(graceDays).catch(() => 0)
+      if (due > 0) {
+        logger.warn(
+          { graceDays, due },
+          'Disabled accounts past the grace period are not anonymized: ANONYMIZE_DISABLED_USERS is off'
+        )
+      } else {
+        logger.debug('Anonymization cron skipped (ANONYMIZE_DISABLED_USERS not enabled)')
+      }
+      return
+    }
     try {
       const summary = await service.anonymizeDisabledUsers(graceDays)
       logger.info({ graceDays, ...summary }, 'Anonymization sweep completed for disabled accounts')
