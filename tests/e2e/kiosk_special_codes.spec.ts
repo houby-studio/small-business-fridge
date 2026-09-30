@@ -62,6 +62,20 @@ test.describe('Kiosk special codes', () => {
     await expect(page.getByText(/easter egg/i)).toBeVisible()
   })
 
+  test('kiosk toasts are large and wide enough to read from a step away', async ({ page }) => {
+    await enterCode(page, '666')
+
+    // The toast is teleported to <body>; its kiosk styles must still apply.
+    const toast = page.locator('.sbf-kiosk-toast')
+    await expect(toast.locator('.p-toast-summary')).toBeVisible()
+    const fontSize = await toast
+      .locator('.p-toast-summary')
+      .evaluate((el) => Number.parseFloat(getComputedStyle(el).fontSize))
+    expect(fontSize).toBeGreaterThanOrEqual(20)
+    const box = await toast.boundingBox()
+    expect(box?.width ?? 0).toBeGreaterThanOrEqual(600)
+  })
+
   test('keyboard entry works on /kiosk without focused input', async ({ page }) => {
     const activeTag = await page.evaluate(() => document.activeElement?.tagName ?? '')
     expect(activeTag).not.toBe('INPUT')
