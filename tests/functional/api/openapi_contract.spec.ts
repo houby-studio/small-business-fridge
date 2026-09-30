@@ -160,6 +160,10 @@ test.group('OpenAPI docs contract', (group) => {
       assert.property(schemas, name, `named schema ${name} should be present`)
     }
 
+    // Orders carry the price the buyer paid (the lot's price may change afterwards).
+    assert.property(schemas.OrderResponse.properties, 'unitPrice')
+    assert.property(schemas.OrderWithDeliveryResponse.properties, 'unitPrice')
+
     // Named DTOs are camelCase, matching the real serialized responses.
     assert.property(schemas.ProductResponse.properties, 'displayName')
     assert.notProperty(schemas.ProductResponse.properties, 'display_name')

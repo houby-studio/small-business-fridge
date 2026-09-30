@@ -398,6 +398,50 @@ test.group('API MCP - Tool calls', (group) => {
     assert.include(result.raw, 'OUT_OF_STOCK')
   })
 
+  test('buy_product stops with a partial result when the next lot costs more', async ({
+    client,
+    assert,
+  }) => {
+    const user = await UserFactory.create()
+    const { supplier, product, delivery: oldest } = await createStockedDelivery()
+    await oldest.merge({ amountLeft: 1 }).save()
+    const pricier = await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountLeft: 5,
+      price: 25,
+    }).create()
+    await db
+      .from('deliveries')
+      .where('id', pricier.id)
+      .update({ created_at: new Date(Date.now() + 60_000) })
+
+    const result = await callTool(client, await createToken(user), 'buy_product', {
+      productId: product.id,
+      quantity: 3,
+    })
+    assert.isFalse(result.isError)
+    assert.equal(result.data.purchased, 1)
+    assert.equal(result.data.totalCost, 20)
+    assert.include(result.data.warning, 'different price')
+    await pricier.refresh()
+    assert.equal(pricier.amountLeft, 5)
+  })
+
+  test('buy_product with a stale expectedPrice buys nothing', async ({ client, assert }) => {
+    const user = await UserFactory.create()
+    const { delivery } = await createStockedDelivery()
+
+    const result = await callTool(client, await createToken(user), 'buy_product', {
+      deliveryId: delivery.id,
+      expectedPrice: 15,
+    })
+    assert.isTrue(result.isError)
+    assert.include(result.raw, 'PRICE_CHANGED')
+    await delivery.refresh()
+    assert.equal(delivery.amountLeft, 5)
+  })
+
   test('buy_product by productId takes the oldest lot, not the cheapest', async ({
     client,
     assert,

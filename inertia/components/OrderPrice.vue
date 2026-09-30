@@ -39,7 +39,7 @@ const corrected = computed(
       data-testid="order-price-corrected"
     >
       <span
-        class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-200"
+        class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-200"
         >{{ t('orders.price_corrected') }}</span
       >
       <span class="text-xs text-gray-500 dark:text-zinc-400">{{

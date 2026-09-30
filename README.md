@@ -59,6 +59,10 @@ normal upgrade — see [docs/migration-from-v2.md](docs/migration-from-v2.md).
 - Order history and invoice management with QR payment generation
 - Automatic payment reminders and daily purchase reports
 - Supplier section: product management, stock, deliveries
+- Delivery corrections: fix a mistyped amount or price, void a duplicate — with a
+  required reason, audit trail and emails to affected buyers (issued invoices never change)
+- Strict first-in-first-out stock across web, kiosk, API and MCP, and a guard that never
+  charges a price the buyer was not shown
 - Admin section: user management, audit log, impersonation
 - Kiosk mode: self-checkout via touchscreen keypad or barcode scanner
 - OIDC single sign-on (Microsoft Entra ID) with auto-registration

@@ -103,7 +103,7 @@ Tests `ShopService` against the test DB using Lucid factories. Covers:
 - `getProducts()` returns only in-stock products
 - `getProducts()` excludes out-of-stock by default; includes them when `showAll: true`
 - Products in disabled categories are excluded
-- Cheapest delivery price wins when multiple deliveries exist
+- Strict FIFO: the oldest in-stock delivery is shown and sold when several exist (never the cheapest)
 - Favorites are marked for authenticated users
 - `getCategories()` returns only active (non-disabled) categories
 
