@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-10T07:58:09.734Z",
+  "generatedAt": "2026-09-30T17:08:56.372Z",
   "format": "wav/pcm16-mono",
   "options": {
     "outDir": "public/keypad",
@@ -240,6 +240,69 @@
         {
           "durationMs": 460,
           "frequenciesHz": [523, 784, 1046, 1568, 2093],
+          "amplitudeScale": 1
+        }
+      ]
+    },
+    {
+      "name": "priceChanged",
+      "description": "Insistent two-tone alert, three times: the basket price changed, nothing was bought",
+      "fileName": "price-changed.wav",
+      "urlPath": "/keypad/price-changed.wav",
+      "parts": [
+        {
+          "durationMs": 120,
+          "frequenciesHz": [988],
+          "amplitudeScale": 1
+        },
+        {
+          "durationMs": 20,
+          "frequenciesHz": [],
+          "amplitudeScale": 0
+        },
+        {
+          "durationMs": 120,
+          "frequenciesHz": [740],
+          "amplitudeScale": 1
+        },
+        {
+          "durationMs": 60,
+          "frequenciesHz": [],
+          "amplitudeScale": 0
+        },
+        {
+          "durationMs": 120,
+          "frequenciesHz": [988],
+          "amplitudeScale": 1
+        },
+        {
+          "durationMs": 20,
+          "frequenciesHz": [],
+          "amplitudeScale": 0
+        },
+        {
+          "durationMs": 120,
+          "frequenciesHz": [740],
+          "amplitudeScale": 1
+        },
+        {
+          "durationMs": 60,
+          "frequenciesHz": [],
+          "amplitudeScale": 0
+        },
+        {
+          "durationMs": 120,
+          "frequenciesHz": [988],
+          "amplitudeScale": 1
+        },
+        {
+          "durationMs": 20,
+          "frequenciesHz": [],
+          "amplitudeScale": 0
+        },
+        {
+          "durationMs": 220,
+          "frequenciesHz": [740],
           "amplitudeScale": 1
         }
       ]

@@ -543,6 +543,9 @@ async function submitBasket() {
       })
     } else if (data.error === 'price_changed') {
       outOfStockDeliveryId.value = null
+      // An insistent tone on top of the toast — the customer is often already reaching for
+      // the fridge and must not walk away thinking the purchase went through.
+      playEventTone('price-changed.wav')
       // Show the current price in the basket, so the next confirm is for what is charged.
       basket.value = basket.value.map((line) =>
         line.deliveryId === data.deliveryId ? { ...line, price: data.price } : line
@@ -621,6 +624,7 @@ onMounted(() => {
     'login-error.wav',
     'purchase-confirmed.wav',
     'purchase-cancelled.wav',
+    'price-changed.wav',
   ]) {
     const player = new Audio(`/keypad/${fileName}`)
     player.preload = 'auto'

@@ -69,6 +69,10 @@ export default class InviteRegistrationController {
         password: data.password,
       })
 
+      // A fresh login never resumes an impersonation left in this browser's session.
+
+      session.forget('__impersonation')
+
       await auth.use('web').login(user, true)
 
       await AuditService.log(user.id, 'invitation.accepted', 'user_invitation', null, user.id, {

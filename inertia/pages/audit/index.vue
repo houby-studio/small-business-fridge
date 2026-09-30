@@ -21,6 +21,7 @@ interface AuditRow {
   user: { displayName: string } | null
   actorIsMe: boolean
   impersonatedBy: string | null
+  impersonation: { phase: 'start' | 'stop'; reason: string | null } | null
   targetUser: { displayName: string } | null
   createdAt: string
 }
@@ -45,6 +46,13 @@ const actionOptions = getAuditActionOptions(t, t('common.all'), ALL)
 
 function actionLabel(action: string | undefined) {
   return getAuditActionLabel(action, t)
+}
+
+function impersonationDetail(info: { phase: 'start' | 'stop'; reason: string | null }) {
+  if (info.phase === 'start') return t('audit.impersonation_started')
+  if (info.reason === 'logout') return t('audit.impersonation_ended_logout')
+  if (info.reason === 'target_invalid') return t('audit.impersonation_ended_invalid')
+  return t('audit.impersonation_ended')
 }
 
 function formatMetadata(meta: Record<string, any> | null): string {
@@ -166,7 +174,13 @@ function onSort(event: any) {
       </Column>
       <Column :header="t('audit.details')">
         <template #body="{ data }">
-          <span class="text-sm text-gray-600 dark:text-zinc-400">{{
+          <span
+            v-if="data.impersonation"
+            class="text-sm text-gray-600 dark:text-zinc-400"
+            data-testid="audit-impersonation-detail"
+            >{{ impersonationDetail(data.impersonation) }}</span
+          >
+          <span v-else class="text-sm text-gray-600 dark:text-zinc-400">{{
             formatMetadata(data.metadata)
           }}</span>
         </template>

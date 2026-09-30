@@ -353,9 +353,23 @@ export default class ProductRatingService {
 
     if (existing) {
       await existing.delete()
+      await AuditService.log(
+        userId,
+        'product_rating.unvoted',
+        'product_rating',
+        ratingId,
+        rating.userId
+      )
     } else {
       try {
         await ProductRatingUpvote.create({ productRatingId: ratingId, userId })
+        await AuditService.log(
+          userId,
+          'product_rating.upvoted',
+          'product_rating',
+          ratingId,
+          rating.userId
+        )
       } catch (error: unknown) {
         // Race / unique-violation safe-guard
         if ((error as { code?: string }).code !== '23505') throw error

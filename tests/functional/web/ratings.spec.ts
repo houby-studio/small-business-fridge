@@ -458,6 +458,18 @@ test.group('Web ratings — HTTP mutations', (group) => {
 
     rows = await db.from('product_rating_upvotes').where('product_rating_id', rating.id)
     assert.lengthOf(rows, 0)
+
+    // Both toggles are on the record (they used to write no audit entry at all).
+    const actions = await db
+      .from('audit_logs')
+      .where('user_id', voter.id)
+      .whereIn('action', ['product_rating.upvoted', 'product_rating.unvoted'])
+      .orderBy('id')
+      .select('action')
+    assert.deepEqual(
+      actions.map((row) => row.action),
+      ['product_rating.upvoted', 'product_rating.unvoted']
+    )
   })
 
   test('a customer cannot upvote while the public feed is off', async ({ client, assert }) => {

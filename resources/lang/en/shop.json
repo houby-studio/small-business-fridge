@@ -7,5 +7,10 @@
   "favorite": "Favorites",
   "forYou": "Recommended for you",
   "exclude_allergens": "Exclude allergens",
-  "allergens_filter_placeholder": "Select allergens to exclude"
+  "allergens_filter_placeholder": "Select allergens to exclude",
+  "price_changed_title": "The price has changed",
+  "price_changed_message": "The price of {name} has changed from {old} {currency} to {price} {currency} in the meantime.",
+  "price_changed_message_unknown": "The price of {name} has changed to {price} {currency} in the meantime.",
+  "price_changed_nothing_bought": "Nothing has been bought yet. Do you want to buy it at the new price?",
+  "price_changed_buy": "Buy for {price} {currency}"
 }

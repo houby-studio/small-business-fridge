@@ -513,6 +513,25 @@ export default class NotificationService {
     })
   }
 
+  /** An AI tool (MCP client) was just granted lasting access to the user's account. */
+  async sendMcpConnectedNotification(user: User, clientName: string) {
+    if (user.isDisabled || !user.email) return
+
+    await mail.send((message) => {
+      message
+        .to(user.email)
+        .subject(this.i18n.t('emails.mcp_connected_subject', { client: clientName }))
+        .htmlView('emails/mcp_connected', {
+          i18n: this.i18n,
+          name: user.displayName,
+          client: clientName,
+          profileUrl: `${this.appUrl}/profile`,
+          appUrl: this.appUrl,
+          appName: this.appName,
+        })
+    })
+  }
+
   /**
    * A supplier's records (their deliveries, orders from their stock, invoices in their name)
    * were changed by someone else — typically an admin. The supplier learns what happened,

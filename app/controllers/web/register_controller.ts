@@ -92,6 +92,10 @@ export default class RegisterController {
       )
     })
 
+    // A fresh login never resumes an impersonation left in this browser's session.
+
+    session.forget('__impersonation')
+
     await auth.use('web').login(user, true)
     await AuditService.log(user.id, 'user.registered', 'user', user.id, null, {
       via: 'local',

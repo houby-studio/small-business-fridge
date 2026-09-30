@@ -130,5 +130,11 @@
   "supplier_change_row_total": "Částka",
   "supplier_change_row_note": "Poznámka",
   "supplier_change_row_actor": "Autor změny",
-  "supplier_change_storno_note": "Kus se vrátil na sklad."
+  "supplier_change_storno_note": "Kus se vrátil na sklad.",
+  "mcp_connected_subject": "K vašemu účtu byl připojen AI nástroj {client}",
+  "mcp_connected_heading": "Nové propojení s AI nástrojem",
+  "mcp_connected_intro": "Ahoj {name}, k tvému účtu se právě přes MCP připojil nástroj „{client}“.",
+  "mcp_connected_access": "Nástroj může jednat tvým jménem – nakupovat, číst objednávky a faktury a vše ostatní, co můžeš dělat ty. Přístup nevyprší sám.",
+  "mcp_connected_not_you": "Pokud jsi propojení nespouštěl(a), přístup hned zruš v Profilu → API tokeny.",
+  "mcp_connected_cta": "Otevřít profil"
 }

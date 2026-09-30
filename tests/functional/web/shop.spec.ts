@@ -410,9 +410,12 @@ test.group('Web Shop - strict FIFO', (group) => {
       .redirects(1)
 
     response.assertStatus(200)
-    const alert = response.body().props.flash.alert
-    assert.equal(alert.type, 'warn')
-    assert.include(alert.message, '25')
+    // No toast: the shop opens a modal asking whether to buy at the new price.
+    const priceChanged = response.body().props.flash.priceChanged
+    assert.equal(priceChanged.deliveryId, older.id)
+    assert.equal(priceChanged.price, 25)
+    assert.equal(priceChanged.productName, product.displayName)
+    assert.isUndefined(response.body().props.flash.alert)
     assert.lengthOf(await Order.query().where('buyerId', buyer.id), 0)
 
     // The shop itself offers the older lot, so a fresh page buys it at its price.

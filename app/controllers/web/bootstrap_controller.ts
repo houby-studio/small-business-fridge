@@ -71,6 +71,10 @@ export default class BootstrapController {
       )
     })
 
+    // A fresh login never resumes an impersonation left in this browser's session.
+
+    session.forget('__impersonation')
+
     await auth.use('web').login(user, true)
     logger.info({ userId: user.id, email: user.email }, 'Bootstrap: first admin created')
 

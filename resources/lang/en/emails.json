@@ -130,5 +130,11 @@
   "supplier_change_row_total": "Amount",
   "supplier_change_row_note": "Note",
   "supplier_change_row_actor": "Changed by",
-  "supplier_change_storno_note": "The piece went back to stock."
+  "supplier_change_storno_note": "The piece went back to stock.",
+  "mcp_connected_subject": "AI tool {client} was connected to your account",
+  "mcp_connected_heading": "New AI tool connection",
+  "mcp_connected_intro": "Hi {name}, the tool “{client}” has just connected to your account via MCP.",
+  "mcp_connected_access": "It can act on your behalf – buy items, read orders and invoices and everything else you can do. Access does not expire on its own.",
+  "mcp_connected_not_you": "If you did not start this connection, revoke the access right away in Profile → API tokens.",
+  "mcp_connected_cta": "Open profile"
 }
