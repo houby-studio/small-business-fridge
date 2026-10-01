@@ -222,7 +222,7 @@ function renderTests(reports: SuiteReport[]): string[] {
   const lines = [
     '## Tests',
     '',
-    '| Suite | Tests | ✅ Passed | ❌ Failed | ⏭️ Skipped | Time |',
+    '| Suite | Tests | ✅ Passed | ❌ Failed | ⏭️ Skipped | Test time (sum) |',
     '| --- | --: | --: | --: | --: | --: |',
   ]
   const total = { tests: 0, passed: 0, failed: 0, skipped: 0, seconds: 0 }
@@ -315,11 +315,14 @@ async function main() {
     jobsError = error instanceof Error ? error.message : String(error)
   }
 
-  const reports: SuiteReport[] = findReports(process.env.JUNIT_DIR ?? 'reports')
-    .map((path) => ({
-      label: SUITE_LABELS[basename(path)] ?? basename(path),
-      cases: parseJunit(readFileSync(path, 'utf8')),
-    }))
+  // The e2e shards each upload a partial junit-e2e.xml under the same name: one row per suite.
+  const bySuite = new Map<string, TestCase[]>()
+  for (const path of findReports(process.env.JUNIT_DIR ?? 'reports')) {
+    const label = SUITE_LABELS[basename(path)] ?? basename(path)
+    bySuite.set(label, [...(bySuite.get(label) ?? []), ...parseJunit(readFileSync(path, 'utf8'))])
+  }
+  const reports: SuiteReport[] = [...bySuite.entries()]
+    .map(([label, cases]) => ({ label, cases }))
     .sort((a, b) => a.label.localeCompare(b.label))
 
   const lines = [

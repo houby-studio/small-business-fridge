@@ -26,6 +26,8 @@ permissions:
 
 env:
   NODE_VERSION: '24'
+  # Must match the length of the `shard` list in the e2e job matrix.
+  E2E_SHARDS: 6
 
 jobs:
   static:
@@ -40,6 +42,7 @@ jobs:
           REF: ${{ github.ref_name }}
           SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           PR: ${{ github.event.pull_request.number }}
+          E2E_SHARDS: ${{ env.E2E_SHARDS }}
         run: |
           {
             echo "## What this run does"
@@ -54,15 +57,15 @@ jobs:
             echo "| --- | :-: | --- |"
             echo "| Lint, format & typecheck | ✅ | ESLint, Prettier, \`tsc --noEmit\` |"
             echo "| Unit & functional tests | ✅ | route/verb parity, Japa against PostgreSQL 18 |"
-            echo "| E2E tests | ✅ | Playwright (Chromium) against a production build |"
+            echo "| E2E tests (1/${E2E_SHARDS} … ${E2E_SHARDS}/${E2E_SHARDS}) | ✅ | Playwright (Chromium) against a production build, split into ${E2E_SHARDS} shards with a database each |"
             if [ "$EVENT" = "pull_request" ]; then
-              echo "| Auth matrix smoke tests | ✅ | Playwright, every auth env combination |"
+              echo "| E2E auth matrix | ✅ | Playwright, every auth env combination |"
             else
-              echo "| Auth matrix smoke tests | ⏭️ | pull requests only |"
+              echo "| E2E auth matrix | ⏭️ | pull requests only |"
             fi
             echo "| Summary | ✅ | results of everything above, in one place |"
             echo
-            echo "The three test jobs run in parallel; the summary waits for all of them."
+            echo "All jobs except the summary run in parallel; the summary waits for all of them."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/checkout@v4
@@ -95,7 +98,9 @@ jobs:
       checks: write # required by mikepenz/action-junit-report to post check runs
       pull-requests: write # required to post PR annotations
 
-    services:
+    # Every job that talks to the app gets its own database and mail catcher (anchored here,
+    # reused by the e2e jobs), which is what lets the e2e shards run side by side.
+    services: &test-services
       postgres:
         image: postgres:18
         env:
@@ -199,42 +204,16 @@ jobs:
           retention-days: 14
 
   e2e:
-    name: E2E tests
+    name: E2E tests (${{ matrix.shard }}/${{ strategy.job-total }})
     runs-on: ubuntu-latest
-    timeout-minutes: 25
-    permissions:
-      contents: read
-      checks: write # required by mikepenz/action-junit-report to post check runs
-      pull-requests: write # required to post PR annotations
+    timeout-minutes: 15
+    strategy:
+      # One red shard must not cancel the others — the summary should list every failure.
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
 
-    services:
-      postgres:
-        image: postgres:18
-        env:
-          POSTGRES_USER: sbf
-          POSTGRES_PASSWORD: sbf
-          POSTGRES_DB: sbf_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      mailpit:
-        image: axllent/mailpit
-        ports:
-          - 1025:1025
-          - 8025:8025
-        env:
-          MP_SMTP_AUTH_ACCEPT_ANY: 1
-          MP_SMTP_AUTH_ALLOW_INSECURE: 1
-        options: >-
-          --health-cmd "wget -qO- http://localhost:8025/api/v1/messages || exit 1"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
+    services: *test-services
 
     env:
       MAILPIT_API_URL: http://localhost:8025
@@ -256,8 +235,9 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       # Builds the app and migrates a fresh test DB itself (scripts/run_e2e.ts, global_setup.ts).
+      # fullyParallel in playwright.config.ts makes --shard split per test, not per file.
       - name: Run Playwright E2E tests
-        run: npm run test:e2e
+        run: npm run test:e2e -- --shard=${{ matrix.shard }}/${{ strategy.job-total }}
 
       - name: Verify Playwright JUnit report exists
         if: always()
@@ -265,30 +245,71 @@ jobs:
           ls -la test-results || true
           test -s test-results/junit-e2e.xml
 
-      - name: Run Playwright Auth Matrix smoke tests (PR only)
-        if: github.event_name == 'pull_request'
+      # Published as one check by the summary job, not one per shard.
+      - name: Upload JUnit report for the summary
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: junit-e2e-${{ matrix.shard }}
+          path: test-results/junit-e2e.xml
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload raw test result artifacts
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: test-results-e2e-${{ matrix.shard }}
+          path: |
+            test-results/**
+            playwright-report/**
+            playwright-artifacts/**
+          if-no-files-found: warn
+          retention-days: 14
+
+  e2e-auth-matrix:
+    name: E2E auth matrix
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      checks: write # required by mikepenz/action-junit-report to post check runs
+      pull-requests: write # required to post PR annotations
+
+    services: *test-services
+
+    env:
+      MAILPIT_API_URL: http://localhost:8025
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright Auth Matrix smoke tests
         run: npm run test:e2e:auth-matrix
 
-      - name: Verify Playwright Auth Matrix JUnit report exists (PR only)
-        if: always() && github.event_name == 'pull_request'
+      - name: Verify Playwright Auth Matrix JUnit report exists
+        if: always()
         run: |
           ls -la test-results || true
           test -s test-results/junit-e2e-auth-matrix.xml
 
-      - name: Publish Playwright E2E results
+      - name: Publish Playwright Auth Matrix results
         uses: mikepenz/action-junit-report@v4
         if: always()
-        with:
-          report_paths: 'test-results/junit-e2e.xml'
-          check_name: 'Playwright E2E Results'
-          require_tests: true
-          require_passed_tests: true
-          include_passed: true
-          detailed_summary: true
-
-      - name: Publish Playwright Auth Matrix results (PR only)
-        uses: mikepenz/action-junit-report@v4
-        if: always() && github.event_name == 'pull_request'
         with:
           report_paths: 'test-results/junit-e2e-auth-matrix.xml'
           check_name: 'Playwright Auth Matrix Results'
@@ -297,14 +318,12 @@ jobs:
           include_passed: true
           detailed_summary: true
 
-      - name: Upload JUnit reports for the summary
+      - name: Upload JUnit report for the summary
         uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: junit-e2e
-          path: |
-            test-results/junit-e2e.xml
-            test-results/junit-e2e-auth-matrix.xml
+          name: junit-e2e-auth-matrix
+          path: test-results/junit-e2e-auth-matrix.xml
           if-no-files-found: ignore
           retention-days: 14
 
@@ -312,23 +331,24 @@ jobs:
         uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: test-results-e2e
+          name: test-results-e2e-auth-matrix
           path: |
             test-results/**
-            playwright-report/**
             playwright-artifacts/**
           if-no-files-found: warn
           retention-days: 14
 
   summary:
     name: Summary
-    needs: [static, test, e2e]
+    needs: [static, test, e2e, e2e-auth-matrix]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: read
       actions: read # the job/step list of this run, for the summary table
+      checks: write # required by mikepenz/action-junit-report to post check runs
+      pull-requests: write # required to post PR annotations
 
     steps:
       - uses: actions/checkout@v4
@@ -346,6 +366,18 @@ jobs:
         with:
           pattern: junit-*
           path: reports
+
+      # The shards each wrote a partial junit-e2e.xml; one check run covers all of them.
+      - name: Publish Playwright E2E results
+        uses: mikepenz/action-junit-report@v4
+        if: always()
+        with:
+          report_paths: 'reports/junit-e2e-[0-9]*/junit-e2e.xml'
+          check_name: 'Playwright E2E Results'
+          require_tests: true
+          require_passed_tests: true
+          include_passed: true
+          detailed_summary: true
 
       - name: Write run summary
         env:
