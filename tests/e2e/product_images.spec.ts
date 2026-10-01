@@ -24,7 +24,17 @@ async function fillRequiredFields(page: Page, name: string) {
   await page.getByRole('option', { name: 'Nealko' }).click()
 }
 
-test.describe('Product image picker', () => {
+test.describe('Product image tile', () => {
+  test('an untouched form lists what is missing instead of shouting errors', async ({ page }) => {
+    await loginAs(page, 'supplier')
+    await page.goto('/supplier/products/new')
+    await expect(page.getByTestId('product-form-missing')).toHaveText(
+      'Doplňte: Název produktu, Popis, Kategorie, Obrázek'
+    )
+    await expect(page.getByText('Popis produktu je povinný.')).toHaveCount(0)
+    await expect(page.locator('#product-barcode')).toBeFocused()
+  })
+
   test('an upload is processed, previewed and saved as WebP', async ({ page }) => {
     const name = `E2E Obrázek ${Date.now()}`
     await loginAs(page, 'supplier')
@@ -39,14 +49,13 @@ test.describe('Product image picker', () => {
     })
 
     const status = page.getByTestId('product-image-status')
-    await expect(status).toHaveText('Pozadí odstraněno (jednobarevné)')
+    await expect(status).toHaveText('Hotovo: pozadí odstraněno')
     await expect(page.getByTestId('product-image-preview')).toHaveAttribute('src', /^blob:/)
     await expect(createButton).toBeEnabled()
 
-    // Changing an option reprocesses the same source.
-    await page.locator('#product-image-background').click()
-    await page.getByRole('option', { name: 'Ponechat pozadí' }).click()
-    await expect(status).toHaveText('Pozadí ponecháno')
+    // The background toggle reprocesses the same picture.
+    await page.getByText('S pozadím', { exact: true }).click()
+    await expect(status).toHaveText('Hotovo: pozadí ponecháno')
 
     await createButton.click()
     await expect(page).toHaveURL(/\/supplier\/stock\?preselect=\d+/)
@@ -57,36 +66,10 @@ test.describe('Product image picker', () => {
       'src',
       /^\/uploads\/products\/[0-9a-f-]+\.webp$/
     )
+    await expect(page.getByText('Uložený obrázek')).toBeVisible()
   })
 
-  test('the edit form reprocesses the current image', async ({ page }) => {
-    const name = `E2E Přegenerovat ${Date.now()}`
-    await loginAs(page, 'supplier')
-    await page.goto('/supplier/products/new')
-    await fillRequiredFields(page, name)
-    await page.locator('#product-image-background').click()
-    await page.getByRole('option', { name: 'Ponechat pozadí' }).click()
-    await page.locator('input[type="file"]').setInputFiles({
-      name: 'keep.png',
-      mimeType: 'image/png',
-      buffer: await whiteBackdropPng(),
-    })
-    await expect(page.getByTestId('product-image-status')).toHaveText('Pozadí ponecháno')
-    await page.getByRole('button', { name: 'Vytvořit produkt' }).click()
-    await expect(page).toHaveURL(/\/supplier\/stock\?preselect=\d+/)
-    const productId = page.url().match(/preselect=(\d+)/)![1]
-
-    await page.goto(`/supplier/products/${productId}/edit`)
-    const status = page.getByTestId('product-image-status')
-    await page.getByRole('button', { name: 'Upravit stávající obrázek' }).click()
-    // The kept white backdrop sits on a transparent canvas now; it is still removed.
-    await expect(status).toHaveText('Pozadí odstraněno (jednobarevné)')
-    await expect(page.getByTestId('product-image-preview')).toHaveAttribute('src', /^blob:/)
-    await page.getByRole('button', { name: 'Uložit změny' }).click()
-    await expect(page).toHaveURL(/\/supplier\/stock/)
-  })
-
-  test('a wide product is turned upright', async ({ page }) => {
+  test('a wide product stands upright and the arrows turn it further', async ({ page }) => {
     await loginAs(page, 'supplier')
     await page.goto('/supplier/products/new')
     await page.locator('input[type="file"]').setInputFiles({
@@ -94,9 +77,15 @@ test.describe('Product image picker', () => {
       mimeType: 'image/png',
       buffer: await whiteBackdropPng(240, 50),
     })
-    await expect(page.getByTestId('product-image-status')).toHaveText(
-      'Pozadí odstraněno (jednobarevné) · otočeno na výšku'
-    )
+    const status = page.getByTestId('product-image-status')
+    await expect(status).toHaveText('Hotovo: pozadí odstraněno, otočeno')
+
+    await page.getByRole('button', { name: 'Nevypadá to dobře?' }).click()
+    await page.getByRole('button', { name: 'Neotáčet' }).click()
+    await expect(status).toHaveText('Hotovo: pozadí odstraněno')
+
+    await page.getByRole('button', { name: 'Otočit doprava' }).click()
+    await expect(status).toHaveText('Hotovo: pozadí odstraněno, otočeno')
   })
 
   test('a pasted image is picked up without choosing a file', async ({ page }) => {
@@ -110,29 +99,60 @@ test.describe('Product image picker', () => {
       data.items.add(new File([bytes], 'clipboard.png', { type: 'image/png' }))
       window.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data }))
     }, png)
-    await expect(page.getByTestId('product-image-status')).toHaveText(
-      'Pozadí odstraněno (jednobarevné)'
-    )
+    await expect(page.getByTestId('product-image-status')).toHaveText('Hotovo: pozadí odstraněno')
   })
 
   test('a link into the internal network is refused with a message', async ({ page }) => {
     await loginAs(page, 'supplier')
     await page.goto('/supplier/products/new')
+    await page.getByRole('button', { name: 'Z odkazu' }).click()
     await page.locator('#product-image-url').fill('http://127.0.0.1:9/secret.png')
-    await page.getByRole('button', { name: 'Načíst' }).click()
+    await page.keyboard.press('Enter')
     await expect(page.getByTestId('product-image-error')).toContainText(
-      'Z této adresy nelze obrázek stáhnout.'
+      'Z této adresy obrázek stáhnout nejde.'
     )
     await expect(page.getByRole('button', { name: 'Vytvořit produkt' })).toBeDisabled()
   })
 
-  test('the barcode search needs an EAN', async ({ page }) => {
+  test('the barcode lookup explains what it needs', async ({ page }) => {
     await loginAs(page, 'supplier')
     await page.goto('/supplier/products/new')
-    const search = page.getByRole('button', { name: 'Hledat podle EAN' })
-    await expect(search).toBeDisabled()
-    await page.locator('#product-barcode').fill('8594001025411')
-    await expect(search).toBeEnabled()
+    await page.getByRole('button', { name: 'Najít' }).click()
+    await expect(page.getByText('Nejdřív zadejte čárový kód (8–14 číslic).')).toBeVisible()
+  })
+
+  test('the edit form improves the saved image and can restore it', async ({ page }) => {
+    const name = `E2E Vylepšit ${Date.now()}`
+    await loginAs(page, 'supplier')
+    await page.goto('/supplier/products/new')
+    await fillRequiredFields(page, name)
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'keep.png',
+      mimeType: 'image/png',
+      buffer: await whiteBackdropPng(),
+    })
+    const status = page.getByTestId('product-image-status')
+    await expect(status).toHaveText('Hotovo: pozadí odstraněno')
+    await page.getByText('S pozadím', { exact: true }).click()
+    await expect(status).toHaveText('Hotovo: pozadí ponecháno')
+    await page.getByRole('button', { name: 'Vytvořit produkt' }).click()
+    await expect(page).toHaveURL(/\/supplier\/stock\?preselect=\d+/)
+    const productId = page.url().match(/preselect=(\d+)/)![1]
+
+    await page.goto(`/supplier/products/${productId}/edit`)
+    await expect(page.getByText('Uložený obrázek')).toBeVisible()
+    await page.getByText('Bez pozadí', { exact: true }).click()
+    await expect(status).toHaveText('Hotovo: pozadí odstraněno')
+    await expect(page.getByTestId('product-form-image-replaced')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Vrátit původní' }).click()
+    await expect(page.getByText('Uložený obrázek')).toBeVisible()
+    await expect(page.getByTestId('product-form-image-replaced')).toHaveCount(0)
+
+    await page.getByText('Bez pozadí', { exact: true }).click()
+    await expect(status).toHaveText('Hotovo: pozadí odstraněno')
+    await page.getByRole('button', { name: 'Uložit změny' }).click()
+    await expect(page).toHaveURL(/\/supplier\/stock/)
   })
 })
 

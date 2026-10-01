@@ -10,6 +10,11 @@ export interface NormalizeOptions {
   rotate: RotateMode
   rotateMinRatio: number
   autoDirection: RotateDirection
+  /**
+   * Extra quarter turns clockwise (negative = counter-clockwise) on top of `rotate` — the
+   * supplier's ↺/↻ buttons, relative to what the automatic rule produced.
+   */
+  turn?: number
 }
 
 export interface NormalizedImage {
@@ -99,15 +104,17 @@ export async function normalizeProductImage(
 ): Promise<NormalizedImage> {
   const box = contentBox(image)
   const rotated = decideRotation(box.width, box.height, options)
+  const base = rotated === 'cw' ? 90 : rotated === 'ccw' ? 270 : 0
+  const degrees = (((base + (options.turn ?? 0) * 90) % 360) + 360) % 360
 
   let pipeline = sharp(image.data, {
     raw: { width: image.width, height: image.height, channels: 4 },
   }).extract(box)
 
-  if (rotated) {
+  if (degrees !== 0) {
     // Materialise the crop first: sharp applies rotate before extract within one pipeline.
     const cropped = await pipeline.png().toBuffer()
-    pipeline = sharp(cropped).rotate(rotated === 'cw' ? 90 : 270)
+    pipeline = sharp(cropped).rotate(degrees)
   }
 
   const buffer = await pipeline

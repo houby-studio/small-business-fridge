@@ -78,6 +78,23 @@ test.group('Product images - normalize', () => {
     assert.equal(await alphaAt(result.buffer, 5, 400), 0)
   })
 
+  test('adds the supplier extra quarter turns on top of the automatic rule', async ({ assert }) => {
+    const bar = await decodeToRaw(
+      await productOnBackdrop({ product: { width: 200, height: 50 }, backdrop: transparent })
+    )
+    // auto turns it upright (ccw); one more turn clockwise undoes that → lying again
+    const back = await normalizeProductImage(bar, { ...options, turn: 1 })
+    assert.equal(back.rotated, 'ccw')
+    assert.equal(await alphaAt(back.buffer, 225, 50), 0)
+    assert.isAbove(await alphaAt(back.buffer, 225, 400), 200)
+    // two turns on an upright product flip it upside down, still upright-shaped
+    const tall = await decodeToRaw(
+      await productOnBackdrop({ product: { width: 50, height: 200 }, backdrop: transparent })
+    )
+    const flipped = await normalizeProductImage(tall, { ...options, turn: 2 })
+    assert.isAbove(await alphaAt(flipped.buffer, 225, 20), 200)
+  })
+
   test('leaves squat products (cups, round cheese) alone', ({ assert }) => {
     assert.isNull(decideRotation(150, 100, options))
     assert.equal(decideRotation(180, 100, options), 'ccw')

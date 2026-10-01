@@ -108,7 +108,7 @@ export default class ProductImageService {
    */
   async process(
     input: Buffer,
-    options: { background: BackgroundMode; rotate: RotateMode }
+    options: { background: BackgroundMode; rotate: RotateMode; turn?: number }
   ): Promise<ProcessedProductImage> {
     if (!ProductImageService.isAvailable(options.background)) {
       throw new DomainError<ProductImageErrorCode>('image_background_method_unavailable')
@@ -129,6 +129,7 @@ export default class ProductImageService {
       width: productImagesConfig.width,
       height: productImagesConfig.height,
       rotate: options.rotate,
+      turn: options.turn,
       rotateMinRatio: productImagesConfig.rotateMinRatio,
       autoDirection: productImagesConfig.rotateDirection,
     })

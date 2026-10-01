@@ -147,7 +147,7 @@ test.describe('Supplier products flow', () => {
     await page.getByRole('combobox').first().click()
     await page.getByRole('option', { name: 'Nealko' }).click()
 
-    await page.getByPlaceholder('Volitelné — EAN kód').fill(String(Date.now()))
+    await page.locator('#product-barcode').fill(String(Date.now()))
 
     await page.locator('input[type="file"]').setInputFiles({
       name: 'e2e-product.png',

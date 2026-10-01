@@ -21,6 +21,8 @@ export const processProductImageValidator = vine.compile(
     productId: vine.number().positive().withoutDecimals().optional(),
     background: vine.enum(BACKGROUND_MODES).optional(),
     rotate: vine.enum(ROTATE_MODES).optional(),
+    /** Extra quarter turns from the ↺/↻ buttons. */
+    turn: vine.number().withoutDecimals().range([-3, 3]).optional(),
   })
 )
 

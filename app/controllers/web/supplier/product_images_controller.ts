@@ -27,6 +27,7 @@ export default class ProductImagesController {
       const result = await service.process(input, {
         background: data.background ?? 'auto',
         rotate: data.rotate ?? 'auto',
+        turn: data.turn ?? 0,
       })
       return response
         .header('Content-Type', 'image/webp')

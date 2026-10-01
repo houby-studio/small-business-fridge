@@ -5,22 +5,28 @@ the kiosk show a uniform catalogue without anyone editing pictures by hand.
 
 ## What the supplier does
 
-In **Supplier → Products → New / Edit**, the image can come from:
+The image is one tile on the left of the product form: the preview is also the drop zone,
+and what it shows is what gets saved.
 
-| Source         | How                                                                    |
-| -------------- | ---------------------------------------------------------------------- |
-| File           | **Choose file** (JPG, PNG, WebP, GIF, AVIF; up to 15 MB)               |
-| Clipboard      | **Ctrl+V** anywhere on the page — a copied image or a copied image URL |
-| Link           | Paste an `https://…` URL into the link field and press **Load**        |
-| Barcode lookup | **Search by EAN** lists pictures from [Open Food Facts]                |
+- **Pick a picture:** drop it on the tile, paste it (Ctrl+V — a copied image or a copied
+  image link), click the tile or **Choose photo** (on a phone this offers the camera), or
+  **From a link**. With a barcode, **Find** next to the barcode field lists pictures from
+  [Open Food Facts] and offers the product name it knows; a click on a picture puts it in
+  the tile. The new-product form starts with the cursor in the barcode field, so a scanner
+  can type the code and press Enter.
+- **Adjust:** ↺ / ↻ turn the result by a quarter; **No background / Keep background**
+  switches background removal. **Doesn't look right?** offers *Remove white background only
+  (faster)*, *Don't rotate* and *Try again*.
+- **Edit form:** the tile shows the saved image (badge *Saved image*). The same adjustments
+  work on it directly; **Restore original** discards the change, and nothing is replaced
+  unless the supplier saves after a change (the form says so next to the save button).
 
-The server returns the finished image straight away and the preview shows it on a
-checkerboard, so a removed background is visible. Two menus change the result without
-picking the image again: **Background** and **Rotation**.
+The supplier never chooses a technology: background removal uses the methods in
+`PRODUCT_IMAGE_BG_AUTO` (below). Processing takes 1–15 s; the tile shows a spinner meanwhile,
+the save button waits, and a failed attempt keeps the last good picture.
 
-Open Food Facts is crowd-sourced: pictures are often phone photos. It is offered as one
-source among others and never applied automatically. When it knows the barcode, it also
-suggests a product name (**Use as name**).
+Open Food Facts is crowd-sourced: pictures are often phone photos, so nothing from it is
+applied without a click.
 
 [Open Food Facts]: https://world.openfoodfacts.org
 
