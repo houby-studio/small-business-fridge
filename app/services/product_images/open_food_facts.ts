@@ -24,6 +24,7 @@ interface OffProduct {
   product_name?: string
   product_name_cs?: string
   brands?: string
+  quantity?: string
   selected_images?: OffSelectedImages
   images?: Record<string, unknown>
 }
@@ -63,13 +64,29 @@ export function parseOffProduct(product: OffProduct, imagesBaseUrl: string): Can
     }
   }
 
-  const name = [
-    product.brands?.split(',')[0]?.trim(),
-    product.product_name_cs || product.product_name,
-  ]
-    .filter(Boolean)
-    .join(' ')
-  return { productName: name || null, candidates }
+  return { productName: offProductName(product), candidates }
+}
+
+/**
+ * A name in the catalogue's style — "Snickers 50 g". `brands` is free text on OFF and
+ * often holds the manufacturer's legal name ("MARS POLSKA SPÓŁKA Z OGRANICZONĄ…"), so a
+ * brand is only prefixed when it is short and not already part of the name.
+ */
+export function offProductName(product: OffProduct): string | null {
+  const base = (product.product_name_cs || product.product_name || '').trim()
+  const brand = product.brands?.split(',')[0]?.trim() ?? ''
+  const shortBrand = brand.length > 0 && brand.length <= 20 && brand.split(/\s+/).length <= 2
+  let name = base
+  if (shortBrand && !base.toLowerCase().includes(brand.toLowerCase())) {
+    name = base ? `${brand} ${base}` : brand
+  }
+  const quantity = product.quantity?.trim()
+  if (name && quantity && !name.toLowerCase().includes(quantity.toLowerCase())) {
+    name = `${name} ${quantity}`
+  }
+  if (!name) return null
+  // Crowd-sourced names are sometimes all lower case ("snickers 75g").
+  return name.charAt(0).toLocaleUpperCase('cs') + name.slice(1)
 }
 
 /**
@@ -84,7 +101,7 @@ export async function lookupOpenFoodFacts(barcode: string): Promise<CandidateLoo
   let response: Response
   try {
     response = await fetch(
-      `${baseUrl}/api/v2/product/${barcode}.json?fields=code,product_name,product_name_cs,brands,selected_images,images`,
+      `${baseUrl}/api/v2/product/${barcode}.json?fields=code,product_name,product_name_cs,brands,quantity,selected_images,images`,
       {
         // OFF asks API clients to identify themselves.
         headers: {

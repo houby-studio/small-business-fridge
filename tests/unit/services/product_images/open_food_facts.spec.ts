@@ -4,6 +4,7 @@ import productImagesConfig from '#config/product_images'
 import {
   lookupOpenFoodFacts,
   offImageFolder,
+  offProductName,
   parseOffProduct,
 } from '#services/product_images/open_food_facts'
 import { startStubServer } from '#tests/utils/product_image_fixtures'
@@ -19,6 +20,32 @@ test.group('Product images - Open Food Facts', (group) => {
   test('splits a barcode into the OFF image folder', ({ assert }) => {
     assert.equal(offImageFolder('8593893763463'), '859/389/376/3463')
     assert.equal(offImageFolder('20005702'), '20005702')
+  })
+
+  test('builds a catalogue-style name and ignores a legal company name as brand', ({ assert }) => {
+    assert.equal(
+      offProductName({
+        product_name: 'SNICKERS',
+        product_name_cs: 'Snickers',
+        brands: 'MARS POLSKA SPÓŁKA Z OGRANICZONĄ ODPOWIEDZIALNOŚCIĄ',
+        quantity: '50 g',
+      }),
+      'Snickers 50 g'
+    )
+    assert.equal(
+      offProductName({ product_name: 'Crisp Bread', brands: 'Danvita' }),
+      'Danvita Crisp Bread'
+    )
+    assert.equal(
+      offProductName({ product_name: 'Kofola Original', brands: 'Kofola' }),
+      'Kofola Original'
+    )
+    assert.equal(
+      offProductName({ product_name: 'Birell 0,5 l', quantity: '0,5 l' }),
+      'Birell 0,5 l'
+    )
+    assert.equal(offProductName({ product_name: 'snickers 75g' }), 'Snickers 75g')
+    assert.isNull(offProductName({}))
   })
 
   test('offers the full-size front image first, then raw uploads', ({ assert }) => {
