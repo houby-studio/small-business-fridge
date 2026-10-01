@@ -315,7 +315,10 @@ async function main() {
   let jobsError = ''
   try {
     const runJobs = await fetchJobs()
-    jobs = runJobs.filter((job) => job.name !== ownName)
+    // The API lists jobs in completion order; by name keeps the shards 1/6 … 6/6 together.
+    jobs = runJobs
+      .filter((job) => job.name !== ownName)
+      .sort((a, b) => a.name.localeCompare(b.name, 'en', { numeric: true }))
   } catch (error) {
     jobsError = error instanceof Error ? error.message : String(error)
   }
