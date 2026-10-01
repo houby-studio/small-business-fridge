@@ -24,6 +24,10 @@ jobs:
     name: Build kiosk snap
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write # Sigstore signing certificate for the snap's provenance
+      attestations: write
 
     steps:
       - uses: actions/checkout@v4
@@ -95,11 +99,22 @@ jobs:
           path: ${{ steps.snap.outputs.file }}
           retention-days: 30
 
+      # Pull requests are left out: a fork's token cannot mint an OIDC token, and an attestation
+      # per PR commit would only add noise next to the master builds people actually install.
+      - name: Attest build provenance
+        id: attest
+        if: github.event_name != 'pull_request'
+        uses: actions/attest@v4
+        with:
+          subject-path: ${{ steps.snap.outputs.file }}
+
       - name: Summarize built snap
         env:
           SNAP_FILE: ${{ steps.snap.outputs.file }}
           SNAP_NAME: ${{ steps.snap.outputs.name }}
           ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+          ATTESTATION_URL: ${{ steps.attest.outputs.attestation-url }}
+          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           {
@@ -111,6 +126,13 @@ jobs:
             echo "| Size | $(numfmt --to=iec --suffix=B "$(stat -c %s "${SNAP_FILE}")") |"
             echo "| SHA-256 | \`$(sha256sum "${SNAP_FILE}" | cut -d' ' -f1)\` |"
             echo "| Kept until | $(date -u -d '+30 days' +%Y-%m-%d) |"
+            if [ -n "${ATTESTATION_URL}" ]; then
+              echo "| Provenance | [attestation](${ATTESTATION_URL}) |"
+              echo
+              echo "Verify a downloaded snap: \`gh attestation verify ${SNAP_NAME} --repo ${REPO}\`"
+            else
+              echo "| Provenance | not attested (pull request build) |"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
       # ── Optional: publish to Snap Store on master ─────────────────────────

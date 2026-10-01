@@ -285,8 +285,10 @@ function renderTests(reports: SuiteReport[]): string[] {
   return lines
 }
 
+/** The `image` job in quality.yml calls a reusable workflow, so its jobs are listed as "Image / …". */
+const IMAGE_JOB_PREFIX = 'Image / '
+
 function renderNext(context: CiContext, jobs: ApiJob[]): string[] {
-  const allGreen = jobs.every((job) => job.conclusion === 'success' || job.conclusion === 'skipped')
   if (!context.imageWillBuild) {
     return [
       '## Next',
@@ -295,14 +297,18 @@ function renderNext(context: CiContext, jobs: ApiJob[]): string[] {
       '',
     ]
   }
-  return [
-    '## Next',
-    '',
-    allGreen
-      ? '🐳 CI is green, so the **Release · Docker image** workflow builds and pushes the image for this commit now.'
-      : '🛑 CI failed, so **no Docker image** is built for this commit.',
-    '',
-  ]
+  const imageJobs = jobs.filter((job) => job.name.startsWith(IMAGE_JOB_PREFIX))
+  const ran = imageJobs.filter((job) => job.conclusion !== 'skipped')
+  let verdict: string
+  if (ran.length === 0) {
+    verdict = '🛑 CI failed, so **no Docker image** was built for this commit.'
+  } else if (ran.every((job) => job.conclusion === 'success')) {
+    verdict =
+      '🐳 CI is green, so the image for this commit was built, pushed and signed with a build provenance attestation — the **Image** job summary has the digest and the verify command.'
+  } else {
+    verdict = '❌ CI is green, but **publishing the image failed** — see the **Image** jobs above.'
+  }
+  return ['## Next', '', verdict, '']
 }
 
 async function main() {

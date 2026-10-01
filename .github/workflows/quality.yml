@@ -1,6 +1,6 @@
-# The quality gate. Every Docker image is built from a commit that passed this workflow:
-# `docker-image.yml` listens for its completion (workflow_run) and refuses to build otherwise.
-# Renaming this workflow therefore means renaming it in docker-image.yml too.
+# The quality gate. Every Docker image is built from a commit that passed this workflow: the
+# `image` job calls docker-image.yml (a reusable workflow) only once every gate is green, inside
+# this same run — so the image, its tags and its signed provenance all name the tested commit.
 name: CI · Lint, typecheck & tests
 
 on:
@@ -28,6 +28,10 @@ env:
   NODE_VERSION: '24'
   # Must match the length of the `shard` list in the e2e job matrix.
   E2E_SHARDS: 6
+  # Which runs publish an image: pushes (master, release tags) and pull requests from this
+  # repository. Forks and Dependabot get no Docker Hub secrets. The `image` job repeats this
+  # condition, because `env` is not available in a job-level `if`.
+  IMAGE_WILL_BUILD: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && !startsWith(github.head_ref, 'dependabot/')) }}
 
 jobs:
   static:
@@ -43,6 +47,7 @@ jobs:
           SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           PR: ${{ github.event.pull_request.number }}
           E2E_SHARDS: ${{ env.E2E_SHARDS }}
+          IMAGE_WILL_BUILD: ${{ env.IMAGE_WILL_BUILD }}
         run: |
           {
             echo "## What this run does"
@@ -63,9 +68,14 @@ jobs:
             else
               echo "| E2E auth matrix | ⏭️ | pull requests only |"
             fi
+            if [ "$IMAGE_WILL_BUILD" = "true" ]; then
+              echo "| Image | ✅ | once all of the above are green: build, push and attest \`houbystudio/fridgora\` |"
+            else
+              echo "| Image | ⏭️ | pushes to \`master\`, release tags and same-repo PRs only |"
+            fi
             echo "| Summary | ✅ | results of everything above, in one place |"
             echo
-            echo "All jobs except the summary run in parallel; the summary waits for all of them."
+            echo "The checks run in parallel; the image waits for all of them, the summary for everything."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/checkout@v4
@@ -338,9 +348,33 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  image:
+    name: Image
+    needs: [static, test, e2e, e2e-auth-matrix]
+    # Green gates only. `!cancelled()` lets the job run although e2e-auth-matrix is skipped on
+    # pushes; a skipped dependency would otherwise skip this job too.
+    if: >-
+      !cancelled() &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled') &&
+      (github.event_name == 'push' ||
+        (github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          !startsWith(github.head_ref, 'dependabot/')))
+    # The ceiling for the called workflow; each of its jobs narrows this down again.
+    permissions:
+      contents: write # GitHub Release (release job only)
+      id-token: write # Sigstore signing certificate for the attestation
+      attestations: write
+      artifact-metadata: write
+    uses: ./.github/workflows/docker-image.yml
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
   summary:
     name: Summary
-    needs: [static, test, e2e, e2e-auth-matrix]
+    needs: [static, test, e2e, e2e-auth-matrix, image]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -384,8 +418,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           JUNIT_DIR: reports
           SUMMARY_JOB_NAME: Summary
-          # Mirrors the conditions in docker-image.yml, so "Next" says truthfully whether
-          # an image follows this run.
+          # "Next" reports what the image job did, or why there is none for this run.
           CI_CONTEXT: >-
             {
               "event": "${{ github.event_name }}",
@@ -393,12 +426,12 @@ jobs:
               "sha": "${{ github.event.pull_request.head.sha || github.sha }}",
               "actor": "${{ github.actor }}",
               "prNumber": "${{ github.event.pull_request.number }}",
-              "imageWillBuild": ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && !startsWith(github.head_ref, 'dependabot/')) }}
+              "imageWillBuild": ${{ env.IMAGE_WILL_BUILD }}
             }
         run: node scripts/ci/summarize_ci.ts
 
       # The summary job is green whenever it managed to write the page; this step carries the
-      # verdict, so a red test job also turns the last box of the graph red.
+      # verdict, so a red test or image job also turns the last box of the graph red.
       - name: Fail if any gate failed
         if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
         run: |

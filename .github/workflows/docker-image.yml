@@ -1,47 +1,47 @@
-# Builds and publishes houbystudio/sbf — but only for a commit that passed CI.
+# Builds, publishes and attests houbystudio/fridgora — called by CI (quality.yml) once every gate is green.
 #
-# It is triggered by the *completion* of the CI workflow (workflow_run), not by the push itself,
-# so a red commit never reaches Docker Hub and a release tag never publishes `latest` from
-# broken code. Under workflow_run, `github.ref`/`github.sha` describe the default branch, not
-# the tested commit: everything here must read `github.event.workflow_run.*` instead.
+# It is a reusable workflow on purpose, not a `workflow_run` listener:
+#   - a called workflow runs inside the CI run, so `github.ref`/`github.sha` — and with them the
+#     OIDC token that signs the attestation — describe the commit that was tested and built.
+#     Under `workflow_run` they would name the default branch instead, and the provenance would
+#     claim the wrong commit and ref (refs/heads/master for a release tag).
+#   - the signing certificate names *this* file as the build signer (job_workflow_ref), separate
+#     from the CI that calls it, which is what `gh attestation verify --signer-workflow` checks.
+# There is deliberately no other trigger: an image must never be built without the CI gate.
 name: Release · Docker image
 
-run-name: >-
-  ${{ github.event.workflow_run.event == 'pull_request' && 'Image' || (github.event.workflow_run.head_branch == 'master' && 'Image' || 'Release') }}
-  ${{ github.event.workflow_run.head_branch }} · ${{ github.event.workflow_run.display_title }}
-
 on:
-  workflow_run:
-    workflows: ['CI · Lint, typecheck & tests']
-    types: [completed]
+  workflow_call:
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: true
+      DOCKERHUB_TOKEN:
+        required: true
 
 permissions:
   contents: read
 
-concurrency:
-  group: docker-${{ github.event.workflow_run.head_branch }}
-  cancel-in-progress: false
+env:
+  IMAGE: docker.io/houbystudio/fridgora
 
 jobs:
   build:
-    name: Build & push image
-    # Green CI only. Pull requests from forks or Dependabot never get the Docker Hub secrets,
-    # so their images are not built (Dependabot runs would fail at login anyway).
-    if: >-
-      github.event.workflow_run.conclusion == 'success' &&
-      (github.event.workflow_run.event == 'push' ||
-        (github.event.workflow_run.event == 'pull_request' &&
-          github.event.workflow_run.head_repository.full_name == github.repository &&
-          !startsWith(github.event.workflow_run.head_branch, 'dependabot/')))
+    name: Build, push & attest
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write # OIDC token for the Sigstore signing certificate
+      attestations: write # store the attestation with the repository
+      artifact-metadata: write # storage record linking the attestation to Docker Hub
     outputs:
       kind: ${{ steps.meta.outputs.kind }}
       version: ${{ steps.meta.outputs.version }}
 
     steps:
+      # The default checkout is github.sha — the exact commit CI tested and the token attests.
+      # For a pull request that is the merge commit, not the branch head.
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -54,29 +54,32 @@ jobs:
 
       # `latest` means "newest release", because that is what a fresh `docker compose up -d`
       # pulls with the default tag in compose.yaml. It must never point at a branch build.
-      # For a tag push, CI's head_branch carries the tag name.
+      # CI only runs on bare semver tags, so a tag ref is always a release.
       - name: Compute image tags and build metadata
         id: meta
         env:
-          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-          SOURCE_EVENT: ${{ github.event.workflow_run.event }}
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          HEAD_REF: ${{ github.head_ref }}
+          SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          tags="houbystudio/sbf:${HEAD_SHA}"
+          tags="${IMAGE}:${SHA}"
           version="dev"
 
-          if [ "${SOURCE_EVENT}" = "push" ] && [[ "${HEAD_BRANCH}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          if [ "${EVENT}" = "push" ] && [ "${REF_TYPE}" = "tag" ] && [[ "${REF_NAME}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             kind="release"
-            version="${HEAD_BRANCH}"
-            tags="${tags},houbystudio/sbf:${version},houbystudio/sbf:latest"
-          elif [ "${SOURCE_EVENT}" = "push" ] && [ "${HEAD_BRANCH}" = "master" ]; then
+            version="${REF_NAME}"
+            tags="${tags},${IMAGE}:${version},${IMAGE}:latest"
+          elif [ "${EVENT}" = "push" ] && [ "${REF}" = "refs/heads/master" ]; then
             kind="master"
-            tags="${tags},houbystudio/sbf:master"
+            tags="${tags},${IMAGE}:master"
           else
             kind="branch"
-            alias="$(printf '%s' "${HEAD_BRANCH}" | tr '/' '-')"
-            tags="${tags},houbystudio/sbf:${alias}"
+            alias="$(printf '%s' "${HEAD_REF:-${REF_NAME}}" | tr '/' '-')"
+            tags="${tags},${IMAGE}:${alias}"
           fi
 
           {
@@ -89,8 +92,8 @@ jobs:
           {
             echo "## What this run does"
             echo
-            echo "Builds \`houbystudio/sbf\` from \`${HEAD_BRANCH}\` at \`${HEAD_SHA:0:7}\` (${kind} build, version \`${version}\`)."
-            echo "CI passed for this commit: [CI run](${{ github.event.workflow_run.html_url }})."
+            echo "CI passed, so this builds \`${IMAGE}\` from \`${REF}\` at \`${SHA:0:7}\` (${kind} build, version \`${version}\`),"
+            echo "pushes it and signs a SLSA build provenance attestation for its digest."
             echo
             echo "Tags to push:"
             echo
@@ -111,15 +114,29 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |
             APP_VERSION=${{ steps.meta.outputs.version }}
-            GIT_SHA=${{ github.event.workflow_run.head_sha }}
+            GIT_SHA=${{ github.sha }}
             BUILD_DATE=${{ steps.meta.outputs.build_date }}
-          cache-from: type=registry,ref=houbystudio/sbf:buildcache
-          cache-to: type=registry,ref=houbystudio/sbf:buildcache,mode=max
+          cache-from: type=registry,ref=houbystudio/fridgora:buildcache
+          cache-to: type=registry,ref=houbystudio/fridgora:buildcache,mode=max
+
+      # Signed with a short-lived Sigstore certificate bound to this workflow, the commit and the
+      # ref, and stored both with the repository and next to the image on Docker Hub. A tag
+      # pushed with a leaked Docker Hub token has no such attestation, and verification fails.
+      - name: Attest build provenance
+        id: attest
+        uses: actions/attest@v4
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
 
       - name: Summarize published image
         env:
           TAGS: ${{ steps.meta.outputs.tags }}
           DIGEST: ${{ steps.push.outputs.digest }}
+          ATTESTATION_URL: ${{ steps.attest.outputs.attestation-url }}
+          REPO: ${{ github.repository }}
+          REF: ${{ github.ref }}
         run: |
           set -euo pipefail
           {
@@ -128,11 +145,21 @@ jobs:
             echo "| | |"
             echo "| --- | --- |"
             echo "| Digest | \`${DIGEST}\` |"
-            echo "| Docker Hub | [houbystudio/sbf](https://hub.docker.com/r/houbystudio/sbf/tags) |"
+            echo "| Provenance | [attestation](${ATTESTATION_URL}) |"
+            echo "| Docker Hub | [houbystudio/fridgora](https://hub.docker.com/r/houbystudio/fridgora/tags) |"
             echo
             echo "| Tag | Pull |"
             echo "| --- | --- |"
             for tag in ${TAGS//,/ }; do echo "| \`${tag#*:}\` | \`docker pull ${tag}\` |"; done
+            echo
+            echo "Verify before deploying:"
+            echo
+            echo '```bash'
+            echo "gh attestation verify oci://${IMAGE}@${DIGEST} \\"
+            echo "  --repo ${REPO} \\"
+            echo "  --signer-workflow ${REPO}/.github/workflows/docker-image.yml \\"
+            echo "  --source-ref ${REF}"
+            echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
   release:
@@ -148,7 +175,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
 
       - name: Create GitHub Release
@@ -162,10 +188,19 @@ jobs:
             Docker image:
 
             ```
-            docker pull houbystudio/sbf:${{ needs.build.outputs.version }}
+            docker pull houbystudio/fridgora:${{ needs.build.outputs.version }}
             ```
 
             Pin this tag in production rather than `latest`, so a rollback is deterministic.
+
+            The image carries a signed build provenance attestation. Verify it before deploying:
+
+            ```
+            gh attestation verify oci://docker.io/houbystudio/fridgora:${{ needs.build.outputs.version }} \
+              --repo ${{ github.repository }} \
+              --signer-workflow ${{ github.repository }}/.github/workflows/docker-image.yml \
+              --source-ref refs/tags/${{ needs.build.outputs.version }}
+            ```
 
       - name: Summarize release
         env:
