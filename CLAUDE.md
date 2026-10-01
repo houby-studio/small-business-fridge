@@ -342,7 +342,7 @@ When adding user-facing text:
   For a PR it builds `github.sha`, the merge commit CI tested — not the branch head.
   Images are multi-arch (`linux/amd64`, `linux/arm64`): the Dockerfile builds on `$BUILDPLATFORM` and only
   the production `npm ci` runs under QEMU. A release also syncs the Docker Hub page from `docker/README.md`
-  (job `hub-description`, secret `DOCKERHUB_DESCRIPTION_TOKEN` with read/write/delete scope); it never
+  (job `hub-description`, with `DOCKERHUB_TOKEN`, which needs read/write/delete scope for it); it never
   fails the release. Images on Docker Hub use absolute `raw.githubusercontent.com` URLs.
 - **Kiosk snap** (`electron-kiosk.yml`, _Kiosk · Electron snap_): only when `electron-kiosk/**` changes.
 - Every workflow writes "what this run does" at the start and "what happened" at the end to
