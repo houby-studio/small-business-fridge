@@ -17,10 +17,6 @@ on:
         required: true
       DOCKERHUB_TOKEN:
         required: true
-      # Optional: a token with read/write/delete scope, needed only to update the Docker Hub page.
-      # Without it releases still publish; the description step just reports that it skipped.
-      DOCKERHUB_DESCRIPTION_TOKEN:
-        required: false
 
 permissions:
   contents: read
@@ -241,46 +237,31 @@ jobs:
         with:
           sparse-checkout: docker
 
-      - name: Check for the description token
-        id: token
-        env:
-          TOKEN: ${{ secrets.DOCKERHUB_DESCRIPTION_TOKEN }}
-        run: |
-          if [ -n "${TOKEN}" ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::DOCKERHUB_DESCRIPTION_TOKEN is not set — the Docker Hub page was not updated."
-          fi
-
-      # Keeps the overview on Docker Hub in step with docker/README.md. It does not gate the
-      # release: an expired token must never stop an image that is already published.
+      # Keeps the overview on Docker Hub in step with docker/README.md. Uses the push token, which
+      # needs read/write/delete scope for this. It does not gate the release: a token without that
+      # scope, or an expired one, must never stop an image that is already published.
       - name: Update the Docker Hub page
         id: update
-        if: steps.token.outputs.present == 'true'
         continue-on-error: true
         uses: peter-evans/dockerhub-description@v5
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_DESCRIPTION_TOKEN }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
           repository: houbystudio/fridgora
           short-description: 'The office fridge, run like a tiny shop: snacks at cost, pay later by QR. Self-hosted.'
           readme-filepath: ./docker/README.md
 
       - name: Summarize
         env:
-          PRESENT: ${{ steps.token.outputs.present }}
           OUTCOME: ${{ steps.update.outcome }}
         run: |
           {
             echo "## Docker Hub page"
             echo
-            if [ "${PRESENT}" != "true" ]; then
-              echo "⏭️ Skipped: no \`DOCKERHUB_DESCRIPTION_TOKEN\` secret (read/write/delete scope)."
-            elif [ "${OUTCOME}" = "success" ]; then
+            if [ "${OUTCOME}" = "success" ]; then
               echo "✅ [houbystudio/fridgora](https://hub.docker.com/r/houbystudio/fridgora) now shows \`docker/README.md\` from this release."
             else
-              echo "⚠️ Updating the page failed — most likely an expired token. The image itself is published."
-              echo "::warning::The Docker Hub page update failed; check DOCKERHUB_DESCRIPTION_TOKEN."
+              echo "⚠️ Updating the page failed — the token lacks read/write/delete scope or has expired. The image itself is published."
+              echo "::warning::The Docker Hub page update failed; DOCKERHUB_TOKEN needs read/write/delete scope."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
