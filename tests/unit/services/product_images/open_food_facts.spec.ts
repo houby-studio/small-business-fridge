@@ -3,6 +3,7 @@ import { test } from '@japa/runner'
 import productImagesConfig from '#config/product_images'
 import {
   clearOpenFoodFactsCache,
+  isOfficialOff,
   lookupOpenFoodFacts,
   offImageFolder,
   offProductName,
@@ -17,6 +18,16 @@ test.group('Product images - Open Food Facts', (group) => {
   group.each.teardown(() => {
     Object.assign(productImagesConfig.openFoodFacts, original)
     clearOpenFoodFactsCache()
+  })
+
+  test('recognises the official OFF host by hostname, not by substring', ({ assert }) => {
+    assert.isTrue(isOfficialOff('https://world.openfoodfacts.org'))
+    assert.isTrue(isOfficialOff('https://cz.openfoodfacts.org/api'))
+    assert.isTrue(isOfficialOff('https://openfoodfacts.org'))
+    assert.isFalse(isOfficialOff('https://openfoodfacts.org.evil.example'))
+    assert.isFalse(isOfficialOff('https://evil.example/openfoodfacts.org'))
+    assert.isFalse(isOfficialOff('https://notopenfoodfacts.org'))
+    assert.isFalse(isOfficialOff('not a url'))
   })
 
   test('splits a barcode into the OFF image folder', ({ assert }) => {

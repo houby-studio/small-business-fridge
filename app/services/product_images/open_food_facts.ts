@@ -137,6 +137,19 @@ const FIELDS = [
   'images',
 ].join(',')
 
+/**
+ * The public OFF API serves its pictures from a separate host. Decided on the parsed
+ * hostname — a substring check would also accept `openfoodfacts.org.example.com`.
+ */
+export function isOfficialOff(baseUrl: string): boolean {
+  try {
+    const { hostname } = new URL(baseUrl)
+    return hostname === 'openfoodfacts.org' || hostname.endsWith('.openfoodfacts.org')
+  } catch {
+    return false
+  }
+}
+
 export function clearOpenFoodFactsCache() {
   cache.clear()
 }
@@ -170,9 +183,7 @@ export async function lookupOpenFoodFacts(barcode: string): Promise<CandidateLoo
   } | null
   if (!body || body.status !== 1 || !body.product) return empty
 
-  const imagesBaseUrl = baseUrl.includes('openfoodfacts.org')
-    ? 'https://images.openfoodfacts.org'
-    : baseUrl
+  const imagesBaseUrl = isOfficialOff(baseUrl) ? 'https://images.openfoodfacts.org' : baseUrl
   const value = parseOffProduct({ code: barcode, ...body.product }, imagesBaseUrl)
   cache.set(barcode, { at: Date.now(), value })
   return value
