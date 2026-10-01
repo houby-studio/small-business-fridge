@@ -108,6 +108,8 @@ test.describe('Authentication lifecycle', () => {
       await expect(page.getByTestId('profile-preferences-card')).toBeVisible()
       await expect(page.getByTestId('profile-security-card')).toBeVisible()
       await expect(page.getByTestId('profile-api-tokens-card')).toBeVisible()
+      await expect(page.getByTestId('profile-mcp-url')).toHaveText(/^https?:\/\/.+\/mcp$/)
+      await expect(page.getByTestId('profile-mcp-copy')).toBeVisible()
 
       await expect(
         page.getByTestId('profile-contact-card').getByText('E-mail není ověřen')

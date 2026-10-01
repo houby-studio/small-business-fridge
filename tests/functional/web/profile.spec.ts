@@ -5,6 +5,7 @@ import { ProductFactory } from '#database/factories/product_factory'
 import { CategoryFactory } from '#database/factories/category_factory'
 import User from '#models/user'
 import db from '@adonisjs/lucid/services/db'
+import env from '#start/env'
 
 const cleanAll = async () => {
   await db.from('profile_pending_drafts').delete()
@@ -364,6 +365,21 @@ test.group('Web Profile - API tokens', (group) => {
 
     const response = await client.get('/profile').loginAs(user)
     response.assertStatus(200)
+  })
+
+  test('GET /profile passes the MCP server address for connecting AI clients', async ({
+    client,
+    assert,
+  }) => {
+    const user = await UserFactory.create()
+
+    const response = await client
+      .get('/profile')
+      .loginAs(user)
+      .header('X-Inertia', 'true')
+      .header('X-Inertia-Version', '1')
+    response.assertStatus(200)
+    assert.equal(response.body().props.mcpUrl, `${env.get('APP_URL')}/mcp`)
   })
 })
 
