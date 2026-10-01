@@ -14,7 +14,7 @@ const page = usePage<SharedProps>()
 const { t } = useI18n()
 const user = computed(() => page.props.user)
 const impersonation = computed(() => page.props.impersonation)
-const appName = computed(() => page.props.appName ?? 'Small Business Fridge')
+const appName = computed(() => page.props.appName ?? 'Fridgora')
 
 // Which build is running. Handy when someone reports a bug: the version is right there
 // instead of having to ask. `dev` means an unreleased local build.

@@ -1,6 +1,6 @@
-# Small Business Fridge — Testing Reference
+# Fridgora — Testing Reference
 
-Complete guide to the test suite for the `sbf/` AdonisJS application.
+Complete guide to the Fridgora test suite.
 Use this when writing new tests, running existing ones, or debugging failures.
 
 ---
@@ -43,7 +43,6 @@ command to touch the dev database — they use different database names on the s
 PostgreSQL must be running. Start it with:
 
 ```bash
-cd sbf/
 docker compose -f compose.dev.yaml up -d postgres
 ```
 
@@ -498,24 +497,24 @@ Same values, but injected into the `webServer` process via the `env` key. Not lo
 ## Running All Quality Checks
 
 ```bash
-cd sbf/
 ./check.sh
 ```
 
-This runs all 4 gates in order, stopping on first failure:
+This runs every gate CI runs, in order, stopping on the first failure:
 
 1. `npm run lint` — ESLint
 2. `npx prettier --check .` — Prettier format check (read-only, does NOT write)
 3. `npm run typecheck` — `tsc --noEmit`
-4. `node ace test --no-color` — unit + functional (91 tests)
+4. ensure the `sbf_test` database exists, then `node ace migration:run --force`
+5. `npm run check:routes` — every frontend call uses a verb some route accepts
+6. `node ace test --no-color` — unit + functional
+7. `npm run test:e2e:reset` and `npm run test:e2e` — Playwright E2E
 
-Skip tests (e.g. to just check linting quickly):
+Skip everything after the typecheck (e.g. to just check linting quickly):
 
 ```bash
 ./check.sh --skip-tests
 ```
-
-E2E tests are **not** included in `./check.sh`. Run them separately when needed.
 
 ---
 
@@ -602,7 +601,7 @@ Both Japa and Playwright write **JUnit XML** files to `test-results/` after ever
 | `test-results/junit-e2e.xml`  | All Playwright E2E results         |
 
 These files are consumed by `mikepenz/action-junit-report@v4` in the GitHub Actions workflow
-(`.github/workflows/sbf-quality.yaml`). After each push/PR the action posts:
+(`.github/workflows/quality.yml`). After each push/PR the action posts:
 
 - A **Check Run** on the commit with pass/fail counts
 - **Inline annotations** on failing test lines in the diff view
@@ -617,21 +616,17 @@ For **Azure DevOps** the same JUnit XML files work natively with the "Publish Te
 - task: PublishTestResults@2
   inputs:
     testResultsFormat: JUnit
-    testResultsFiles: 'sbf/test-results/junit-*.xml'
+    testResultsFiles: 'test-results/junit-*.xml'
     mergeTestResults: true
-    testRunTitle: 'SBF Tests'
+    testRunTitle: 'Fridgora Tests'
 ```
 
 ---
 
-## Test Counts (current)
+## Test Counts
 
-| Suite          | Tests           |
-| -------------- | --------------- |
-| Unit           | 44              |
-| Functional     | 83              |
-| **Japa total** | **127**         |
-| E2E            | 19 (Playwright) |
+Not kept here — they go stale with every PR. Each CI run's **Summary** job lists the current
+counts per suite, with failures and the slowest tests.
 
 ---
 

@@ -1,5 +1,5 @@
 /**
- * Background removal for Small Business Fridge on Cloudflare Images.
+ * Background removal for Fridgora on Cloudflare Images.
  *
  * Takes the raw image bytes in a POST body and returns a PNG with the background made
  * transparent, using `segment: 'foreground'` (BiRefNet on Workers AI).

@@ -1,6 +1,6 @@
 # MCP (Model Context Protocol) Server
 
-Small Business Fridge exposes an MCP server at `/mcp`, allowing AI assistants like Claude Desktop, Claude Code or GitHub Copilot to interact with the fridge programmatically — browse the shop, buy products, manage invoices and payments, stock products, and administer users.
+Fridgora exposes an MCP server at `/mcp`, allowing AI assistants like Claude Desktop, Claude Code or GitHub Copilot to interact with the fridge programmatically — browse the shop, buy products, manage invoices and payments, stock products, and administer users.
 
 ## Authentication
 

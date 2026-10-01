@@ -108,7 +108,7 @@ test.group('Product images - Open Food Facts', (group) => {
         found.candidates.map((c) => c.url),
         [`${server.url}/images/products/12345678/1.jpg`]
       )
-      assert.match(String(server.requests[0].headers['user-agent']), /SmallBusinessFridge/)
+      assert.match(String(server.requests[0].headers['user-agent']), /Fridgora/)
 
       const missing = await lookupOpenFoodFacts('87654321')
       assert.deepEqual(missing, { productName: null, candidates: [], facts: null })

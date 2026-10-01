@@ -8,7 +8,7 @@ set -euo pipefail
 # daemon: run as a background system service (true) or launch manually (false)
 [ -n "$(snapctl get daemon)" ]          || snapctl set daemon="true"
 
-# url: address of the SBF web server the kiosk will load.
+# url: address of the Fridgora web server the kiosk will load.
 [ -n "$(snapctl get url)" ]             || snapctl set url=""
 
 # allowed-origins: extra origins the kiosk may navigate to (space- or comma-separated)

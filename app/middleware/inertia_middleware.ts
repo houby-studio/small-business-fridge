@@ -24,7 +24,7 @@ function loadTranslations(locale: string): Record<string, Record<string, string>
   }
 
   const langDir = app.languageFilesPath(locale)
-  const appName = env.get('APP_NAME', 'Small Business Fridge')
+  const appName = env.get('APP_NAME', 'Fridgora')
 
   try {
     const files = readdirSync(langDir).filter((file) => file.endsWith('.json'))
@@ -107,7 +107,7 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
         impersonation ? { asName: impersonation.asName } : undefined
       ),
       locale,
-      appName: env.get('APP_NAME', 'Small Business Fridge'),
+      appName: env.get('APP_NAME', 'Fridgora'),
       /**
        * Plain value, not `always()`, so it rides along with the first render and is then
        * excluded from partial reloads like every other piece of static shared data.

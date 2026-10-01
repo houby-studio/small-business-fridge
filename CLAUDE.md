@@ -1,6 +1,16 @@
-# Small Business Fridge — Claude Development Guide
+# Fridgora — Claude Development Guide
 
 @AGENTS.md
+
+## Naming
+
+The project is **Fridgora** (repo `houby-studio/fridgora`, image `houbystudio/fridgora`). It used to be
+_Small Business Fridge_ (SBF), and a few technical identifiers deliberately keep `sbf`, because
+renaming them would break existing installations: the default PostgreSQL user/database `sbf` /
+`sbf_test`, the `sbf-session` cookie, the `sbfv2.` invite-token prefix (links already sent), the
+`sbf-kiosk` snap and its `SBF Kiosk` Electron `productName` (installed kiosks and their stored
+login), `SBF_TOKEN` in the Cloudflare worker, and internal CSS/SVG ids (`sbf-*`). Releases up to
+3.2.1 exist only as `houbystudio/sbf`. Use _Fridgora_ for everything new and user-facing.
 
 ## Mandatory Quality Gates
 
@@ -318,14 +328,18 @@ When adding user-facing text:
 - **CI** (`quality.yml`, shown as _CI · Lint, typecheck & tests_): runs on every PR to `master`, on push
   to `master` and on release tags. Parallel jobs `static` / `test` / `e2e` (6 shards, one database each;
   `fullyParallel` lets `--shard` split per test, so e2e tests must stay independent of each other) /
-  `e2e-auth-matrix` (PRs only), then `summary`, which publishes the merged Playwright check and writes
-  one job-summary page (jobs, step timings, test counts, a Mermaid pie, failures, slowest tests) via
-  `scripts/ci/summarize_ci.ts`. Feature branches without a PR get no CI — that avoids a double run per commit.
-- **Docker image** (`docker-image.yml`, _Release · Docker image_): triggered by `workflow_run` when CI
-  **completes green** — never by the push itself, so a red commit is never published. Builds for push to
-  `master`, release tags and same-repo PRs (not forks/Dependabot). Under `workflow_run`, `github.ref` and
-  `github.sha` point at the default branch — read `github.event.workflow_run.head_sha/head_branch`.
-  Renaming the CI workflow breaks this trigger unless `workflows:` is renamed too.
+  `e2e-auth-matrix` (PRs only), then `image` (below) once they are all green, then `summary`, which
+  publishes the merged Playwright check and writes one job-summary page (jobs, step timings, test
+  counts, a Mermaid pie, failures, slowest tests, the image outcome) via `scripts/ci/summarize_ci.ts`.
+  Feature branches without a PR get no CI — that avoids a double run per commit.
+- **Docker image** (`docker-image.yml`, _Release · Docker image_): a reusable workflow (`workflow_call`)
+  that CI's `image` job calls only when every gate is green, so a red commit is never published. Builds for
+  push to `master`, release tags and same-repo PRs (not forks/Dependabot), pushes, then signs a SLSA
+  build provenance attestation (`actions/attest`, `push-to-registry`) for the digest. It must stay a
+  called workflow: under `workflow_run` the OIDC token names the default branch, so the provenance
+  would attest the wrong commit and ref. Never give it a trigger of its own (it would bypass the gate),
+  and keep its path — `gh attestation verify --signer-workflow` pins `.github/workflows/docker-image.yml`.
+  For a PR it builds `github.sha`, the merge commit CI tested — not the branch head.
 - **Kiosk snap** (`electron-kiosk.yml`, _Kiosk · Electron snap_): only when `electron-kiosk/**` changes.
 - Every workflow writes "what this run does" at the start and "what happened" at the end to
   `$GITHUB_STEP_SUMMARY` — keep that when adding steps.

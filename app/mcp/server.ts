@@ -65,7 +65,7 @@ function addToolLogging(server: McpServer, ctx: McpLoggingContext): void {
  */
 export function createMcpServer(user: User, loggingCtx?: McpLoggingContext): McpServer {
   const server = new McpServer({
-    name: 'small-business-fridge-mcp',
+    name: 'fridgora-mcp',
     version: '1.0.0',
   })
 

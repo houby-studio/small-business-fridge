@@ -29,7 +29,7 @@ run_step() {
 }
 
 echo "================================================"
-echo "  SBF Quality Gate"
+echo "  Fridgora Quality Gate"
 echo "================================================"
 
 run_step "ESLint"         npm run lint
