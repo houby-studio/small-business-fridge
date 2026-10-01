@@ -1,5 +1,5 @@
 # =============================================================================
-# Small Business Fridge — Production Docker Compose
+# Fridgora — Production Docker Compose
 # =============================================================================
 # 1. Copy this file and .env.example to your server.
 # 2. Create a .env file next to this file (cp .env.example .env).
@@ -22,14 +22,14 @@ x-app-env: &app-env
 
   LOG_LEVEL: ${LOG_LEVEL:-info} # trace | debug | info | warn | error | fatal
   TZ: ${TZ:-UTC} # e.g. Europe/Prague
-  APP_NAME: ${APP_NAME:-Small Business Fridge}
+  APP_NAME: ${APP_NAME:-Fridgora}
   APP_URL: ${APP_URL:-http://localhost:3000} # [REQUIRED] public URL used in email links
   CURRENCY: ${CURRENCY:-CZK} # ISO 4217 currency code (e.g. CZK, USD, EUR)
   FEEDBACK_URL: ${FEEDBACK_URL:-} # optional link shown in the UI sidebar
 
   # ---------------------------------------------------------------------------
   # Security — [REQUIRED] generate once and keep secret
-  # docker run houbystudio/sbf /usr/local/bin/node ace generate:key --show
+  # docker run houbystudio/fridgora /usr/local/bin/node ace generate:key --show
   # ---------------------------------------------------------------------------
   APP_KEY: ${APP_KEY:?Missing APP_KEY value in .env file!} # no default — app refuses to start if missing
 
@@ -53,7 +53,7 @@ x-app-env: &app-env
   SMTP_USERNAME: ${SMTP_USERNAME:-} # leave empty if no auth
   SMTP_PASSWORD: ${SMTP_PASSWORD:-} # leave empty if no auth
   SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS:-noreply@localhost.localdomain}
-  SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Small Business Fridge}
+  SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Fridgora}
   SMTP_IGNORE_TLS: ${SMTP_IGNORE_TLS:-false} # true = plain SMTP, no TLS
 
   # ---------------------------------------------------------------------------
@@ -130,7 +130,7 @@ x-app-env: &app-env
 
 services:
   app:
-    image: houbystudio/sbf:${DOCKER_IMAGE_TAG:-latest}
+    image: houbystudio/fridgora:${DOCKER_IMAGE_TAG:-latest}
     ports:
       - '${HOST_PORT:-3000}:3000'
     environment:
@@ -158,7 +158,7 @@ services:
     restart: unless-stopped
 
   scheduler:
-    image: houbystudio/sbf:${DOCKER_IMAGE_TAG:-latest}
+    image: houbystudio/fridgora:${DOCKER_IMAGE_TAG:-latest}
     command: node ace scheduler:run
     environment:
       <<: *app-env

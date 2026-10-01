@@ -2,14 +2,14 @@ import path from 'node:path'
 import url from 'node:url'
 import env from '#start/env'
 
-const appName = env.get('APP_NAME', 'Small Business Fridge')
+const appName = env.get('APP_NAME', 'Fridgora')
 
 const config = {
   path: path.dirname(url.fileURLToPath(import.meta.url)) + '/../',
   title: `${appName} API`,
   version: '1.0.0',
   description:
-    `REST API for the Small Business Fridge (${appName}) self-service shop system. ` +
+    `REST API for ${appName === 'Fridgora' ? appName : `${appName} (Fridgora)`}, the self-service office snack shop. ` +
     'Authenticate with a Bearer token obtained from the profile page or via POST /api/v1/auth/token.',
   tagIndex: 3,
   snakeCase: true,

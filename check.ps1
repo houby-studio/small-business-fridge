@@ -53,7 +53,7 @@ function Run-Step {
 }
 
 Write-Host '================================================'
-Write-Host '  SBF Quality Gate'
+Write-Host '  Fridgora Quality Gate'
 Write-Host '================================================'
 
 Run-Step 'ESLint' { npm run lint }

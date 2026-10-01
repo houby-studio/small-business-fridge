@@ -38,9 +38,9 @@ ENV APP_VERSION=${APP_VERSION} \
     GIT_SHA=${GIT_SHA} \
     BUILD_DATE=${BUILD_DATE}
 
-LABEL org.opencontainers.image.title="Small Business Fridge" \
+LABEL org.opencontainers.image.title="Fridgora" \
       org.opencontainers.image.description="Office fridge shop: colleagues buy drinks and snacks at cost." \
-      org.opencontainers.image.source="https://github.com/houby-studio/small-business-fridge" \
+      org.opencontainers.image.source="https://github.com/houby-studio/fridgora" \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.version="${APP_VERSION}" \
       org.opencontainers.image.revision="${GIT_SHA}" \

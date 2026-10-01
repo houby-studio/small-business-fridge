@@ -167,8 +167,7 @@ export async function lookupOpenFoodFacts(barcode: string): Promise<CandidateLoo
     response = await fetch(`${baseUrl}/api/v2/product/${barcode}.json?fields=${FIELDS}`, {
       // OFF asks API clients to identify themselves.
       headers: {
-        'User-Agent':
-          'SmallBusinessFridge/3 (+https://github.com/houby-studio/small-business-fridge)',
+        'User-Agent': 'Fridgora/3 (+https://github.com/houby-studio/fridgora)',
       },
       signal: AbortSignal.timeout(timeoutMs),
     })

@@ -121,7 +121,7 @@ function requestOnce(
         lookup: guardedLookup(options.allowPrivateNetwork),
         timeout: options.timeoutMs,
         headers: {
-          'User-Agent': 'SmallBusinessFridge/3 (product image fetch)',
+          'User-Agent': 'Fridgora/3 (product image fetch)',
           'Accept': 'image/*',
         },
       },

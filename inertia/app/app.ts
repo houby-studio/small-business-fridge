@@ -13,14 +13,14 @@ import ToastService from 'primevue/toastservice'
 import ConfirmationService from 'primevue/confirmationservice'
 import Tooltip from 'primevue/tooltip'
 
-const DEFAULT_APP_NAME = 'Small Business Fridge'
+const DEFAULT_APP_NAME = 'Fridgora'
 const BOOT_MIN_VISIBLE_MS = 1000
 const BOOT_SETTLE_MS = 140
 const BOOT_FADE_OUT_MS = 420
 
-// ─── Custom SBF theme preset ─────────────────────────────────────────────────
+// ─── Custom Fridgora theme preset ─────────────────────────────────────────────────
 // Extends Aura with the Czech red (#cf112a) brand palette and refined tokens
-const SBFPreset = definePreset(Aura, {
+const FridgoraPreset = definePreset(Aura, {
   primitive: {
     borderRadius: {
       none: '0',
@@ -106,7 +106,7 @@ createInertiaApp({
       .use(plugin)
       .use(PrimeVue, {
         theme: {
-          preset: SBFPreset,
+          preset: FridgoraPreset,
           options: {
             prefix: 'p',
             darkModeSelector: '[data-theme="dark"]',

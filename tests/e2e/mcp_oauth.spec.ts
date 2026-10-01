@@ -88,6 +88,6 @@ test.describe('MCP OAuth flow', () => {
     })
     expect(mcpResponse.status()).toBe(200)
     const bodyText = await mcpResponse.text()
-    expect(bodyText).toContain('small-business-fridge-mcp')
+    expect(bodyText).toContain('fridgora-mcp')
   })
 })

@@ -5,7 +5,7 @@ import type User from '#models/user'
 function buildWorkflowGuide(isSupplier: boolean, isAdmin: boolean): string {
   const s: string[] = []
 
-  s.push('SMALL BUSINESS FRIDGE MCP — WORKFLOW REFERENCE')
+  s.push('FRIDGORA MCP — WORKFLOW REFERENCE')
   s.push('Load once per session. Exact tool names, param names, sequences, and error codes.')
   s.push('')
   s.push('DOMAIN: an office fridge. Suppliers stock drinks/snacks, colleagues buy them with')

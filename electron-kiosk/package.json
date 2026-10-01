@@ -1,7 +1,7 @@
 {
   "name": "sbf-kiosk",
   "version": "1.0.0",
-  "description": "Small Business Fridge — kiosk client",
+  "description": "Fridgora — kiosk client",
   "main": "main.js",
   "private": true,
   "scripts": {

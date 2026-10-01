@@ -239,7 +239,7 @@ test.group('API MCP - Authentication', (group) => {
     const response = await mcpPost(client, token, MCP_INIT)
     response.assertStatus(200)
     const message = parseMcpBody(response)
-    assert.equal(message?.result?.serverInfo?.name, 'small-business-fridge-mcp')
+    assert.equal(message?.result?.serverInfo?.name, 'fridgora-mcp')
   })
 
   test('rejects kiosk users with 403', async ({ client }) => {

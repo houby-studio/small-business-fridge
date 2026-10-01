@@ -21,7 +21,7 @@ export default class NotificationService {
   }
 
   private get appName() {
-    return env.get('APP_NAME', 'Small Business Fridge')
+    return env.get('APP_NAME', 'Fridgora')
   }
 
   /**

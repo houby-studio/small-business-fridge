@@ -2,7 +2,7 @@
 # Usage: docker compose -f compose.yaml -f compose.build.yaml up -d
 #
 # When both `image:` and `build:` are specified, Docker Compose builds from source
-# and tags the result with the image name (houbystudio/sbf:latest).
+# and tags the result with the image name (houbystudio/fridgora:latest).
 services:
   app:
     build: .

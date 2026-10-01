@@ -42,7 +42,7 @@ onMounted(() => {
           </span>
         </div>
         <h1 class="text-3xl font-bold tracking-tight text-zinc-100">
-          {{ page.props.appName ?? 'Small Business Fridge' }}
+          {{ page.props.appName ?? 'Fridgora' }}
         </h1>
         <p class="mt-1.5 text-sm text-zinc-400">{{ t('common.guest_tagline') }}</p>
       </div>

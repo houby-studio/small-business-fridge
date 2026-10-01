@@ -8,7 +8,7 @@ import env from '#start/env'
  */
 export default class ManifestController {
   async index({ i18n, response }: HttpContext) {
-    const appName = env.get('APP_NAME', 'Small Business Fridge')
+    const appName = env.get('APP_NAME', 'Fridgora')
 
     response.header('content-type', 'application/manifest+json; charset=utf-8')
     response.header('cache-control', 'public, max-age=3600')

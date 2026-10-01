@@ -1,8 +1,8 @@
 name: sbf-kiosk
 version: '1.0.0'
-summary: Small Business Fridge — kiosk client
+summary: Fridgora — kiosk client
 description: |
-  Kiosk client for the Small Business Fridge office inventory system.
+  Kiosk client for the Fridgora office inventory system.
   Configure the server URL after installation:
     snap set sbf-kiosk url=https://your-server.example.com
 

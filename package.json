@@ -1,12 +1,12 @@
 {
-  "name": "sbf",
+  "name": "fridgora",
   "version": "3.2.1",
   "private": true,
   "engines": {
     "node": ">=24"
   },
   "type": "module",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "scripts": {
     "prepare": "npm run hooks:install",
     "postinstall": "patch-package",
@@ -130,5 +130,14 @@
       "./app/middleware/*.ts"
     ]
   },
-  "prettier": "@adonisjs/prettier-config"
+  "prettier": "@adonisjs/prettier-config",
+  "description": "Share office snacks and drinks at cost — one-click buying on web, kiosk and API, pay later by QR bank transfer. Self-hosted, open source.",
+  "homepage": "https://github.com/houby-studio/fridgora#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/houby-studio/fridgora.git"
+  },
+  "bugs": {
+    "url": "https://github.com/houby-studio/fridgora/issues"
+  }
 }

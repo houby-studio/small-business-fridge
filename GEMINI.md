@@ -1,4 +1,4 @@
-# Small Business Fridge (SBF) - Gemini CLI Guide
+# Fridgora - Gemini CLI Guide
 
 I am your senior software engineering assistant, specialized in this AdonisJS + Vue + PrimeVue stack.
 

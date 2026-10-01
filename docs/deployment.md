@@ -2,7 +2,7 @@
 
 ## Overview
 
-Small Business Fridge is distributed as a Docker image (`houbystudio/sbf`) on Docker Hub.
+Fridgora is distributed as a Docker image (`houbystudio/fridgora`) on Docker Hub.
 The image ships with `.env.production` baked in, which reads sensitive values from Docker secrets.
 
 ### Environment variable source priority (highest → lowest)
@@ -125,7 +125,7 @@ docker compose -f compose.yaml -f compose.build.yaml up -d --build
 
 The `compose.build.yaml` override adds `build: .` to both `app` and `scheduler` services.
 When both `image:` and `build:` are specified, Docker Compose builds from source and tags the
-result with the `image:` name (`houbystudio/sbf:latest`).
+result with the `image:` name (`houbystudio/fridgora:latest`).
 
 ---
 
@@ -142,12 +142,13 @@ git push --follow-tags
 `npm version` bumps `package.json`, commits, and creates the tag. `.npmrc` keeps the tag
 bare so it matches the tags this repo already carries.
 
-Pushing the tag runs CI on the tagged commit first. Only once CI is green does `docker-image.yml`
-(listening for CI's completion) start, and it:
+Pushing the tag runs CI on the tagged commit first. Only once every gate is green does CI call
+`docker-image.yml` (a reusable workflow, in the same run), and it:
 
-1. builds the image and pushes `houbystudio/sbf:<version>`, `:latest` and `:<commit sha>`,
+1. builds the image and pushes `houbystudio/fridgora:<version>`, `:latest` and `:<commit sha>`,
 2. bakes the version, commit and build date into the image as env vars and OCI labels,
-3. creates a GitHub Release with notes generated from the merged pull requests.
+3. signs a [build provenance attestation](#verifying-an-image) for the image digest,
+4. creates a GitHub Release with notes generated from the merged pull requests.
 
 ### What `latest` means
 
@@ -167,7 +168,7 @@ Three ways, no guessing:
 
 ```bash
 # from the image, without starting anything
-docker inspect --format '{{index .Config.Labels "org.opencontainers.image.version"}}' houbystudio/sbf:latest
+docker inspect --format '{{index .Config.Labels "org.opencontainers.image.version"}}' houbystudio/fridgora:latest
 
 # from a running container
 docker exec <container> printenv APP_VERSION GIT_SHA BUILD_DATE
@@ -177,6 +178,55 @@ Signed-in users see it in the footer of every page. It is deliberately **not** o
 `/api/v1/health`, which is unauthenticated and usually internet-facing.
 
 A build that was not produced by the release workflow reports itself as `dev`.
+
+### Verifying an image
+
+Every image CI publishes carries a signed [SLSA build provenance](https://slsa.dev/provenance)
+attestation: a statement that this exact digest was built by `docker-image.yml` in this
+repository, from a given commit and ref, in a given workflow run. It is signed with a
+short-lived Sigstore certificate tied to that workflow, so nobody can forge one — not even with
+the Docker Hub credentials. An image pushed by hand, or with a leaked token, simply has none.
+
+Verify before deploying (needs the [GitHub CLI](https://cli.github.com/), signed in):
+
+```bash
+gh attestation verify oci://docker.io/houbystudio/fridgora:3.2.2 \
+  --repo houby-studio/fridgora \
+  --signer-workflow houby-studio/fridgora/.github/workflows/docker-image.yml \
+  --source-ref refs/tags/3.2.2
+```
+
+- `--repo` alone proves the image came from this repository's Actions.
+- `--signer-workflow` additionally requires the release workflow, not some other workflow here.
+- `--source-ref` pins the ref: `refs/tags/<version>` for a release, `refs/heads/master` for
+  `:master`. Pull request images are attested too, with `refs/pull/<n>/merge` — leave the flag
+  out or match that, but never deploy one to production.
+- Without a GitHub login, add `--bundle-from-oci` to read the attestation from Docker Hub instead
+  of the GitHub API.
+
+A tag can be moved, so for an unattended deploy verify the **digest** you are about to run
+(`oci://docker.io/houbystudio/fridgora@sha256:…`) and deploy that same digest. A non-zero exit code
+means: do not deploy.
+
+Releases up to and including 3.2.1 were published before attestations existed, as
+`houbystudio/sbf`, and have none.
+
+The kiosk snap built on `master` is attested as well: unzip the workflow artifact and run
+`gh attestation verify <file>.snap --repo houby-studio/fridgora`.
+
+### Moving from `houbystudio/sbf` to `houbystudio/fridgora`
+
+The project was renamed from _Small Business Fridge_ to **Fridgora** after 3.2.1. Everything after
+that is published only as `houbystudio/fridgora`; the old `houbystudio/sbf` repository keeps its
+tags (up to 3.2.1) but receives no updates.
+
+1. In your `compose.yaml`, change `image: houbystudio/sbf:…` to `image: houbystudio/fridgora:…`
+   for both `app` and `scheduler` (or download the current `compose.yaml`).
+2. `docker compose pull && docker compose up -d`.
+
+Nothing else changes: the database, volumes, `.env`, sessions and installed kiosks keep working
+as they are. The default `APP_NAME` is now `Fridgora` — set `APP_NAME` if you want to keep your
+own name in the UI and emails.
 
 ### Upgrading to 3.1
 
@@ -206,7 +256,7 @@ A build that was not produced by the release workflow reports itself as `dev`.
 | `HOST`                                  | Yes      | No     | `0.0.0.0`               | Bind address                                                      |
 | `LOG_LEVEL`                             | No       | No     | `info`                  | trace/debug/info/warn/error/fatal                                 |
 | `TZ`                                    | No       | No     | `UTC`                   | Timezone (e.g. `Europe/Prague`)                                   |
-| `APP_NAME`                              | No       | No     | `Small Business Fridge` | App brand name used in UI/emails/API docs                         |
+| `APP_NAME`                              | No       | No     | `Fridgora` | App brand name used in UI/emails/API docs                         |
 | `APP_URL`                               | No       | No     | `http://localhost:3000` | Public URL (used in email links)                                  |
 | `FEEDBACK_URL`                          | No       | No     | —                       | URL shown in feedback link                                        |
 | `SWAGGER_ENABLED`                       | No       | No     | `false`                 | Enable Swagger UI at `/docs`                                      |
@@ -221,7 +271,7 @@ A build that was not produced by the release workflow reports itself as `dev`.
 | `SMTP_USERNAME`                         | No       | No     | —                       | SMTP username (leave empty if no auth)                            |
 | `SMTP_PASSWORD`                         | No       | Yes    | —                       | SMTP password                                                     |
 | `SMTP_FROM_ADDRESS`                     | Yes      | No     | `noreply@example.com`   | Sender address for outgoing mail                                  |
-| `SMTP_FROM_NAME`                        | Yes      | No     | `Small Business Fridge` | Sender display name                                               |
+| `SMTP_FROM_NAME`                        | Yes      | No     | `Fridgora` | Sender display name                                               |
 | `SMTP_IGNORE_TLS`                       | No       | No     | `false`                 | Set true for plain SMTP without TLS                               |
 | `AUTH_PROVIDERS`                        | No       | No     | `local`                 | Comma-separated providers (`local`, `microsoft`, `discord`)       |
 | `AUTH_AUTO_REGISTER_PROVIDERS`          | No       | No     | —                       | Comma list for auto-provisioning (`microsoft`, `discord`)         |

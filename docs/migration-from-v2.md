@@ -48,7 +48,7 @@ historical orders resolve to the right buyer and invoice.
 **5. Upgrade to the current release** the way you would any other version bump.
 
 ```bash
-docker pull houbystudio/sbf:latest
+docker pull houbystudio/fridgora:latest
 node ace migration:run
 ```
 

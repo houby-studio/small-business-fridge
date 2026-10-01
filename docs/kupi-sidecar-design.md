@@ -8,10 +8,10 @@
 ## 1. Overview and Goals
 
 The sidecar is a separate Python application that scrapes [kupi.cz](https://www.kupi.cz) for
-current product discounts and exposes them to the main SBF (Small Business Fridge) app so that
+current product discounts and exposes them to the main Fridgora app so that
 **suppliers can make smarter purchasing decisions**.
 
-Concretely, a supplier should be able to open a page in SBF and see:
+Concretely, a supplier should be able to open a page in Fridgora and see:
 
 - "Lidl has **5** products from your catalog where the deal price is at or below your usual cost"
 - "Kaufland has **2** worth considering (slightly above usual cost)"
@@ -30,7 +30,7 @@ marked up to begin with.
 
 - `kupiapi` is a Python library (`pip install kupiapi`) — running it inside a Node.js process
   requires spawning subprocesses, which is fragile
-- The feature is Czech-market specific; keeping it out of the main repo lets SBF remain
+- The feature is Czech-market specific; keeping it out of the main repo lets Fridgora remain
   locale-neutral
 - Independent deployment, versioning, and lifecycle
 - The entire feature is opt-in — deployments that don't set `KUPI_SIDECAR_URL` see nothing
@@ -41,16 +41,16 @@ marked up to begin with.
 
 ### 3.1 Primary: REST API (implement first)
 
-The sidecar exposes a small HTTP API. SBF calls it on demand (when a supplier loads the deals
+The sidecar exposes a small HTTP API. Fridgora calls it on demand (when a supplier loads the deals
 page) and caches results. **End users never interact with the sidecar directly** — every call goes
-through SBF's own supplier controllers, which apply the normal role-based auth and return Inertia
+through Fridgora's own supplier controllers, which apply the normal role-based auth and return Inertia
 pages. The sidecar is an internal implementation detail.
 
 ```
 Supplier browser
       │  (normal Inertia navigation)
       ▼
-SBF (AdonisJS)  ──── HTTP + API key ────►  Kupi Sidecar (FastAPI, internal only)
+Fridgora (AdonisJS)  ──── HTTP + API key ────►  Kupi Sidecar (FastAPI, internal only)
       │                                            │
       │  serves Inertia pages                APScheduler (daily scrape)
       │  via /supplier/deals/*                     │
@@ -88,19 +88,19 @@ internally — both the REST routes and the MCP tools call the same service func
 
 ## 4. Authentication Model
 
-Both sides share a single pre-shared API key that lives in **one `.env` file** (the main SBF
+Both sides share a single pre-shared API key that lives in **one `.env` file** (the main Fridgora
 `.env`). The sidecar reads it from the same file (mounted as a Docker secret or env var).
 
 ```env
-# .env (SBF — single source of truth)
+# .env (Fridgora — single source of truth)
 KUPI_SIDECAR_URL=http://kupi-sidecar:8000    # empty = feature disabled everywhere
-KUPI_API_KEY=some-random-secret-here         # shared by SBF and sidecar
+KUPI_API_KEY=some-random-secret-here         # shared by Fridgora and sidecar
 ```
 
-- SBF sends `X-API-Key: ${KUPI_API_KEY}` on every request to the sidecar
+- Fridgora sends `X-API-Key: ${KUPI_API_KEY}` on every request to the sidecar
 - Sidecar validates the header and rejects anything else with 401
-- The catalog endpoint (`GET /api/kupi/catalog`) that the sidecar calls on SBF uses the same key:
-  sidecar sends `X-API-Key: ${KUPI_API_KEY}`, SBF validates it
+- The catalog endpoint (`GET /api/kupi/catalog`) that the sidecar calls on Fridgora uses the same key:
+  sidecar sends `X-API-Key: ${KUPI_API_KEY}`, Fridgora validates it
 
 No user tokens, no OAuth — it is a service-to-service secret, and both parties read the same
 `.env`. Simple and sufficient for a self-hosted deployment.
@@ -114,15 +114,15 @@ kupi-sidecar/
 ├── app/
 │   ├── scraper/
 │   │   ├── kupi_client.py          # Thin wrapper around kupiapi library
-│   │   ├── product_matcher.py      # Fuzzy matching: kupi deal names → SBF product names
+│   │   ├── product_matcher.py      # Fuzzy matching: kupi deal names → Fridgora product names
 │   │   └── unit_parser.py          # Multipack/unit normalization (per-unit price)
 │   ├── models/
 │   │   ├── deal.py                 # SQLAlchemy: raw scraped deals
 │   │   ├── product_mapping.py      # Manual/confirmed product → search term overrides
-│   │   └── suggestion.py           # Computed suggestions (deal × SBF product × price signal)
+│   │   └── suggestion.py           # Computed suggestions (deal × Fridgora product × price signal)
 │   ├── services/
 │   │   ├── scrape_service.py       # Orchestrates scraping all configured shops/categories
-│   │   ├── catalog_service.py      # Fetches SBF product catalog (via REST)
+│   │   ├── catalog_service.py      # Fetches Fridgora product catalog (via REST)
 │   │   ├── suggestion_service.py   # Builds suggestions: fuzzy match + price signal
 │   │   └── shop_ranking_service.py # Aggregates per-shop "buy" and "consider" counts
 │   ├── api/
@@ -198,11 +198,11 @@ CREATE TABLE suggestions (
   deal_id              INTEGER REFERENCES deals(id),
   shop                 VARCHAR(100) NOT NULL,
   deal_per_unit_price  NUMERIC(8,2),         -- deals.per_unit_price (multipack-normalised)
-  last_delivery_price  NUMERIC(8,2),         -- from SBF catalog at scrape time (per unit)
+  last_delivery_price  NUMERIC(8,2),         -- from Fridgora catalog at scrape time (per unit)
   price_ratio          NUMERIC(6,4),         -- deal_per_unit_price / last_delivery_price
   price_signal         VARCHAR(10) NOT NULL, -- 'buy' | 'consider' | 'skip' | 'unknown'
   match_score          NUMERIC(5,4),         -- fuzzy match confidence 0–1
-  stock_left           INTEGER,              -- summed amountLeft from SBF
+  stock_left           INTEGER,              -- summed amountLeft from Fridgora
   is_low_stock         BOOLEAN NOT NULL DEFAULT FALSE
 );
 CREATE INDEX ON suggestions (shop, price_signal, generated_at);
@@ -238,8 +238,8 @@ def compute_price_signal(per_unit_price: Decimal | None, last_delivery_price: De
 Both sides of the comparison are **per-unit prices**:
 - `per_unit_price` from `deals` table — multipack-normalised by `unit_parser.py` at scrape time
   (e.g. 4×Red Bull for 99 Kč → `per_unit_price = 24.75`)
-- `last_delivery_price` from SBF's `deliveries.price` — already per-unit since that is what the
-  supplier pays per item when they restock SBF
+- `last_delivery_price` from Fridgora's `deliveries.price` — already per-unit since that is what the
+  supplier pays per item when they restock Fridgora
 
 This means "I always buy Red Bull for 25 Kč each" is correctly compared against "4-pack for 99 Kč
 → 24.75 Kč each → buy signal".
@@ -440,7 +440,7 @@ candidates = [
 matches = match_deals_to_product(product["displayName"], candidates)
 ```
 
-A 2L Mattoni deal never reaches the fuzzy matcher when the SBF product is 0.5L. The filter is
+A 2L Mattoni deal never reaches the fuzzy matcher when the Fridgora product is 0.5L. The filter is
 silent — it does not produce a "skip" signal, the deal simply does not appear.
 
 ### Edge cases
@@ -456,14 +456,14 @@ silent — it does not produce a "skip" signal, the deal simply does not appear.
 
 ## 9. Product Matching Strategy  <!-- was §8 before unit normalization section was added -->
 
-SBF product names (e.g. "Mattoni perlivá 0.75L") vs kupi.cz deal names
+Fridgora product names (e.g. "Mattoni perlivá 0.75L") vs kupi.cz deal names
 ("Mattoni perlivá voda 0.75 l") need fuzzy matching.
 
 ### Strategy 1: Category bulk scrape + fuzzy match (primary)
 
-1. Admin maps each SBF category to one or more kupi.cz slugs (SBF DB: `kupi_category_mappings`)
+1. Admin maps each Fridgora category to one or more kupi.cz slugs (Fridgora DB: `kupi_category_mappings`)
 2. Daily scrape of all mapped categories
-3. `rapidfuzz.token_sort_ratio` match: each SBF product name vs each deal name in the category
+3. `rapidfuzz.token_sort_ratio` match: each Fridgora product name vs each deal name in the category
 4. Keep matches ≥ `MATCH_THRESHOLD` (default: 70)
 5. Store as suggestions
 
@@ -500,9 +500,9 @@ def match_deals_to_product(product_name: str, deals: list[dict], threshold: int 
 ```env
 DATABASE_URL=postgresql://user:pass@postgres:5432/kupi_sidecar
 
-# SBF connection (sidecar pulls catalog from SBF, same key SBF uses to call sidecar)
+# Fridgora connection (sidecar pulls catalog from Fridgora, same key Fridgora uses to call sidecar)
 SBF_BASE_URL=http://sbf-app:3333
-KUPI_API_KEY=some-random-secret-here    # single shared secret, read from SBF's .env
+KUPI_API_KEY=some-random-secret-here    # single shared secret, read from Fridgora's .env
 
 # Scraping config
 SCRAPE_CRON=0 3 * * *                  # default: 03:00 daily
@@ -543,7 +543,7 @@ GET  /shop-summary
        sorted by buy_count desc
 
 GET  /shopping-list/{shop}
-     → deals at {shop} matched to SBF products
+     → deals at {shop} matched to Fridgora products
        sorted by: is_low_stock desc, price_signal (buy first), match_score desc
        each item: {sbf_product_name, deal_per_unit_price, last_delivery_price, price_ratio, price_signal,
                    deal_name, amount, valid_until, match_score, stock_left, is_low_stock}
@@ -567,7 +567,7 @@ GET  /admin/match-preview?q=mattoni
 
 ---
 
-## 11. SBF Catalog Endpoint (SBF exposes, sidecar calls)
+## 11. Fridgora Catalog Endpoint (Fridgora exposes, sidecar calls)
 
 `GET /api/kupi/catalog` — internal, authenticated with `X-API-Key: ${KUPI_API_KEY}`.
 
@@ -605,7 +605,7 @@ alone. This is acceptable for products where size is not in the name (or irrelev
 
 ---
 
-## 12. SBF-Side Changes
+## 12. Fridgora-Side Changes
 
 ### 12.1 Environment variables
 
@@ -614,7 +614,7 @@ KUPI_SIDECAR_URL=http://kupi-sidecar:8000   # unset = feature invisible
 KUPI_API_KEY=some-random-secret-here
 ```
 
-### 12.2 New DB table (SBF): `kupi_category_mappings`
+### 12.2 New DB table (Fridgora): `kupi_category_mappings`
 
 ```sql
 CREATE TABLE kupi_category_mappings (
@@ -667,7 +667,7 @@ The `/supplier/deals` page layout:
 ```
 03:00 UTC  APScheduler fires
            │
-           ├─ fetch SBF catalog
+           ├─ fetch Fridgora catalog
            │   GET {SBF_BASE_URL}/api/kupi/catalog
            │   → [{id, displayName, barcode, kupiSlugs[], stockLeft, lastDeliveryPrice}]
            │
@@ -678,11 +678,11 @@ The `/supplier/deals` page layout:
            │   (falls back to get_discounts_by_category(slug) if KUPI_SHOPS is empty)
            │   insert new deals with is_current = TRUE
            │
-           ├─ for each unmatched SBF product (no category mapping or low confidence):
+           ├─ for each unmatched Fridgora product (no category mapping or low confidence):
            │   kupi_client.get_discounts_by_search(product.displayName) → supplementary deals
            │
            ├─ run fuzzy matching + price signal computation:
-           │   for each SBF product × matching deals:
+           │   for each Fridgora product × matching deals:
            │     compute match_score (rapidfuzz)
            │     compute price_ratio = deal_price / lastDeliveryPrice
            │     compute price_signal ('buy' | 'consider' | 'skip' | 'unknown')
@@ -709,7 +709,7 @@ physically purchase and restock. These are separate concerns:
 | **Data source** | Order history per user | kupi.cz deals + delivery history |
 | **Key signal** | Purchase frequency + recency + context | Price vs last delivery cost + stock level |
 | **Output** | Product IDs to show on shop page | Shopping list grouped by store |
-| **Lives in** | SBF (`recommendations` table) | Sidecar (`suggestions` table) |
+| **Lives in** | Fridgora (`recommendations` table) | Sidecar (`suggestions` table) |
 
 They could eventually be linked — e.g., a product with high customer demand AND a good deal price
 AND low stock is an extremely high-priority restock. But that is a later-phase enrichment, not MVP.
@@ -724,7 +724,7 @@ Add to `docker-compose.yml`:
 kupi-sidecar:
   image: ghcr.io/your-org/kupi-sidecar:latest
   restart: unless-stopped
-  env_file: .env                         # reads same .env as SBF
+  env_file: .env                         # reads same .env as Fridgora
   environment:
     DATABASE_URL: postgresql://kupi:${KUPI_DB_PASS}@postgres:5432/kupi_sidecar
     SBF_BASE_URL: http://sbf-app:3333    # internal Docker hostname
@@ -737,7 +737,7 @@ kupi-sidecar:
   # No ports mapping — internal only
 ```
 
-SBF app needs two additions in `.env`:
+Fridgora app needs two additions in `.env`:
 ```env
 KUPI_SIDECAR_URL=http://kupi-sidecar:8000
 KUPI_API_KEY=<generate with: openssl rand -hex 32>
@@ -753,8 +753,8 @@ KUPI_SHOPS=Lidl,Albert,Kaufland,Tesco
 - [ ] Python project: FastAPI + SQLAlchemy + APScheduler + Alembic + Pydantic BaseSettings
 - [ ] `deals` table + daily scrape job (category + KUPI_SHOPS filter)
 - [ ] `/health` and `/shop-summary` endpoints (no matching yet — raw deal counts)
-- [ ] SBF: catalog endpoint (`GET /api/kupi/catalog` with `lastDeliveryPrice`)
-- [ ] SBF: `KupiSidecarService` + simple supplier deals page (shop summary only)
+- [ ] Fridgora: catalog endpoint (`GET /api/kupi/catalog` with `lastDeliveryPrice`)
+- [ ] Fridgora: `KupiSidecarService` + simple supplier deals page (shop summary only)
 
 ### Phase 2 — Product matching + price signals
 
@@ -762,14 +762,14 @@ KUPI_SHOPS=Lidl,Albert,Kaufland,Tesco
 - [ ] Fuzzy matching with rapidfuzz + price signal computation
 - [ ] Sidecar: pull catalog on scrape, build suggestions
 - [ ] `/suggestions` and `/shopping-list/{shop}` endpoints
-- [ ] SBF: `/supplier/deals/shopping-list/:shop` page with price signal badges (buy/consider/skip)
-- [ ] SBF: `/supplier/deals/mappings` management page
+- [ ] Fridgora: `/supplier/deals/shopping-list/:shop` page with price signal badges (buy/consider/skip)
+- [ ] Fridgora: `/supplier/deals/mappings` management page
 
 ### Phase 3 — Stock awareness + admin tooling
 
 - [ ] `is_low_stock` flag based on `LOW_STOCK_THRESHOLD`
-- [ ] SBF: "Restock now" section on deals page
-- [ ] SBF: `/admin/kupi-settings` (category mappings + trigger scrape + scrape status)
+- [ ] Fridgora: "Restock now" section on deals page
+- [ ] Fridgora: `/admin/kupi-settings` (category mappings + trigger scrape + scrape status)
 - [ ] Low-stock + buy-signal combined alert (email? notification?)
 
 ### Phase 4 — MCP server (optional)
@@ -783,9 +783,9 @@ KUPI_SHOPS=Lidl,Albert,Kaufland,Tesco
 
 ## 17. Open Questions
 
-1. **Unit size parsing in SBF (Node.js)**: the catalog endpoint needs to parse `unitSizeNormalized`
+1. **Unit size parsing in Fridgora (Node.js)**: the catalog endpoint needs to parse `unitSizeNormalized`
    and `unitSizeType` from `product.displayName`. Two options: (a) a small TypeScript port of
-   `unit_parser.py` regex logic in SBF, or (b) store `unit_size_normalized` + `unit_size_type`
+   `unit_parser.py` regex logic in Fridgora, or (b) store `unit_size_normalized` + `unit_size_type`
    explicitly on the `products` table (a new migration). Option (b) is cleaner long-term and lets
    suppliers correct the parsed size; option (a) avoids a migration and is sufficient for MVP.
 
@@ -795,10 +795,10 @@ KUPI_SHOPS=Lidl,Albert,Kaufland,Tesco
 2. **kupi.cz rate limiting**: the library does no backoff. Add configurable `sleep` between
    category+shop requests. Monitor for 429/block responses.
 
-3. **Barcode matching**: `Product.barcode` exists in SBF. kupi.cz does not currently expose
+3. **Barcode matching**: `Product.barcode` exists in Fridgora. kupi.cz does not currently expose
    barcodes, but if it ever does, barcode = direct exact match (no fuzzy needed). Design
    `product_mappings` to support this as a future upgrade path.
 
-4. **Webhook vs polling**: currently SBF polls sidecar on page load (simple). Alternative: sidecar
-   posts `POST /api/kupi/webhook` to SBF after each scrape to invalidate a local cache. Only
+4. **Webhook vs polling**: currently Fridgora polls sidecar on page load (simple). Alternative: sidecar
+   posts `POST /api/kupi/webhook` to Fridgora after each scrape to invalidate a local cache. Only
    needed if the two services run on separate hosts.

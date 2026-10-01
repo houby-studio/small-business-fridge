@@ -106,7 +106,7 @@ function buildSvg({ backdrop, contentScale }: ArtworkOptions): string {
 `
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <title>Small Business Fridge</title>
+  <title>Fridgora</title>
   <defs>
 ${backdropGradient}    <linearGradient id="sbf-cabinet" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="${SHAPE.height}">
       <stop offset="0" stop-color="${COLORS.cabinetTop}" />

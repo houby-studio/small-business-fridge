@@ -143,7 +143,7 @@ export function entraOAuthScheme(tenantId?: string, clientId?: string): EntraOAu
         authorizationUrl: `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize`,
         tokenUrl: `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
         scopes: {
-          [entraApiScope(clientId)]: 'Access the Small Business Fridge API on your behalf',
+          [entraApiScope(clientId)]: 'Access the Fridgora API on your behalf',
         },
       },
     },
