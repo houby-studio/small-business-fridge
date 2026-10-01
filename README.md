@@ -59,6 +59,10 @@ normal upgrade — see [docs/migration-from-v2.md](docs/migration-from-v2.md).
 - Order history and invoice management with QR payment generation
 - Automatic payment reminders and daily purchase reports
 - Supplier section: product management, stock, deliveries
+- Product image pipeline: upload, paste, link or look up by EAN; background removal
+  (plain backdrops built in, BiRefNet via an optional sidecar or Cloudflare), automatic
+  trim, upright rotation and a uniform 450×800 WebP — see
+  [docs/product-images.md](docs/product-images.md)
 - Delivery corrections: fix a mistyped amount or price, void a duplicate — with a
   required reason, audit trail and emails to affected buyers (issued invoices never change)
 - Strict first-in-first-out stock across web, kiosk, API and MCP, and a guard that never

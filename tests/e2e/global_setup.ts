@@ -224,6 +224,13 @@ export default async function globalSetup() {
       categoryIds[cat.name] = result.rows[0].id
     }
 
+    // 4b. One allergen, so forms that pre-select allergens have something to pick
+    await client.query(
+      `INSERT INTO allergens (name, is_disabled, created_at, updated_at)
+       SELECT 'Mléko', false, NOW(), NOW()
+       WHERE NOT EXISTS (SELECT 1 FROM allergens WHERE name = 'Mléko')`
+    )
+
     // 5. Seed 15 products across all categories
     const products = [
       // Nealko (6 products)

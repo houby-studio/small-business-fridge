@@ -106,6 +106,28 @@ x-app-env: &app-env
   # ---------------------------------------------------------------------------
   RATINGS_PUBLIC_FEED_ENABLED: ${RATINGS_PUBLIC_FEED_ENABLED:-false} # customers see each other's public ratings
 
+  # ---------------------------------------------------------------------------
+  # Product images (optional) — see docs/product-images.md
+  # Uploaded images are always trimmed, turned upright when wide and fitted onto a
+  # transparent 450×800 canvas. Background removal beyond plain backdrops needs a model:
+  #   - local:  start the rembg sidecar (`docker compose --profile bg-removal up -d`)
+  #             and set PRODUCT_IMAGE_REMBG_URL=http://rembg:7000
+  #   - remote: deploy integrations/cloudflare-background-removal and set the two
+  #             PRODUCT_IMAGE_CLOUDFLARE_* values
+  # ---------------------------------------------------------------------------
+  PRODUCT_IMAGE_REMBG_URL: ${PRODUCT_IMAGE_REMBG_URL:-} # e.g. http://rembg:7000
+  PRODUCT_IMAGE_REMBG_MODEL: ${PRODUCT_IMAGE_REMBG_MODEL:-birefnet-general} # or birefnet-general-lite
+  PRODUCT_IMAGE_CLOUDFLARE_URL: ${PRODUCT_IMAGE_CLOUDFLARE_URL:-}
+  PRODUCT_IMAGE_CLOUDFLARE_TOKEN: ${PRODUCT_IMAGE_CLOUDFLARE_TOKEN:-}
+  PRODUCT_IMAGE_OPENFOODFACTS_ENABLED: ${PRODUCT_IMAGE_OPENFOODFACTS_ENABLED:-true} # look up pictures by EAN
+  # AI suggestions (description, category) — Azure OpenAI / Foundry; empty endpoint = off
+  PRODUCT_AI_ENDPOINT: ${PRODUCT_AI_ENDPOINT:-}
+  PRODUCT_AI_DEPLOYMENT: ${PRODUCT_AI_DEPLOYMENT:-gpt-5-mini}
+  PRODUCT_AI_API_KEY: ${PRODUCT_AI_API_KEY:-}
+  PRODUCT_AI_TENANT_ID: ${PRODUCT_AI_TENANT_ID:-}
+  PRODUCT_AI_CLIENT_ID: ${PRODUCT_AI_CLIENT_ID:-}
+  PRODUCT_AI_CLIENT_SECRET: ${PRODUCT_AI_CLIENT_SECRET:-}
+
 services:
   app:
     image: houbystudio/sbf:${DOCKER_IMAGE_TAG:-latest}
@@ -176,6 +198,27 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # Optional local background removal (BiRefNet via rembg). Off unless started with
+  # `--profile bg-removal`. Needs RAM: birefnet-general peaks at ~14 GB on CPU,
+  # birefnet-general-lite at ~12 GB; ~45 s per image on an old 4-core Xeon. The model
+  # (~1 GB) downloads on the first request into the rembg_models volume.
+  rembg:
+    image: danielgatis/rembg:${REMBG_IMAGE_TAG:-latest}
+    profiles: ['bg-removal']
+    command: ['s', '--host', '0.0.0.0', '--port', '7000', '--no-ui', '--threads', '1']
+    environment:
+      U2NET_HOME: /models
+      OMP_NUM_THREADS: ${REMBG_CPU_THREADS:-4}
+    volumes:
+      - rembg_models:/models
+    logging:
+      driver: json-file
+      options:
+        max-size: '5m'
+        max-file: '3'
+    restart: unless-stopped
+
 volumes:
   pgdata:
   app_uploads:
+  rembg_models:

@@ -5,6 +5,8 @@ import { createProductValidator, updateProductValidator } from '#validators/prod
 import AuditService from '#services/audit_service'
 import { normalizeImagePath } from '#helpers/image_url'
 import { isUniqueViolation } from '#services/unique_violation'
+import ProductImageService from '#services/product_images/product_image_service'
+import ProductSuggestionService from '#services/product_ai/product_suggestion_service'
 
 export default class ProductsController {
   async index({ inertia, request }: HttpContext) {
@@ -51,6 +53,8 @@ export default class ProductsController {
     return inertia.render('supplier/products/create', {
       categories: categories.map((c) => ({ id: c.id, name: c.name, color: c.color })),
       allergens: allergens.map((a) => ({ id: a.id, name: a.name })),
+      imageCapabilities: ProductImageService.capabilities(),
+      aiSuggestions: ProductSuggestionService.isAiAvailable(),
     })
   }
 
@@ -112,6 +116,8 @@ export default class ProductsController {
       },
       categories: categories.map((c) => ({ id: c.id, name: c.name, color: c.color })),
       allergens: allergens.map((a) => ({ id: a.id, name: a.name })),
+      imageCapabilities: ProductImageService.capabilities(),
+      aiSuggestions: ProductSuggestionService.isAiAvailable(),
     })
   }
 

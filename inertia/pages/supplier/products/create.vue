@@ -1,16 +1,21 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { Head, router, useForm } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Select from 'primevue/select'
 import MultiSelect from 'primevue/multiselect'
-import FileUpload from 'primevue/fileupload'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import { useI18n } from '~/composables/use_i18n'
 import { useProductFormValidation } from '~/composables/use_product_form_validation'
+import { useInitialFocus } from '~/composables/use_initial_focus'
+import ProductImagePicker, {
+  type ProductImageCapabilities,
+} from '~/components/supplier/ProductImagePicker.vue'
+import ProductBarcodeField from '~/components/supplier/ProductBarcodeField.vue'
+import { useProductSuggestions } from '~/composables/use_product_suggestions'
 
 interface CategoryOption {
   id: number
@@ -23,7 +28,12 @@ interface AllergenOption {
   name: string
 }
 
-const props = defineProps<{ categories: CategoryOption[]; allergens: AllergenOption[] }>()
+const props = defineProps<{
+  categories: CategoryOption[]
+  allergens: AllergenOption[]
+  imageCapabilities: ProductImageCapabilities
+  aiSuggestions: boolean
+}>()
 const { t } = useI18n()
 
 const form = useForm({
@@ -34,10 +44,31 @@ const form = useForm({
   allergenIds: [] as number[],
   image: null as File | null,
 })
-const imagePreviewUrl = ref<string | null>(null)
+const imageBusy = ref(false)
+const suggestions = useProductSuggestions(form, props.aiSuggestions)
+const { hints, describing, descriptionError } = suggestions
+const picker = ref<InstanceType<typeof ProductImagePicker> | null>(null)
 const nameInput = ref<any>(null)
 const descriptionInput = ref<any>(null)
 const categorySelect = ref<any>(null)
+
+// Inline errors only for fields the supplier has already touched — an untouched form is
+// not wrong yet. What is still missing is summed up next to the disabled submit instead.
+const touched = reactive({
+  displayName: false,
+  description: false,
+  categoryId: false,
+  barcode: false,
+})
+watch(
+  () => [form.displayName, form.description, form.categoryId, form.barcode] as const,
+  ([name, description, category, barcode], previous) => {
+    if (name !== previous[0]) touched.displayName = true
+    if (description !== previous[1]) touched.description = true
+    if (category !== previous[2]) touched.categoryId = true
+    if (barcode !== previous[3]) touched.barcode = true
+  }
+)
 
 const previewTitle = computed(() => form.displayName || t('supplier.products_name_label'))
 const validation = useProductFormValidation(
@@ -66,32 +97,28 @@ const clientErrors = computed(() => ({
     ? t('supplier.products_validation_category_required')
     : '',
   barcode: validation.barcodeTooLong.value ? t('supplier.products_validation_barcode_max') : '',
-  image: validation.imageMissing.value ? t('supplier.products_image_required') : '',
 }))
-const submitDisabled = computed(() => form.processing || validation.hasBlockingErrors.value)
+const missing = computed(() =>
+  [
+    validation.displayNameMissing.value && t('supplier.products_name_label'),
+    validation.descriptionMissing.value && t('supplier.products_description_label'),
+    validation.categoryMissing.value && t('supplier.products_category_label'),
+    validation.imageMissing.value && t('supplier.products_image_label'),
+  ].filter(Boolean)
+)
+const submitDisabled = computed(
+  () => form.processing || imageBusy.value || validation.hasBlockingErrors.value
+)
 
-function fieldError(field: keyof typeof form.errors | keyof typeof clientErrors.value) {
+function fieldError(field: keyof typeof touched) {
   const serverError = form.errors[field as keyof typeof form.errors]
   if (serverError) return serverError
-  return clientErrors.value[field as keyof typeof clientErrors.value]
+  return touched[field] ? clientErrors.value[field] : ''
 }
 
-function resetPreviewUrl() {
-  if (imagePreviewUrl.value) {
-    URL.revokeObjectURL(imagePreviewUrl.value)
-    imagePreviewUrl.value = null
-  }
-}
-
-function onImageSelect(event: any) {
-  form.image = event.files[0] ?? null
-  resetPreviewUrl()
-  if (form.image) {
-    imagePreviewUrl.value = URL.createObjectURL(form.image)
-  }
-  if (form.image) {
-    form.clearErrors('image')
-  }
+function onImageProcessed(file: File | null) {
+  form.image = file
+  if (file) form.clearErrors('image')
 }
 
 function getRootElement(target: any): HTMLElement | null {
@@ -113,8 +140,7 @@ function focusTextControl(target: any) {
 }
 
 function focusSelectControl(target: any) {
-  const instance = target
-  const root = getRootElement(instance)
+  const root = getRootElement(target)
   const trigger = root?.querySelector('[role="combobox"]') as HTMLElement | null
   trigger?.focus()
 }
@@ -157,20 +183,9 @@ function goBack() {
   router.get('/supplier/products')
 }
 
-onUnmounted(() => {
-  resetPreviewUrl()
-})
-
-onMounted(() => {
-  nextTick(() => {
-    const retries = [0, 100, 300]
-    retries.forEach((delay) => {
-      window.setTimeout(() => {
-        focusTextControl(nameInput.value)
-      }, delay)
-    })
-  })
-})
+// The supplier usually has the product in hand: start at the barcode (a scanner types it
+// and presses Enter, which looks it up and moves on to the name).
+useInitialFocus(() => document.getElementById('product-barcode'))
 </script>
 
 <template>
@@ -186,42 +201,61 @@ onMounted(() => {
         icon="pi pi-arrow-left"
         size="small"
         severity="secondary"
+        text
         @click="goBack"
       />
     </div>
 
-    <div class="grid items-start gap-6 lg:grid-cols-3">
-      <Card class="order-first lg:order-none lg:col-span-1">
+    <form class="grid items-start gap-6 lg:grid-cols-3" @submit.prevent="submit">
+      <Card class="lg:sticky lg:top-20 lg:col-span-1">
         <template #content>
-          <h2 class="mb-3 text-sm font-medium text-gray-700 dark:text-zinc-300">
-            {{ t('supplier.products_image_label') }}
-          </h2>
-          <div
-            class="flex h-56 w-full items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 p-3 dark:border-zinc-700 dark:bg-zinc-900/60"
+          <label class="mb-3 block text-sm text-gray-700 dark:text-zinc-300"
+            >{{ t('supplier.products_image_label') }} *</label
           >
-            <img
-              v-if="imagePreviewUrl"
-              :src="imagePreviewUrl"
-              :alt="previewTitle"
-              class="h-full w-full rounded object-contain"
-            />
-            <span v-else class="pi pi-image text-5xl text-gray-300 dark:text-zinc-600" />
-          </div>
+          <ProductImagePicker
+            ref="picker"
+            :capabilities="imageCapabilities"
+            :alt="previewTitle"
+            @update:file="onImageProcessed"
+            @busy="imageBusy = $event"
+          />
         </template>
       </Card>
 
       <Card class="lg:col-span-2">
         <template #content>
-          <form @submit.prevent="submit" class="flex flex-col gap-5">
+          <div class="flex flex-col gap-5">
             <div>
-              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
-                t('supplier.products_name_label')
-              }}</label>
+              <label
+                for="product-barcode"
+                class="mb-1 block text-sm text-gray-700 dark:text-zinc-300"
+                >{{ t('supplier.products_barcode_label') }}</label
+              >
+              <ProductBarcodeField
+                v-model="form.barcode"
+                inputId="product-barcode"
+                :lookupEnabled="imageCapabilities.openFoodFacts"
+                :placeholder="t('supplier.products_barcode_placeholder')"
+                :invalid="!!fieldError('barcode')"
+                :currentName="form.displayName"
+                @pickImage="picker?.useUrl($event)"
+                @found="suggestions.onFound"
+                @useName="form.displayName = $event"
+                @enter="focusTextControl(nameInput)"
+              />
+              <small v-if="fieldError('barcode')" class="text-red-600 dark:text-red-400">{{
+                fieldError('barcode')
+              }}</small>
+            </div>
+
+            <div>
+              <label for="product-name" class="mb-1 block text-sm text-gray-700 dark:text-zinc-300"
+                >{{ t('supplier.products_name_label') }} *</label
+              >
               <InputText
                 ref="nameInput"
                 id="product-name"
                 v-model="form.displayName"
-                autofocus
                 :placeholder="t('supplier.products_name_placeholder')"
                 class="w-full"
                 :invalid="!!fieldError('displayName')"
@@ -233,9 +267,25 @@ onMounted(() => {
             </div>
 
             <div>
-              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
-                t('supplier.products_description_label')
-              }}</label>
+              <div class="mb-1 flex items-center justify-between gap-2">
+                <label
+                  for="product-description"
+                  class="block text-sm text-gray-700 dark:text-zinc-300"
+                  >{{ t('supplier.products_description_label') }} *</label
+                >
+                <Button
+                  v-if="aiSuggestions"
+                  :label="t('supplier.products_suggest')"
+                  icon="pi pi-sparkles"
+                  severity="secondary"
+                  text
+                  size="small"
+                  :loading="describing"
+                  :disabled="describing || !form.displayName.trim()"
+                  data-testid="product-suggest-description"
+                  @click="suggestions.suggestDescription"
+                />
+              </div>
               <Textarea
                 ref="descriptionInput"
                 id="product-description"
@@ -249,90 +299,91 @@ onMounted(() => {
               <small v-if="fieldError('description')" class="text-red-600 dark:text-red-400">{{
                 fieldError('description')
               }}</small>
-            </div>
-
-            <div>
-              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
-                t('supplier.products_category_label')
-              }}</label>
-              <Select
-                ref="categorySelect"
-                inputId="product-category"
-                v-model="form.categoryId"
-                :options="categories"
-                optionLabel="name"
-                optionValue="id"
-                :placeholder="t('supplier.products_category_label')"
-                class="w-full"
-                :invalid="!!fieldError('categoryId')"
-              />
-              <small v-if="fieldError('categoryId')" class="text-red-600 dark:text-red-400">{{
-                fieldError('categoryId')
+              <small v-else-if="descriptionError" class="text-red-600 dark:text-red-400">{{
+                descriptionError
               }}</small>
+              <small v-else-if="hints.description" class="text-gray-500 dark:text-zinc-400"
+                ><span class="pi pi-sparkles mr-1 !text-xs" />{{
+                  t('supplier.products_hint_ai_description')
+                }}</small
+              >
             </div>
 
-            <div>
-              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
-                t('supplier.products_barcode_label')
-              }}</label>
-              <InputText
-                id="product-barcode"
-                v-model="form.barcode"
-                :placeholder="t('supplier.products_barcode_placeholder')"
-                class="w-full"
-                :invalid="!!fieldError('barcode')"
-              />
-              <small v-if="fieldError('barcode')" class="text-red-600 dark:text-red-400">{{
-                fieldError('barcode')
-              }}</small>
+            <div class="grid gap-5 sm:grid-cols-2">
+              <div>
+                <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300"
+                  >{{ t('supplier.products_category_label') }} *</label
+                >
+                <Select
+                  ref="categorySelect"
+                  inputId="product-category"
+                  v-model="form.categoryId"
+                  :options="categories"
+                  optionLabel="name"
+                  optionValue="id"
+                  :placeholder="t('supplier.products_category_placeholder')"
+                  class="w-full"
+                  :invalid="!!fieldError('categoryId')"
+                />
+                <small v-if="fieldError('categoryId')" class="text-red-600 dark:text-red-400">{{
+                  fieldError('categoryId')
+                }}</small>
+                <small v-else-if="hints.category" class="text-gray-500 dark:text-zinc-400"
+                  ><span class="pi pi-sparkles mr-1 !text-xs" />{{
+                    t('supplier.products_hint_ai_category')
+                  }}</small
+                >
+              </div>
+
+              <div>
+                <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300">{{
+                  t('supplier.products_allergens_label')
+                }}</label>
+                <MultiSelect
+                  inputId="product-allergens"
+                  v-model="form.allergenIds"
+                  :options="allergens"
+                  optionLabel="name"
+                  optionValue="id"
+                  :placeholder="t('supplier.products_allergens_none')"
+                  :emptyMessage="t('supplier.products_no_available_options')"
+                  :emptyFilterMessage="t('supplier.products_no_available_options')"
+                  class="w-full"
+                />
+                <small v-if="hints.allergens" class="text-gray-500 dark:text-zinc-400"
+                  ><span class="pi pi-database mr-1 !text-xs" />{{
+                    t('supplier.products_hint_off_allergens')
+                  }}</small
+                >
+              </div>
             </div>
 
-            <div>
-              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
-                t('supplier.products_allergens_label')
-              }}</label>
-              <MultiSelect
-                inputId="product-allergens"
-                v-model="form.allergenIds"
-                :options="allergens"
-                optionLabel="name"
-                optionValue="id"
-                :placeholder="t('supplier.products_allergens_label')"
-                :emptyMessage="t('supplier.products_no_available_options')"
-                :emptyFilterMessage="t('supplier.products_no_available_options')"
-                class="w-full"
-              />
-            </div>
-
-            <div>
-              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
-                t('supplier.products_image_label')
-              }}</label>
-              <FileUpload
-                mode="basic"
-                accept=".jpg,.jpeg,.png,.webp"
-                :maxFileSize="5 * 1024 * 1024"
-                :chooseLabel="t('supplier.products_image_choose')"
-                @select="onImageSelect"
-                :auto="false"
-              />
-              <small v-if="fieldError('image')" class="text-red-600 dark:text-red-400">{{
-                fieldError('image')
-              }}</small>
-            </div>
-
-            <div class="pt-2">
+            <div class="flex flex-col gap-2 pt-2 sm:flex-row sm:items-center">
               <Button
                 type="submit"
-                :label="t('supplier.products_create_submit')"
+                :label="
+                  imageBusy
+                    ? t('supplier.products_waiting_for_image')
+                    : t('supplier.products_create_submit')
+                "
                 icon="pi pi-check"
+                class="w-full sm:w-auto"
                 :loading="form.processing"
                 :disabled="submitDisabled"
               />
+              <small
+                v-if="missing.length && !imageBusy"
+                class="text-gray-500 dark:text-zinc-400"
+                data-testid="product-form-missing"
+                >{{ t('supplier.products_missing', { fields: missing.join(', ') }) }}</small
+              >
+              <small v-if="form.errors.image" class="text-red-600 dark:text-red-400">{{
+                form.errors.image
+              }}</small>
             </div>
-          </form>
+          </div>
         </template>
       </Card>
-    </div>
+    </form>
   </AppLayout>
 </template>
