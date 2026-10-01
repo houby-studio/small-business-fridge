@@ -9,7 +9,6 @@ const props = defineProps<{
   blocked?: 'impersonating'
   clientName?: string
   redirectHost?: string
-  returnsToApp?: boolean
   role?: 'customer' | 'supplier' | 'admin'
   account?: { displayName: string; email: string | null }
 }>()
@@ -107,15 +106,12 @@ function stopImpersonation() {
       </p>
 
       <p class="text-sm text-zinc-300">
-        <template v-if="returnsToApp">{{ t('auth.oauth_consent_return_app') }}</template>
-        <template v-else>
-          {{ t('auth.oauth_consent_redirect') }}
-          <span
-            class="ml-1 inline-flex whitespace-nowrap rounded bg-zinc-800 px-2 py-0.5 font-mono text-xs text-zinc-100"
-            data-testid="oauth-consent-host"
-            >{{ redirectHost }}</span
-          >
-        </template>
+        {{ t('auth.oauth_consent_redirect') }}
+        <span
+          class="ml-1 inline-flex whitespace-nowrap rounded bg-zinc-800 px-2 py-0.5 font-mono text-xs text-zinc-100"
+          data-testid="oauth-consent-host"
+          >{{ redirectHost }}</span
+        >
       </p>
 
       <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

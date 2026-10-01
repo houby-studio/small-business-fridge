@@ -88,6 +88,7 @@ const props = defineProps<{
   hasLocalPassword: boolean
   pendingDraft: PendingDraft | null
   apiDocsEnabled?: boolean
+  mcpUrl: string
 }>()
 const { t } = useI18n()
 const page = usePage<SharedProps>()
@@ -527,6 +528,15 @@ watch(
   },
   { immediate: true }
 )
+
+const copiedMcpUrl = ref(false)
+
+function copyMcpUrl() {
+  navigator.clipboard.writeText(props.mcpUrl).then(() => {
+    copiedMcpUrl.value = true
+    setTimeout(() => (copiedMcpUrl.value = false), 2000)
+  })
+}
 
 function copyToken() {
   if (!newTokenFlash.value?.token) return
@@ -971,6 +981,33 @@ onMounted(() => {
         </template>
         <template #content>
           <div class="flex flex-col gap-6">
+            <div
+              class="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm dark:border-sky-500/30 dark:bg-sky-500/10"
+              data-testid="profile-mcp-hint"
+            >
+              <p class="font-semibold text-sky-900 dark:text-sky-100">
+                <i class="pi pi-sparkles mr-1 text-xs" aria-hidden="true" />
+                {{ t('profile.mcp_heading') }}
+              </p>
+              <p class="mt-1 text-sky-900/80 dark:text-sky-100/80">{{ t('profile.mcp_info') }}</p>
+              <div class="mt-2 flex min-w-0 items-center gap-1">
+                <code
+                  class="min-w-0 truncate rounded bg-white px-2 py-1 font-mono text-xs text-gray-900 dark:bg-zinc-900 dark:text-zinc-100"
+                  data-testid="profile-mcp-url"
+                  >{{ mcpUrl }}</code
+                >
+                <Button
+                  :icon="copiedMcpUrl ? 'pi pi-check' : 'pi pi-copy'"
+                  severity="secondary"
+                  text
+                  size="small"
+                  :aria-label="copiedMcpUrl ? t('profile.tokens_copied') : t('profile.mcp_copy')"
+                  data-testid="profile-mcp-copy"
+                  @click="copyMcpUrl"
+                />
+              </div>
+            </div>
+
             <DataTable :value="tokens" stripedRows class="rounded-lg border">
               <Column :header="t('profile.tokens_name')">
                 <template #body="{ data }">{{ data.name }}</template>

@@ -3,7 +3,6 @@ import { test } from '@japa/runner'
 import type { ApiClient } from '@japa/api-client'
 import { createHash, randomBytes } from 'node:crypto'
 import db from '@adonisjs/lucid/services/db'
-import env from '#start/env'
 import mail from '@adonisjs/mail/services/main'
 import { UserFactory } from '#database/factories/user_factory'
 import { ProductFactory } from '#database/factories/product_factory'
@@ -856,31 +855,6 @@ test.group('API MCP - OAuth server', (group) => {
     } finally {
       mail.restore()
     }
-  })
-
-  test('an external client gets no flash; returning into the app shows the outcome', async ({
-    client,
-    assert,
-  }) => {
-    const user = await UserFactory.create()
-    const external = await authorizeWithConsent(
-      client,
-      user,
-      authorizeQs(await registerClient(client))
-    )
-    assert.notProperty(external.flashMessages(), 'alert')
-
-    const ownRedirect = `${env.get('APP_URL')}/profile`
-    const registration = await client
-      .post('/oauth/register')
-      .json({ client_name: 'Local tool', redirect_uris: [ownRedirect] })
-    const own = await authorizeWithConsent(client, user, {
-      ...authorizeQs(registration.body().client_id),
-      redirect_uri: ownRedirect,
-    })
-    const alert = own.flashMessages().alert as { type: string; message: string }
-    assert.equal(alert.type, 'success')
-    assert.include(alert.message, 'Local tool')
   })
 
   test('while impersonating the consent page explains why and offers to stop', async ({

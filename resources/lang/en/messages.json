@@ -103,7 +103,5 @@
   "delivery_correction_no_change": "Neither the amount nor the price changed.",
   "delivery_void_has_orders": "Someone has already bought from this delivery, so it cannot be voided. Reduce the amount to the number of sold pieces instead.",
   "delivery_correction_amount_increase": "A correction cannot increase the amount. Stock the missing pieces as a new delivery.",
-  "keypad_id_reserved": "This keypad ID is reserved for a special kiosk code and cannot be assigned to a user.",
-  "mcp_connect_approved": "Your account is now connected to “{client}”. You can revoke access at any time in Profile → API tokens.",
-  "mcp_connect_declined": "You declined to connect “{client}”. The tool was not given any access."
+  "keypad_id_reserved": "This keypad ID is reserved for a special kiosk code and cannot be assigned to a user."
 }
