@@ -107,7 +107,14 @@ node ace products:normalize-images --dry-run            # report only
 node ace products:normalize-images                      # trim, rotate, 450×800 WebP
 node ace products:normalize-images --background=flood   # also remove plain backdrops
 node ace products:normalize-images --ids=12,40          # selected products only
+node ace products:normalize-images --exclude-ids=7,9    # leave these alone
+node ace products:normalize-images --rotate=none        # reframe without rotating
 ```
+
+The width rule also catches things that are not bars — plated food, an egg carton, a
+wrapped sweet. Look at the `rotated` lines of a `--dry-run` and exclude what should stay
+landscape. Images the supplier wants redone individually can be processed from the edit
+form with **Process current image**.
 
 The default `--background=none` changes only the framing. New files are written under new
 names and the old files stay on disk, so a database restore undoes the run. Each change is

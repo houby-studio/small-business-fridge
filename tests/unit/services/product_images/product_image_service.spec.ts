@@ -78,6 +78,43 @@ test.group('Product images - service', (group) => {
     assert.equal(await alphaAt(result.buffer, 225, 400), 255)
   })
 
+  test('a backdrop kept on a transparent canvas is still removed', async ({ assert }) => {
+    productImagesConfig.rembg.url = ''
+    productImagesConfig.cloudflare.url = ''
+    const service = new ProductImageService()
+    // Wide and tall variants: whether the canvas margins end up left/right or top/bottom
+    // must not matter.
+    for (const product of [
+      { width: 40, height: 60 },
+      { width: 40, height: 140 },
+    ]) {
+      const kept = await service.process(await productOnBackdrop({ product }), {
+        background: 'none',
+        rotate: 'none',
+      })
+      const auto = await service.process(kept.buffer, { background: 'auto', rotate: 'none' })
+      assert.equal(auto.background, 'flood', JSON.stringify(product))
+      assert.isNull(auto.note)
+    }
+  })
+
+  test('auto leaves a cut-out product alone and says so', async ({ assert }) => {
+    const circle = await sharp(
+      Buffer.from(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">' +
+          '<circle cx="100" cy="100" r="80" fill="#c81e28"/></svg>'
+      )
+    )
+      .png()
+      .toBuffer()
+    const result = await new ProductImageService().process(circle, {
+      background: 'auto',
+      rotate: 'auto',
+    })
+    assert.equal(result.background, 'none')
+    assert.equal(result.note, 'already_transparent')
+  })
+
   test('sends the image to rembg with the configured model', async ({ assert }) => {
     const server = await modelStub()
     productImagesConfig.rembg.url = server.url

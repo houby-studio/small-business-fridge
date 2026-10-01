@@ -18,12 +18,17 @@ interface Candidate {
   source: string
 }
 
-type Source = { kind: 'file'; file: File } | { kind: 'url'; url: string }
+type Source =
+  | { kind: 'file'; file: File }
+  | { kind: 'url'; url: string }
+  | { kind: 'stored'; productId: number }
 
 const props = defineProps<{
   capabilities: ProductImageCapabilities
   barcode: string
   chooseLabel: string
+  /** Edit form: the product whose current image can be run through the pipeline. */
+  storedImageProductId?: number | null
 }>()
 
 const emit = defineEmits<{
@@ -44,7 +49,7 @@ const rotate = ref('auto')
 const urlInput = ref('')
 const processing = ref(false)
 const error = ref('')
-const resultInfo = ref<{ background: string; rotated: string } | null>(null)
+const resultInfo = ref<{ background: string; rotated: string; note: string } | null>(null)
 const candidates = ref<Candidate[]>([])
 const candidatesLoading = ref(false)
 const candidatesSearched = ref(false)
@@ -69,7 +74,11 @@ const barcodeSearchable = computed(() => /^\d{8,14}$/.test(props.barcode.trim())
 const urlValid = computed(() => /^https?:\/\/\S+$/i.test(urlInput.value.trim()))
 const resultSummary = computed(() => {
   if (!resultInfo.value) return ''
-  const parts = [t(`supplier.products_image_result_bg_${resultInfo.value.background}`)]
+  const parts = [
+    resultInfo.value.note === 'already_transparent'
+      ? t('supplier.products_image_result_already_transparent')
+      : t(`supplier.products_image_result_bg_${resultInfo.value.background}`),
+  ]
   if (resultInfo.value.rotated !== 'none') parts.push(t('supplier.products_image_result_rotated'))
   return parts.join(' · ')
 })
@@ -100,7 +109,8 @@ async function processImage() {
 
   const body = new FormData()
   if (source.value.kind === 'file') body.append('image', source.value.file)
-  else body.append('url', source.value.url)
+  else if (source.value.kind === 'url') body.append('url', source.value.url)
+  else body.append('productId', String(source.value.productId))
   body.append('background', background.value)
   body.append('rotate', rotate.value)
 
@@ -127,6 +137,7 @@ async function processImage() {
     resultInfo.value = {
       background: response.headers.get('X-Image-Background') ?? 'none',
       rotated: response.headers.get('X-Image-Rotated') ?? 'none',
+      note: response.headers.get('X-Image-Note') ?? 'none',
     }
     setPreview(URL.createObjectURL(file))
     emit('update:file', file)
@@ -149,6 +160,12 @@ function useFile(file: File | null | undefined) {
 
 function useUrl(url: string) {
   source.value = { kind: 'url', url }
+  processImage()
+}
+
+function useStoredImage() {
+  if (!props.storedImageProductId) return
+  source.value = { kind: 'stored', productId: props.storedImageProductId }
   processImage()
 }
 
@@ -221,6 +238,14 @@ onUnmounted(() => {
         :chooseLabel="chooseLabel"
         :auto="false"
         @select="onSelect"
+      />
+      <Button
+        v-if="storedImageProductId"
+        :label="t('supplier.products_image_reprocess')"
+        icon="pi pi-refresh"
+        severity="secondary"
+        :disabled="processing"
+        @click="useStoredImage"
       />
       <Button
         v-if="capabilities.openFoodFacts"

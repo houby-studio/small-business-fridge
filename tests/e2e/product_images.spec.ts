@@ -59,6 +59,33 @@ test.describe('Product image picker', () => {
     )
   })
 
+  test('the edit form reprocesses the current image', async ({ page }) => {
+    const name = `E2E Přegenerovat ${Date.now()}`
+    await loginAs(page, 'supplier')
+    await page.goto('/supplier/products/new')
+    await fillRequiredFields(page, name)
+    await page.locator('#product-image-background').click()
+    await page.getByRole('option', { name: 'Ponechat pozadí' }).click()
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'keep.png',
+      mimeType: 'image/png',
+      buffer: await whiteBackdropPng(),
+    })
+    await expect(page.getByTestId('product-image-status')).toHaveText('Pozadí ponecháno')
+    await page.getByRole('button', { name: 'Vytvořit produkt' }).click()
+    await expect(page).toHaveURL(/\/supplier\/stock\?preselect=\d+/)
+    const productId = page.url().match(/preselect=(\d+)/)![1]
+
+    await page.goto(`/supplier/products/${productId}/edit`)
+    const status = page.getByTestId('product-image-status')
+    await page.getByRole('button', { name: 'Upravit stávající obrázek' }).click()
+    // The kept white backdrop sits on a transparent canvas now; it is still removed.
+    await expect(status).toHaveText('Pozadí odstraněno (jednobarevné)')
+    await expect(page.getByTestId('product-image-preview')).toHaveAttribute('src', /^blob:/)
+    await page.getByRole('button', { name: 'Uložit změny' }).click()
+    await expect(page).toHaveURL(/\/supplier\/stock/)
+  })
+
   test('a wide product is turned upright', async ({ page }) => {
     await loginAs(page, 'supplier')
     await page.goto('/supplier/products/new')

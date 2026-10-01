@@ -316,6 +316,9 @@ onMounted(() => {
                 :capabilities="imageCapabilities"
                 :barcode="form.barcode"
                 :chooseLabel="t('supplier.products_image_upload')"
+                :storedImageProductId="
+                  product.imagePath?.startsWith('/uploads/products/') ? product.id : null
+                "
                 @update:file="form.image = $event"
                 @preview="imagePreviewUrl = $event"
                 @busy="imageBusy = $event"

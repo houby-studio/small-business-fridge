@@ -179,5 +179,8 @@
   "image_url_blocked": "Images cannot be downloaded from this address.",
   "image_url_unreachable": "The image could not be downloaded from the link.",
   "image_url_not_image": "The link does not point to an image.",
-  "image_url_too_large": "The linked image is too large."
+  "image_url_too_large": "The linked image is too large.",
+  "products_image_reprocess": "Process current image",
+  "image_stored_missing": "The product has no stored image to process.",
+  "products_image_result_already_transparent": "The image already has a transparent background (pick a method to remove what is left)"
 }

@@ -3,6 +3,7 @@ import { test } from '@japa/runner'
 import sharp from 'sharp'
 import {
   contentBox,
+  cropToContent,
   decideRotation,
   decodeToRaw,
   normalizeProductImage,
@@ -45,6 +46,24 @@ test.group('Product images - normalize', () => {
     const { buffer } = await normalizeProductImage(raw, options)
     assert.isAbove(await alphaAt(buffer, 2, 2), 200)
     assert.isAbove(await alphaAt(buffer, 447, 797), 200)
+  })
+
+  test('crops to the visible content', async ({ assert }) => {
+    const raw = await decodeToRaw(
+      await productOnBackdrop({
+        product: { width: 30, height: 50 },
+        margin: 10,
+        backdrop: transparent,
+      })
+    )
+    const cropped = cropToContent(raw)
+    assert.equal(cropped.width, 30)
+    assert.equal(cropped.height, 50)
+    assert.equal(cropped.data[3], 255)
+    const opaque = await decodeToRaw(
+      await productOnBackdrop({ product: { width: 10, height: 10 } })
+    )
+    assert.strictEqual(cropToContent(opaque), opaque)
   })
 
   test('turns a wide bar upright, counter-clockwise by default', async ({ assert }) => {

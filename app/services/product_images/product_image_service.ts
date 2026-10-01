@@ -1,4 +1,8 @@
 import sharp from 'sharp'
+import { readFile } from 'node:fs/promises'
+import path from 'node:path'
+import app from '@adonisjs/core/services/app'
+import Product from '#models/product'
 import productImagesConfig, { type BackgroundRemovalMethod } from '#config/product_images'
 import { DomainError, isDomainError } from '#services/domain_error'
 import {
@@ -7,6 +11,7 @@ import {
   type RawImage,
 } from '#services/product_images/flood_fill'
 import {
+  cropToContent,
   decodeToRaw,
   normalizeProductImage,
   type RotateMode,
@@ -21,7 +26,10 @@ import {
 
 export type BackgroundMode = 'auto' | BackgroundRemovalMethod
 
-export type ProductImageErrorCode = 'image_unreadable' | 'image_background_method_unavailable'
+export type ProductImageErrorCode =
+  | 'image_unreadable'
+  | 'image_background_method_unavailable'
+  | 'image_stored_missing'
 
 export const BACKGROUND_MODES: BackgroundMode[] = ['auto', 'none', 'flood', 'rembg', 'cloudflare']
 export const ROTATE_MODES: RotateMode[] = ['auto', 'none', 'cw', 'ccw']
@@ -31,6 +39,8 @@ export interface ProcessedProductImage {
   /** What actually removed the background (`none` when nothing did). */
   background: BackgroundRemovalMethod
   rotated: 'cw' | 'ccw' | null
+  /** Set when "auto" left the background alone because the image is already cut out. */
+  note: 'already_transparent' | null
 }
 
 export interface ProductImageCapabilities {
@@ -52,6 +62,8 @@ function providerInput(raw: RawImage): Promise<Buffer> {
     .toBuffer()
 }
 
+export const STORED_IMAGE_PREFIX = '/uploads/products/'
+
 const SUPPORTED_FORMATS = new Set(['jpeg', 'png', 'webp', 'gif', 'avif', 'heif', 'tiff'])
 
 export default class ProductImageService {
@@ -65,6 +77,26 @@ export default class ProductImageService {
 
   static isAvailable(method: BackgroundMode): boolean {
     return ProductImageService.capabilities().backgrounds.includes(method)
+  }
+
+  /**
+   * The image a product already has, straight from storage — for "process the existing
+   * image" in the edit form and for the catalogue command.
+   */
+  async readStoredImage(productId: number): Promise<Buffer> {
+    const product = await Product.find(productId)
+    const imagePath = product?.imagePath
+    if (!imagePath?.startsWith(STORED_IMAGE_PREFIX)) {
+      throw new DomainError<ProductImageErrorCode>('image_stored_missing')
+    }
+    try {
+      // basename(): the stored path never gets to pick a directory.
+      return await readFile(
+        path.join(app.makePath('storage/uploads/products'), path.basename(imagePath))
+      )
+    } catch {
+      throw new DomainError<ProductImageErrorCode>('image_stored_missing')
+    }
   }
 
   async downloadFromUrl(url: string): Promise<Buffer> {
@@ -91,7 +123,7 @@ export default class ProductImageService {
       throw new DomainError<ProductImageErrorCode>('image_unreadable')
     }
 
-    const { raw: cutOut, method } = await this.removeBackground(raw, options.background)
+    const { raw: cutOut, method, note } = await this.removeBackground(raw, options.background)
 
     const normalized = await normalizeProductImage(cutOut, {
       width: productImagesConfig.width,
@@ -101,29 +133,44 @@ export default class ProductImageService {
       autoDirection: productImagesConfig.rotateDirection,
     })
 
-    return { buffer: normalized.buffer, background: method, rotated: normalized.rotated }
+    return { buffer: normalized.buffer, background: method, rotated: normalized.rotated, note }
   }
 
   private async removeBackground(
     raw: RawImage,
     mode: BackgroundMode
-  ): Promise<{ raw: RawImage; method: BackgroundRemovalMethod }> {
-    if (mode === 'none') return { raw, method: 'none' }
+  ): Promise<{
+    raw: RawImage
+    method: BackgroundRemovalMethod
+    note: ProcessedProductImage['note']
+  }> {
+    if (mode === 'none') return { raw, method: 'none', note: null }
+
+    // Methods work on the visible content, so a backdrop kept inside a transparent
+    // canvas (an earlier "keep background" result) can still be removed.
+    const content = cropToContent(raw)
 
     if (mode !== 'auto') {
-      const result = await this.runMethod(mode, raw)
-      return result ? { raw: result, method: mode } : { raw, method: 'none' }
+      const result = await this.runMethod(mode, content)
+      return result
+        ? { raw: result, method: mode, note: null }
+        : { raw: content, method: 'none', note: null }
     }
 
-    // Already cut out (a transparent PNG) — nothing to do.
-    if (hasTransparentBorder(raw)) return { raw, method: 'none' }
+    // Already cut out: transparency reaches the product itself. Judged on the content,
+    // not the canvas — a backdrop kept on a transparent canvas is an opaque rectangle and
+    // still gets removed. Running a model on a cut-out would only cost a call and risk
+    // nibbling at the product; an explicit method choice still forces it.
+    if (hasTransparentBorder(content)) {
+      return { raw, method: 'none', note: 'already_transparent' }
+    }
 
     let lastError: unknown = null
     for (const method of productImagesConfig.autoChain) {
       if (method === 'none' || !ProductImageService.isAvailable(method)) continue
       try {
-        const result = await this.runMethod(method, raw)
-        if (result) return { raw: result, method }
+        const result = await this.runMethod(method, content)
+        if (result) return { raw: result, method, note: null }
       } catch (error) {
         // A remote provider being down must not block saving — try the next one.
         if (!isDomainError(error)) throw error
@@ -132,7 +179,7 @@ export default class ProductImageService {
     }
     // Every heavy provider failed: say so instead of silently keeping the background.
     if (lastError) throw lastError
-    return { raw, method: 'none' }
+    return { raw, method: 'none', note: null }
   }
 
   private async runMethod(

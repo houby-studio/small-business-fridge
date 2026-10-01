@@ -21,7 +21,9 @@ export default class ProductImagesController {
     try {
       const input = data.image
         ? await readFile(data.image.tmpPath!)
-        : await service.downloadFromUrl(data.url!)
+        : data.url
+          ? await service.downloadFromUrl(data.url)
+          : await service.readStoredImage(data.productId!)
       const result = await service.process(input, {
         background: data.background ?? 'auto',
         rotate: data.rotate ?? 'auto',
@@ -31,6 +33,7 @@ export default class ProductImagesController {
         .header('Cache-Control', 'no-store')
         .header('X-Image-Background', result.background)
         .header('X-Image-Rotated', result.rotated ?? 'none')
+        .header('X-Image-Note', result.note ?? 'none')
         .send(result.buffer)
     } catch (error) {
       if (isDomainError(error)) {

@@ -21,12 +21,22 @@ export default class ProductsNormalizeImages extends BaseCommand {
   })
   declare background: string
 
+  @flags.string({
+    description: 'Rotation: auto (default — wide products upright), none, cw, ccw',
+    default: 'auto',
+  })
+  declare rotate: string
+
   @flags.string({ description: 'Comma-separated product IDs (default: all)' })
   declare ids: string | undefined
 
+  @flags.string({ description: 'Comma-separated product IDs to leave untouched' })
+  declare excludeIds: string | undefined
+
   async run() {
     const { normalizeCatalogImages } = await import('#services/product_images/catalog_normalizer')
-    const { BACKGROUND_MODES } = await import('#services/product_images/product_image_service')
+    const { BACKGROUND_MODES, ROTATE_MODES } =
+      await import('#services/product_images/product_image_service')
 
     const background = this.background as (typeof BACKGROUND_MODES)[number]
     if (!BACKGROUND_MODES.includes(background)) {
@@ -34,15 +44,24 @@ export default class ProductsNormalizeImages extends BaseCommand {
       this.exitCode = 1
       return
     }
-    const productIds = this.ids
-      ?.split(',')
-      .map((s) => Number(s.trim()))
-      .filter((n) => Number.isInteger(n) && n > 0)
+    const rotate = this.rotate as (typeof ROTATE_MODES)[number]
+    if (!ROTATE_MODES.includes(rotate)) {
+      this.logger.error(`Unknown --rotate "${this.rotate}"`)
+      this.exitCode = 1
+      return
+    }
+    const parseIds = (value: string | undefined) =>
+      value
+        ?.split(',')
+        .map((s) => Number(s.trim()))
+        .filter((n) => Number.isInteger(n) && n > 0)
 
     const report = await normalizeCatalogImages({
       dryRun: this.dryRun,
       background,
-      productIds,
+      rotate,
+      productIds: parseIds(this.ids),
+      excludeIds: parseIds(this.excludeIds),
       onProgress: (line) => this.logger.info(line),
     })
 

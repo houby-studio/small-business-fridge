@@ -179,5 +179,8 @@
   "image_url_blocked": "Z této adresy nelze obrázek stáhnout.",
   "image_url_unreachable": "Obrázek se z odkazu nepodařilo stáhnout.",
   "image_url_not_image": "Odkaz nevede na obrázek.",
-  "image_url_too_large": "Obrázek na odkazu je příliš velký."
+  "image_url_too_large": "Obrázek na odkazu je příliš velký.",
+  "products_image_reprocess": "Upravit stávající obrázek",
+  "image_stored_missing": "Produkt nemá uložený obrázek, který by šel upravit.",
+  "products_image_result_already_transparent": "Obrázek už má průhledné pozadí (pro odstranění zbytku zvolte způsob ručně)"
 }

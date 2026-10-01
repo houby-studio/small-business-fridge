@@ -142,6 +142,50 @@ test.group('Web Supplier - product image processing', (group) => {
     assert.equal(response.body().errors[0].field, 'image')
   })
 
+  test('reprocesses the image a product already has', async ({ client, assert }) => {
+    const directory = app.makePath('storage/uploads/products')
+    await mkdir(directory, { recursive: true })
+    const fileName = `reprocess-test-${Date.now()}.png`
+    await writeFile(
+      path.join(directory, fileName),
+      await productOnBackdrop({ product: { width: 200, height: 40 } })
+    )
+    try {
+      const category = await CategoryFactory.create()
+      const product = await ProductFactory.merge({
+        categoryId: category.id,
+        imagePath: `/uploads/products/${fileName}`,
+      }).create()
+      const withoutImage = await ProductFactory.merge({
+        categoryId: category.id,
+        imagePath: null,
+      }).create()
+      const supplier = await UserFactory.apply('supplier').create()
+
+      const response = await client
+        .post('/supplier/products/image/process')
+        .loginAs(supplier)
+        .withCsrfToken()
+        .header('Accept', 'application/json')
+        .field('productId', String(product.id))
+        .field('background', 'flood')
+      response.assertStatus(200)
+      response.assertHeader('x-image-background', 'flood')
+      response.assertHeader('x-image-rotated', 'ccw')
+
+      const missing = await client
+        .post('/supplier/products/image/process')
+        .loginAs(supplier)
+        .withCsrfToken()
+        .header('Accept', 'application/json')
+        .field('productId', String(withoutImage.id))
+      missing.assertStatus(422)
+      assert.equal(missing.body().error, 'image_stored_missing')
+    } finally {
+      await rm(path.join(directory, fileName), { force: true })
+    }
+  })
+
   test('lists Open Food Facts candidates for a barcode', async ({ client, assert }) => {
     const off = await startStubServer((_req, _body, res) => {
       res
@@ -243,6 +287,29 @@ test.group('products:normalize-images', (group) => {
     const audit = await db.from('audit_logs').where('action', 'product.updated').first()
     assert.equal(audit.entity_id, product.id)
     assert.isNull(audit.user_id)
+  })
+
+  test('can leave products out and switch rotation off', async ({ assert }) => {
+    const bar = await productWithImage(
+      await productOnBackdrop({ product: { width: 200, height: 40 } })
+    )
+    const plate = await productWithImage(
+      await productOnBackdrop({ product: { width: 200, height: 40 } })
+    )
+    const excluded = await normalizeCatalogImages({
+      dryRun: true,
+      background: 'none',
+      excludeIds: [plate.id],
+    })
+    assert.equal(excluded.processed, 1)
+    const unrotated = await normalizeCatalogImages({
+      dryRun: true,
+      background: 'none',
+      rotate: 'none',
+      productIds: [bar.id],
+    })
+    assert.equal(unrotated.processed, 1)
+    assert.equal(unrotated.rotated, 0)
   })
 
   test('skips products whose file is missing or that use a legacy path', async ({ assert }) => {

@@ -10,13 +10,15 @@ export const processProductImageValidator = vine.compile(
     image: vine
       .file({ size: PRODUCT_IMAGE_SOURCE_MAX_SIZE, extnames: PRODUCT_IMAGE_SOURCE_EXTNAMES })
       .optional()
-      .requiredIfMissing('url'),
+      .requiredIfMissing(['url', 'productId']),
     url: vine
       .string()
       .trim()
       .maxLength(2048)
       .url({ require_protocol: true, protocols: ['http', 'https'] })
       .optional(),
+    /** Reprocess the image a product already has (read from storage, not over HTTP). */
+    productId: vine.number().positive().withoutDecimals().optional(),
     background: vine.enum(BACKGROUND_MODES).optional(),
     rotate: vine.enum(ROTATE_MODES).optional(),
   })

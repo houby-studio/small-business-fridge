@@ -1,18 +1,23 @@
-import { readFile, writeFile } from 'node:fs/promises'
+import { writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import path from 'node:path'
 import app from '@adonisjs/core/services/app'
 import Product from '#models/product'
 import AuditService from '#services/audit_service'
 import ProductImageService, {
+  STORED_IMAGE_PREFIX,
   type BackgroundMode,
 } from '#services/product_images/product_image_service'
+import type { RotateMode } from '#services/product_images/normalize'
 import { isDomainError } from '#services/domain_error'
 
 export interface CatalogNormalizeOptions {
   dryRun: boolean
   background: BackgroundMode
+  rotate?: RotateMode
   productIds?: number[]
+  /** Left untouched, e.g. plated food the width rule would turn on its side. */
+  excludeIds?: number[]
   onProgress?: (line: string) => void
 }
 
@@ -24,8 +29,6 @@ export interface CatalogNormalizeReport {
   bytesBefore: number
   bytesAfter: number
 }
-
-const UPLOAD_PREFIX = '/uploads/products/'
 
 /**
  * Runs every stored product image through the pipeline once, so the catalogue that was
@@ -49,18 +52,18 @@ export async function normalizeCatalogImages(
 
   const query = Product.query().whereNotNull('imagePath').orderBy('id', 'asc')
   if (options.productIds?.length) query.whereIn('id', options.productIds)
+  if (options.excludeIds?.length) query.whereNotIn('id', options.excludeIds)
 
   for (const product of await query) {
     const imagePath = product.imagePath!
-    if (!imagePath.startsWith(UPLOAD_PREFIX)) {
+    if (!imagePath.startsWith(STORED_IMAGE_PREFIX)) {
       report.skipped++
       continue
     }
-    const source = path.join(directory, path.basename(imagePath))
 
     let input: Buffer
     try {
-      input = await readFile(source)
+      input = await service.readStoredImage(product.id)
     } catch {
       log(`#${product.id} ${product.displayName}: file missing, skipped`)
       report.skipped++
@@ -70,7 +73,7 @@ export async function normalizeCatalogImages(
     try {
       const result = await service.process(input, {
         background: options.background,
-        rotate: 'auto',
+        rotate: options.rotate ?? 'auto',
       })
       report.processed++
       report.bytesBefore += input.length
@@ -85,7 +88,7 @@ export async function normalizeCatalogImages(
 
       const fileName = `${randomUUID()}.webp`
       await writeFile(path.join(directory, fileName), result.buffer)
-      const newPath = `${UPLOAD_PREFIX}${fileName}`
+      const newPath = `${STORED_IMAGE_PREFIX}${fileName}`
       product.imagePath = newPath
       await product.save()
       await AuditService.log(null, 'product.updated', 'product', product.id, null, {

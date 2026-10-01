@@ -62,6 +62,23 @@ export function contentBox(image: RawImage) {
   return { left, top, width: right - left + 1, height: bottom - top + 1 }
 }
 
+/**
+ * The visible content only. An image that went through the pipeline with its background
+ * kept sits on a transparent canvas — the backdrop to remove starts at the content's
+ * edge, not at the canvas edge.
+ */
+export function cropToContent(image: RawImage): RawImage {
+  const box = contentBox(image)
+  if (box.width === image.width && box.height === image.height) return image
+  const rowBytes = box.width * 4
+  const data = Buffer.alloc(rowBytes * box.height)
+  for (let y = 0; y < box.height; y++) {
+    const start = ((box.top + y) * image.width + box.left) * 4
+    image.data.copy(data, y * rowBytes, start, start + rowBytes)
+  }
+  return { data, width: box.width, height: box.height }
+}
+
 export function decideRotation(
   contentWidth: number,
   contentHeight: number,
