@@ -142,7 +142,8 @@ git push --follow-tags
 `npm version` bumps `package.json`, commits, and creates the tag. `.npmrc` keeps the tag
 bare so it matches the tags this repo already carries.
 
-Pushing the tag triggers `docker-image.yml`, which:
+Pushing the tag runs CI on the tagged commit first. Only once CI is green does `docker-image.yml`
+(listening for CI's completion) start, and it:
 
 1. builds the image and pushes `houbystudio/sbf:<version>`, `:latest` and `:<commit sha>`,
 2. bakes the version, commit and build date into the image as env vars and OCI labels,

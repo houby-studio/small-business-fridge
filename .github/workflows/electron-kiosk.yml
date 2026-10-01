@@ -1,8 +1,9 @@
-name: Build Electron Kiosk Snap
+name: Kiosk · Electron snap
 
 on:
+  # As in CI: branch work is built by its pull request, so push only covers master.
   push:
-    branches: ['feat/*', 'master']
+    branches: ['master']
     paths:
       - 'electron-kiosk/**'
   pull_request:
@@ -11,13 +12,32 @@ on:
       - 'electron-kiosk/**'
   workflow_dispatch: # allow manual trigger
 
+concurrency:
+  group: kiosk-snap-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
 jobs:
   build-snap:
+    name: Build kiosk snap
     runs-on: ubuntu-24.04
     timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Describe this run
+        working-directory: electron-kiosk
+        run: |
+          {
+            echo "## What this run does"
+            echo
+            echo "Builds the kiosk app \`$(node -p "require('./package.json').version")\` as an unpacked Electron app,"
+            echo "packs it into a \`.snap\` (snapcraft, destructive mode) and keeps it as a workflow artifact for 30 days."
+            echo "Nothing is published to the Snap Store."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -65,14 +85,33 @@ jobs:
         run: |
           SNAP_FILE=$(find electron-kiosk -maxdepth 1 -name "*.snap" | head -1)
           echo "file=${SNAP_FILE}" >> "$GITHUB_OUTPUT"
-          echo "name=$(basename ${SNAP_FILE})" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "${SNAP_FILE}")" >> "$GITHUB_OUTPUT"
 
       - name: Upload snap artifact
+        id: upload
         uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.snap.outputs.name }}
           path: ${{ steps.snap.outputs.file }}
           retention-days: 30
+
+      - name: Summarize built snap
+        env:
+          SNAP_FILE: ${{ steps.snap.outputs.file }}
+          SNAP_NAME: ${{ steps.snap.outputs.name }}
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## Built"
+            echo
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| Snap | [\`${SNAP_NAME}\`](${ARTIFACT_URL}) |"
+            echo "| Size | $(numfmt --to=iec --suffix=B "$(stat -c %s "${SNAP_FILE}")") |"
+            echo "| SHA-256 | \`$(sha256sum "${SNAP_FILE}" | cut -d' ' -f1)\` |"
+            echo "| Kept until | $(date -u -d '+30 days' +%Y-%m-%d) |"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # ── Optional: publish to Snap Store on master ─────────────────────────
       # Requires SNAPCRAFT_STORE_CREDENTIALS secret (generate with `snapcraft export-login`).

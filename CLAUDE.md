@@ -315,9 +315,19 @@ When adding user-facing text:
 
 ## CI/CD
 
-- **Docker image**: `.github/workflows/docker-image.yml` — triggers on push to `v3/*` or `master`
-- **Quality CI**: `.github/workflows/quality.yml` — runs lint + format + typecheck + tests on every PR and push to `v3/*`
-- Dockerfile does NOT run quality checks — they happen in the quality CI job
+- **CI** (`quality.yml`, shown as _CI · Lint, typecheck & tests_): runs on every PR to `master`, on push
+  to `master` and on release tags. Parallel jobs `static` / `test` / `e2e`, then `summary`, which writes
+  one job-summary page (jobs, step timings, test counts, a Mermaid pie, failures, slowest tests) via
+  `scripts/ci/summarize_ci.ts`. Feature branches without a PR get no CI — that avoids a double run per commit.
+- **Docker image** (`docker-image.yml`, _Release · Docker image_): triggered by `workflow_run` when CI
+  **completes green** — never by the push itself, so a red commit is never published. Builds for push to
+  `master`, release tags and same-repo PRs (not forks/Dependabot). Under `workflow_run`, `github.ref` and
+  `github.sha` point at the default branch — read `github.event.workflow_run.head_sha/head_branch`.
+  Renaming the CI workflow breaks this trigger unless `workflows:` is renamed too.
+- **Kiosk snap** (`electron-kiosk.yml`, _Kiosk · Electron snap_): only when `electron-kiosk/**` changes.
+- Every workflow writes "what this run does" at the start and "what happened" at the end to
+  `$GITHUB_STEP_SUMMARY` — keep that when adding steps.
+- Dockerfile does NOT run quality checks — they happen in the CI workflow
 
 ### Quality CI Reporting (Mandatory)
 
