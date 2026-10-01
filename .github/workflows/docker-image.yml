@@ -1,20 +1,47 @@
-name: Build and push Docker image
+# Builds and publishes houbystudio/sbf — but only for a commit that passed CI.
+#
+# It is triggered by the *completion* of the CI workflow (workflow_run), not by the push itself,
+# so a red commit never reaches Docker Hub and a release tag never publishes `latest` from
+# broken code. Under workflow_run, `github.ref`/`github.sha` describe the default branch, not
+# the tested commit: everything here must read `github.event.workflow_run.*` instead.
+name: Release · Docker image
+
+run-name: >-
+  ${{ github.event.workflow_run.event == 'pull_request' && 'Image' || (github.event.workflow_run.head_branch == 'master' && 'Image' || 'Release') }}
+  ${{ github.event.workflow_run.head_branch }} · ${{ github.event.workflow_run.display_title }}
+
+on:
+  workflow_run:
+    workflows: ['CI · Lint, typecheck & tests']
+    types: [completed]
+
 permissions:
   contents: read
 
-on:
-  push:
-    branches: ['feat/*', 'master']
-    # Releases are cut by pushing a bare semver tag (1.0.0 … 3.0.0), matching the tags
-    # this repo already carries. `npm version` produces them thanks to .npmrc.
-    tags: ['[0-9]+.[0-9]+.[0-9]+']
+concurrency:
+  group: docker-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
 
 jobs:
   build:
+    name: Build & push image
+    # Green CI only. Pull requests from forks or Dependabot never get the Docker Hub secrets,
+    # so their images are not built (Dependabot runs would fail at login anyway).
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      (github.event.workflow_run.event == 'push' ||
+        (github.event.workflow_run.event == 'pull_request' &&
+          github.event.workflow_run.head_repository.full_name == github.repository &&
+          !startsWith(github.event.workflow_run.head_branch, 'dependabot/')))
     runs-on: ubuntu-latest
+    outputs:
+      kind: ${{ steps.meta.outputs.kind }}
+      version: ${{ steps.meta.outputs.version }}
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -27,31 +54,55 @@ jobs:
 
       # `latest` means "newest release", because that is what a fresh `docker compose up -d`
       # pulls with the default tag in compose.yaml. It must never point at a branch build.
+      # For a tag push, CI's head_branch carries the tag name.
       - name: Compute image tags and build metadata
         id: meta
+        env:
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          SOURCE_EVENT: ${{ github.event.workflow_run.event }}
         run: |
           set -euo pipefail
-          tags="houbystudio/sbf:${GITHUB_SHA}"
+          tags="houbystudio/sbf:${HEAD_SHA}"
           version="dev"
 
-          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
-            version="${GITHUB_REF_NAME}"
+          if [ "${SOURCE_EVENT}" = "push" ] && [[ "${HEAD_BRANCH}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            kind="release"
+            version="${HEAD_BRANCH}"
             tags="${tags},houbystudio/sbf:${version},houbystudio/sbf:latest"
-          elif [ "${GITHUB_REF}" = "refs/heads/master" ]; then
+          elif [ "${SOURCE_EVENT}" = "push" ] && [ "${HEAD_BRANCH}" = "master" ]; then
+            kind="master"
             tags="${tags},houbystudio/sbf:master"
           else
-            alias="$(printf '%s' "${GITHUB_REF_NAME}" | tr '/' '-')"
+            kind="branch"
+            alias="$(printf '%s' "${HEAD_BRANCH}" | tr '/' '-')"
             tags="${tags},houbystudio/sbf:${alias}"
           fi
 
           {
+            echo "kind=${kind}"
             echo "tags=${tags}"
             echo "version=${version}"
             echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           } >> "$GITHUB_OUTPUT"
-          echo "Tagging as: ${tags} (version ${version})"
+
+          {
+            echo "## What this run does"
+            echo
+            echo "Builds \`houbystudio/sbf\` from \`${HEAD_BRANCH}\` at \`${HEAD_SHA:0:7}\` (${kind} build, version \`${version}\`)."
+            echo "CI passed for this commit: [CI run](${{ github.event.workflow_run.html_url }})."
+            echo
+            echo "Tags to push:"
+            echo
+            for tag in ${tags//,/ }; do echo "- \`${tag}\`"; done
+            if [ "${kind}" = "release" ]; then
+              echo
+              echo "Afterwards a GitHub Release \`${version}\` is created."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Build and push
+        id: push
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -60,15 +111,35 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |
             APP_VERSION=${{ steps.meta.outputs.version }}
-            GIT_SHA=${{ github.sha }}
+            GIT_SHA=${{ github.event.workflow_run.head_sha }}
             BUILD_DATE=${{ steps.meta.outputs.build_date }}
           cache-from: type=registry,ref=houbystudio/sbf:buildcache
           cache-to: type=registry,ref=houbystudio/sbf:buildcache,mode=max
 
+      - name: Summarize published image
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## Published"
+            echo
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| Digest | \`${DIGEST}\` |"
+            echo "| Docker Hub | [houbystudio/sbf](https://hub.docker.com/r/houbystudio/sbf/tags) |"
+            echo
+            echo "| Tag | Pull |"
+            echo "| --- | --- |"
+            for tag in ${TAGS//,/ }; do echo "| \`${tag#*:}\` | \`docker pull ${tag}\` |"; done
+          } >> "$GITHUB_STEP_SUMMARY"
+
   release:
+    name: GitHub Release
     # Only tags produce a GitHub Release, and only once the image is actually published,
     # so a release never advertises a version nobody can pull.
-    if: github.ref_type == 'tag'
+    if: needs.build.outputs.kind == 'release'
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -77,19 +148,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
 
       - name: Create GitHub Release
+        id: release
         uses: softprops/action-gh-release@v2
         with:
-          name: ${{ github.ref_name }}
-          tag_name: ${{ github.ref_name }}
+          name: ${{ needs.build.outputs.version }}
+          tag_name: ${{ needs.build.outputs.version }}
           generate_release_notes: true
           body: |
             Docker image:
 
             ```
-            docker pull houbystudio/sbf:${{ github.ref_name }}
+            docker pull houbystudio/sbf:${{ needs.build.outputs.version }}
             ```
 
             Pin this tag in production rather than `latest`, so a rollback is deterministic.
+
+      - name: Summarize release
+        env:
+          URL: ${{ steps.release.outputs.url }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          {
+            echo "## Release"
+            echo
+            echo "🎉 [Release ${VERSION}](${URL}) is published, with notes generated from the merged PRs."
+          } >> "$GITHUB_STEP_SUMMARY"

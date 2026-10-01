@@ -1,22 +1,106 @@
-name: Quality Checks
+# The quality gate. Every Docker image is built from a commit that passed this workflow:
+# `docker-image.yml` listens for its completion (workflow_run) and refuses to build otherwise.
+# Renaming this workflow therefore means renaming it in docker-image.yml too.
+name: CI · Lint, typecheck & tests
 
 on:
+  # Branch work is covered by its pull request; a push-trigger on feature branches as well
+  # would run the whole suite twice for every commit on an open PR.
   push:
-    branches: ['feat/*', 'master']
+    branches: ['master']
+    # Releases are cut by pushing a bare semver tag. CI runs on it too, so a release
+    # image is only published once the tagged commit has passed.
+    tags: ['[0-9]+.[0-9]+.[0-9]+']
   pull_request:
     branches: ['master']
+  workflow_dispatch:
+
+# A newer push to the same PR makes the running check worthless. master and tags are never
+# cancelled: each of their runs gates an image.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '24'
+  # Must match the length of the `shard` list in the e2e job matrix.
+  E2E_SHARDS: 6
 
 jobs:
-  quality:
-    name: Lint, Format, Typecheck, Test
+  static:
+    name: Lint, format & typecheck
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
+
+    steps:
+      - name: Describe this run
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref_name }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          PR: ${{ github.event.pull_request.number }}
+          E2E_SHARDS: ${{ env.E2E_SHARDS }}
+        run: |
+          {
+            echo "## What this run does"
+            echo
+            if [ "$EVENT" = "pull_request" ]; then
+              echo "Checks pull request **#${PR}** at \`${SHA:0:7}\`."
+            else
+              echo "Checks \`${REF}\` (\`${EVENT}\`) at \`${SHA:0:7}\`."
+            fi
+            echo
+            echo "| Job | Runs | What it covers |"
+            echo "| --- | :-: | --- |"
+            echo "| Lint, format & typecheck | ✅ | ESLint, Prettier, \`tsc --noEmit\` |"
+            echo "| Unit & functional tests | ✅ | route/verb parity, Japa against PostgreSQL 18 |"
+            echo "| E2E tests (1/${E2E_SHARDS} … ${E2E_SHARDS}/${E2E_SHARDS}) | ✅ | Playwright (Chromium) against a production build, split into ${E2E_SHARDS} shards with a database each |"
+            if [ "$EVENT" = "pull_request" ]; then
+              echo "| E2E auth matrix | ✅ | Playwright, every auth env combination |"
+            else
+              echo "| E2E auth matrix | ⏭️ | pull requests only |"
+            fi
+            echo "| Summary | ✅ | results of everything above, in one place |"
+            echo
+            echo "All jobs except the summary run in parallel; the summary waits for all of them."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npx prettier --check .
+
+      - name: TypeScript typecheck
+        run: npm run typecheck
+
+  test:
+    name: Unit & functional tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
       checks: write # required by mikepenz/action-junit-report to post check runs
       pull-requests: write # required to post PR annotations
 
-    services:
+    # Every job that talks to the app gets its own database and mail catcher (anchored here,
+    # reused by the e2e jobs), which is what lets the e2e shards run side by side.
+    services: &test-services
       postgres:
         image: postgres:18
         env:
@@ -45,100 +129,50 @@ jobs:
           --health-timeout 3s
           --health-retries 10
 
+    env:
+      TZ: UTC
+      NODE_ENV: test
+      APP_KEY: test-app-key-for-ci-only-123456789
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_USER: sbf
+      DB_PASSWORD: sbf
+      DB_DATABASE: sbf_test
+      SESSION_DRIVER: memory
+      LOG_LEVEL: error
+      SMTP_HOST: localhost
+      SMTP_PORT: 1025
+      MAILPIT_API_URL: http://localhost:8025
+      OIDC_ENABLED: 'false'
+      API_SECRET: test-api-secret
+      APP_URL: http://localhost:3334
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint
-        run: npm run lint
-
-      - name: Format check
-        run: npx prettier --check .
-
-      - name: TypeScript typecheck
-        run: npm run typecheck
-
       # Catches frontend calls whose verb no route accepts — that mismatch answers 404,
       # not 405, so it reads like a wrong URL and is easy to miss in review.
       - name: Route/method parity
         run: npm run check:routes
-        env:
-          TZ: UTC
-          NODE_ENV: test
-          APP_KEY: test-app-key-for-ci-only-123456789
-          DB_HOST: 127.0.0.1
-          DB_PORT: 5432
-          DB_USER: sbf
-          DB_PASSWORD: sbf
-          DB_DATABASE: sbf_test
-          SESSION_DRIVER: memory
-          LOG_LEVEL: error
-          SMTP_HOST: localhost
-          SMTP_PORT: 1025
-          OIDC_ENABLED: 'false'
-          API_SECRET: test-api-secret
-          APP_URL: http://localhost:3334
 
       - name: Run unit and functional tests
         run: node ace test --no-color
-        env:
-          TZ: UTC
-          NODE_ENV: test
-          APP_KEY: test-app-key-for-ci-only-123456789
-          DB_HOST: 127.0.0.1
-          DB_PORT: 5432
-          DB_USER: sbf
-          DB_PASSWORD: sbf
-          DB_DATABASE: sbf_test
-          SESSION_DRIVER: memory
-          LOG_LEVEL: error
-          SMTP_HOST: localhost
-          SMTP_PORT: 1025
-          MAILPIT_API_URL: http://localhost:8025
-          OIDC_ENABLED: 'false'
-          API_SECRET: test-api-secret
-          APP_URL: http://localhost:3334
 
       - name: Verify Japa JUnit report exists
         if: always()
         run: |
           ls -la test-results || true
           test -s test-results/junit-japa.xml
-
-      - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
-
-      - name: Run Playwright E2E tests
-        run: npm run test:e2e
-        env:
-          MAILPIT_API_URL: http://localhost:8025
-
-      - name: Verify Playwright JUnit report exists
-        if: always()
-        run: |
-          ls -la test-results || true
-          test -s test-results/junit-e2e.xml
-
-      - name: Run Playwright Auth Matrix smoke tests (PR only)
-        if: github.event_name == 'pull_request'
-        run: npm run test:e2e:auth-matrix
-        env:
-          MAILPIT_API_URL: http://localhost:8025
-
-      - name: Verify Playwright Auth Matrix JUnit report exists (PR only)
-        if: always() && github.event_name == 'pull_request'
-        run: |
-          ls -la test-results || true
-          test -s test-results/junit-e2e-auth-matrix.xml
 
       - name: Publish Japa test results
         uses: mikepenz/action-junit-report@v4
@@ -151,20 +185,131 @@ jobs:
           include_passed: true
           detailed_summary: true
 
-      - name: Publish Playwright E2E results
-        uses: mikepenz/action-junit-report@v4
+      - name: Upload JUnit report for the summary
+        uses: actions/upload-artifact@v7
         if: always()
         with:
-          report_paths: 'test-results/junit-e2e.xml'
-          check_name: 'Playwright E2E Results'
-          require_tests: true
-          require_passed_tests: true
-          include_passed: true
-          detailed_summary: true
+          name: junit-japa
+          path: test-results/junit-japa.xml
+          if-no-files-found: ignore
+          retention-days: 14
 
-      - name: Publish Playwright Auth Matrix results (PR only)
+      - name: Upload raw test result artifacts
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: test-results-japa
+          path: test-results/**
+          if-no-files-found: warn
+          retention-days: 14
+
+  e2e:
+    name: E2E tests (${{ matrix.shard }}/${{ strategy.job-total }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      # One red shard must not cancel the others — the summary should list every failure.
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
+
+    services: *test-services
+
+    env:
+      MAILPIT_API_URL: http://localhost:8025
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      # Builds the app and migrates a fresh test DB itself (scripts/run_e2e.ts, global_setup.ts).
+      # fullyParallel in playwright.config.ts makes --shard split per test, not per file.
+      - name: Run Playwright E2E tests
+        run: npm run test:e2e -- --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+
+      - name: Verify Playwright JUnit report exists
+        if: always()
+        run: |
+          ls -la test-results || true
+          test -s test-results/junit-e2e.xml
+
+      # Published as one check by the summary job, not one per shard.
+      - name: Upload JUnit report for the summary
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: junit-e2e-${{ matrix.shard }}
+          path: test-results/junit-e2e.xml
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload raw test result artifacts
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: test-results-e2e-${{ matrix.shard }}
+          path: |
+            test-results/**
+            playwright-report/**
+            playwright-artifacts/**
+          if-no-files-found: warn
+          retention-days: 14
+
+  e2e-auth-matrix:
+    name: E2E auth matrix
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      checks: write # required by mikepenz/action-junit-report to post check runs
+      pull-requests: write # required to post PR annotations
+
+    services: *test-services
+
+    env:
+      MAILPIT_API_URL: http://localhost:8025
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright Auth Matrix smoke tests
+        run: npm run test:e2e:auth-matrix
+
+      - name: Verify Playwright Auth Matrix JUnit report exists
+        if: always()
+        run: |
+          ls -la test-results || true
+          test -s test-results/junit-e2e-auth-matrix.xml
+
+      - name: Publish Playwright Auth Matrix results
         uses: mikepenz/action-junit-report@v4
-        if: always() && github.event_name == 'pull_request'
+        if: always()
         with:
           report_paths: 'test-results/junit-e2e-auth-matrix.xml'
           check_name: 'Playwright Auth Matrix Results'
@@ -173,17 +318,89 @@ jobs:
           include_passed: true
           detailed_summary: true
 
+      - name: Upload JUnit report for the summary
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: junit-e2e-auth-matrix
+          path: test-results/junit-e2e-auth-matrix.xml
+          if-no-files-found: ignore
+          retention-days: 14
+
       - name: Upload raw test result artifacts
         uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: test-results
+          name: test-results-e2e-auth-matrix
           path: |
-            test-results/junit-japa.xml
-            test-results/junit-e2e.xml
-            test-results/junit-e2e-auth-matrix.xml
-            playwright-report/**
             test-results/**
             playwright-artifacts/**
           if-no-files-found: warn
           retention-days: 14
+
+  summary:
+    name: Summary
+    needs: [static, test, e2e, e2e-auth-matrix]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read # the job/step list of this run, for the summary table
+      checks: write # required by mikepenz/action-junit-report to post check runs
+      pull-requests: write # required to post PR annotations
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/ci
+
+      # Node 24 runs the TypeScript script directly (type stripping), so no npm ci here.
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download JUnit reports
+        uses: actions/download-artifact@v5
+        with:
+          pattern: junit-*
+          path: reports
+
+      # The shards each wrote a partial junit-e2e.xml; one check run covers all of them.
+      - name: Publish Playwright E2E results
+        uses: mikepenz/action-junit-report@v4
+        if: always()
+        with:
+          report_paths: 'reports/junit-e2e-[0-9]*/junit-e2e.xml'
+          check_name: 'Playwright E2E Results'
+          require_tests: true
+          require_passed_tests: true
+          include_passed: true
+          detailed_summary: true
+
+      - name: Write run summary
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          JUNIT_DIR: reports
+          SUMMARY_JOB_NAME: Summary
+          # Mirrors the conditions in docker-image.yml, so "Next" says truthfully whether
+          # an image follows this run.
+          CI_CONTEXT: >-
+            {
+              "event": "${{ github.event_name }}",
+              "ref": "${{ github.ref_name }}",
+              "sha": "${{ github.event.pull_request.head.sha || github.sha }}",
+              "actor": "${{ github.actor }}",
+              "prNumber": "${{ github.event.pull_request.number }}",
+              "imageWillBuild": ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && !startsWith(github.head_ref, 'dependabot/')) }}
+            }
+        run: node scripts/ci/summarize_ci.ts
+
+      # The summary job is green whenever it managed to write the page; this step carries the
+      # verdict, so a red test job also turns the last box of the graph red.
+      - name: Fail if any gate failed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: |
+          echo "::error::At least one CI job did not pass — see the table above."
+          exit 1

@@ -17,12 +17,17 @@ const testEnv = getTestRuntimeEnv({
  * To run: npm run test:e2e
  * To run with UI: npm run test:e2e -- --ui
  * To run specific file: npm run test:e2e -- tests/e2e/auth.spec.ts
+ * To run one CI shard: npm run test:e2e -- --shard=2/6
  */
 export default defineConfig({
   testDir: './tests/e2e',
   testIgnore: ['auth_env_matrix.spec.ts'],
   globalSetup: './tests/e2e/global_setup.ts',
-  fullyParallel: false, // Avoid DB conflicts between parallel tests
+  // One worker, because every test shares one database. fullyParallel only lets `--shard` split
+  // per test instead of per file: CI runs the suite as several jobs, each with its own database,
+  // and admin_pages.spec.ts alone would otherwise pin one shard for ~90 s. That is safe because
+  // no test depends on another (verified by running 4 and 6 shards against fresh databases).
+  fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: 1,
