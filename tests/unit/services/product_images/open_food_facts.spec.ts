@@ -2,6 +2,7 @@ import '#tests/test_context'
 import { test } from '@japa/runner'
 import productImagesConfig from '#config/product_images'
 import {
+  clearOpenFoodFactsCache,
   lookupOpenFoodFacts,
   offImageFolder,
   offProductName,
@@ -15,6 +16,7 @@ test.group('Product images - Open Food Facts', (group) => {
   const original = { ...productImagesConfig.openFoodFacts }
   group.each.teardown(() => {
     Object.assign(productImagesConfig.openFoodFacts, original)
+    clearOpenFoodFactsCache()
   })
 
   test('splits a barcode into the OFF image folder', ({ assert }) => {
@@ -98,7 +100,7 @@ test.group('Product images - Open Food Facts', (group) => {
       assert.match(String(server.requests[0].headers['user-agent']), /SmallBusinessFridge/)
 
       const missing = await lookupOpenFoodFacts('87654321')
-      assert.deepEqual(missing, { productName: null, candidates: [] })
+      assert.deepEqual(missing, { productName: null, candidates: [], facts: null })
     } finally {
       await server.close()
     }

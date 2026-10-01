@@ -246,6 +246,8 @@ A build that was not produced by the release workflow reports itself as `dev`.
 | `PRODUCT_IMAGE_REMBG_MODEL` | No | No | `birefnet-general` | rembg model name |
 | `PRODUCT_IMAGE_CLOUDFLARE_URL` | No | No | — | Cloudflare background-removal Worker |
 | `PRODUCT_IMAGE_CLOUDFLARE_TOKEN` | No | Yes | — | Bearer token for that Worker |
+| `PRODUCT_AI_ENDPOINT` | No | No | — | Azure OpenAI / Foundry endpoint for product-form suggestions |
+| `PRODUCT_AI_CLIENT_SECRET` | No | Yes | — | Entra service principal secret (or `PRODUCT_AI_API_KEY`) |
 | `PRODUCT_IMAGE_OPENFOODFACTS_ENABLED` | No | No | `true` | Picture lookup by barcode |
 
 All product image settings: [docs/product-images.md](product-images.md).

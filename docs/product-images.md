@@ -30,6 +30,49 @@ applied without a click.
 
 [Open Food Facts]: https://world.openfoodfacts.org
 
+## Name, category, allergens and description
+
+The barcode is where a new product starts. **Find** (or Enter in the barcode field)
+looks the product up on Open Food Facts and:
+
+- **fills the name** in the catalogue's style (`Snickers 50 g`) — only while the name is
+  empty or still the previous suggestion; a typed name is never overwritten. The found name
+  stays in the results as a chip: ✓ when it is in the name field, ⤓ to put it back;
+- **pre-selects allergens** from what Open Food Facts lists for the product (EU-14 tags
+  matched to the instance's allergen names). Allergens are a safety matter, so they are
+  never guessed by a model — only taken from the product's record, and marked
+  *From Open Food Facts — check the pack*;
+- **suggests a category** with AI, when configured — only while no category is chosen.
+
+With AI configured, **Suggest** next to the description writes one playful line in the
+tone of the existing catalogue: the prompt carries 20 random descriptions of other
+products as style examples, plus the product's Open Food Facts category and ingredients.
+Asking again gives a different one. Filled fields say where their value came from until
+the supplier edits them.
+
+### Enabling AI suggestions
+
+Any Azure OpenAI / Azure AI Foundry chat deployment works (tested with `gpt-5-mini`):
+
+```bash
+PRODUCT_AI_ENDPOINT=https://<resource>.cognitiveservices.azure.com
+PRODUCT_AI_DEPLOYMENT=gpt-5-mini
+# then one way to authenticate — first match wins:
+PRODUCT_AI_API_KEY=<key>
+# …or an Entra service principal with the "Cognitive Services OpenAI User" role:
+PRODUCT_AI_TENANT_ID=<tenant>
+PRODUCT_AI_CLIENT_ID=<app id>
+PRODUCT_AI_CLIENT_SECRET=<secret>
+# …or, for local testing only, a token from `az account get-access-token
+# --resource https://cognitiveservices.azure.com` (valid for about an hour):
+PRODUCT_AI_BEARER_TOKEN=<token>
+```
+
+Without these the **Suggest** button is not shown and no category is suggested; the name
+and the allergens still come from Open Food Facts. What is sent: the product name, its
+Open Food Facts category and ingredients, the instance's category names, and other
+products' names and descriptions as examples — no personal data.
+
 ## The pipeline
 
 1. **Decode** the image and apply its EXIF orientation (phone photos).
@@ -151,3 +194,9 @@ audit-logged as `product.updated` with `reason: products:normalize-images`.
 | `PRODUCT_IMAGE_CLOUDFLARE_TIMEOUT_MS` | `60000`                           |                                                |
 | `PRODUCT_IMAGE_OPENFOODFACTS_ENABLED` | `true`                            | Barcode lookup (sends only the barcode)        |
 | `PRODUCT_IMAGE_OPENFOODFACTS_URL`     | `https://world.openfoodfacts.org` | API base URL                                   |
+| `PRODUCT_AI_ENDPOINT`                 | —                                 | Azure OpenAI / Foundry endpoint; empty = off   |
+| `PRODUCT_AI_DEPLOYMENT`               | `gpt-5-mini`                      | Chat deployment name                           |
+| `PRODUCT_AI_API_VERSION`              | `2024-10-21`                      | Azure OpenAI API version                       |
+| `PRODUCT_AI_API_KEY`                  | —                                 | Key auth (secret)                              |
+| `PRODUCT_AI_TENANT_ID` / `_CLIENT_ID` / `_CLIENT_SECRET` | —              | Entra service principal auth (secret)          |
+| `PRODUCT_AI_BEARER_TOKEN`             | —                                 | Static token, local testing only               |

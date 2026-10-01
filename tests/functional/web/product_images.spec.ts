@@ -12,6 +12,7 @@ import Product from '#models/product'
 import productImagesConfig from '#config/product_images'
 import { normalizeCatalogImages } from '#services/product_images/catalog_normalizer'
 import { productOnBackdrop, startStubServer } from '#tests/utils/product_image_fixtures'
+import { clearOpenFoodFactsCache } from '#services/product_images/open_food_facts'
 
 const cleanAll = async () => {
   await db.from('audit_logs').delete()
@@ -33,6 +34,7 @@ test.group('Web Supplier - product image processing', (group) => {
   group.each.teardown(async () => {
     Object.assign(productImagesConfig.openFoodFacts, originalOff)
     Object.assign(productImagesConfig.cloudflare, originalCloudflare)
+    clearOpenFoodFactsCache()
     await cleanAll()
   })
 

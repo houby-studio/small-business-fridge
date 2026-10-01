@@ -42,6 +42,8 @@ const SupplierStockController = () => import('#controllers/web/supplier/stock_co
 const SupplierProductsController = () => import('#controllers/web/supplier/products_controller')
 const SupplierProductImagesController = () =>
   import('#controllers/web/supplier/product_images_controller')
+const SupplierProductSuggestionsController = () =>
+  import('#controllers/web/supplier/product_suggestions_controller')
 const AdminDashboardController = () => import('#controllers/web/admin/dashboard_controller')
 const AdminUsersController = () => import('#controllers/web/admin/users_controller')
 const AdminInvitationsController = () => import('#controllers/web/admin/invitations_controller')
@@ -333,6 +335,7 @@ router
     router.put('/products/:id', [SupplierProductsController, 'update'])
     router.post('/products/image/process', [SupplierProductImagesController, 'process'])
     router.get('/products/image/candidates', [SupplierProductImagesController, 'candidates'])
+    router.post('/products/suggest', [SupplierProductSuggestionsController, 'suggest'])
   })
   .prefix('/supplier')
   .use([

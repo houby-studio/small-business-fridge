@@ -177,9 +177,7 @@
   "image_revert": "Vrátit původní",
   "barcode_lookup": "Najít",
   "barcode_lookup_needs_code": "Nejdřív zadejte čárový kód (8–14 číslic).",
-  "barcode_lookup_found": "Open Food Facts zná: {name}",
   "barcode_lookup_pictures": "Fotky z Open Food Facts",
-  "barcode_lookup_use_name": "Použít jako název",
   "barcode_lookup_use_picture": "Použít tuto fotku",
   "barcode_lookup_none": "Pro tento kód jsme žádnou fotku nenašli.",
   "products_category_placeholder": "Vyberte kategorii",
@@ -187,5 +185,15 @@
   "products_waiting_for_image": "Čekám na obrázek…",
   "products_missing": "Doplňte: {fields}",
   "products_image_will_replace": "Uložením nahradíte současný obrázek.",
-  "image_tap_hint": "Klepněte a vyfoťte produkt"
+  "image_tap_hint": "Klepněte a vyfoťte produkt",
+  "products_suggest": "Navrhnout",
+  "products_hint_ai_description": "Navrženo umělou inteligencí — klidně upravte, nebo nechte navrhnout znovu.",
+  "products_hint_ai_category": "Navrženo umělou inteligencí",
+  "products_hint_off_allergens": "Podle Open Food Facts — zkontrolujte na obalu",
+  "barcode_lookup_source": "Open Food Facts:",
+  "barcode_lookup_unknown": "Tento kód Open Food Facts nezná.",
+  "barcode_lookup_apply_name": "Doplnit název: {name}",
+  "barcode_lookup_name_applied": "Název je doplněný",
+  "product_ai_unavailable": "Návrhy pomocí AI nejsou na serveru zapnuté.",
+  "product_ai_failed": "Návrh se teď nepovedl. Zkuste to za chvíli znovu."
 }

@@ -15,6 +15,7 @@ import ProductImagePicker, {
   type ProductImageCapabilities,
 } from '~/components/supplier/ProductImagePicker.vue'
 import ProductBarcodeField from '~/components/supplier/ProductBarcodeField.vue'
+import { useProductSuggestions } from '~/composables/use_product_suggestions'
 
 interface CategoryOption {
   id: number
@@ -31,6 +32,7 @@ const props = defineProps<{
   categories: CategoryOption[]
   allergens: AllergenOption[]
   imageCapabilities: ProductImageCapabilities
+  aiSuggestions: boolean
 }>()
 const { t } = useI18n()
 
@@ -43,6 +45,8 @@ const form = useForm({
   image: null as File | null,
 })
 const imageBusy = ref(false)
+const suggestions = useProductSuggestions(form, props.aiSuggestions)
+const { hints, describing, descriptionError } = suggestions
 const picker = ref<InstanceType<typeof ProductImagePicker> | null>(null)
 const nameInput = ref<any>(null)
 const descriptionInput = ref<any>(null)
@@ -233,7 +237,9 @@ useInitialFocus(() => document.getElementById('product-barcode'))
                 :lookupEnabled="imageCapabilities.openFoodFacts"
                 :placeholder="t('supplier.products_barcode_placeholder')"
                 :invalid="!!fieldError('barcode')"
+                :currentName="form.displayName"
                 @pickImage="picker?.useUrl($event)"
+                @found="suggestions.onFound"
                 @useName="form.displayName = $event"
                 @enter="focusTextControl(nameInput)"
               />
@@ -261,11 +267,25 @@ useInitialFocus(() => document.getElementById('product-barcode'))
             </div>
 
             <div>
-              <label
-                for="product-description"
-                class="mb-1 block text-sm text-gray-700 dark:text-zinc-300"
-                >{{ t('supplier.products_description_label') }} *</label
-              >
+              <div class="mb-1 flex items-center justify-between gap-2">
+                <label
+                  for="product-description"
+                  class="block text-sm text-gray-700 dark:text-zinc-300"
+                  >{{ t('supplier.products_description_label') }} *</label
+                >
+                <Button
+                  v-if="aiSuggestions"
+                  :label="t('supplier.products_suggest')"
+                  icon="pi pi-sparkles"
+                  severity="secondary"
+                  text
+                  size="small"
+                  :loading="describing"
+                  :disabled="describing || !form.displayName.trim()"
+                  data-testid="product-suggest-description"
+                  @click="suggestions.suggestDescription"
+                />
+              </div>
               <Textarea
                 ref="descriptionInput"
                 id="product-description"
@@ -279,6 +299,14 @@ useInitialFocus(() => document.getElementById('product-barcode'))
               <small v-if="fieldError('description')" class="text-red-600 dark:text-red-400">{{
                 fieldError('description')
               }}</small>
+              <small v-else-if="descriptionError" class="text-red-600 dark:text-red-400">{{
+                descriptionError
+              }}</small>
+              <small v-else-if="hints.description" class="text-gray-500 dark:text-zinc-400"
+                ><span class="pi pi-sparkles mr-1 !text-xs" />{{
+                  t('supplier.products_hint_ai_description')
+                }}</small
+              >
             </div>
 
             <div class="grid gap-5 sm:grid-cols-2">
@@ -300,6 +328,11 @@ useInitialFocus(() => document.getElementById('product-barcode'))
                 <small v-if="fieldError('categoryId')" class="text-red-600 dark:text-red-400">{{
                   fieldError('categoryId')
                 }}</small>
+                <small v-else-if="hints.category" class="text-gray-500 dark:text-zinc-400"
+                  ><span class="pi pi-sparkles mr-1 !text-xs" />{{
+                    t('supplier.products_hint_ai_category')
+                  }}</small
+                >
               </div>
 
               <div>
@@ -317,6 +350,11 @@ useInitialFocus(() => document.getElementById('product-barcode'))
                   :emptyFilterMessage="t('supplier.products_no_available_options')"
                   class="w-full"
                 />
+                <small v-if="hints.allergens" class="text-gray-500 dark:text-zinc-400"
+                  ><span class="pi pi-database mr-1 !text-xs" />{{
+                    t('supplier.products_hint_off_allergens')
+                  }}</small
+                >
               </div>
             </div>
 

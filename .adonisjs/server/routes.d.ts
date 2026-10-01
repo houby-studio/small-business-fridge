@@ -75,6 +75,7 @@ export type ScannedRoutes = {
     'supplier_products.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'supplier_product_images.process': { paramsTuple?: []; params?: {} }
     'supplier_product_images.candidates': { paramsTuple?: []; params?: {} }
+    'supplier_product_suggestions.suggest': { paramsTuple?: []; params?: {} }
     'admin_dashboard.index': { paramsTuple?: []; params?: {} }
     'admin_users.index': { paramsTuple?: []; params?: {} }
     'admin_users.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -247,6 +248,7 @@ export type ScannedRoutes = {
     'supplier_payments.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'supplier_products.store': { paramsTuple?: []; params?: {} }
     'supplier_product_images.process': { paramsTuple?: []; params?: {} }
+    'supplier_product_suggestions.suggest': { paramsTuple?: []; params?: {} }
     'admin_invitations.store': { paramsTuple?: []; params?: {} }
     'admin_invitations.revoke': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin_categories.store': { paramsTuple?: []; params?: {} }

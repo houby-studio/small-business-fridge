@@ -135,6 +135,15 @@ export default await Env.create(new URL('../', import.meta.url), {
   PRODUCT_IMAGE_CLOUDFLARE_TIMEOUT_MS: Env.schema.number.optional(),
   PRODUCT_IMAGE_OPENFOODFACTS_ENABLED: Env.schema.boolean.optional(),
   PRODUCT_IMAGE_OPENFOODFACTS_URL: Env.schema.string.optional({ format: 'url', tld: false }),
+  PRODUCT_AI_ENDPOINT: Env.schema.string.optional({ format: 'url', tld: false }),
+  PRODUCT_AI_DEPLOYMENT: Env.schema.string.optional(),
+  PRODUCT_AI_API_VERSION: Env.schema.string.optional(),
+  PRODUCT_AI_API_KEY: Env.schema.string.optional(),
+  PRODUCT_AI_TENANT_ID: Env.schema.string.optional(),
+  PRODUCT_AI_CLIENT_ID: Env.schema.string.optional(),
+  PRODUCT_AI_CLIENT_SECRET: Env.schema.string.optional(),
+  PRODUCT_AI_BEARER_TOKEN: Env.schema.string.optional(),
+  PRODUCT_AI_AUTHORITY_URL: Env.schema.string.optional({ format: 'url', tld: false }),
 
   /*
   |----------------------------------------------------------

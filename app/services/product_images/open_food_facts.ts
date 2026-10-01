@@ -8,9 +8,19 @@ export interface ImageCandidate {
   source: 'openfoodfacts'
 }
 
+/** What OFF knows about the product beyond pictures — input for category/allergen hints. */
+export interface ProductFacts {
+  name: string | null
+  categories: string | null
+  ingredients: string | null
+  /** OFF allergen tags without the language prefix, e.g. `milk`, `peanuts`. */
+  allergens: string[]
+}
+
 export interface CandidateLookup {
   productName: string | null
   candidates: ImageCandidate[]
+  facts: ProductFacts | null
 }
 
 const MAX_CANDIDATES = 12
@@ -25,6 +35,11 @@ interface OffProduct {
   product_name_cs?: string
   brands?: string
   quantity?: string
+  categories?: string
+  ingredients_text_cs?: string
+  ingredients_text?: string
+  allergens_tags?: string[]
+  traces_tags?: string[]
   selected_images?: OffSelectedImages
   images?: Record<string, unknown>
 }
@@ -64,7 +79,18 @@ export function parseOffProduct(product: OffProduct, imagesBaseUrl: string): Can
     }
   }
 
-  return { productName: offProductName(product), candidates }
+  const productName = offProductName(product)
+  return { productName, candidates, facts: offFacts(product, productName) }
+}
+
+function offFacts(product: OffProduct, name: string | null): ProductFacts {
+  const tag = (t: string) => t.replace(/^[a-z]{2}:/, '')
+  return {
+    name,
+    categories: product.categories?.trim() || null,
+    ingredients: (product.ingredients_text_cs || product.ingredients_text || '').trim() || null,
+    allergens: [...new Set((product.allergens_tags ?? []).map(tag))],
+  }
 }
 
 /**
@@ -93,24 +119,46 @@ export function offProductName(product: OffProduct): string | null {
  * Candidate pictures for a barcode from Open Food Facts. Quality varies a lot (phone
  * photos), so they are offered next to manual sources, never applied automatically.
  */
+/** Lookups are cached briefly: the form asks for pictures and then for hints. */
+const CACHE_TTL_MS = 10 * 60 * 1000
+const cache = new Map<string, { at: number; value: CandidateLookup }>()
+
+const FIELDS = [
+  'code',
+  'product_name',
+  'product_name_cs',
+  'brands',
+  'quantity',
+  'categories',
+  'ingredients_text_cs',
+  'ingredients_text',
+  'allergens_tags',
+  'selected_images',
+  'images',
+].join(',')
+
+export function clearOpenFoodFactsCache() {
+  cache.clear()
+}
+
 export async function lookupOpenFoodFacts(barcode: string): Promise<CandidateLookup> {
-  const empty: CandidateLookup = { productName: null, candidates: [] }
+  const empty: CandidateLookup = { productName: null, candidates: [], facts: null }
   const { enabled, baseUrl, timeoutMs } = productImagesConfig.openFoodFacts
   if (!enabled || !/^\d{8,14}$/.test(barcode)) return empty
 
+  const cached = cache.get(barcode)
+  if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.value
+
   let response: Response
   try {
-    response = await fetch(
-      `${baseUrl}/api/v2/product/${barcode}.json?fields=code,product_name,product_name_cs,brands,quantity,selected_images,images`,
-      {
-        // OFF asks API clients to identify themselves.
-        headers: {
-          'User-Agent':
-            'SmallBusinessFridge/3 (+https://github.com/houby-studio/small-business-fridge)',
-        },
-        signal: AbortSignal.timeout(timeoutMs),
-      }
-    )
+    response = await fetch(`${baseUrl}/api/v2/product/${barcode}.json?fields=${FIELDS}`, {
+      // OFF asks API clients to identify themselves.
+      headers: {
+        'User-Agent':
+          'SmallBusinessFridge/3 (+https://github.com/houby-studio/small-business-fridge)',
+      },
+      signal: AbortSignal.timeout(timeoutMs),
+    })
   } catch {
     return empty
   }
@@ -125,5 +173,7 @@ export async function lookupOpenFoodFacts(barcode: string): Promise<CandidateLoo
   const imagesBaseUrl = baseUrl.includes('openfoodfacts.org')
     ? 'https://images.openfoodfacts.org'
     : baseUrl
-  return parseOffProduct({ code: barcode, ...body.product }, imagesBaseUrl)
+  const value = parseOffProduct({ code: barcode, ...body.product }, imagesBaseUrl)
+  cache.set(barcode, { at: Date.now(), value })
+  return value
 }

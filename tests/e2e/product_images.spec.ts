@@ -156,6 +156,95 @@ test.describe('Product image tile', () => {
   })
 })
 
+test.describe('Barcode lookup', () => {
+  /** The form's own props, to answer with ids that exist in the e2e database. */
+  async function pageProps(page: Page) {
+    return page.evaluate(
+      () =>
+        history.state.page.props as {
+          categories: { id: number; name: string }[]
+          allergens: { id: number; name: string }[]
+        }
+    )
+  }
+
+  test('fills the name, category and allergens and keeps the found name one click away', async ({
+    page,
+  }) => {
+    await loginAs(page, 'supplier')
+    await page.goto('/supplier/products/new')
+    await page.locator('#product-barcode').waitFor()
+    const props = await pageProps(page)
+    const category = props.categories.find((c) => c.name === 'Nealko')!
+    const allergen = props.allergens.find((a) => a.name === 'Mléko')!
+
+    await page.route('**/supplier/products/image/candidates?**', (route) =>
+      route.fulfill({
+        json: {
+          productName: 'Snickers 50 g',
+          candidates: [],
+          facts: {
+            name: 'Snickers 50 g',
+            categories: null,
+            ingredients: null,
+            allergens: ['milk'],
+          },
+        },
+      })
+    )
+    await page.route('**/supplier/products/suggest', (route) =>
+      route.fulfill({
+        json: {
+          categoryId: category.id,
+          allergenIds: [allergen.id],
+          allergensFrom: 'openfoodfacts',
+        },
+      })
+    )
+
+    await page.locator('#product-barcode').fill('5900951311505')
+    await page.keyboard.press('Enter')
+
+    const chip = page.getByTestId('barcode-lookup-name')
+    await expect(page.locator('#product-name')).toHaveValue('Snickers 50 g')
+    await expect(chip).toHaveAttribute('aria-label', 'Název je doplněný')
+    await expect(page.getByText('Navrženo umělou inteligencí')).toBeVisible()
+    await expect(page.getByText('Podle Open Food Facts — zkontrolujte na obalu')).toBeVisible()
+    await expect(page.locator('#product-category')).toContainText('Nealko')
+
+    // Clearing the name turns the chip into "fill in", and a click brings it back.
+    await page.locator('#product-name').fill('')
+    await expect(chip).toHaveAttribute('aria-label', 'Doplnit název: Snickers 50 g')
+    await chip.click()
+    await expect(page.locator('#product-name')).toHaveValue('Snickers 50 g')
+
+    // A name the supplier typed is never overwritten by a new lookup.
+    await page.locator('#product-name').fill('Můj Snickers')
+    await page.getByRole('button', { name: 'Najít' }).click()
+    await expect(chip).toHaveAttribute('aria-label', 'Doplnit název: Snickers 50 g')
+    await expect(page.locator('#product-name')).toHaveValue('Můj Snickers')
+  })
+
+  test('an unknown barcode says so and changes nothing', async ({ page }) => {
+    await loginAs(page, 'supplier')
+    await page.goto('/supplier/products/new')
+    await page.route('**/supplier/products/image/candidates?**', (route) =>
+      route.fulfill({ json: { productName: null, candidates: [], facts: null } })
+    )
+    await page.locator('#product-barcode').fill('12345678')
+    await page.keyboard.press('Enter')
+    await expect(page.getByText('Tento kód Open Food Facts nezná.')).toBeVisible()
+    await expect(page.locator('#product-name')).toHaveValue('')
+  })
+
+  test('the suggest button only exists when AI is configured', async ({ page }) => {
+    await loginAs(page, 'supplier')
+    await page.goto('/supplier/products/new')
+    await page.locator('#product-name').waitFor()
+    await expect(page.getByTestId('product-suggest-description')).toHaveCount(0)
+  })
+})
+
 test.describe('Kiosk product images', () => {
   test('the kiosk shows the whole product instead of cropping it square', async ({ page }) => {
     const name = `E2E Kiosk obrázek ${Date.now()}`

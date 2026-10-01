@@ -177,9 +177,7 @@
   "image_revert": "Restore original",
   "barcode_lookup": "Find",
   "barcode_lookup_needs_code": "Enter the barcode first (8–14 digits).",
-  "barcode_lookup_found": "Open Food Facts knows: {name}",
   "barcode_lookup_pictures": "Pictures from Open Food Facts",
-  "barcode_lookup_use_name": "Use as name",
   "barcode_lookup_use_picture": "Use this picture",
   "barcode_lookup_none": "No pictures found for this barcode.",
   "products_category_placeholder": "Choose a category",
@@ -187,5 +185,15 @@
   "products_waiting_for_image": "Waiting for the image…",
   "products_missing": "Still missing: {fields}",
   "products_image_will_replace": "Saving replaces the current image.",
-  "image_tap_hint": "Tap to take a photo"
+  "image_tap_hint": "Tap to take a photo",
+  "products_suggest": "Suggest",
+  "products_hint_ai_description": "Suggested by AI — edit it, or ask for another one.",
+  "products_hint_ai_category": "Suggested by AI",
+  "products_hint_off_allergens": "From Open Food Facts — check the pack",
+  "barcode_lookup_source": "Open Food Facts:",
+  "barcode_lookup_unknown": "Open Food Facts does not know this barcode.",
+  "barcode_lookup_apply_name": "Fill in the name: {name}",
+  "barcode_lookup_name_applied": "The name is filled in",
+  "product_ai_unavailable": "AI suggestions are not enabled on the server.",
+  "product_ai_failed": "The suggestion failed. Please try again in a moment."
 }
