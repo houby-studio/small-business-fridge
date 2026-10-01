@@ -106,10 +106,15 @@ function attr(tag: string, name: string): string {
   return match ? decodeXml(match[1]) : ''
 }
 
-/** Markdown table cells must stay on one line and must not open a new column. */
+/**
+ * Markdown table cells must stay on one line and must not open a new column. Truncate before
+ * escaping, so the cut never lands inside an escape, and escape backslashes first, so a trailing
+ * `\` in an error message cannot swallow the pipe that closes the cell.
+ */
 function cell(value: string, max = 140): string {
-  const flat = value.replace(/\s+/g, ' ').replace(/\|/g, '\\|').trim()
-  return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat
+  const flat = value.replace(/\s+/g, ' ').trim()
+  const short = flat.length > max ? `${flat.slice(0, max - 1)}…` : flat
+  return short.replace(/\\/g, '\\\\').replace(/\|/g, '\\|')
 }
 
 /**
