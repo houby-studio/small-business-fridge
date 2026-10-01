@@ -1,9 +1,14 @@
+# Multi-arch (linux/amd64, linux/arm64). Installing the toolchain and building the app run on the
+# build host's own platform ($BUILDPLATFORM) — the build output is plain JavaScript, identical for
+# every target — so only the production `npm ci` runs under emulation, where native modules
+# (sharp, …) must match the target architecture.
 FROM node:24-alpine AS base
+FROM --platform=$BUILDPLATFORM node:24-alpine AS build-base
 
 # ----------------------------
 # Stage 1: Install all dependencies
 # ----------------------------
-FROM base AS deps
+FROM build-base AS deps
 WORKDIR /app
 COPY package*.json ./
 # patch-package (postinstall) needs the patches before the first npm ci
@@ -39,8 +44,12 @@ ENV APP_VERSION=${APP_VERSION} \
     BUILD_DATE=${BUILD_DATE}
 
 LABEL org.opencontainers.image.title="Fridgora" \
-      org.opencontainers.image.description="Office fridge shop: colleagues buy drinks and snacks at cost." \
+      org.opencontainers.image.description="The office fridge, run like a tiny shop: buy snacks and drinks at cost, pay later by QR bank transfer." \
+      org.opencontainers.image.url="https://hub.docker.com/r/houbystudio/fridgora" \
       org.opencontainers.image.source="https://github.com/houby-studio/fridgora" \
+      org.opencontainers.image.documentation="https://github.com/houby-studio/fridgora/blob/master/docs/deployment.md" \
+      org.opencontainers.image.vendor="Houby Studio" \
+      org.opencontainers.image.authors="Houby Studio <https://github.com/houby-studio>" \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.version="${APP_VERSION}" \
       org.opencontainers.image.revision="${GIT_SHA}" \

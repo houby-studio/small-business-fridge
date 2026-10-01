@@ -17,6 +17,10 @@ on:
         required: true
       DOCKERHUB_TOKEN:
         required: true
+      # Optional: a token with read/write/delete scope, needed only to update the Docker Hub page.
+      # Without it releases still publish; the description step just reports that it skipped.
+      DOCKERHUB_DESCRIPTION_TOKEN:
+        required: false
 
 permissions:
   contents: read
@@ -42,6 +46,13 @@ jobs:
       # The default checkout is github.sha — the exact commit CI tested and the token attests.
       # For a pull request that is the merge commit, not the branch head.
       - uses: actions/checkout@v4
+
+      # Emulates arm64 for the one stage that has to run on the target architecture (the
+      # production `npm ci`); everything else builds natively, see the top of the Dockerfile.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: arm64
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -110,6 +121,7 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |
@@ -144,7 +156,8 @@ jobs:
             echo
             echo "| | |"
             echo "| --- | --- |"
-            echo "| Digest | \`${DIGEST}\` |"
+            echo "| Digest | \`${DIGEST}\` (multi-arch index) |"
+            echo "| Platforms | \`linux/amd64\`, \`linux/arm64\` |"
             echo "| Provenance | [attestation](${ATTESTATION_URL}) |"
             echo "| Docker Hub | [houbystudio/fridgora](https://hub.docker.com/r/houbystudio/fridgora/tags) |"
             echo
@@ -211,4 +224,63 @@ jobs:
             echo "## Release"
             echo
             echo "🎉 [Release ${VERSION}](${URL}) is published, with notes generated from the merged PRs."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  hub-description:
+    name: Docker Hub page
+    # The page describes releases, so only a release updates it.
+    if: needs.build.outputs.kind == 'release'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: docker
+
+      - name: Check for the description token
+        id: token
+        env:
+          TOKEN: ${{ secrets.DOCKERHUB_DESCRIPTION_TOKEN }}
+        run: |
+          if [ -n "${TOKEN}" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::DOCKERHUB_DESCRIPTION_TOKEN is not set — the Docker Hub page was not updated."
+          fi
+
+      # Keeps the overview on Docker Hub in step with docker/README.md. It does not gate the
+      # release: an expired token must never stop an image that is already published.
+      - name: Update the Docker Hub page
+        id: update
+        if: steps.token.outputs.present == 'true'
+        continue-on-error: true
+        uses: peter-evans/dockerhub-description@v5
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_DESCRIPTION_TOKEN }}
+          repository: houbystudio/fridgora
+          short-description: 'The office fridge, run like a tiny shop: snacks at cost, pay later by QR. Self-hosted.'
+          readme-filepath: ./docker/README.md
+
+      - name: Summarize
+        env:
+          PRESENT: ${{ steps.token.outputs.present }}
+          OUTCOME: ${{ steps.update.outcome }}
+        run: |
+          {
+            echo "## Docker Hub page"
+            echo
+            if [ "${PRESENT}" != "true" ]; then
+              echo "⏭️ Skipped: no \`DOCKERHUB_DESCRIPTION_TOKEN\` secret (read/write/delete scope)."
+            elif [ "${OUTCOME}" = "success" ]; then
+              echo "✅ [houbystudio/fridgora](https://hub.docker.com/r/houbystudio/fridgora) now shows \`docker/README.md\` from this release."
+            else
+              echo "⚠️ Updating the page failed — most likely an expired token. The image itself is published."
+              echo "::warning::The Docker Hub page update failed; check DOCKERHUB_DESCRIPTION_TOKEN."
+            fi
           } >> "$GITHUB_STEP_SUMMARY"

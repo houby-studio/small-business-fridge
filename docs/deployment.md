@@ -2,7 +2,8 @@
 
 ## Overview
 
-Fridgora is distributed as a Docker image (`houbystudio/fridgora`) on Docker Hub.
+Fridgora is distributed as a multi-arch Docker image (`houbystudio/fridgora`, `linux/amd64` and
+`linux/arm64`) on Docker Hub.
 The image ships with `.env.production` baked in, which reads sensitive values from Docker secrets.
 
 ### Environment variable source priority (highest → lowest)

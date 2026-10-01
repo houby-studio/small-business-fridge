@@ -340,6 +340,10 @@ When adding user-facing text:
   would attest the wrong commit and ref. Never give it a trigger of its own (it would bypass the gate),
   and keep its path — `gh attestation verify --signer-workflow` pins `.github/workflows/docker-image.yml`.
   For a PR it builds `github.sha`, the merge commit CI tested — not the branch head.
+  Images are multi-arch (`linux/amd64`, `linux/arm64`): the Dockerfile builds on `$BUILDPLATFORM` and only
+  the production `npm ci` runs under QEMU. A release also syncs the Docker Hub page from `docker/README.md`
+  (job `hub-description`, secret `DOCKERHUB_DESCRIPTION_TOKEN` with read/write/delete scope); it never
+  fails the release. Images on Docker Hub use absolute `raw.githubusercontent.com` URLs.
 - **Kiosk snap** (`electron-kiosk.yml`, _Kiosk · Electron snap_): only when `electron-kiosk/**` changes.
 - Every workflow writes "what this run does" at the start and "what happened" at the end to
   `$GITHUB_STEP_SUMMARY` — keep that when adding steps.
