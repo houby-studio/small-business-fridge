@@ -1,0 +1,140 @@
+# Product images
+
+Every product image goes through the same pipeline before it is stored, so the shop and
+the kiosk show a uniform catalogue without anyone editing pictures by hand.
+
+## What the supplier does
+
+In **Supplier → Products → New / Edit**, the image can come from:
+
+| Source         | How                                                                    |
+| -------------- | ---------------------------------------------------------------------- |
+| File           | **Choose file** (JPG, PNG, WebP, GIF, AVIF; up to 15 MB)               |
+| Clipboard      | **Ctrl+V** anywhere on the page — a copied image or a copied image URL |
+| Link           | Paste an `https://…` URL into the link field and press **Load**        |
+| Barcode lookup | **Search by EAN** lists pictures from [Open Food Facts]                |
+
+The server returns the finished image straight away and the preview shows it on a
+checkerboard, so a removed background is visible. Two menus change the result without
+picking the image again: **Background** and **Rotation**.
+
+Open Food Facts is crowd-sourced: pictures are often phone photos. It is offered as one
+source among others and never applied automatically. When it knows the barcode, it also
+suggests a product name (**Use as name**).
+
+[Open Food Facts]: https://world.openfoodfacts.org
+
+## The pipeline
+
+1. **Decode** the image and apply its EXIF orientation (phone photos).
+2. **Remove the background** with the selected method (below).
+3. **Trim** to the visible content.
+4. **Rotate** content that is at least 1.8× wider than tall by 90° counter-clockwise, so
+   bars and wafers stand upright like cans (text reads bottom to top). Cups and other squat
+   products are left alone. The supplier can force left/right or no rotation.
+5. **Fit** onto a transparent 450×800 (9:16) canvas — the size the catalogue already used.
+6. **Encode** as WebP (typically 30–80 kB instead of 300+ kB PNG).
+
+The processing endpoint (`POST /supplier/products/image/process`) stores nothing; the form
+submits the result like any upload.
+
+## Background removal methods
+
+| Method                     | Where it runs                                    | Good for                                         |
+| -------------------------- | ------------------------------------------------ | ------------------------------------------------ |
+| **Remove automatically**   | first available of `PRODUCT_IMAGE_BG_AUTO`       | the default                                      |
+| **Keep background**        | —                                                | images that should stay as they are              |
+| **Plain background**       | in the app (flood fill, no model)                | e-shop pictures on white; instant                |
+| **BiRefNet (own server)**  | optional `rembg` sidecar container               | photos; nothing leaves your server               |
+| **BiRefNet (Cloudflare)**  | Cloudflare Images via a small Worker             | photos; no hardware needed, free tier            |
+
+"Automatically" skips images that are already transparent, then tries
+`PRODUCT_IMAGE_BG_AUTO` in order (default `cloudflare,rembg,flood`), skipping methods that
+are not configured. A model that is down is skipped; if every configured method fails, the
+supplier gets an error and can pick another method.
+
+The plain-background fill cannot tell a white package from a white backdrop and may eat
+into it — which is why the models come first when they are configured.
+
+### Comparison (measured on real catalogue and Open Food Facts pictures)
+
+| Model                   | Time / image, 4 modern cores | RAM peak | Quality on photos |
+| ----------------------- | ---------------------------- | -------- | ----------------- |
+| `u2netp`                | 0.1 s                        | 0.8 GB   | poor              |
+| `isnet-general-use`     | 0.6 s                        | 1.8 GB   | poor              |
+| `birefnet-general-lite` | 5 s                          | 12 GB    | good              |
+| `birefnet-general`      | 9–10 s                       | 14 GB    | very good         |
+
+An older 4-core Xeon (E5-2603 v3) is roughly 5× slower per core. The first request after
+the sidecar starts also downloads (~1 GB) and loads the model, which takes a few minutes.
+Cloudflare runs `birefnet-general` on GPUs.
+
+## Enabling the local model (rembg sidecar)
+
+```bash
+# .env
+PRODUCT_IMAGE_REMBG_URL=http://rembg:7000
+PRODUCT_IMAGE_REMBG_MODEL=birefnet-general   # or birefnet-general-lite
+
+docker compose --profile bg-removal up -d
+```
+
+The `rembg` service in `compose.yaml` runs the official
+[`danielgatis/rembg`](https://github.com/danielgatis/rembg) image in server mode, one
+request at a time, with the models cached in the `rembg_models` volume. It is only started
+with the `bg-removal` profile. Give the host enough RAM for the chosen model (table above).
+The sidecar does not need to be reachable from outside the compose network.
+
+## Enabling Cloudflare
+
+Deploy the Worker in
+[`integrations/cloudflare-background-removal`](../integrations/cloudflare-background-removal/README.md)
+and set:
+
+```bash
+PRODUCT_IMAGE_CLOUDFLARE_URL=https://sbf-background-removal.<subdomain>.workers.dev
+PRODUCT_IMAGE_CLOUDFLARE_TOKEN=<shared secret>
+```
+
+Product images are then sent to your Cloudflare account for processing.
+
+## Normalising the existing catalogue
+
+Images uploaded before the pipeline existed can be brought in line once:
+
+```bash
+node ace products:normalize-images --dry-run            # report only
+node ace products:normalize-images                      # trim, rotate, 450×800 WebP
+node ace products:normalize-images --background=flood   # also remove plain backdrops
+node ace products:normalize-images --ids=12,40          # selected products only
+```
+
+The default `--background=none` changes only the framing. New files are written under new
+names and the old files stay on disk, so a database restore undoes the run. Each change is
+audit-logged as `product.updated` with `reason: products:normalize-images`.
+
+## Security
+
+- The link field downloads on the server. Only `http(s)` is accepted; addresses in private,
+  loopback, link-local (cloud metadata), CGNAT and multicast ranges are refused. The check
+  runs inside the socket's DNS lookup, so the address that is checked is the address that
+  is connected to, and it is repeated for every redirect.
+- Downloads are capped at 15 MB, must be served as `image/*` and must decode as an image.
+- Only suppliers and admins can use the endpoints (`/supplier/*` middleware).
+
+## Configuration reference
+
+| Variable                              | Default                           | Description                                    |
+| ------------------------------------- | --------------------------------- | ---------------------------------------------- |
+| `PRODUCT_IMAGE_WIDTH` / `_HEIGHT`     | `450` / `800`                     | Output canvas                                  |
+| `PRODUCT_IMAGE_ROTATE_MIN_RATIO`      | `1.8`                             | Width/height ratio from which content is rotated |
+| `PRODUCT_IMAGE_ROTATE_DIRECTION`      | `ccw`                             | `ccw` (text bottom-to-top) or `cw`             |
+| `PRODUCT_IMAGE_BG_AUTO`               | `cloudflare,rembg,flood`          | Order "automatically" tries                    |
+| `PRODUCT_IMAGE_REMBG_URL`             | —                                 | rembg sidecar, e.g. `http://rembg:7000`        |
+| `PRODUCT_IMAGE_REMBG_MODEL`           | `birefnet-general`                | Any rembg model name                           |
+| `PRODUCT_IMAGE_REMBG_TIMEOUT_MS`      | `300000`                          | Covers the first, model-downloading request    |
+| `PRODUCT_IMAGE_CLOUDFLARE_URL`        | —                                 | Background-removal Worker                      |
+| `PRODUCT_IMAGE_CLOUDFLARE_TOKEN`      | —                                 | Shared bearer token (secret)                   |
+| `PRODUCT_IMAGE_CLOUDFLARE_TIMEOUT_MS` | `60000`                           |                                                |
+| `PRODUCT_IMAGE_OPENFOODFACTS_ENABLED` | `true`                            | Barcode lookup (sends only the barcode)        |
+| `PRODUCT_IMAGE_OPENFOODFACTS_URL`     | `https://world.openfoodfacts.org` | API base URL                                   |

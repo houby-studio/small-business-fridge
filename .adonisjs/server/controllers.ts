@@ -51,6 +51,7 @@ export const controllers = {
       Deliveries: () => import('#controllers/web/supplier/deliveries_controller'),
       Invoice: () => import('#controllers/web/supplier/invoice_controller'),
       Payments: () => import('#controllers/web/supplier/payments_controller'),
+      ProductImages: () => import('#controllers/web/supplier/product_images_controller'),
       Products: () => import('#controllers/web/supplier/products_controller'),
       Stock: () => import('#controllers/web/supplier/stock_controller'),
     },

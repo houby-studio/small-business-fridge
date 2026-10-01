@@ -160,7 +160,7 @@ function purchase(product: ProductItem) {
                   v-if="product.imagePath"
                   :src="product.imagePath"
                   :alt="product.displayName"
-                  class="mx-auto mb-2 h-24 w-24 rounded-lg object-cover"
+                  class="mx-auto mb-2 h-24 w-24 rounded-lg object-contain"
                 />
                 <div
                   v-else

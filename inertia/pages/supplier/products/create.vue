@@ -1,16 +1,18 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { Head, router, useForm } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Select from 'primevue/select'
 import MultiSelect from 'primevue/multiselect'
-import FileUpload from 'primevue/fileupload'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import { useI18n } from '~/composables/use_i18n'
 import { useProductFormValidation } from '~/composables/use_product_form_validation'
+import ProductImagePicker, {
+  type ProductImageCapabilities,
+} from '~/components/supplier/ProductImagePicker.vue'
 
 interface CategoryOption {
   id: number
@@ -23,7 +25,11 @@ interface AllergenOption {
   name: string
 }
 
-const props = defineProps<{ categories: CategoryOption[]; allergens: AllergenOption[] }>()
+const props = defineProps<{
+  categories: CategoryOption[]
+  allergens: AllergenOption[]
+  imageCapabilities: ProductImageCapabilities
+}>()
 const { t } = useI18n()
 
 const form = useForm({
@@ -35,6 +41,7 @@ const form = useForm({
   image: null as File | null,
 })
 const imagePreviewUrl = ref<string | null>(null)
+const imageBusy = ref(false)
 const nameInput = ref<any>(null)
 const descriptionInput = ref<any>(null)
 const categorySelect = ref<any>(null)
@@ -68,7 +75,9 @@ const clientErrors = computed(() => ({
   barcode: validation.barcodeTooLong.value ? t('supplier.products_validation_barcode_max') : '',
   image: validation.imageMissing.value ? t('supplier.products_image_required') : '',
 }))
-const submitDisabled = computed(() => form.processing || validation.hasBlockingErrors.value)
+const submitDisabled = computed(
+  () => form.processing || imageBusy.value || validation.hasBlockingErrors.value
+)
 
 function fieldError(field: keyof typeof form.errors | keyof typeof clientErrors.value) {
   const serverError = form.errors[field as keyof typeof form.errors]
@@ -76,20 +85,9 @@ function fieldError(field: keyof typeof form.errors | keyof typeof clientErrors.
   return clientErrors.value[field as keyof typeof clientErrors.value]
 }
 
-function resetPreviewUrl() {
-  if (imagePreviewUrl.value) {
-    URL.revokeObjectURL(imagePreviewUrl.value)
-    imagePreviewUrl.value = null
-  }
-}
-
-function onImageSelect(event: any) {
-  form.image = event.files[0] ?? null
-  resetPreviewUrl()
-  if (form.image) {
-    imagePreviewUrl.value = URL.createObjectURL(form.image)
-  }
-  if (form.image) {
+function onImageProcessed(file: File | null) {
+  form.image = file
+  if (file) {
     form.clearErrors('image')
   }
 }
@@ -157,10 +155,6 @@ function goBack() {
   router.get('/supplier/products')
 }
 
-onUnmounted(() => {
-  resetPreviewUrl()
-})
-
 onMounted(() => {
   nextTick(() => {
     const retries = [0, 100, 300]
@@ -197,13 +191,14 @@ onMounted(() => {
             {{ t('supplier.products_image_label') }}
           </h2>
           <div
-            class="flex h-56 w-full items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 p-3 dark:border-zinc-700 dark:bg-zinc-900/60"
+            class="sbf-transparency-grid flex h-56 w-full items-center justify-center rounded-lg border border-dashed border-gray-300 p-3 dark:border-zinc-700"
           >
             <img
               v-if="imagePreviewUrl"
               :src="imagePreviewUrl"
               :alt="previewTitle"
               class="h-full w-full rounded object-contain"
+              data-testid="product-image-preview"
             />
             <span v-else class="pi pi-image text-5xl text-gray-300 dark:text-zinc-600" />
           </div>
@@ -308,13 +303,14 @@ onMounted(() => {
               <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">{{
                 t('supplier.products_image_label')
               }}</label>
-              <FileUpload
-                mode="basic"
-                accept=".jpg,.jpeg,.png,.webp"
-                :maxFileSize="5 * 1024 * 1024"
+              <ProductImagePicker
+                :capabilities="imageCapabilities"
+                :barcode="form.barcode"
                 :chooseLabel="t('supplier.products_image_choose')"
-                @select="onImageSelect"
-                :auto="false"
+                @update:file="onImageProcessed"
+                @preview="imagePreviewUrl = $event"
+                @busy="imageBusy = $event"
+                @suggestName="form.displayName = $event"
               />
               <small v-if="fieldError('image')" class="text-red-600 dark:text-red-400">{{
                 fieldError('image')

@@ -119,6 +119,25 @@ export default await Env.create(new URL('../', import.meta.url), {
 
   /*
   |----------------------------------------------------------
+  | Product image pipeline (docs/product-images.md)
+  |----------------------------------------------------------
+  */
+  PRODUCT_IMAGE_WIDTH: Env.schema.number.optional(),
+  PRODUCT_IMAGE_HEIGHT: Env.schema.number.optional(),
+  PRODUCT_IMAGE_ROTATE_MIN_RATIO: Env.schema.number.optional(),
+  PRODUCT_IMAGE_ROTATE_DIRECTION: Env.schema.enum.optional(['cw', 'ccw'] as const),
+  PRODUCT_IMAGE_BG_AUTO: Env.schema.string.optional(),
+  PRODUCT_IMAGE_REMBG_URL: Env.schema.string.optional({ format: 'url', tld: false }),
+  PRODUCT_IMAGE_REMBG_MODEL: Env.schema.string.optional(),
+  PRODUCT_IMAGE_REMBG_TIMEOUT_MS: Env.schema.number.optional(),
+  PRODUCT_IMAGE_CLOUDFLARE_URL: Env.schema.string.optional({ format: 'url', tld: false }),
+  PRODUCT_IMAGE_CLOUDFLARE_TOKEN: Env.schema.string.optional(),
+  PRODUCT_IMAGE_CLOUDFLARE_TIMEOUT_MS: Env.schema.number.optional(),
+  PRODUCT_IMAGE_OPENFOODFACTS_ENABLED: Env.schema.boolean.optional(),
+  PRODUCT_IMAGE_OPENFOODFACTS_URL: Env.schema.string.optional({ format: 'url', tld: false }),
+
+  /*
+  |----------------------------------------------------------
   | Scheduler cron expressions (all default to Mon-Fri)
   |----------------------------------------------------------
   */

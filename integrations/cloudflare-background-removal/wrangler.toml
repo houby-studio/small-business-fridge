@@ -1,0 +1,7 @@
+name = "sbf-background-removal"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+# Cloudflare Images binding — background removal runs through it.
+[images]
+binding = "IMAGES"
