@@ -15,6 +15,7 @@ import ProductImagePicker, {
   type ProductImageCapabilities,
 } from '~/components/supplier/ProductImagePicker.vue'
 import ProductBarcodeField from '~/components/supplier/ProductBarcodeField.vue'
+import ProductOffContribution from '~/components/supplier/ProductOffContribution.vue'
 import { useProductSuggestions } from '~/composables/use_product_suggestions'
 
 interface CategoryOption {
@@ -43,8 +44,24 @@ const form = useForm({
   barcode: '',
   allergenIds: [] as number[],
   image: null as File | null,
+  offContribute: false,
+  offOriginal: null as File | null,
+  offBackground: 'auto',
 })
 const imageBusy = ref(false)
+
+function onOriginal(original: { file: File; background: string } | null) {
+  form.offOriginal = original?.file ?? null
+  form.offBackground = original?.background ?? 'auto'
+}
+
+/** The Open Food Facts fields only travel with the consent, the photo only when there is one. */
+function offFields<
+  T extends { offContribute: boolean; offOriginal: File | null; offBackground: string },
+>(data: T) {
+  const { offOriginal, offBackground, ...rest } = data
+  return data.offContribute && offOriginal ? { ...rest, offOriginal, offBackground } : rest
+}
 const suggestions = useProductSuggestions(form, props.aiSuggestions)
 const { hints, describing, descriptionError } = suggestions
 const picker = ref<InstanceType<typeof ProductImagePicker> | null>(null)
@@ -164,7 +181,7 @@ function submit() {
   // picked here was silently lost.
   form
     .transform((data) => ({
-      ...data,
+      ...offFields(data),
       allergenIds: JSON.stringify(data.allergenIds),
     }))
     .post('/supplier/products', {
@@ -218,6 +235,7 @@ useInitialFocus(() => document.getElementById('product-barcode'))
             :alt="previewTitle"
             @update:file="onImageProcessed"
             @busy="imageBusy = $event"
+            @update:original="onOriginal"
           />
         </template>
       </Card>
@@ -357,6 +375,13 @@ useInitialFocus(() => document.getElementById('product-barcode'))
                 >
               </div>
             </div>
+
+            <ProductOffContribution
+              v-model="form.offContribute"
+              :enabled="imageCapabilities.openFoodFactsContribute"
+              :barcode="form.barcode"
+              :hasOwnPhoto="!!form.offOriginal"
+            />
 
             <div class="flex flex-col gap-2 pt-2 sm:flex-row sm:items-center">
               <Button

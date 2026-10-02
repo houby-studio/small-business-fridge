@@ -357,6 +357,43 @@ export class MusicTrackSchema extends BaseModel {
   declare uploadedByUserId: number | null
 }
 
+export class OffContributionSchema extends BaseModel {
+  static $columns = ['attempts', 'background', 'barcode', 'completedAt', 'createdAt', 'id', 'lastError', 'nextAttemptAt', 'originalImage', 'originalMime', 'productId', 'productName', 'result', 'status', 'updatedAt', 'userId'] as const
+  $columns = OffContributionSchema.$columns
+  @column()
+  declare attempts: number
+  @column()
+  declare background: string
+  @column()
+  declare barcode: string
+  @column.dateTime()
+  declare completedAt: DateTime | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare lastError: string | null
+  @column.dateTime()
+  declare nextAttemptAt: DateTime
+  @column()
+  declare originalImage: Buffer | null
+  @column()
+  declare originalMime: string | null
+  @column()
+  declare productId: number
+  @column()
+  declare productName: string
+  @column()
+  declare result: any | null
+  @column()
+  declare status: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare userId: number | null
+}
+
 export class OrderSchema extends BaseModel {
   static $columns = ['buyerId', 'channel', 'createdAt', 'deliveryId', 'id', 'invoiceId', 'originalUnitPrice', 'priceCorrectionId', 'unitPrice', 'updatedAt'] as const
   $columns = OrderSchema.$columns

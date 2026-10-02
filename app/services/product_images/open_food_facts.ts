@@ -1,4 +1,8 @@
 import productImagesConfig from '#config/product_images'
+import buildInfo from '#services/build_info'
+
+/** OFF asks every API client to identify itself. */
+export const OFF_USER_AGENT = `Fridgora/${buildInfo.version} (+https://github.com/houby-studio/fridgora)`
 
 export interface ImageCandidate {
   /** Full-resolution image, fed to the processing endpoint. */
@@ -150,6 +154,23 @@ export function isOfficialOff(baseUrl: string): boolean {
   }
 }
 
+/** The staging server (`world.openfoodfacts.net`), for trying contributions out. */
+export function isOffStaging(baseUrl: string): boolean {
+  try {
+    const { hostname } = new URL(baseUrl)
+    return hostname === 'openfoodfacts.net' || hostname.endsWith('.openfoodfacts.net')
+  } catch {
+    return false
+  }
+}
+
+/** Headers for every OFF request; staging sits behind a fixed, public basic-auth login. */
+export function offHeaders(baseUrl: string): Record<string, string> {
+  const headers: Record<string, string> = { 'User-Agent': OFF_USER_AGENT }
+  if (isOffStaging(baseUrl)) headers.Authorization = `Basic ${btoa('off:off')}`
+  return headers
+}
+
 export function clearOpenFoodFactsCache() {
   cache.clear()
 }
@@ -165,10 +186,7 @@ export async function lookupOpenFoodFacts(barcode: string): Promise<CandidateLoo
   let response: Response
   try {
     response = await fetch(`${baseUrl}/api/v2/product/${barcode}.json?fields=${FIELDS}`, {
-      // OFF asks API clients to identify themselves.
-      headers: {
-        'User-Agent': 'Fridgora/3 (+https://github.com/houby-studio/fridgora)',
-      },
+      headers: offHeaders(baseUrl),
       signal: AbortSignal.timeout(timeoutMs),
     })
   } catch {
@@ -182,7 +200,11 @@ export async function lookupOpenFoodFacts(barcode: string): Promise<CandidateLoo
   } | null
   if (!body || body.status !== 1 || !body.product) return empty
 
-  const imagesBaseUrl = isOfficialOff(baseUrl) ? 'https://images.openfoodfacts.org' : baseUrl
+  const imagesBaseUrl = isOfficialOff(baseUrl)
+    ? 'https://images.openfoodfacts.org'
+    : isOffStaging(baseUrl)
+      ? 'https://images.openfoodfacts.net'
+      : baseUrl
   const value = parseOffProduct({ code: barcode, ...body.product }, imagesBaseUrl)
   cache.set(barcode, { at: Date.now(), value })
   return value

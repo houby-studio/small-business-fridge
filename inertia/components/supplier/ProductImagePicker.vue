@@ -16,6 +16,7 @@ import { useI18n } from '~/composables/use_i18n'
 export interface ProductImageCapabilities {
   backgrounds: string[]
   openFoodFacts: boolean
+  openFoodFactsContribute: boolean
 }
 
 type Source =
@@ -45,6 +46,12 @@ const emit = defineEmits<{
   /** The processed WebP to submit; null = nothing new (the edit form keeps the old one). */
   (e: 'update:file', file: File | null): void
   (e: 'busy', busy: boolean): void
+  /**
+   * The supplier's own photo as picked, with the background choice behind the preview —
+   * what may go to Open Food Facts. `null` for a link, an Open Food Facts picture or the
+   * stored image: those are not the supplier's to license.
+   */
+  (e: 'update:original', original: { file: File; background: BackgroundMethod } | null): void
 }>()
 
 const { t } = useI18n()
@@ -161,6 +168,10 @@ async function run() {
       note: response.headers.get('X-Image-Note') ?? 'none',
     })
     emit('update:file', file)
+    emit(
+      'update:original',
+      source.value?.kind === 'file' ? { file: source.value.file, background: method.value } : null
+    )
   } catch (err) {
     if ((err as Error).name === 'AbortError') return
     error.value = t('supplier.image_failed')
@@ -232,6 +243,7 @@ function revert() {
   moreOpen.value = false
   replaceResult(null)
   emit('update:file', null)
+  emit('update:original', null)
 }
 
 function onDrop(event: DragEvent) {

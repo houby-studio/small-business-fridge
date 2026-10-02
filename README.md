@@ -72,6 +72,9 @@ department in Czechia, where it still keeps the drinks cold and the accounts str
   reason, an audit trail and emails to affected buyers (issued invoices never change)
 - Product image pipeline: upload, paste, link or look up by EAN, with background removal,
   trimming and a uniform format ([details](docs/product-images.md))
+- Optionally give back to [Open Food Facts](https://world.openfoodfacts.org): suppliers can
+  share a product's EAN, name and their own photo with one tick
+  ([details](docs/product-images.md#contributing-back-to-open-food-facts))
 - Payment approval with grouped, filterable invoices
 
 **For admins**
@@ -146,7 +149,7 @@ gh attestation verify oci://docker.io/houbystudio/fridgora:<version> --repo houb
 | [Deployment](docs/deployment.md)                   | Production setup, secrets, releases, verifying images, all env vars |
 | [Authentication scenarios](docs/auth-scenarios.md) | Local accounts, SSO, invitations and how the env options combine    |
 | [MCP server](docs/mcp.md)                          | Connecting Claude and other AI assistants                           |
-| [Product images](docs/product-images.md)           | The image pipeline and the optional background-removal backends     |
+| [Product images](docs/product-images.md)           | The image pipeline, background removal and Open Food Facts          |
 | [Testing reference](docs/testing-reference.md)     | The test suite and how to work with it                              |
 | [Migrating from v2](docs/migration-from-v2.md)     | Coming from the old MongoDB-based v2                                |
 | [Kiosk client](electron-kiosk/)                    | The Electron kiosk and its snap                                     |

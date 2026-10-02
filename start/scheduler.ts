@@ -2,6 +2,7 @@ import scheduler from 'adonisjs-scheduler/services/main'
 import NotificationService from '#services/notification_service'
 import RecommendationService from '#services/recommendation_service'
 import AnonymizationService from '#services/anonymization_service'
+import OffContributionService from '#services/product_images/off_contribution_service'
 import env from '#start/env'
 import logger from '@adonisjs/core/services/logger'
 
@@ -105,3 +106,22 @@ scheduler
     }
   })
   .cron(env.get('CRON_ANONYMIZE_DISABLED') ?? '0 3 * * *')
+
+/**
+ * Open Food Facts contributions — every 2 minutes, only when the instance has an OFF
+ * account. Sends the EAN, name and photos suppliers agreed to share; failed rounds retry
+ * with a growing delay (docs/product-images.md). One round at a time: a round may run a
+ * background-removal model for every photo.
+ */
+scheduler
+  .call(async () => {
+    if (!OffContributionService.isEnabled()) return
+    try {
+      const sent = await new OffContributionService().processDue()
+      if (sent > 0) logger.info({ sent }, 'Open Food Facts contributions processed')
+    } catch (error) {
+      logger.error({ err: error }, 'Failed to process Open Food Facts contributions')
+    }
+  })
+  .everyTwoMinutes()
+  .withoutOverlapping()

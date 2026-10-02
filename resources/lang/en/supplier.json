@@ -195,5 +195,11 @@
   "barcode_lookup_apply_name": "Fill in the name: {name}",
   "barcode_lookup_name_applied": "The name is filled in",
   "product_ai_unavailable": "AI suggestions are not enabled on the server.",
-  "product_ai_failed": "The suggestion failed. Please try again in a moment."
+  "product_ai_failed": "The suggestion failed. Please try again in a moment.",
+  "off_contribute_label": "Contribute to Open Food Facts",
+  "off_contribute_what_all": "Sends the EAN, the name and your photo (as taken and without background) to the open food database the barcode lookup uses. Nothing already there is overwritten.",
+  "off_contribute_what_data": "Sends the EAN and the name to the open food database the barcode lookup uses — only if it does not know the product yet.",
+  "off_contribute_what_photo": "Sends your new photo (as taken and without background) to the open food database.",
+  "off_contribute_license": " The photo must be your own; it is published under the CC BY-SA licence.",
+  "off_contribute_no_photo": " A picture from a link or from Open Food Facts is not sent — only your own photo can be shared."
 }

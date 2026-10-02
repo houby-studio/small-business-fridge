@@ -6,6 +6,10 @@ const E2E_BASE_URL = `http://localhost:${E2E_PORT}`
 const testEnv = getTestRuntimeEnv({
   PORT: E2E_PORT,
   APP_URL: E2E_BASE_URL,
+  // Lets the product form offer contributing to Open Food Facts. Nothing is ever sent:
+  // contributions go out from the scheduler, which the e2e server does not run.
+  PRODUCT_IMAGE_OPENFOODFACTS_USER: 'fridgora-e2e',
+  PRODUCT_IMAGE_OPENFOODFACTS_PASSWORD: 'e2e',
 })
 
 /**
