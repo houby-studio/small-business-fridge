@@ -46,6 +46,8 @@ export interface ProcessedProductImage {
 export interface ProductImageCapabilities {
   backgrounds: BackgroundMode[]
   openFoodFacts: boolean
+  /** Suppliers may contribute EAN, name and photos back to Open Food Facts. */
+  openFoodFactsContribute: boolean
 }
 
 /** Longest side sent to a remote model — they work at ~1024px anyway. */
@@ -72,7 +74,12 @@ export default class ProductImageService {
     const backgrounds: BackgroundMode[] = ['auto', 'none', 'flood']
     if (isRembgConfigured()) backgrounds.push('rembg')
     if (isCloudflareConfigured()) backgrounds.push('cloudflare')
-    return { backgrounds, openFoodFacts: productImagesConfig.openFoodFacts.enabled }
+    const off = productImagesConfig.openFoodFacts
+    return {
+      backgrounds,
+      openFoodFacts: off.enabled,
+      openFoodFactsContribute: off.enabled && !!off.userId && !!off.password,
+    }
   }
 
   static isAvailable(method: BackgroundMode): boolean {
@@ -135,6 +142,35 @@ export default class ProductImageService {
     })
 
     return { buffer: normalized.buffer, background: method, rotated: normalized.rotated, note }
+  }
+
+  /**
+   * The photo without its background, as taken (no trimming to the 9:16 canvas, no
+   * rotation) and at working resolution, flattened on white as JPEG — the cut-out that goes
+   * to Open Food Facts next to the original. `null` when the background stays or nothing
+   * was removed: the original then says it all.
+   */
+  async cutOut(input: Buffer, background: BackgroundMode): Promise<Buffer | null> {
+    if (background === 'none') return null
+    // The instance may have lost a provider since the preview — "auto" still does its best.
+    const mode = ProductImageService.isAvailable(background) ? background : 'auto'
+
+    let raw: RawImage
+    try {
+      raw = await decodeToRaw(input)
+    } catch {
+      throw new DomainError<ProductImageErrorCode>('image_unreadable')
+    }
+
+    const { raw: cut, method } = await this.removeBackground(raw, mode)
+    if (method === 'none') return null
+    const content = cropToContent(cut)
+    return sharp(content.data, {
+      raw: { width: content.width, height: content.height, channels: 4 },
+    })
+      .flatten({ background: '#ffffff' })
+      .jpeg({ quality: 92 })
+      .toBuffer()
   }
 
   private async removeBackground(

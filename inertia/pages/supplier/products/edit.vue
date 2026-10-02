@@ -15,6 +15,7 @@ import ProductImagePicker, {
   type ProductImageCapabilities,
 } from '~/components/supplier/ProductImagePicker.vue'
 import ProductBarcodeField from '~/components/supplier/ProductBarcodeField.vue'
+import ProductOffContribution from '~/components/supplier/ProductOffContribution.vue'
 import { useProductSuggestions } from '~/composables/use_product_suggestions'
 
 interface CategoryOption {
@@ -37,6 +38,7 @@ interface ProductData {
   barcode: string | null
   categoryId: number
   allergenIds: number[]
+  offShared: boolean
 }
 
 const props = defineProps<{
@@ -55,8 +57,24 @@ const form = useForm({
   barcode: props.product.barcode ?? '',
   allergenIds: [...props.product.allergenIds],
   image: null as File | null,
+  offContribute: false,
+  offOriginal: null as File | null,
+  offBackground: 'auto',
 })
 const imageBusy = ref(false)
+
+function onOriginal(original: { file: File; background: string } | null) {
+  form.offOriginal = original?.file ?? null
+  form.offBackground = original?.background ?? 'auto'
+}
+
+/** The Open Food Facts fields only travel with the consent, the photo only when there is one. */
+function offFields<
+  T extends { offContribute: boolean; offOriginal: File | null; offBackground: string },
+>(data: T) {
+  const { offOriginal, offBackground, ...rest } = data
+  return data.offContribute && offOriginal ? { ...rest, offOriginal, offBackground } : rest
+}
 const suggestions = useProductSuggestions(form, props.aiSuggestions)
 const { hints, describing, descriptionError } = suggestions
 const picker = ref<InstanceType<typeof ProductImagePicker> | null>(null)
@@ -165,7 +183,7 @@ function submit() {
   // "all allergens removed", making it impossible to clear them.
   form
     .transform((data) => ({
-      ...data,
+      ...offFields(data),
       allergenIds: JSON.stringify(data.allergenIds),
     }))
     .put(`/supplier/products/${props.product.id}`, {
@@ -220,6 +238,7 @@ useInitialFocus(() => document.getElementById('edit-product-name'))
             :alt="previewTitle"
             @update:file="form.image = $event"
             @busy="imageBusy = $event"
+            @update:original="onOriginal"
           />
         </template>
       </Card>
@@ -365,6 +384,14 @@ useInitialFocus(() => document.getElementById('edit-product-name'))
                 >
               </div>
             </div>
+
+            <ProductOffContribution
+              v-model="form.offContribute"
+              :enabled="imageCapabilities.openFoodFactsContribute"
+              :barcode="form.barcode"
+              :hasOwnPhoto="!!form.offOriginal"
+              :alreadyShared="product.offShared"
+            />
 
             <div class="flex flex-col gap-2 pt-2 sm:flex-row sm:items-center">
               <Button

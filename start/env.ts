@@ -135,6 +135,8 @@ export default await Env.create(new URL('../', import.meta.url), {
   PRODUCT_IMAGE_CLOUDFLARE_TIMEOUT_MS: Env.schema.number.optional(),
   PRODUCT_IMAGE_OPENFOODFACTS_ENABLED: Env.schema.boolean.optional(),
   PRODUCT_IMAGE_OPENFOODFACTS_URL: Env.schema.string.optional({ format: 'url', tld: false }),
+  PRODUCT_IMAGE_OPENFOODFACTS_USER: Env.schema.string.optional(),
+  PRODUCT_IMAGE_OPENFOODFACTS_PASSWORD: Env.schema.string.optional(),
   PRODUCT_AI_ENDPOINT: Env.schema.string.optional({ format: 'url', tld: false }),
   PRODUCT_AI_DEPLOYMENT: Env.schema.string.optional(),
   PRODUCT_AI_API_VERSION: Env.schema.string.optional(),

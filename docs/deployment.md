@@ -300,6 +300,9 @@ own name in the UI and emails.
 | `PRODUCT_AI_ENDPOINT` | No | No | — | Azure OpenAI / Foundry endpoint for product-form suggestions |
 | `PRODUCT_AI_CLIENT_SECRET` | No | Yes | — | Entra service principal secret (or `PRODUCT_AI_API_KEY`) |
 | `PRODUCT_IMAGE_OPENFOODFACTS_ENABLED` | No | No | `true` | Picture lookup by barcode |
+| `PRODUCT_IMAGE_OPENFOODFACTS_URL` | No | No | `https://world.openfoodfacts.org` | OFF server for lookups and contributions |
+| `PRODUCT_IMAGE_OPENFOODFACTS_USER` | No | No | — | Instance's OFF account — enables contributing EAN, name and photos |
+| `PRODUCT_IMAGE_OPENFOODFACTS_PASSWORD` | No | Yes | — | Password of that OFF account |
 
 All product image settings: [docs/product-images.md](product-images.md).
 

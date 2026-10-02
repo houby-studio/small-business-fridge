@@ -73,6 +73,90 @@ and the allergens still come from Open Food Facts. What is sent: the product nam
 Open Food Facts category and ingredients, the instance's category names, and other
 products' names and descriptions as examples — no personal data.
 
+## Contributing back to Open Food Facts
+
+Open Food Facts is a free, crowd-sourced database, and Czech products are often missing
+from it. Fridgora can give back what its suppliers already have in hand: the EAN, the name
+and their own photo. It is off until the instance has an OFF account (below).
+
+### What the supplier sees
+
+Under the product fields, the form offers **Contribute to Open Food Facts**, with a line
+saying exactly what will be sent. It is unchecked by default and shown only
+
+- for a **public EAN** — in-store codes (prefixes 02, 04, 20–29), coupons, ISSN/ISBN
+  numbers, outer-case GTIN-14 codes and codes with a wrong check digit name nothing outside
+  the shop and are never sent;
+- when there is **something left to send** — the edit form of a product whose barcode was
+  shared before offers it again only after a new own photo is picked.
+
+### What is sent
+
+- **The EAN and the name**, when OFF does not know the product or has no name for it
+  (as `product_name_cs`; a product we create gets Czech as its main language). A name
+  already on OFF is never overwritten, and a barcode goes this way only once.
+- **The supplier's own photo, twice:**
+  - the **cut-out** — the background removed with the method the preview used, trimmed but
+    not rotated or squeezed into the 9:16 canvas, on white, as JPEG at up to 2048 px;
+  - the **original**, exactly as it was picked.
+
+  The original helps OFF's text recognition (ingredients, nutrition), the cut-out anyone
+  who needs a clean product picture. The cut-out becomes the front-of-pack picture only
+  when the product has none on OFF yet; otherwise both are added as further pictures. With
+  *Keep background* only the original goes.
+
+A picture from a link or from the Open Food Facts results is never sent — it is not the
+supplier's to license. Photos on OFF are published under CC BY-SA, which the form says.
+
+### How it is sent
+
+Saving the product never waits for OFF. The contribution is queued in the
+`off_contributions` table, and the **scheduler** sends it within two minutes. The original
+photo waits in the database, not under `storage/uploads`, so it is never reachable over
+`/uploads`; it is deleted once sent or given up. A failed round is retried after 5, 10, 20,
+40 and 80 minutes and continues where it stopped (nothing is uploaded twice); after six
+rounds it is given up. A photo OFF already has, or rejects as too small or unreadable, is
+skipped without failing the rest.
+
+The audit log records the supplier's consent (*Shared with Open Food Facts*) and the
+outcome (*Sent to Open Food Facts* / *Sending to Open Food Facts failed*, with the error).
+
+Every request identifies the app (`app_name=Fridgora`, `app_version`) and carries an
+`app_uuid` derived from `APP_KEY` and the supplier's id. OFF can then moderate a single
+contributor without banning the whole instance, and learns nothing about who they are.
+
+### Enabling it
+
+1. **Create an account for the instance** — a dedicated one, never a personal one. OFF
+   logs in with the **username**, not the e-mail address.
+2. **Try it on the staging server first.** Staging has its own accounts: register at
+   <https://world.openfoodfacts.net> (the site asks for the fixed login `off` / `off`
+   first; Fridgora adds it to its requests automatically), then set:
+
+   ```bash
+   PRODUCT_IMAGE_OPENFOODFACTS_URL=https://world.openfoodfacts.net
+   PRODUCT_IMAGE_OPENFOODFACTS_USER=<staging username>
+   PRODUCT_IMAGE_OPENFOODFACTS_PASSWORD=<staging password>
+   ```
+
+   Restart **both** the app and the scheduler (`docker compose up -d`) — the form reads the
+   variables in the app, the scheduler sends. Save a product with a real EAN and the box
+   ticked; within two minutes it shows up on staging and in the audit log.
+
+3. **Switch to production:** register at <https://world.openfoodfacts.org>, put that
+   account in, and remove `PRODUCT_IMAGE_OPENFOODFACTS_URL` (or set it back to
+   `https://world.openfoodfacts.org`). The barcode lookup uses the same server, so on
+   staging it finds only what staging knows.
+
+OFF also asks API users to introduce themselves through their
+[API usage form](https://docs.google.com/forms/d/e/1FAIpQLSdIE3D8qvjC_zRJw1W8OmuHhsWJ_NSckiiniAHlfaVwUZCziQ/viewform)
+— worth doing for a production instance.
+
+To turn it off, empty the two account variables (or set
+`PRODUCT_IMAGE_OPENFOODFACTS_ENABLED=false`, which also turns off the lookup) and restart.
+The box disappears; contributions already queued stay in `off_contributions` and are sent
+once it is enabled again.
+
 ## The pipeline
 
 1. **Decode** the image and apply its EXIF orientation (phone photos).
@@ -177,6 +261,9 @@ audit-logged as `product.updated` with `reason: products:normalize-images`.
   is connected to, and it is repeated for every redirect.
 - Downloads are capped at 15 MB, must be served as `image/*` and must decode as an image.
 - Only suppliers and admins can use the endpoints (`/supplier/*` middleware).
+- The Open Food Facts account is used only by the server; it never reaches the browser.
+  Original photos queued for OFF live in the database until sent, so they are part of
+  database backups for that time, but never of `/uploads`.
 
 ## Configuration reference
 
@@ -193,7 +280,9 @@ audit-logged as `product.updated` with `reason: products:normalize-images`.
 | `PRODUCT_IMAGE_CLOUDFLARE_TOKEN`      | —                                 | Shared bearer token (secret)                   |
 | `PRODUCT_IMAGE_CLOUDFLARE_TIMEOUT_MS` | `60000`                           |                                                |
 | `PRODUCT_IMAGE_OPENFOODFACTS_ENABLED` | `true`                            | Barcode lookup (sends only the barcode)        |
-| `PRODUCT_IMAGE_OPENFOODFACTS_URL`     | `https://world.openfoodfacts.org` | API base URL                                   |
+| `PRODUCT_IMAGE_OPENFOODFACTS_URL`     | `https://world.openfoodfacts.org` | API base URL, for lookups and contributions    |
+| `PRODUCT_IMAGE_OPENFOODFACTS_USER`    | —                                 | Instance's OFF username; empty = no contributions |
+| `PRODUCT_IMAGE_OPENFOODFACTS_PASSWORD` | —                                | Its password (secret)                          |
 | `PRODUCT_AI_ENDPOINT`                 | —                                 | Azure OpenAI / Foundry endpoint; empty = off   |
 | `PRODUCT_AI_DEPLOYMENT`               | `gpt-5-mini`                      | Chat deployment name                           |
 | `PRODUCT_AI_API_VERSION`              | `2024-10-21`                      | Azure OpenAI API version                       |

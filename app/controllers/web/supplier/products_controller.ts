@@ -1,4 +1,11 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import type { MultipartFile } from '@adonisjs/core/bodyparser'
+import logger from '@adonisjs/core/services/logger'
+import { readFile } from 'node:fs/promises'
+import type Product from '#models/product'
+import OffContribution from '#models/off_contribution'
+import OffContributionService from '#services/product_images/off_contribution_service'
+import type { BackgroundMode } from '#services/product_images/product_image_service'
 import { resolvePage } from '#helpers/pagination'
 import ProductService from '#services/product_service'
 import { createProductValidator, updateProductValidator } from '#validators/product'
@@ -83,6 +90,7 @@ export default class ProductsController {
     await AuditService.log(auth.user!.id, 'product.created', 'product', product.id, null, {
       name: product.displayName,
     })
+    if (data.offContribute) await this.shareWithOff(product, auth.user!.id, data)
 
     session.flash('alert', {
       type: 'success',
@@ -113,6 +121,13 @@ export default class ProductsController {
           ? { id: product.category.id, name: product.category.name }
           : null,
         allergenIds: product.allergens.map((a) => a.id),
+        // Name and EAN go to Open Food Facts once; after that only a new own photo is offered.
+        offShared: product.barcode
+          ? !!(await OffContribution.query()
+              .where('barcode', product.barcode)
+              .whereIn('status', ['pending', 'done'])
+              .first())
+          : false,
       },
       categories: categories.map((c) => ({ id: c.id, name: c.name, color: c.color })),
       allergens: allergens.map((a) => ({ id: a.id, name: a.name })),
@@ -158,6 +173,7 @@ export default class ProductsController {
       null,
       Object.keys(changes).length ? changes : null
     )
+    if (data.offContribute) await this.shareWithOff(product, auth.user!.id, data)
 
     session.flash('alert', {
       type: 'success',
@@ -165,5 +181,30 @@ export default class ProductsController {
     })
 
     return response.redirect('/supplier/stock')
+  }
+
+  /**
+   * Queues what the supplier agreed to send to Open Food Facts. The product is saved by
+   * now, so a failure here is logged, never shown as a failed save.
+   */
+  private async shareWithOff(
+    product: Product,
+    userId: number,
+    data: { offOriginal?: MultipartFile; offBackground?: BackgroundMode }
+  ) {
+    try {
+      const file = data.offOriginal
+      const original = file?.tmpPath
+        ? { data: await readFile(file.tmpPath), mime: `${file.type}/${file.subtype}` }
+        : null
+      await new OffContributionService().queue({
+        product,
+        userId,
+        original,
+        background: data.offBackground,
+      })
+    } catch (err) {
+      logger.error({ err, productId: product.id }, 'Failed to queue Open Food Facts contribution')
+    }
   }
 }

@@ -56,6 +56,14 @@ const productImagesConfig = {
     enabled: env.get('PRODUCT_IMAGE_OPENFOODFACTS_ENABLED', true),
     baseUrl: env.get('PRODUCT_IMAGE_OPENFOODFACTS_URL', 'https://world.openfoodfacts.org'),
     timeoutMs: 10_000,
+    /**
+     * The instance's own OFF account for contributions (docs/product-images.md). Both
+     * empty = suppliers are not offered to contribute. Never a shared default account.
+     */
+    userId: env.get('PRODUCT_IMAGE_OPENFOODFACTS_USER', ''),
+    password: env.get('PRODUCT_IMAGE_OPENFOODFACTS_PASSWORD', ''),
+    /** Uploading a photo to OFF takes a while — it is resized and indexed there. */
+    uploadTimeoutMs: 60_000,
   },
 }
 

@@ -195,5 +195,11 @@
   "barcode_lookup_apply_name": "Doplnit název: {name}",
   "barcode_lookup_name_applied": "Název je doplněný",
   "product_ai_unavailable": "Návrhy pomocí AI nejsou na serveru zapnuté.",
-  "product_ai_failed": "Návrh se teď nepovedl. Zkuste to za chvíli znovu."
+  "product_ai_failed": "Návrh se teď nepovedl. Zkuste to za chvíli znovu.",
+  "off_contribute_label": "Přispět do Open Food Facts",
+  "off_contribute_what_all": "Pošle EAN, název a vaši fotku (originál i bez pozadí) do otevřené databáze potravin, ze které tu dohledáváme produkty. Co tam už je, nepřepíše.",
+  "off_contribute_what_data": "Pošle EAN a název do otevřené databáze potravin, ze které tu dohledáváme produkty — jen pokud ho tam ještě nemají.",
+  "off_contribute_what_photo": "Pošle vaši novou fotku (originál i bez pozadí) do otevřené databáze potravin.",
+  "off_contribute_license": " Fotka musí být vaše vlastní a zveřejní se pod licencí CC BY-SA.",
+  "off_contribute_no_photo": " Obrázek z odkazu nebo z Open Food Facts se neposílá — sdílet jde jen vlastní fotka."
 }

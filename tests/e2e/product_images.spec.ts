@@ -271,3 +271,66 @@ test.describe('Kiosk product images', () => {
     await expect(image).toHaveCSS('object-fit', 'contain')
   })
 })
+
+/** A fresh, valid Czech EAN-13 — barcodes are unique per product. */
+function randomEan(): string {
+  const body = `859${String(Date.now()).slice(-9)}`
+  const sum = body
+    .split('')
+    .reverse()
+    .reduce((acc, digit, index) => acc + Number(digit) * (index % 2 === 0 ? 3 : 1), 0)
+  return `${body}${(10 - (sum % 10)) % 10}`
+}
+
+test.describe('Contributing to Open Food Facts', () => {
+  test('is offered for a public EAN and says what goes, own photo included', async ({ page }) => {
+    const name = `E2E OFF ${Date.now()}`
+    const ean = randomEan()
+    await loginAs(page, 'supplier')
+    await page.goto('/supplier/products/new')
+    const contribution = page.getByTestId('product-off-contribution')
+
+    await page.locator('#product-barcode').fill('2005702000004')
+    await expect(contribution).toHaveCount(0)
+
+    await page.locator('#product-barcode').fill(ean)
+    await expect(contribution).toContainText('Pošle EAN a název')
+    await expect(contribution.getByRole('checkbox')).not.toBeChecked()
+
+    await fillRequiredFields(page, name)
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'own.png',
+      mimeType: 'image/png',
+      buffer: await whiteBackdropPng(),
+    })
+    await expect(page.getByTestId('product-image-status')).toHaveText('Hotovo: pozadí odstraněno')
+    await expect(contribution).toContainText('Pošle EAN, název a vaši fotku')
+    await expect(contribution).toContainText('CC BY-SA')
+
+    await page.getByText('Přispět do Open Food Facts').click()
+    await expect(contribution.getByRole('checkbox')).toBeChecked()
+
+    await page.getByRole('button', { name: 'Vytvořit produkt' }).click()
+    await expect(page).toHaveURL(/\/supplier\/stock\?preselect=\d+/)
+    const productId = page.url().match(/preselect=(\d+)/)![1]
+
+    // Name and EAN went once; the edit form only offers a new own photo.
+    await page.goto(`/supplier/products/${productId}/edit`)
+    await page.locator('#edit-product-name').waitFor()
+    await expect(contribution).toHaveCount(0)
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'another.png',
+      mimeType: 'image/png',
+      buffer: await whiteBackdropPng(70, 110),
+    })
+    await expect(contribution).toContainText('Pošle vaši novou fotku')
+  })
+
+  test('without an own photo it says a picture from elsewhere is not sent', async ({ page }) => {
+    await loginAs(page, 'supplier')
+    await page.goto('/supplier/products/new')
+    await page.locator('#product-barcode').fill(randomEan())
+    const contribution = page.getByTestId('product-off-contribution')
+    await expect(contribution).toContainText('Obrázek z odkazu nebo z Open Food Facts se neposílá')
+  })
+})
