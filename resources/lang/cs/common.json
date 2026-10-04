@@ -66,6 +66,8 @@
   "nav_activity": "Aktivita",
   "nav_supplier": "Dodavatel",
   "nav_stock": "Sklad",
+  "nav_shopping_list": "Nákupní seznam",
+  "nav_finance": "Hospodaření",
   "nav_products": "Produkty",
   "nav_billing": "Fakturace",
   "nav_payments": "Platby",
@@ -80,5 +82,16 @@
   "page_not_found": "Stránka nebyla nalezena.",
   "server_error": "Chyba serveru.",
   "back_to_home": "Zpět na úvod",
-  "version": "Verze"
+  "version": "Verze",
+  "more_info": "Více informací",
+  "scope": "Rozsah",
+  "scope_all": "Celá lednice",
+  "scope_mine": "Jen moje",
+  "tab_stock_state": "Stav",
+  "tab_stock_history": "Historie",
+  "tab_inventory": "Inventura",
+  "tab_products": "Produkty",
+  "tab_product_groups": "Skupiny",
+  "nav_receiving": "Naskladnění",
+  "keypad_code": "Kód"
 }

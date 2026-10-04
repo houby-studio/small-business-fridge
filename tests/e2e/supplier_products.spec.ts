@@ -1,5 +1,11 @@
 import { test, expect } from '@playwright/test'
 import { loginAs } from './helpers/auth'
+import { commitDraft, createProduct, discardDraft } from './helpers/products'
+
+const PIXEL_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAGCAYAAADkOT91AAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEklEQVR4nGM4IafxHxkz0EIAAMbhMTmfCC9yAAAAAElFTkSuQmCC',
+  'base64'
+)
 
 test.describe('Supplier products flow', () => {
   test('new product form enforces client-side validation', async ({ page }) => {
@@ -27,10 +33,7 @@ test.describe('Supplier products flow', () => {
     await page.locator('input[type="file"]').setInputFiles({
       name: 'e2e-validation.png',
       mimeType: 'image/png',
-      buffer: Buffer.from(
-        'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAGCAYAAADkOT91AAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEklEQVR4nGM4IafxHxkz0EIAAMbhMTmfCC9yAAAAAElFTkSuQmCC',
-        'base64'
-      ),
+      buffer: PIXEL_PNG,
     })
 
     await expect(createButton).toBeEnabled()
@@ -61,29 +64,14 @@ test.describe('Supplier products flow', () => {
     await loginAs(page, 'supplier')
 
     // Work on an own product so the seeded catalogue stays untouched.
-    await page.goto('/supplier/products/new')
-    await page.locator('#product-name').fill(createdName)
-    await page.locator('#product-description').fill('E2E editace produktu')
-    await page.getByRole('combobox').first().click()
-    await page.getByRole('option', { name: 'Nealko' }).click()
-    await page.locator('input[type="file"]').setInputFiles({
-      name: 'e2e-edit.png',
-      mimeType: 'image/png',
-      buffer: Buffer.from(
-        'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAGCAYAAADkOT91AAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEklEQVR4nGM4IafxHxkz0EIAAMbhMTmfCC9yAAAAAElFTkSuQmCC',
-        'base64'
-      ),
-    })
-    await page.getByRole('button', { name: 'Vytvořit produkt' }).click()
-    await expect(page).toHaveURL(/\/supplier\/stock\?preselect=\d+/)
-
-    const productId = page.url().match(/preselect=(\d+)/)![1]
+    const productId = await createProduct(page, createdName)
+    await discardDraft(page)
 
     await page.goto(`/supplier/products/${productId}/edit`)
     await page.locator('#edit-product-name').fill(renamedTo)
     await page.getByRole('button', { name: 'Uložit změny' }).click()
 
-    await expect(page).toHaveURL(/\/supplier\/stock$/)
+    await expect(page).toHaveURL(/\/supplier\/products$/)
     await expect(page.getByText(`Produkt „${renamedTo}“ byl upraven.`)).toBeVisible()
 
     // The change must really be persisted, not just flashed.
@@ -102,38 +90,50 @@ test.describe('Supplier products flow', () => {
   })
 
   test('create and edit pages expose keyboard-friendly name inputs', async ({ page }) => {
-    const productName = `E2E Fokus ${Date.now()}`
-
     await loginAs(page, 'supplier')
     await page.goto('/supplier/products/new')
     await expect(page.locator('#product-name')).toBeVisible()
 
-    await page.locator('#product-name').fill(productName)
-    await page.locator('#product-description').fill('E2E focus flow')
-
-    await page.getByRole('combobox').first().click()
-    await page.getByRole('option', { name: 'Nealko' }).click()
-
-    await page.locator('input[type="file"]').setInputFiles({
-      name: 'e2e-focus.png',
-      mimeType: 'image/png',
-      buffer: Buffer.from(
-        'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAGCAYAAADkOT91AAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEklEQVR4nGM4IafxHxkz0EIAAMbhMTmfCC9yAAAAAElFTkSuQmCC',
-        'base64'
-      ),
-    })
-
-    await page.getByRole('button', { name: 'Vytvořit produkt' }).click()
-    await expect(page).toHaveURL(/\/supplier\/stock\?preselect=\d+/)
-
-    const match = page.url().match(/preselect=(\d+)/)
-    expect(match).not.toBeNull()
-
-    await page.goto(`/supplier/products/${match![1]}/edit`)
+    const productId = await createProduct(page, `E2E Fokus ${Date.now()}`)
+    await discardDraft(page)
+    await page.goto(`/supplier/products/${productId}/edit`)
     await expect(page.locator('#edit-product-name')).toBeVisible()
   })
 
-  test('creating product redirects to stock with preselected product and focused amount', async ({
+  test('groups are a tab of the products page and a row stocks its product', async ({ page }) => {
+    const name = `E2E Řádek ${Date.now()}`
+
+    await loginAs(page, 'supplier')
+    const productId = await createProduct(page, name)
+    await discardDraft(page)
+
+    await page.goto('/supplier/products')
+    await expect(page.locator('#sbf-boot-loader')).toHaveCount(0)
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Produkty')
+    await expect(page.getByTestId('tab-products')).toHaveAttribute('aria-selected', 'true')
+    await page.getByTestId('tab-product-groups').click()
+    await expect(page).toHaveURL(/\/supplier\/product-groups$/)
+    await expect(page.getByTestId('tab-product-groups')).toHaveAttribute('aria-selected', 'true')
+    await page.getByTestId('tab-products').click()
+    await expect(page).toHaveURL(/\/supplier\/products$/)
+
+    // "Naskladnit" on a row puts the product on the supplier's draft and focuses its amount.
+    await page.goto(`/supplier/products?search=${encodeURIComponent(name)}`)
+    await expect(page.locator('#sbf-boot-loader')).toHaveCount(0)
+    const row = page.locator('tbody tr', { hasText: name })
+    await expect(row).toHaveCount(1)
+    await expect(row.getByRole('button', { name: 'Upravit' })).toBeVisible()
+    await row.getByTestId('product-row-receive').click()
+    await expect(page).toHaveURL(/\/supplier\/stock\/drafts\/\d+\?focus=\d+/)
+    await expect(
+      page.locator(`[data-testid="draft-row"][data-product-id="${productId}"]`)
+    ).toHaveCount(1)
+    await expect(page.locator(':focus')).toHaveAttribute('placeholder', 'ks')
+
+    await discardDraft(page)
+  })
+
+  test('creating a product lands on a stocking draft with its line and the amount focused', async ({
     page,
   }) => {
     const productName = `E2E Produkt ${Date.now()}`
@@ -152,24 +152,23 @@ test.describe('Supplier products flow', () => {
     await page.locator('input[type="file"]').setInputFiles({
       name: 'e2e-product.png',
       mimeType: 'image/png',
-      buffer: Buffer.from(
-        'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAGCAYAAADkOT91AAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEklEQVR4nGM4IafxHxkz0EIAAMbhMTmfCC9yAAAAAElFTkSuQmCC',
-        'base64'
-      ),
+      buffer: PIXEL_PNG,
     })
 
     await page.getByRole('button', { name: 'Vytvořit produkt' }).click()
+    await expect(page).toHaveURL(/\/supplier\/stock\/drafts\/\d+\?focus=\d+/)
 
-    await expect(page).toHaveURL(/\/supplier\/stock\?preselect=\d+/)
+    // The new product is already a line of the draft; the amount is focused so stocking
+    // continues straight away. The trailing empty line waits for the next product.
+    const rows = page.getByTestId('draft-row')
+    await expect(rows.filter({ hasText: productName })).toHaveCount(1)
+    await expect(rows.last()).toHaveAttribute('data-product-id', '')
+    await expect(page.locator(':focus')).toHaveAttribute('placeholder', 'ks')
 
-    // The newly created product should be selected in the quick-delivery product field.
-    await expect(page.getByRole('combobox').first()).toContainText(productName)
-
-    // Amount should be auto-focused to speed up immediate stock delivery entry.
-    await expect(page.getByPlaceholder('ks')).toBeFocused()
+    await discardDraft(page)
   })
 
-  test('quick delivery supports enter-first keyboard flow', async ({ page }) => {
+  test('the stocking draft supports the enter-first keyboard flow', async ({ page }) => {
     const productName = `E2E Keyboard ${Date.now()}`
 
     await loginAs(page, 'supplier')
@@ -189,34 +188,45 @@ test.describe('Supplier products flow', () => {
     await page.locator('input[type="file"]').setInputFiles({
       name: 'e2e-keyboard.png',
       mimeType: 'image/png',
-      buffer: Buffer.from(
-        'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAGCAYAAADkOT91AAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEklEQVR4nGM4IafxHxkz0EIAAMbhMTmfCC9yAAAAAElFTkSuQmCC',
-        'base64'
-      ),
+      buffer: PIXEL_PNG,
     })
     await page.getByRole('button', { name: 'Vytvořit produkt' }).click()
-    await expect(page).toHaveURL(/\/supplier\/stock\?preselect=\d+/)
-    await expect(page.getByPlaceholder('ks')).toBeFocused()
+    await expect(page).toHaveURL(/\/supplier\/stock\/drafts\/\d+\?focus=\d+/)
+    await expect(page.locator(':focus')).toHaveAttribute('placeholder', 'ks')
 
-    await page.getByPlaceholder('ks').fill('3')
+    await page.locator(':focus').fill('3')
     await page.keyboard.press('Enter')
 
-    const priceField = page.getByPlaceholder('Kč')
-    await expect(priceField).toBeFocused()
-    await priceField.fill('49')
+    // Enter walks amount → purchase price (optional, may stay empty) → selling price.
+    await expect(page.locator(':focus')).toHaveAttribute('placeholder', 'nákup')
     await page.keyboard.press('Enter')
 
-    const searchField = page.locator('.p-select-filter')
+    await expect(page.locator(':focus')).toHaveAttribute('placeholder', 'Kč')
+    await page.locator(':focus').fill('49')
+    await page.keyboard.press('Enter')
+
+    // Enter in the price confirms the line and opens the product search of the empty one.
+    // (.last(): the previous line's search may still be fading out.)
+    const searchField = page.locator('.p-select-overlay .p-select-filter').last()
     await expect(searchField).toBeFocused()
     await searchField.fill(productName)
     await page.keyboard.press('Enter')
 
-    await expect(page.getByRole('combobox').first()).toContainText(productName)
-
-    await page.getByRole('combobox').first().click()
-    await expect(searchField).toBeFocused()
-    await page.keyboard.press('ArrowDown')
+    // Two lines for the product now, plus the empty one waiting at the end.
+    const rows = page.getByTestId('draft-row')
+    await expect(rows.filter({ hasText: productName })).toHaveCount(2)
+    await expect(rows.last()).toHaveAttribute('data-product-id', '')
+    await expect(page.locator(':focus')).toHaveAttribute('placeholder', 'ks')
+    await page.locator(':focus').fill('2')
     await page.keyboard.press('Enter')
-    await expect(page.getByPlaceholder('ks')).toBeFocused()
+    await page.keyboard.press('Enter')
+    await page.locator(':focus').fill('50')
+    await page.keyboard.press('Enter')
+    await expect(searchField).toBeFocused()
+    await page.keyboard.press('Escape')
+
+    await expect(page.getByTestId('draft-commit')).toHaveText(/Naskladnit \(2 položky · 5 ks\)/)
+    await commitDraft(page)
+    await expect(page.getByText('Naskladněno 5 ks (2 dodávky).')).toBeVisible()
   })
 })

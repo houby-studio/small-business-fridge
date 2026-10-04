@@ -73,5 +73,17 @@
   "impersonation_started": "Začal vás zastupovat",
   "impersonation_ended": "Přestal vás zastupovat",
   "impersonation_ended_logout": "Přestal vás zastupovat (odhlásil se)",
-  "impersonation_ended_invalid": "Zastupování skončilo (účet už není aktivní)"
+  "impersonation_ended_invalid": "Zastupování skončilo (účet už není aktivní)",
+  "action_product_group_created": "Nákupní skupina vytvořena",
+  "action_product_group_updated": "Nákupní skupina upravena",
+  "action_product_group_deleted": "Nákupní skupina smazána",
+  "action_stock_draft_created": "Příjemka založena",
+  "action_stock_draft_committed": "Příjemka naskladněna",
+  "action_stock_draft_discarded": "Příjemka zahozena",
+  "action_shopping_list_completed": "Nákupní seznam dokončen",
+  "action_stock_written_off": "Odpis zboží",
+  "action_stock_adjusted": "Inventura změnila váš sklad",
+  "action_stock_reclassified": "Důvod manka změněn",
+  "action_inventory_committed": "Inventura",
+  "action_supplier_settings_updated": "Marže změněna"
 }

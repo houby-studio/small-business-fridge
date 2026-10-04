@@ -86,10 +86,12 @@ export class CategorySchema extends BaseModel {
 }
 
 export class DeliverySchema extends BaseModel {
-  static $columns = ['amountLeft', 'amountSupplied', 'createdAt', 'id', 'price', 'productId', 'supplierId', 'updatedAt', 'voidedAt'] as const
+  static $columns = ['amountLeft', 'amountLost', 'amountSupplied', 'createdAt', 'id', 'price', 'productId', 'purchasePrice', 'supplierId', 'updatedAt', 'voidedAt'] as const
   $columns = DeliverySchema.$columns
   @column()
   declare amountLeft: number
+  @column()
+  declare amountLost: number
   @column()
   declare amountSupplied: number
   @column.dateTime({ autoCreate: true })
@@ -101,6 +103,8 @@ export class DeliverySchema extends BaseModel {
   @column()
   declare productId: number
   @column()
+  declare purchasePrice: string | null
+  @column()
   declare supplierId: number
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
@@ -109,7 +113,7 @@ export class DeliverySchema extends BaseModel {
 }
 
 export class DeliveryCorrectionSchema extends BaseModel {
-  static $columns = ['actorId', 'createdAt', 'deliveryId', 'id', 'impersonatorId', 'kind', 'newAmountSupplied', 'newPrice', 'oldAmountSupplied', 'oldPrice', 'reason', 'repricedOrderCount'] as const
+  static $columns = ['actorId', 'createdAt', 'deliveryId', 'id', 'impersonatorId', 'kind', 'newAmountSupplied', 'newPrice', 'newPurchasePrice', 'oldAmountSupplied', 'oldPrice', 'oldPurchasePrice', 'reason', 'repricedOrderCount'] as const
   $columns = DeliveryCorrectionSchema.$columns
   @column()
   declare actorId: number
@@ -128,9 +132,13 @@ export class DeliveryCorrectionSchema extends BaseModel {
   @column()
   declare newPrice: number
   @column()
+  declare newPurchasePrice: string | null
+  @column()
   declare oldAmountSupplied: number
   @column()
   declare oldPrice: number
+  @column()
+  declare oldPurchasePrice: string | null
   @column()
   declare reason: string
   @column()
@@ -177,6 +185,40 @@ export class IbanChangeTokenSchema extends BaseModel {
   declare usedAt: DateTime | null
   @column()
   declare userId: number
+}
+
+export class InventoryCountItemSchema extends BaseModel {
+  static $columns = ['appliedQty', 'countedQty', 'expectedQty', 'id', 'inventoryCountId', 'productId'] as const
+  $columns = InventoryCountItemSchema.$columns
+  @column()
+  declare appliedQty: number
+  @column()
+  declare countedQty: number
+  @column()
+  declare expectedQty: number
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare inventoryCountId: number
+  @column()
+  declare productId: number
+}
+
+export class InventoryCountSchema extends BaseModel {
+  static $columns = ['actorId', 'createdAt', 'id', 'impersonatorId', 'note', 'scope'] as const
+  $columns = InventoryCountSchema.$columns
+  @column()
+  declare actorId: number
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare impersonatorId: number | null
+  @column()
+  declare note: string | null
+  @column()
+  declare scope: string
 }
 
 export class InvoiceSchema extends BaseModel {
@@ -462,6 +504,23 @@ export class ProductAllergenSchema extends BaseModel {
   declare productId: number
 }
 
+export class ProductGroupSchema extends BaseModel {
+  static $columns = ['categoryId', 'createdAt', 'id', 'name', 'note', 'updatedAt'] as const
+  $columns = ProductGroupSchema.$columns
+  @column()
+  declare categoryId: number
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare name: string
+  @column()
+  declare note: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
 export class ProductRatingUpvoteSchema extends BaseModel {
   static $columns = ['createdAt', 'id', 'productRatingId', 'updatedAt', 'userId'] as const
   $columns = ProductRatingUpvoteSchema.$columns
@@ -499,7 +558,7 @@ export class ProductRatingSchema extends BaseModel {
 }
 
 export class ProductSchema extends BaseModel {
-  static $columns = ['barcode', 'categoryId', 'createdAt', 'description', 'displayName', 'id', 'imagePath', 'keypadId', 'updatedAt'] as const
+  static $columns = ['barcode', 'categoryId', 'createdAt', 'description', 'displayName', 'id', 'imagePath', 'keypadId', 'productGroupId', 'updatedAt'] as const
   $columns = ProductSchema.$columns
   @column()
   declare barcode: string | null
@@ -517,6 +576,8 @@ export class ProductSchema extends BaseModel {
   declare imagePath: string | null
   @column()
   declare keypadId: number
+  @column()
+  declare productGroupId: number | null
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
 }
@@ -574,6 +635,143 @@ export class RememberMeTokenSchema extends BaseModel {
   declare id: number
   @column()
   declare tokenableId: number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
+export class ShoppingListItemSchema extends BaseModel {
+  static $columns = ['createdAt', 'id', 'isChecked', 'isRemoved', 'kind', 'label', 'note', 'productGroupId', 'productId', 'quantity', 'shoppingListId', 'unitCost', 'updatedAt'] as const
+  $columns = ShoppingListItemSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare isChecked: boolean
+  @column()
+  declare isRemoved: boolean
+  @column()
+  declare kind: string
+  @column()
+  declare label: string | null
+  @column()
+  declare note: string | null
+  @column()
+  declare productGroupId: number | null
+  @column()
+  declare productId: number | null
+  @column()
+  declare quantity: number | null
+  @column()
+  declare shoppingListId: number
+  @column()
+  declare unitCost: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
+export class ShoppingListSchema extends BaseModel {
+  static $columns = ['categoryIds', 'completedAt', 'createdAt', 'horizonDays', 'id', 'scope', 'status', 'supplierId', 'updatedAt'] as const
+  $columns = ShoppingListSchema.$columns
+  @column()
+  declare categoryIds: any
+  @column.dateTime()
+  declare completedAt: DateTime | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare horizonDays: number | null
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare scope: string
+  @column()
+  declare status: string
+  @column()
+  declare supplierId: number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
+export class StockAdjustmentSchema extends BaseModel {
+  static $columns = ['actorId', 'createdAt', 'deliveryId', 'id', 'impersonatorId', 'inventoryCountId', 'kind', 'note', 'productId', 'quantity', 'reason', 'supplierId', 'unitCost', 'unitPrice'] as const
+  $columns = StockAdjustmentSchema.$columns
+  @column()
+  declare actorId: number
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare deliveryId: number
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare impersonatorId: number | null
+  @column()
+  declare inventoryCountId: number | null
+  @column()
+  declare kind: string
+  @column()
+  declare note: string | null
+  @column()
+  declare productId: number
+  @column()
+  declare quantity: number
+  @column()
+  declare reason: string
+  @column()
+  declare supplierId: number
+  @column()
+  declare unitCost: string | null
+  @column()
+  declare unitPrice: number
+}
+
+export class StockDraftItemSchema extends BaseModel {
+  static $columns = ['amount', 'createdAt', 'deliveryId', 'id', 'label', 'price', 'productGroupId', 'productId', 'purchasePrice', 'sortOrder', 'stockDraftId', 'updatedAt'] as const
+  $columns = StockDraftItemSchema.$columns
+  @column()
+  declare amount: number
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare deliveryId: number | null
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare label: string | null
+  @column()
+  declare price: number | null
+  @column()
+  declare productGroupId: number | null
+  @column()
+  declare productId: number | null
+  @column()
+  declare purchasePrice: string | null
+  @column()
+  declare sortOrder: number
+  @column()
+  declare stockDraftId: number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
+export class StockDraftSchema extends BaseModel {
+  static $columns = ['committedAt', 'createdAt', 'id', 'note', 'source', 'status', 'supplierId', 'updatedAt'] as const
+  $columns = StockDraftSchema.$columns
+  @column.dateTime()
+  declare committedAt: DateTime | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare note: string | null
+  @column()
+  declare source: string
+  @column()
+  declare status: string
+  @column()
+  declare supplierId: number
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
 }
@@ -651,7 +849,7 @@ export class UserInvitationSchema extends BaseModel {
 }
 
 export class UserSchema extends BaseModel {
-  static $columns = ['anonymizedAt', 'cardId', 'colorMode', 'createdAt', 'disabledAt', 'displayName', 'email', 'emailVerifiedAt', 'iban', 'ibanVerifiedAt', 'id', 'isDisabled', 'isKiosk', 'isPremium', 'keypadDisabled', 'keypadId', 'password', 'pendingEmail', 'pendingIban', 'phone', 'role', 'sendDailyReport', 'sendMailOnPurchase', 'showAllProducts', 'updatedAt'] as const
+  static $columns = ['anonymizedAt', 'cardId', 'colorMode', 'createdAt', 'disabledAt', 'displayName', 'email', 'emailVerifiedAt', 'iban', 'ibanVerifiedAt', 'id', 'isDisabled', 'isKiosk', 'isPremium', 'keypadDisabled', 'keypadId', 'marginPercent', 'password', 'pendingEmail', 'pendingIban', 'phone', 'role', 'sendDailyReport', 'sendMailOnPurchase', 'showAllProducts', 'updatedAt'] as const
   $columns = UserSchema.$columns
   @column.dateTime()
   declare anonymizedAt: DateTime | null
@@ -685,6 +883,8 @@ export class UserSchema extends BaseModel {
   declare keypadDisabled: boolean | null
   @column()
   declare keypadId: number | null
+  @column()
+  declare marginPercent: string
   @column({ serializeAs: null })
   declare password: string | null
   @column()

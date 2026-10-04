@@ -16,6 +16,9 @@ import ProductImagePicker, {
 } from '~/components/supplier/ProductImagePicker.vue'
 import ProductBarcodeField from '~/components/supplier/ProductBarcodeField.vue'
 import ProductOffContribution from '~/components/supplier/ProductOffContribution.vue'
+import ProductGroupField, {
+  type ProductGroupOption,
+} from '~/components/supplier/ProductGroupField.vue'
 import { useProductSuggestions } from '~/composables/use_product_suggestions'
 
 interface CategoryOption {
@@ -38,6 +41,7 @@ interface ProductData {
   barcode: string | null
   categoryId: number
   allergenIds: number[]
+  productGroupId: number | null
   offShared: boolean
 }
 
@@ -45,6 +49,7 @@ const props = defineProps<{
   product: ProductData
   categories: CategoryOption[]
   allergens: AllergenOption[]
+  productGroups: ProductGroupOption[]
   imageCapabilities: ProductImageCapabilities
   aiSuggestions: boolean
 }>()
@@ -56,6 +61,7 @@ const form = useForm({
   categoryId: props.product.categoryId,
   barcode: props.product.barcode ?? '',
   allergenIds: [...props.product.allergenIds],
+  productGroupId: props.product.productGroupId,
   image: null as File | null,
   offContribute: false,
   offOriginal: null as File | null,
@@ -185,6 +191,8 @@ function submit() {
     .transform((data) => ({
       ...offFields(data),
       allergenIds: JSON.stringify(data.allergenIds),
+      // FormData has no null — an empty value means "no group".
+      productGroupId: data.productGroupId ?? '',
     }))
     .put(`/supplier/products/${props.product.id}`, {
       forceFormData: true,
@@ -384,6 +392,13 @@ useInitialFocus(() => document.getElementById('edit-product-name'))
                 >
               </div>
             </div>
+
+            <ProductGroupField
+              v-model="form.productGroupId"
+              :groups="productGroups"
+              :categoryId="form.categoryId"
+              inputId="edit-product-group"
+            />
 
             <ProductOffContribution
               v-model="form.offContribute"

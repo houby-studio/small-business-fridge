@@ -76,6 +76,14 @@ department in Czechia, where it still keeps the drinks cold and the accounts str
   share a product's EAN, name and their own photo with one tick
   ([details](docs/product-images.md#contributing-back-to-open-food-facts))
 - Payment approval with grouped, filterable invoices
+- A **shopping list** that says what to buy, how much and for how much — from what the fridge
+  sells, what is left and how often you shop, with purchase groups ("any energy drink without
+  sugar") and a slider for the next trip ([details](docs/shopping-list.md))
+- **Purchase prices and margin**, shrinkage from write-offs and inventories, and an earnings
+  page with an optional yearly income limit
+- One stocking form for everything: a **stocking draft** that stocks one item in three
+  keystrokes or a whole receipt at once — prepared by hand, by the shopping list or by an AI
+  assistant from a receipt photo, with a duplicate and price check before anything hits the shelf
 
 **For admins**
 
@@ -144,15 +152,16 @@ gh attestation verify oci://docker.io/houbystudio/fridgora:<version> --repo houb
 
 ## 📚 Documentation
 
-| Guide                                              | What is in it                                                       |
-| -------------------------------------------------- | ------------------------------------------------------------------- |
-| [Deployment](docs/deployment.md)                   | Production setup, secrets, releases, verifying images, all env vars |
-| [Authentication scenarios](docs/auth-scenarios.md) | Local accounts, SSO, invitations and how the env options combine    |
-| [MCP server](docs/mcp.md)                          | Connecting Claude and other AI assistants                           |
-| [Product images](docs/product-images.md)           | The image pipeline, background removal and Open Food Facts          |
-| [Testing reference](docs/testing-reference.md)     | The test suite and how to work with it                              |
-| [Migrating from v2](docs/migration-from-v2.md)     | Coming from the old MongoDB-based v2                                |
-| [Kiosk client](electron-kiosk/)                    | The Electron kiosk and its snap                                     |
+| Guide                                              | What is in it                                                        |
+| -------------------------------------------------- | -------------------------------------------------------------------- |
+| [Deployment](docs/deployment.md)                   | Production setup, secrets, releases, verifying images, all env vars  |
+| [Authentication scenarios](docs/auth-scenarios.md) | Local accounts, SSO, invitations and how the env options combine     |
+| [MCP server](docs/mcp.md)                          | Connecting Claude and other AI assistants                            |
+| [Shopping list](docs/shopping-list.md)             | Shopping list, stocking drafts, purchase prices, shrinkage, earnings |
+| [Product images](docs/product-images.md)           | The image pipeline, background removal and Open Food Facts           |
+| [Testing reference](docs/testing-reference.md)     | The test suite and how to work with it                               |
+| [Migrating from v2](docs/migration-from-v2.md)     | Coming from the old MongoDB-based v2                                 |
+| [Kiosk client](electron-kiosk/)                    | The Electron kiosk and its snap                                      |
 
 The REST API documents itself: set `SWAGGER_ENABLED=true` and open `/docs`.
 

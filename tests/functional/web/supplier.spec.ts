@@ -10,6 +10,8 @@ import { OrderFactory } from '#database/factories/order_factory'
 import Invoice from '#models/invoice'
 import Product from '#models/product'
 import Allergen from '#models/allergen'
+import StockDraft from '#models/stock_draft'
+import StockDraftItem from '#models/stock_draft_item'
 import db from '@adonisjs/lucid/services/db'
 
 const cleanAll = async () => {
@@ -17,6 +19,8 @@ const cleanAll = async () => {
   await db.from('user_favorites').delete()
   await db.from('orders').delete()
   await db.from('invoices').delete()
+  await db.from('stock_draft_items').delete()
+  await db.from('stock_drafts').delete()
   await db.from('deliveries').delete()
   await db.from('product_allergen').delete()
   await db.from('products').delete()
@@ -25,6 +29,8 @@ const cleanAll = async () => {
   await db.from('auth_access_tokens').delete()
   await db.from('users').delete()
 }
+
+const inertia = { 'X-Inertia': 'true', 'X-Inertia-Version': '1' }
 
 test.group('Web Supplier - stock index', (group) => {
   group.each.setup(cleanAll)
@@ -73,6 +79,152 @@ test.group('Web Supplier - stock index', (group) => {
       .get('/supplier/stock?sortBy=totalRemaining&sortOrder=asc')
       .loginAs(supplier)
     response.assertStatus(200)
+  })
+
+  test('the stock table is sorted by product name A→Z by default', async ({ client, assert }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    for (const displayName of ['Zebra', 'Ananas', 'Mango']) {
+      const product = await ProductFactory.merge({ categoryId: category.id, displayName }).create()
+      await DeliveryFactory.merge({
+        supplierId: supplier.id,
+        productId: product.id,
+        amountLeft: 5,
+        price: 10,
+      }).create()
+    }
+
+    const response = await client.get('/supplier/stock').loginAs(supplier).headers(inertia)
+    response.assertStatus(200)
+    const { stock, filters } = response.body().props
+    assert.deepEqual(
+      stock.data.map((row: any) => row.productName),
+      ['Ananas', 'Mango', 'Zebra']
+    )
+    assert.equal(filters.sortBy, 'productName')
+    assert.equal(filters.sortOrder, 'asc')
+
+    const reversed = await client
+      .get('/supplier/stock?sortBy=productName&sortOrder=desc')
+      .loginAs(supplier)
+      .headers(inertia)
+    assert.equal(reversed.body().props.stock.data[0].productName, 'Zebra')
+  })
+
+  test('stockState narrows the table while lowStockCount counts the whole scope', async ({
+    client,
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const ids: Record<string, number> = {}
+    for (const [name, left] of [
+      ['Out', 0],
+      ['Low', 3],
+      ['Fine', 20],
+    ] as const) {
+      const product = await ProductFactory.merge({
+        categoryId: category.id,
+        displayName: name,
+      }).create()
+      ids[name] = product.id
+      await DeliveryFactory.merge({
+        supplierId: supplier.id,
+        productId: product.id,
+        amountSupplied: 20,
+        amountLeft: left,
+        price: 10,
+      }).create()
+    }
+
+    const all = await client.get('/supplier/stock').loginAs(supplier).headers(inertia)
+    assert.equal(all.body().props.stock.meta.total, 3)
+    assert.equal(all.body().props.stock.lowStockCount, 2)
+    assert.equal(all.body().props.filters.stockState, 'all')
+
+    const low = await client
+      .get('/supplier/stock?stockState=low')
+      .loginAs(supplier)
+      .headers(inertia)
+    assert.deepEqual(
+      low.body().props.stock.data.map((row: any) => row.productId),
+      [ids.Low]
+    )
+    assert.equal(low.body().props.stock.lowStockCount, 2)
+    assert.equal(low.body().props.stock.totals.totalProducts, 3)
+    assert.equal(low.body().props.filters.stockState, 'low')
+
+    const out = await client
+      .get('/supplier/stock?stockState=out')
+      .loginAs(supplier)
+      .headers(inertia)
+    assert.deepEqual(
+      out.body().props.stock.data.map((row: any) => row.productId),
+      [ids.Out]
+    )
+  })
+
+  test('the stock page carries only what the table needs', async ({ client, assert }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const response = await client.get('/supplier/stock').loginAs(supplier).headers(inertia)
+    response.assertStatus(200)
+    const props = response.body().props
+    for (const key of ['stock', 'categories', 'filters', 'openDraftCount', 'incomeLimit']) {
+      assert.property(props, key)
+    }
+    for (const gone of [
+      'products',
+      'recentDeliveries',
+      'preselect',
+      'marginPercent',
+      'openDrafts',
+    ]) {
+      assert.notProperty(props, gone)
+    }
+    assert.deepEqual(props.filters, {
+      categoryId: '',
+      sortBy: 'productName',
+      sortOrder: 'asc',
+      scope: 'all',
+      stockState: 'all',
+    })
+    assert.deepEqual(props.stock.totals, {
+      totalProducts: 0,
+      totalRemaining: 0,
+      totalStockValue: 0,
+    })
+  })
+
+  test('openDraftCount is shared with every page and counts only drafts with lines', async ({
+    client,
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    await StockDraft.create({ supplierId: supplier.id, source: 'web', status: 'open' })
+    const filled = await StockDraft.create({
+      supplierId: supplier.id,
+      source: 'mcp',
+      status: 'open',
+    })
+    await StockDraftItem.create({
+      stockDraftId: filled.id,
+      productId: product.id,
+      amount: 2,
+      price: 10,
+      sortOrder: 0,
+    })
+
+    const stock = await client.get('/supplier/stock').loginAs(supplier).headers(inertia)
+    assert.equal(stock.body().props.openDraftCount, 1)
+    // Shared props: the nav badge works on any page.
+    const products = await client.get('/supplier/products').loginAs(supplier).headers(inertia)
+    assert.equal(products.body().props.openDraftCount, 1)
+
+    const customer = await UserFactory.create()
+    const shop = await client.get('/shop').loginAs(customer).headers(inertia)
+    assert.equal(shop.body().props.openDraftCount, 0)
   })
 
   test('stock page defaults to store-wide scope', async ({ client, assert }) => {
@@ -161,7 +313,7 @@ test.group('Web Supplier - products', (group) => {
   group.each.setup(cleanAll)
   group.each.teardown(cleanAll)
 
-  test('creating product redirects to stock with preselected product id', async ({
+  test('creating a product opens the stocking draft with it as a prefilled line', async ({
     client,
     assert,
   }) => {
@@ -189,17 +341,20 @@ test.group('Web Supplier - products', (group) => {
 
     response.assertStatus(302)
     const location = response.header('location') || ''
-    assert.match(location, /^\/supplier\/stock\?preselect=\d+$/)
+    const match = location.match(/^\/supplier\/stock\/drafts\/(\d+)\?focus=(\d+)$/)
+    assert.isNotNull(match, location)
 
-    const match = location.match(/preselect=(\d+)/)
-    assert.isNotNull(match)
-
-    const productId = Number(match![1])
-    const product = await Product.find(productId)
-    assert.isNotNull(product)
+    const product = await Product.findByOrFail('displayName', 'Prefill Product')
+    const draft = await StockDraft.findOrFail(Number(match![1]))
+    assert.equal(draft.supplierId, supplier.id)
+    assert.equal(draft.source, 'web')
+    const item = await StockDraftItem.findOrFail(Number(match![2]))
+    assert.equal(item.stockDraftId, draft.id)
+    assert.equal(item.productId, product.id)
+    assert.equal(item.amount, 1)
   })
 
-  test('updating product via PUT persists changes and redirects to stock', async ({
+  test('updating product via PUT persists changes and returns to the product list', async ({
     client,
     assert,
   }) => {
@@ -222,7 +377,7 @@ test.group('Web Supplier - products', (group) => {
       .redirects(0)
 
     response.assertStatus(302)
-    assert.equal(response.header('location'), '/supplier/stock')
+    assert.equal(response.header('location'), '/supplier/products')
 
     await product.refresh()
     assert.equal(product.displayName, 'Po úpravě')
@@ -248,18 +403,6 @@ test.group('Web Supplier - products', (group) => {
       .redirects(0)
 
     response.assertStatus(404)
-  })
-
-  test('stock page returns preselect value from query string', async ({ client, assert }) => {
-    const supplier = await UserFactory.apply('supplier').create()
-    const response = await client
-      .get('/supplier/stock?preselect=42')
-      .loginAs(supplier)
-      .header('X-Inertia', 'true')
-      .header('X-Inertia-Version', '1')
-
-    response.assertStatus(200)
-    assert.equal(response.body().props.preselect, 42)
   })
 })
 
@@ -745,8 +888,7 @@ test.group('Web Supplier - product allergens', (group) => {
 
     response.assertStatus(302)
 
-    const productId = Number(response.header('location')!.match(/preselect=(\d+)/)![1])
-    const product = await Product.findOrFail(productId)
+    const product = await Product.findByOrFail('displayName', 'Sušenka')
     await product.load('allergens')
     assert.deepEqual(
       product.allergens.map((a) => a.id).sort((a, b) => a - b),
@@ -795,23 +937,38 @@ test.group('Web Supplier - product allergens', (group) => {
   })
 })
 
-test.group('Web Supplier - deliveries (stocking)', (group) => {
+test.group('Web Supplier - stocking through a draft', (group) => {
   group.each.setup(cleanAll)
   group.each.teardown(cleanAll)
 
-  test('POST /supplier/deliveries creates the stock row', async ({ client, assert }) => {
+  async function openDraft(client: any, supplier: any) {
+    const created = await client
+      .post('/supplier/stock/drafts')
+      .loginAs(supplier)
+      .withCsrfToken()
+      .redirects(0)
+    created.assertStatus(302)
+    return Number(created.header('location')!.match(/drafts\/(\d+)/)![1])
+  }
+
+  test('committing a draft creates the stock row and the audit entry', async ({
+    client,
+    assert,
+  }) => {
     const supplier = await UserFactory.apply('supplier').create()
     const category = await CategoryFactory.create()
     const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    const draftId = await openDraft(client, supplier)
 
     const response = await client
-      .post('/supplier/deliveries')
+      .post(`/supplier/stock/drafts/${draftId}/commit`)
       .loginAs(supplier)
       .withCsrfToken()
-      .form({ productId: product.id, amount: 3, price: 49 })
+      .json({ items: [{ productId: product.id, amount: 3, price: 49 }] })
       .redirects(0)
 
     response.assertStatus(302)
+    assert.equal(response.header('location'), '/supplier/stock')
 
     const row = await db
       .from('deliveries')
@@ -829,45 +986,53 @@ test.group('Web Supplier - deliveries (stocking)', (group) => {
       .where('action', 'delivery.created')
       .first()
     assert.exists(log)
+    assert.isNull(log.target_user_id)
   })
 
-  test('POST /supplier/deliveries rejects a zero price and stocks nothing', async ({
+  test('a zero price is rejected and stocks nothing', async ({ client, assert }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    const draftId = await openDraft(client, supplier)
+
+    const response = await client
+      .post(`/supplier/stock/drafts/${draftId}/commit`)
+      .loginAs(supplier)
+      .withCsrfToken()
+      .json({ items: [{ productId: product.id, amount: 3, price: 0 }] })
+      .redirects(0)
+
+    response.assertStatus(302)
+    assert.lengthOf(await db.from('deliveries').where('product_id', product.id), 0)
+    const draft = await StockDraft.findOrFail(draftId)
+    assert.equal(draft.status, 'open')
+  })
+
+  test('a customer cannot start a draft, and the old quick-form route is gone', async ({
     client,
     assert,
   }) => {
+    const customer = await UserFactory.create()
     const supplier = await UserFactory.apply('supplier').create()
     const category = await CategoryFactory.create()
     const product = await ProductFactory.merge({ categoryId: category.id }).create()
 
-    const response = await client
+    const refused = await client
+      .post('/supplier/stock/drafts')
+      .loginAs(customer)
+      .withCsrfToken()
+      .redirects(0)
+    refused.assertStatus(302)
+    assert.equal(refused.header('location'), '/')
+    assert.lengthOf(await StockDraft.all(), 0)
+
+    const gone = await client
       .post('/supplier/deliveries')
       .loginAs(supplier)
       .withCsrfToken()
-      .form({ productId: product.id, amount: 3, price: 0 })
-      .redirects(0)
-
-    response.assertStatus(302)
-
-    const rows = await db.from('deliveries').where('product_id', product.id)
-    assert.lengthOf(rows, 0)
-  })
-
-  test('a customer cannot stock products', async ({ client, assert }) => {
-    const customer = await UserFactory.create()
-    const category = await CategoryFactory.create()
-    const product = await ProductFactory.merge({ categoryId: category.id }).create()
-
-    const response = await client
-      .post('/supplier/deliveries')
-      .loginAs(customer)
-      .withCsrfToken()
       .form({ productId: product.id, amount: 3, price: 49 })
       .redirects(0)
-
-    response.assertStatus(302)
-    assert.equal(response.header('location'), '/')
-
-    const rows = await db.from('deliveries').where('product_id', product.id)
-    assert.lengthOf(rows, 0)
+    gone.assertStatus(404)
+    assert.lengthOf(await db.from('deliveries').where('product_id', product.id), 0)
   })
 })

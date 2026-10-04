@@ -1,30 +1,15 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import { resolvePage } from '#helpers/pagination'
-import DeliveryService from '#services/delivery_service'
+import { listRedirectUrl } from '#helpers/list_redirect'
+import DeliveryService, { type StockScope } from '#services/delivery_service'
 import type { DeliveryCorrectionErrorCode } from '#services/delivery_service'
+import StockHistoryService from '#services/stock_history_service'
 import NotificationService from '#services/notification_service'
 import { isDomainError } from '#services/domain_error'
-import {
-  createDeliveryValidator,
-  correctDeliveryValidator,
-  voidDeliveryValidator,
-} from '#validators/delivery'
+import { correctDeliveryValidator, voidDeliveryValidator } from '#validators/delivery'
 import { normalizeImagePath } from '#helpers/image_url'
 import logger from '@adonisjs/core/services/logger'
 import type DeliveryCorrection from '#models/delivery_correction'
-
-function deliveryReturnUrl(request: HttpContext['request']): string {
-  const referer = request.header('referer') ?? ''
-  try {
-    const { pathname, search } = new URL(referer)
-    if (pathname === '/supplier/stock' || pathname === '/supplier/deliveries') {
-      return pathname + search
-    }
-  } catch {
-    // invalid URL — use fallback
-  }
-  return '/supplier/deliveries'
-}
 
 const CORRECTION_ERROR_MESSAGES: Record<DeliveryCorrectionErrorCode, string> = {
   DELIVERY_NOT_FOUND: 'messages.delivery_correction_not_found',
@@ -36,6 +21,14 @@ const CORRECTION_ERROR_MESSAGES: Record<DeliveryCorrectionErrorCode, string> = {
   DELIVERY_HAS_ORDERS: 'messages.delivery_void_has_orders',
 }
 
+type HistoryType = 'deliveries' | 'adjustments'
+
+const PER_PAGE = 20
+
+/**
+ * Sklad › Historie: deliveries (with their corrections) or write-offs and inventory
+ * differences. Only the table that is shown is loaded; the other comes back empty.
+ */
 export default class DeliveriesController {
   async index({ inertia, auth, request }: HttpContext) {
     const service = new DeliveryService()
@@ -44,23 +37,29 @@ export default class DeliveriesController {
     const productId = request.input('productId')
     const sortBy = request.input('sortBy')
     const sortOrder = request.input('sortOrder')
-    const scope: 'store' | 'mine' = request.input('scope') === 'store' ? 'store' : 'mine'
-    const preselect = request.input('preselect')
+    const scope: StockScope = request.input('scope') === 'all' ? 'all' : 'mine'
+    const type: HistoryType = request.input('type') === 'adjustments' ? 'adjustments' : 'deliveries'
+    const listFilters = {
+      productId: productId ? Number(productId) : undefined,
+      sortBy: sortBy || undefined,
+      sortOrder: sortOrder || undefined,
+      scope,
+    }
+    const empty = { data: [], meta: { total: 0, perPage: PER_PAGE, currentPage: 1, lastPage: 1 } }
 
-    const [products, recentDeliveries] = await Promise.all([
+    const [products, recentDeliveries, adjustments] = await Promise.all([
       service.getAllProducts(),
-      service.getRecentDeliveries(user.id, page, 20, {
-        productId: productId ? Number(productId) : undefined,
-        sortBy: sortBy || undefined,
-        sortOrder: sortOrder || undefined,
-        scope,
-      }),
+      type === 'deliveries'
+        ? service.getRecentDeliveries(user.id, page, PER_PAGE, listFilters)
+        : null,
+      type === 'adjustments'
+        ? new StockHistoryService().listAdjustments(user.id, page, PER_PAGE, listFilters)
+        : empty,
     ])
 
     const orderStats = await service.getOrderStatsForDeliveries(
-      recentDeliveries.all().map((d) => d.id)
+      recentDeliveries?.all().map((d) => d.id) ?? []
     )
-    const serialized = recentDeliveries.serialize()
 
     return inertia.render('supplier/deliveries/index', {
       products: products.map((p) => ({
@@ -69,79 +68,49 @@ export default class DeliveriesController {
         imagePath: normalizeImagePath(p.imagePath),
         category: p.category ? { name: p.category.name, color: p.category.color } : null,
       })),
-      recentDeliveries: {
-        meta: serialized.meta,
-        data: recentDeliveries.all().map((d) => {
-          const stats = orderStats.get(d.id)
-          const lastCorrection = d.corrections[0]
-          return {
-            id: d.id,
-            createdAt: d.createdAt.toISO(),
-            amountSupplied: d.amountSupplied,
-            amountLeft: d.amountLeft,
-            price: d.price,
-            voidedAt: d.voidedAt?.toISO() ?? null,
-            product: {
-              displayName: d.product?.displayName ?? '—',
-              category: d.product?.category ? { name: d.product.category.name } : undefined,
-            },
-            supplierName: d.supplier?.displayName ?? '—',
-            soldCount: d.amountSupplied - d.amountLeft,
-            invoicedCount: stats?.invoicedCount ?? 0,
-            uninvoicedCount: stats?.uninvoicedCount ?? 0,
-            uninvoicedBuyerCount: stats?.uninvoicedBuyerCount ?? 0,
-            correctionCount: d.corrections.length,
-            lastCorrection: lastCorrection
-              ? { reason: lastCorrection.reason, createdAt: lastCorrection.createdAt.toISO() }
-              : null,
-            canCorrect: user.isAdmin || d.supplierId === user.id,
+      recentDeliveries: recentDeliveries
+        ? {
+            meta: recentDeliveries.serialize().meta,
+            data: recentDeliveries.all().map((d) => {
+              const stats = orderStats.get(d.id)
+              const lastCorrection = d.corrections[0]
+              return {
+                id: d.id,
+                createdAt: d.createdAt.toISO(),
+                amountSupplied: d.amountSupplied,
+                amountLeft: d.amountLeft,
+                price: d.price,
+                purchasePrice: d.purchasePrice,
+                lostCount: d.amountLost,
+                voidedAt: d.voidedAt?.toISO() ?? null,
+                product: {
+                  displayName: d.product?.displayName ?? '—',
+                  category: d.product?.category ? { name: d.product.category.name } : undefined,
+                },
+                supplierName: d.supplier?.displayName ?? '—',
+                // What is gone from the lot: sold, plus written off — a correction may not go below it.
+                soldCount: d.amountSupplied - d.amountLeft,
+                invoicedCount: stats?.invoicedCount ?? 0,
+                uninvoicedCount: stats?.uninvoicedCount ?? 0,
+                uninvoicedBuyerCount: stats?.uninvoicedBuyerCount ?? 0,
+                correctionCount: d.corrections.length,
+                lastCorrection: lastCorrection
+                  ? { reason: lastCorrection.reason, createdAt: lastCorrection.createdAt.toISO() }
+                  : null,
+                canCorrect: user.isAdmin || d.supplierId === user.id,
+              }
+            }),
           }
-        }),
-      },
+        : empty,
+      adjustments,
       filters: {
         productId: productId || '',
         sortBy: sortBy || '',
         sortOrder: sortOrder || '',
         scope,
+        type,
       },
-      preselect: preselect ? Number(preselect) : null,
     })
-  }
-
-  async store({ request, response, auth, session, i18n }: HttpContext) {
-    const data = await request.validateUsing(createDeliveryValidator)
-
-    const service = new DeliveryService()
-
-    if (!data.confirmWarnings) {
-      const warnings = await service.getStockWarnings(auth.user!.id, data.productId, data.price)
-      if (warnings) {
-        // Nothing is stored — the page shows a confirm dialog and resubmits with
-        // confirmWarnings once the supplier has checked the numbers.
-        session.flash('deliveryWarning', {
-          ...warnings,
-          productId: data.productId,
-          amount: data.amount,
-          price: data.price,
-        })
-        return response.redirect(deliveryReturnUrl(request))
-      }
-    }
-
-    const delivery = await service.addStock(auth.user!.id, data.productId, data.amount, data.price)
-
-    // Notify users who favourited this product (fire-and-forget)
-    const notificationService = new NotificationService()
-    notificationService.sendRestockNotification(delivery).catch((err) => {
-      logger.error({ err }, `Failed to send restock notifications for product #${data.productId}`)
-    })
-
-    session.flash('alert', {
-      type: 'success',
-      message: i18n.t('messages.delivery_created', { amount: data.amount, price: data.price }),
-    })
-
-    return response.redirect(deliveryReturnUrl(request))
   }
 
   async update(ctx: HttpContext) {
@@ -177,7 +146,7 @@ export default class DeliveriesController {
       this.flashCorrectionError(error, session, i18n)
     }
 
-    return response.redirect(deliveryReturnUrl(request))
+    return response.redirect(listRedirectUrl(request, '/supplier/deliveries'))
   }
 
   async destroy(ctx: HttpContext) {
@@ -197,7 +166,7 @@ export default class DeliveriesController {
       this.flashCorrectionError(error, session, i18n)
     }
 
-    return response.redirect(deliveryReturnUrl(request))
+    return response.redirect(listRedirectUrl(request, '/supplier/deliveries'))
   }
 
   /** An admin (not the supplier) changed the delivery — let the supplier know. */

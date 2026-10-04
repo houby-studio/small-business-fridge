@@ -82,6 +82,10 @@ export default class User extends compose(BaseModel, AuthFinder) {
   @column()
   declare isPremium: boolean
 
+  /** Supplier markup used to suggest a selling price from the purchase price. */
+  @column({ consume: (value: string | number) => Number(value) })
+  declare marginPercent: number
+
   @column.dateTime()
   declare anonymizedAt: DateTime | null
 

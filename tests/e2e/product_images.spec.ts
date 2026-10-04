@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import sharp from 'sharp'
 import { loginAs } from './helpers/auth'
+import { discardDraft, stockPreselected } from './helpers/products'
 
 /** A red "product" on a white backdrop, the typical e-shop picture. */
 async function whiteBackdropPng(width = 60, height = 100): Promise<Buffer> {
@@ -15,6 +16,14 @@ async function whiteBackdropPng(width = 60, height = 100): Promise<Buffer> {
     .composite([{ input: product, left: 20, top: 20 }])
     .png()
     .toBuffer()
+}
+
+/** The product form lands on a stocking draft; the new product is the line that has an id. */
+async function draftProductId(page: Page): Promise<string> {
+  await expect(page).toHaveURL(/\/supplier\/stock\/drafts\/\d+\?focus=\d+/)
+  const row = page.locator('[data-testid="draft-row"][data-product-id]:not([data-product-id=""])')
+  await expect(row.first()).toBeVisible()
+  return (await row.first().getAttribute('data-product-id'))!
 }
 
 async function fillRequiredFields(page: Page, name: string) {
@@ -58,8 +67,8 @@ test.describe('Product image tile', () => {
     await expect(status).toHaveText('Hotovo: pozadí ponecháno')
 
     await createButton.click()
-    await expect(page).toHaveURL(/\/supplier\/stock\?preselect=\d+/)
-    const productId = page.url().match(/preselect=(\d+)/)![1]
+    const productId = await draftProductId(page)
+    await discardDraft(page)
 
     await page.goto(`/supplier/products/${productId}/edit`)
     await expect(page.getByTestId('product-image-preview')).toHaveAttribute(
@@ -136,8 +145,8 @@ test.describe('Product image tile', () => {
     await page.getByText('S pozadím', { exact: true }).click()
     await expect(status).toHaveText('Hotovo: pozadí ponecháno')
     await page.getByRole('button', { name: 'Vytvořit produkt' }).click()
-    await expect(page).toHaveURL(/\/supplier\/stock\?preselect=\d+/)
-    const productId = page.url().match(/preselect=(\d+)/)![1]
+    const productId = await draftProductId(page)
+    await discardDraft(page)
 
     await page.goto(`/supplier/products/${productId}/edit`)
     await expect(page.getByText('Uložený obrázek')).toBeVisible()
@@ -152,7 +161,7 @@ test.describe('Product image tile', () => {
     await page.getByText('Bez pozadí', { exact: true }).click()
     await expect(status).toHaveText('Hotovo: pozadí odstraněno')
     await page.getByRole('button', { name: 'Uložit změny' }).click()
-    await expect(page).toHaveURL(/\/supplier\/stock/)
+    await expect(page).toHaveURL(/\/supplier\/products$/)
   })
 })
 
@@ -257,12 +266,8 @@ test.describe('Kiosk product images', () => {
       buffer: await whiteBackdropPng(),
     })
     await page.getByRole('button', { name: 'Vytvořit produkt' }).click()
-    await expect(page).toHaveURL(/\/supplier\/stock\?preselect=\d+/)
-    await page.getByPlaceholder('ks').fill('2')
-    await page.keyboard.press('Enter')
-    await page.getByPlaceholder('Kč').fill('25')
-    await page.keyboard.press('Enter')
-    await expect(page.getByText(name).first()).toBeVisible()
+    await draftProductId(page)
+    await stockPreselected(page, '2', '25')
 
     await loginAs(page, 'kiosk')
     await page.goto('/kiosk/shop?keypadId=89992')
@@ -305,14 +310,17 @@ test.describe('Contributing to Open Food Facts', () => {
     })
     await expect(page.getByTestId('product-image-status')).toHaveText('Hotovo: pozadí odstraněno')
     await expect(contribution).toContainText('Pošle EAN, název a vaši fotku')
-    await expect(contribution).toContainText('CC BY-SA')
+    // The licence sentence sits behind the (i) next to it.
+    await contribution.getByTestId('product-off-license').click()
+    await expect(page.getByRole('dialog')).toContainText('CC BY-SA')
+    await page.keyboard.press('Escape')
 
     await page.getByText('Přispět do Open Food Facts').click()
     await expect(contribution.getByRole('checkbox')).toBeChecked()
 
     await page.getByRole('button', { name: 'Vytvořit produkt' }).click()
-    await expect(page).toHaveURL(/\/supplier\/stock\?preselect=\d+/)
-    const productId = page.url().match(/preselect=(\d+)/)![1]
+    const productId = await draftProductId(page)
+    await discardDraft(page)
 
     // Name and EAN went once; the edit form only offers a new own photo.
     await page.goto(`/supplier/products/${productId}/edit`)

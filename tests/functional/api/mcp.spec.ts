@@ -2,6 +2,7 @@ import '#tests/test_context'
 import { test } from '@japa/runner'
 import type { ApiClient } from '@japa/api-client'
 import { createHash, randomBytes } from 'node:crypto'
+import { DateTime } from 'luxon'
 import db from '@adonisjs/lucid/services/db'
 import mail from '@adonisjs/mail/services/main'
 import { UserFactory } from '#database/factories/user_factory'
@@ -14,6 +15,9 @@ import McpOauthClient from '#models/mcp_oauth_client'
 import McpOauthCode from '#models/mcp_oauth_code'
 import Category from '#models/category'
 import Product from '#models/product'
+import { OrderFactory } from '#database/factories/order_factory'
+import { evalScenarios } from '#mcp/eval_scenarios'
+import { liveToolDefinitions } from '../../../commands/mcp_eval.js'
 
 const MCP_URL = '/mcp'
 
@@ -34,11 +38,20 @@ const cleanAll = async () => {
   await db.from('mcp_oauth_clients').delete()
   await db.from('audit_logs').delete()
   await db.from('user_favorites').delete()
+  await db.from('stock_adjustments').delete()
+  await db.from('inventory_count_items').delete()
+  await db.from('inventory_counts').delete()
+  await db.from('delivery_corrections').delete()
+  await db.from('stock_draft_items').delete()
+  await db.from('stock_drafts').delete()
+  await db.from('shopping_list_items').delete()
+  await db.from('shopping_lists').delete()
   await db.from('orders').delete()
   await db.from('invoices').delete()
   await db.from('deliveries').delete()
   await db.from('product_allergen').delete()
   await db.from('products').delete()
+  await db.from('product_groups').delete()
   await db.from('allergens').delete()
   await db.from('categories').delete()
   await db.from('auth_access_tokens').delete()
@@ -311,9 +324,32 @@ test.group('API MCP - Role-based tools', (group) => {
       'list_products',
       'add_stock',
       'get_stock',
+      'recent_deliveries',
+      'list_catalog_products',
+      'create_product',
+      'update_product',
       'uninvoiced_summary',
       'generate_invoices',
+      'list_issued_invoices',
       'approve_payment',
+      'reject_payment',
+      'get_shopping_list',
+      'update_shopping_list_line',
+      'add_shopping_list_line',
+      'list_product_groups',
+      'create_product_group',
+      'create_stock_draft',
+      'list_stock_drafts',
+      'get_stock_draft',
+      'update_stock_draft',
+      'discard_stock_draft',
+      'commit_stock_draft',
+      'write_off_stock',
+      'void_delivery',
+      'correct_delivery',
+      'record_inventory_count',
+      'classify_inventory_loss',
+      'get_finance_summary',
     ])
     assert.notInclude(names, 'list_users')
     assert.notInclude(names, 'storno_order')
@@ -1024,5 +1060,1125 @@ test.group('API MCP - audit log', (group) => {
       via: 'mcp',
       name: { from: 'Auditovaný produkt', to: 'Přejmenovaný produkt' },
     })
+  })
+})
+
+test.group('API MCP - shopping, stocking drafts and earnings', (group) => {
+  group.each.setup(async () => {
+    throttleStore.clear()
+    await cleanAll()
+  })
+  group.each.teardown(cleanAll)
+
+  test('suppliers get the new tools, customers do not', async ({ client, assert }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const customer = await UserFactory.create()
+    const supplierTools = await listToolNames(client, await createToken(supplier))
+    const customerTools = await listToolNames(client, await createToken(customer))
+    const added = [
+      'get_shopping_list',
+      'update_shopping_list_line',
+      'add_shopping_list_line',
+      'list_product_groups',
+      'create_product_group',
+      'create_stock_draft',
+      'list_stock_drafts',
+      'get_stock_draft',
+      'update_stock_draft',
+      'discard_stock_draft',
+      'commit_stock_draft',
+      'write_off_stock',
+      'void_delivery',
+      'correct_delivery',
+      'record_inventory_count',
+      'classify_inventory_loss',
+      'get_finance_summary',
+    ]
+    assert.includeMembers(supplierTools, added)
+    for (const name of added) assert.notInclude(customerTools, name)
+  })
+
+  test('add_stock derives the selling price from the purchase price and margin', async ({
+    client,
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    supplier.marginPercent = 5
+    await supplier.save()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    const token = await createToken(supplier)
+
+    const result = await callTool(client, token, 'add_stock', {
+      productId: product.id,
+      amount: 24,
+      purchasePrice: 14.9,
+    })
+    assert.isFalse(result.isError)
+    assert.isTrue(result.data.stocked)
+    assert.equal(result.data.price, 16)
+    const lot = await db.from('deliveries').where('product_id', product.id).first()
+    assert.equal(Number(lot.purchase_price), 14.9)
+
+    const missing = await callTool(client, token, 'add_stock', { productId: product.id, amount: 1 })
+    assert.isTrue(missing.isError)
+    assert.include(missing.raw, 'PRICE_REQUIRED')
+  })
+
+  test('create_stock_draft prepares lines for review without stocking', async ({
+    client,
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+
+    const result = await callTool(client, await createToken(supplier), 'create_stock_draft', {
+      note: 'Lidl 2. 10.',
+      items: [
+        { productId: product.id, label: 'PEPSI 0,33 PLECH', amount: 24, purchasePrice: 14.9 },
+        { label: 'NEZNÁMÁ POLOŽKA', amount: 2, purchasePrice: 9.9 },
+      ],
+    })
+    assert.isFalse(result.isError)
+    assert.equal(result.data.lines, 2)
+    assert.equal(result.data.unmatched, 1)
+    assert.match(
+      result.data.reviewUrl,
+      new RegExp(`/supplier/stock/drafts/${result.data.draftId}$`)
+    )
+    assert.lengthOf(await db.from('deliveries'), 0)
+
+    const audit = await db.from('audit_logs').where('action', 'stock_draft.created').first()
+    assert.equal(audit.metadata.via, 'mcp')
+  })
+
+  test('purchase groups are created idempotently and assigned to products', async ({
+    client,
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    const token = await createToken(supplier)
+
+    const created = await callTool(client, token, 'create_product_group', {
+      name: 'Energy bez cukru',
+      categoryId: category.id,
+    })
+    assert.isFalse(created.data.existed)
+    const again = await callTool(client, token, 'create_product_group', {
+      name: 'energy bez cukru',
+      categoryId: category.id,
+    })
+    assert.isTrue(again.data.existed)
+    assert.equal(again.data.groupId, created.data.groupId)
+
+    const updated = await callTool(client, token, 'update_product', {
+      productId: product.id,
+      groupId: created.data.groupId,
+    })
+    assert.isFalse(updated.isError)
+    const listed = await callTool(client, token, 'list_product_groups')
+    assert.deepEqual(listed.data.groups[0].products, [
+      { productId: product.id, name: product.displayName },
+    ])
+
+    const cleared = await callTool(client, token, 'update_product', {
+      productId: product.id,
+      groupId: null,
+    })
+    assert.isFalse(cleared.isError)
+    const ungrouped = await Product.findOrFail(product.id)
+    assert.isNull(ungrouped.productGroupId)
+  })
+
+  test('get_shopping_list and get_finance_summary answer for the supplier', async ({
+    client,
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const token = await createToken(supplier)
+
+    const list = await callTool(client, token, 'get_shopping_list', { horizonDays: 7 })
+    assert.isFalse(list.isError)
+    assert.equal(list.data.settings.horizonDays, 7)
+    assert.isArray(list.data.lines)
+
+    const finance = await callTool(client, token, 'get_finance_summary', {})
+    assert.isFalse(finance.isError)
+    assert.equal(finance.data.unitsSold, 0)
+    assert.property(finance.data, 'incomeLimit')
+  })
+})
+
+/** Waits for a fire-and-forget side effect (e-mails are sent after the tool answered). */
+async function waitFor(condition: () => boolean, timeoutMs = 3000): Promise<void> {
+  const started = Date.now()
+  while (!condition()) {
+    if (Date.now() - started > timeoutMs) return
+    await new Promise((resolve) => setTimeout(resolve, 25))
+  }
+}
+
+async function supplierWithProduct() {
+  const supplier = await UserFactory.apply('supplier').create()
+  const category = await CategoryFactory.create()
+  const product = await ProductFactory.merge({ categoryId: category.id }).create()
+  const token = await createToken(supplier)
+  return { supplier, category, product, token }
+}
+
+test.group('API MCP - stock out, drafts from chat and list edits', (group) => {
+  group.each.setup(async () => {
+    throttleStore.clear()
+    await cleanAll()
+  })
+  group.each.teardown(cleanAll)
+
+  test('add_stock warns about a lot stocked minutes ago and stocks only with confirmWarnings', async ({
+    client,
+    assert,
+  }) => {
+    const { product, token } = await supplierWithProduct()
+
+    const first = await callTool(client, token, 'add_stock', {
+      productId: product.id,
+      amount: 10,
+      price: 20,
+    })
+    assert.isFalse(first.isError)
+    assert.isTrue(first.data.stocked)
+    assert.equal(first.data.price, 20)
+    assert.include(first.data.note, 'void_delivery')
+
+    const repeated = await callTool(client, token, 'add_stock', {
+      productId: product.id,
+      amount: 10,
+      price: 20,
+    })
+    assert.isFalse(repeated.isError)
+    assert.isFalse(repeated.data.stocked)
+    assert.equal(repeated.data.warnings.duplicate.amount, 10)
+    assert.isNull(repeated.data.warnings.unusualPrice)
+    assert.include(repeated.data.note, 'confirmWarnings')
+    assert.lengthOf(await db.from('deliveries'), 1)
+
+    const confirmed = await callTool(client, token, 'add_stock', {
+      productId: product.id,
+      amount: 10,
+      price: 20,
+      confirmWarnings: true,
+    })
+    assert.isTrue(confirmed.data.stocked)
+    assert.lengthOf(await db.from('deliveries'), 2)
+  })
+
+  test('add_stock flags an unusual price against the last lot', async ({ client, assert }) => {
+    const { supplier, product, token } = await supplierWithProduct()
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      price: 20,
+      createdAt: DateTime.now().minus({ days: 2 }),
+    }).create()
+
+    const result = await callTool(client, token, 'add_stock', {
+      productId: product.id,
+      amount: 5,
+      price: 60,
+    })
+    assert.isFalse(result.data.stocked)
+    assert.isNull(result.data.warnings.duplicate)
+    assert.equal(result.data.warnings.unusualPrice.lastPrice, 20)
+  })
+
+  test('add_stock e-mails users who favourited the product, like the web does', async ({
+    client,
+    assert,
+  }) => {
+    const fakeMailer = mail.fake()
+    try {
+      const { product, token } = await supplierWithProduct()
+      const fan = await UserFactory.merge({ email: 'fan@example.com' }).create()
+      await db.table('user_favorites').insert({
+        user_id: fan.id,
+        product_id: product.id,
+        created_at: new Date(),
+      })
+
+      const result = await callTool(client, token, 'add_stock', {
+        productId: product.id,
+        amount: 3,
+        price: 15,
+      })
+      assert.isTrue(result.data.stocked)
+
+      await waitFor(() => fakeMailer.messages.sent().length > 0)
+      fakeMailer.messages.assertSent((message) => message.hasTo('fan@example.com'))
+    } finally {
+      mail.restore()
+    }
+  })
+
+  test('add_stock and create_product report unknown ids with a code and a hint', async ({
+    client,
+    assert,
+  }) => {
+    const { category, token } = await supplierWithProduct()
+
+    const stock = await callTool(client, token, 'add_stock', {
+      productId: 999_999,
+      amount: 1,
+      price: 10,
+    })
+    assert.isTrue(stock.isError)
+    assert.include(stock.raw, '(error code: PRODUCT_NOT_FOUND)')
+    assert.include(stock.raw, 'list_catalog_products')
+
+    const product = await callTool(client, token, 'create_product', {
+      displayName: 'Bez kategorie',
+      categoryId: 999_999,
+    })
+    assert.isTrue(product.isError)
+    assert.include(product.raw, '(error code: CATEGORY_NOT_FOUND)')
+    assert.include(product.raw, 'list_categories')
+    assert.notInclude(product.raw, 'foreign key')
+    assert.lengthOf(await db.from('products').where('display_name', 'Bez kategorie'), 0)
+
+    const noGroup = await callTool(client, token, 'create_product', {
+      displayName: 'Bez skupiny',
+      categoryId: category.id,
+      groupId: 999_999,
+    })
+    assert.isTrue(noGroup.isError)
+    assert.include(noGroup.raw, '(error code: GROUP_NOT_FOUND)')
+  })
+
+  test('write_off_stock takes pieces off the oldest lots and refuses more than is in stock', async ({
+    client,
+    assert,
+  }) => {
+    const { supplier, product, token } = await supplierWithProduct()
+    const older = await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountSupplied: 2,
+      amountLeft: 2,
+      price: 20,
+      createdAt: DateTime.now().minus({ days: 3 }),
+    }).create()
+    const newer = await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountSupplied: 5,
+      amountLeft: 5,
+      price: 20,
+    }).create()
+
+    const result = await callTool(client, token, 'write_off_stock', {
+      productId: product.id,
+      quantity: 3,
+      reason: 'expired',
+      note: 'prošlé',
+    })
+    assert.isFalse(result.isError)
+    assert.equal(result.data.product, product.displayName)
+    assert.deepEqual(result.data.lots, [
+      { deliveryId: older.id, quantity: 2 },
+      { deliveryId: newer.id, quantity: 1 },
+    ])
+    assert.include(result.data.note, 'shrinkage')
+    const left = await db.from('deliveries').where('id', newer.id).first()
+    assert.equal(left.amount_left, 4)
+    assert.equal(left.amount_lost, 1)
+    const audit = await db.from('audit_logs').where('action', 'stock.written_off').first()
+    assert.equal(audit.metadata.via, 'mcp')
+
+    const tooMany = await callTool(client, token, 'write_off_stock', {
+      productId: product.id,
+      quantity: 10,
+      reason: 'damaged',
+    })
+    assert.isTrue(tooMany.isError)
+    assert.include(tooMany.raw, '(error code: NOT_ENOUGH_STOCK)')
+
+    const unknown = await callTool(client, token, 'write_off_stock', {
+      productId: 999_999,
+      quantity: 1,
+      reason: 'other',
+    })
+    assert.include(unknown.raw, '(error code: PRODUCT_NOT_FOUND)')
+  })
+
+  test('void_delivery cancels an unsold lot and refuses one something sold from', async ({
+    client,
+    assert,
+  }) => {
+    const { supplier, product, token } = await supplierWithProduct()
+    const unsold = await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountSupplied: 6,
+      amountLeft: 6,
+      price: 18,
+    }).create()
+    const sold = await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountSupplied: 6,
+      amountLeft: 5,
+      price: 18,
+    }).create()
+    const buyer = await UserFactory.create()
+    await OrderFactory.merge({ buyerId: buyer.id, deliveryId: sold.id, unitPrice: 18 }).create()
+
+    const voided = await callTool(client, token, 'void_delivery', {
+      deliveryId: unsold.id,
+      reason: 'duplicate — stocked twice',
+    })
+    assert.isFalse(voided.isError)
+    assert.equal(voided.data.status, 'voided')
+    assert.equal(voided.data.amountSupplied, 6)
+    assert.equal(voided.data.product, product.displayName)
+    const row = await db.from('deliveries').where('id', unsold.id).first()
+    assert.isNotNull(row.voided_at)
+    assert.equal(row.amount_left, 0)
+
+    const refused = await callTool(client, token, 'void_delivery', {
+      deliveryId: sold.id,
+      reason: 'omyl',
+    })
+    assert.isTrue(refused.isError)
+    assert.include(refused.raw, '(error code: DELIVERY_HAS_ORDERS)')
+    assert.include(refused.raw, 'correct_delivery')
+
+    const again = await callTool(client, token, 'void_delivery', {
+      deliveryId: unsold.id,
+      reason: 'ještě jednou',
+    })
+    assert.include(again.raw, '(error code: DELIVERY_VOIDED)')
+  })
+
+  test('void_delivery refuses a lot of another supplier', async ({ client, assert }) => {
+    const { product, token } = await supplierWithProduct()
+    const other = await UserFactory.apply('supplier').create()
+    const foreign = await DeliveryFactory.merge({
+      supplierId: other.id,
+      productId: product.id,
+    }).create()
+
+    const result = await callTool(client, token, 'void_delivery', {
+      deliveryId: foreign.id,
+      reason: 'není moje',
+    })
+    assert.isTrue(result.isError)
+    assert.include(result.raw, '(error code: FORBIDDEN)')
+  })
+
+  test('correct_delivery changes pieces and both prices, and reports NO_CHANGE', async ({
+    client,
+    assert,
+  }) => {
+    const { supplier, product, token } = await supplierWithProduct()
+    const lot = await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountSupplied: 10,
+      amountLeft: 10,
+      price: 20,
+    }).create()
+
+    const result = await callTool(client, token, 'correct_delivery', {
+      deliveryId: lot.id,
+      amount: 8,
+      price: 25,
+      purchasePrice: 14.9,
+      reason: 'překlep v množství a ceně',
+    })
+    assert.isFalse(result.isError)
+    assert.deepEqual(result.data.amountSupplied, { from: 10, to: 8 })
+    assert.deepEqual(result.data.price, { from: 20, to: 25 })
+    assert.deepEqual(result.data.purchasePrice, { from: null, to: 14.9 })
+    assert.equal(result.data.amountLeft, 8)
+    assert.equal(result.data.repricedOrders, 0)
+    const row = await db.from('deliveries').where('id', lot.id).first()
+    assert.equal(row.amount_left, 8)
+    assert.equal(Number(row.purchase_price), 14.9)
+
+    const same = await callTool(client, token, 'correct_delivery', {
+      deliveryId: lot.id,
+      amount: 8,
+      price: 25,
+      reason: 'nic nového',
+    })
+    assert.isTrue(same.isError)
+    assert.include(same.raw, '(error code: NO_CHANGE)')
+
+    const more = await callTool(client, token, 'correct_delivery', {
+      deliveryId: lot.id,
+      amount: 12,
+      price: 25,
+      reason: 'přidat kusy',
+    })
+    assert.include(more.raw, '(error code: AMOUNT_INCREASE_NOT_ALLOWED)')
+    assert.include(more.raw, 'add_stock')
+  })
+
+  test('recent_deliveries hides voided lots unless asked and shows purchase prices and scope', async ({
+    client,
+    assert,
+  }) => {
+    const { supplier, product, token } = await supplierWithProduct()
+    const other = await UserFactory.apply('supplier').create()
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      purchasePrice: 12.5,
+    }).create()
+    const voided = await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+    }).create()
+    await DeliveryFactory.merge({ supplierId: other.id, productId: product.id }).create()
+    await callTool(client, token, 'void_delivery', { deliveryId: voided.id, reason: 'duplicita' })
+
+    const mine = await callTool(client, token, 'recent_deliveries', {})
+    assert.equal(mine.data.scope, 'mine')
+    assert.lengthOf(mine.data.deliveries, 1)
+    assert.equal(mine.data.deliveries[0].purchasePrice, 12.5)
+    assert.equal(mine.data.deliveries[0].amountLost, 0)
+    assert.property(mine.data.deliveries[0], 'price')
+    assert.notProperty(mine.data.deliveries[0], 'unitPrice')
+
+    const withVoided = await callTool(client, token, 'recent_deliveries', { includeVoided: true })
+    assert.lengthOf(withVoided.data.deliveries, 2)
+    assert.isTrue(withVoided.data.deliveries.some((d: any) => d.voided && d.corrections === 1))
+
+    const all = await callTool(client, token, 'recent_deliveries', { scope: 'all' })
+    assert.lengthOf(all.data.deliveries, 2)
+    assert.includeMembers(
+      all.data.deliveries.map((d: any) => d.supplier),
+      [supplier.displayName, other.displayName]
+    )
+  })
+
+  test('get_stock takes scope and stockState and keeps the insights', async ({
+    client,
+    assert,
+  }) => {
+    const { supplier, product, token } = await supplierWithProduct()
+    const other = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const theirs = await ProductFactory.merge({ categoryId: category.id }).create()
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountSupplied: 10,
+      amountLeft: 2,
+    }).create()
+    await DeliveryFactory.merge({
+      supplierId: other.id,
+      productId: theirs.id,
+      amountSupplied: 10,
+      amountLeft: 10,
+    }).create()
+
+    const whole = await callTool(client, token, 'get_stock', {})
+    assert.equal(whole.data.scope, 'all')
+    assert.equal(whole.data.totals.totalProducts, 2)
+    assert.property(whole.data, 'topMovers')
+    assert.include(whole.data.note, 'record_inventory_count')
+
+    const mine = await callTool(client, token, 'get_stock', { scope: 'mine' })
+    assert.equal(mine.data.totals.totalProducts, 1)
+
+    const low = await callTool(client, token, 'get_stock', { stockState: 'low' })
+    assert.lengthOf(low.data.products, 1)
+    assert.equal(low.data.products[0].productId, product.id)
+  })
+
+  test('list_catalog_products returns the purchase group of a product', async ({
+    client,
+    assert,
+  }) => {
+    const { category, product, token } = await supplierWithProduct()
+    const energy = await callTool(client, token, 'create_product_group', {
+      name: 'Energy s cukrem',
+      categoryId: category.id,
+      productIds: [product.id],
+    })
+    assert.isFalse(energy.data.existed)
+    assert.deepEqual(energy.data.productIds, [product.id])
+
+    const listed = await callTool(client, token, 'list_catalog_products', {
+      search: product.displayName,
+    })
+    const row = listed.data.products.find((p: any) => p.productId === product.id)
+    assert.equal(row.groupId, energy.data.groupId)
+    assert.equal(row.groupName, 'Energy s cukrem')
+  })
+
+  test('create_product_group adds members to an existing group instead of ignoring them', async ({
+    client,
+    assert,
+  }) => {
+    const { category, product, token } = await supplierWithProduct()
+    const second = await ProductFactory.merge({ categoryId: category.id }).create()
+    const created = await callTool(client, token, 'create_product_group', {
+      name: 'Tyčinky',
+      categoryId: category.id,
+      productIds: [product.id],
+    })
+
+    const again = await callTool(client, token, 'create_product_group', {
+      name: 'tyčinky',
+      categoryId: category.id,
+      productIds: [product.id, second.id],
+    })
+    assert.isTrue(again.data.existed)
+    assert.equal(again.data.groupId, created.data.groupId)
+    assert.deepEqual(again.data.addedProductIds, [second.id])
+    assert.sameMembers(again.data.productIds, [product.id, second.id])
+    const row = await Product.findOrFail(second.id)
+    assert.equal(row.productGroupId, created.data.groupId)
+
+    const unchanged = await callTool(client, token, 'create_product_group', {
+      name: 'Tyčinky',
+      categoryId: category.id,
+    })
+    assert.deepEqual(unchanged.data.addedProductIds, [])
+    assert.include(unchanged.data.note, 'nothing changed')
+  })
+
+  test('update_product reports what changed and unknown ids by code', async ({
+    client,
+    assert,
+  }) => {
+    const { product, token } = await supplierWithProduct()
+
+    const renamed = await callTool(client, token, 'update_product', {
+      productId: product.id,
+      displayName: 'Pepsi Max 0,33 l',
+    })
+    assert.isFalse(renamed.isError)
+    assert.deepEqual(renamed.data.changes.name, {
+      from: product.displayName,
+      to: 'Pepsi Max 0,33 l',
+    })
+
+    const same = await callTool(client, token, 'update_product', {
+      productId: product.id,
+      displayName: 'Pepsi Max 0,33 l',
+    })
+    assert.deepEqual(same.data.changes, {})
+    assert.include(same.data.note, 'Nothing changed')
+
+    const missing = await callTool(client, token, 'update_product', {
+      productId: 999_999,
+      displayName: 'x',
+    })
+    assert.include(missing.raw, '(error code: PRODUCT_NOT_FOUND)')
+    const badCategory = await callTool(client, token, 'update_product', {
+      productId: product.id,
+      categoryId: 999_999,
+    })
+    assert.include(badCategory.raw, '(error code: CATEGORY_NOT_FOUND)')
+  })
+
+  test('a group line of a draft tells the agent which products it can pick', async ({
+    client,
+    assert,
+  }) => {
+    const { category, product, token } = await supplierWithProduct()
+    const sibling = await ProductFactory.merge({ categoryId: category.id }).create()
+    const outsider = await ProductFactory.merge({ categoryId: category.id }).create()
+    const energy = await callTool(client, token, 'create_product_group', {
+      name: 'Energy drink bez cukru',
+      categoryId: category.id,
+      productIds: [product.id, sibling.id],
+    })
+    assert.isFalse(energy.isError)
+
+    // The shopping list hands over a group line: no product yet, just the group.
+    const created = await callTool(client, token, 'create_stock_draft', {
+      items: [{ groupId: energy.data.groupId, label: 'Energy drink bez cukru', amount: 12 }],
+    })
+    assert.isFalse(created.isError)
+
+    const read = await callTool(client, token, 'get_stock_draft', { draftId: created.data.draftId })
+    const line = read.data.items[0]
+    assert.isNull(line.productId)
+    assert.equal(line.groupName, 'Energy drink bez cukru')
+    assert.sameMembers(
+      line.groupProducts.map((p: any) => p.productId),
+      [product.id, sibling.id]
+    )
+    assert.notInclude(
+      line.groupProducts.map((p: any) => p.productId),
+      outsider.id
+    )
+    assert.deepEqual(read.data.problems, [{ index: 0, problem: 'product' }])
+  })
+
+  test('a draft can be listed, read, fixed and stocked from chat', async ({ client, assert }) => {
+    const { category, product, token } = await supplierWithProduct()
+    const second = await ProductFactory.merge({ categoryId: category.id }).create()
+
+    const created = await callTool(client, token, 'create_stock_draft', {
+      note: 'Lidl',
+      items: [
+        { productId: product.id, label: 'PEPSI', amount: 24, purchasePrice: 14.9 },
+        { label: 'MONSTER MANGO', amount: 12, purchasePrice: 24.9 },
+      ],
+    })
+    assert.isFalse(created.isError)
+    assert.equal(created.data.unmatched, 1)
+    assert.deepEqual(created.data.problems, [{ index: 1, problem: 'product' }])
+    const draftId = created.data.draftId
+
+    const listed = await callTool(client, token, 'list_stock_drafts')
+    const entry = listed.data.drafts.find((d: any) => d.draftId === draftId)
+    assert.equal(entry.source, 'mcp')
+    assert.equal(entry.lines, 2)
+    assert.equal(entry.pieces, 36)
+    assert.isFalse(entry.isEmpty)
+    assert.match(entry.reviewUrl, new RegExp(`/supplier/stock/drafts/${draftId}$`))
+
+    const read = await callTool(client, token, 'get_stock_draft', { draftId })
+    assert.equal(read.data.status, 'open')
+    assert.equal(read.data.items[0].product, product.displayName)
+    assert.isNull(read.data.items[1].productId)
+    assert.equal(read.data.items[1].label, 'MONSTER MANGO')
+
+    const incomplete = await callTool(client, token, 'commit_stock_draft', { draftId })
+    assert.isTrue(incomplete.isError)
+    assert.include(incomplete.raw, '(error code: DRAFT_INCOMPLETE)')
+    assert.include(incomplete.raw, 'update_stock_draft')
+
+    const fixed = await callTool(client, token, 'update_stock_draft', {
+      draftId,
+      note: 'Lidl, opraveno',
+      items: [
+        { productId: product.id, label: 'PEPSI', amount: 24, purchasePrice: 14.9 },
+        {
+          productId: second.id,
+          label: 'MONSTER MANGO',
+          amount: 12,
+          purchasePrice: 24.9,
+          price: 30,
+        },
+      ],
+    })
+    assert.isFalse(fixed.isError)
+    assert.deepEqual(fixed.data.problems, [])
+    assert.equal(fixed.data.note.slice(0, 5), 'Saved')
+    assert.equal(fixed.data.items[1].productId, second.id)
+    assert.lengthOf(await db.from('deliveries'), 0)
+
+    const committed = await callTool(client, token, 'commit_stock_draft', { draftId })
+    assert.isFalse(committed.isError)
+    assert.isTrue(committed.data.stocked)
+    assert.lengthOf(committed.data.deliveries, 2)
+    assert.equal(committed.data.deliveries[1].product, second.displayName)
+    assert.equal(committed.data.deliveries[1].price, 30)
+    assert.lengthOf(await db.from('deliveries'), 2)
+
+    const closed = await callTool(client, token, 'get_stock_draft', { draftId })
+    assert.equal(closed.data.status, 'committed')
+    assert.isNotNull(closed.data.items[0].deliveryId)
+    const stillOpen = await callTool(client, token, 'list_stock_drafts')
+    assert.notInclude(
+      stillOpen.data.drafts.map((d: any) => d.draftId),
+      draftId
+    )
+
+    const twice = await callTool(client, token, 'commit_stock_draft', { draftId })
+    assert.include(twice.raw, '(error code: DRAFT_CLOSED)')
+    const editClosed = await callTool(client, token, 'update_stock_draft', {
+      draftId,
+      items: [{ productId: product.id, amount: 1, price: 10 }],
+    })
+    assert.include(editClosed.raw, '(error code: DRAFT_CLOSED)')
+  })
+
+  test('commit_stock_draft returns warnings and stocks only with confirmWarnings', async ({
+    client,
+    assert,
+  }) => {
+    const { product, token } = await supplierWithProduct()
+    await callTool(client, token, 'add_stock', { productId: product.id, amount: 5, price: 20 })
+
+    const created = await callTool(client, token, 'create_stock_draft', {
+      items: [{ productId: product.id, label: 'PEPSI', amount: 5, price: 20 }],
+    })
+    const draftId = created.data.draftId
+
+    const warned = await callTool(client, token, 'commit_stock_draft', { draftId })
+    assert.isFalse(warned.isError)
+    assert.isFalse(warned.data.stocked)
+    assert.lengthOf(warned.data.warnings, 1)
+    assert.equal(warned.data.warnings[0].productName, product.displayName)
+    assert.isNotNull(warned.data.warnings[0].duplicate)
+    assert.lengthOf(await db.from('deliveries'), 1)
+
+    const stocked = await callTool(client, token, 'commit_stock_draft', {
+      draftId,
+      confirmWarnings: true,
+    })
+    assert.isTrue(stocked.data.stocked)
+    assert.lengthOf(await db.from('deliveries'), 2)
+  })
+
+  test('discard_stock_draft closes a draft without touching the stock', async ({
+    client,
+    assert,
+  }) => {
+    const { product, token } = await supplierWithProduct()
+    const created = await callTool(client, token, 'create_stock_draft', {
+      items: [{ productId: product.id, label: 'PEPSI', amount: 5, price: 20 }],
+    })
+    const draftId = created.data.draftId
+
+    const discarded = await callTool(client, token, 'discard_stock_draft', { draftId })
+    assert.isFalse(discarded.isError)
+    assert.equal(discarded.data.status, 'discarded')
+    assert.lengthOf(await db.from('deliveries'), 0)
+    const open = await callTool(client, token, 'list_stock_drafts')
+    assert.lengthOf(open.data.drafts, 0)
+
+    const again = await callTool(client, token, 'discard_stock_draft', { draftId })
+    assert.include(again.raw, '(error code: DRAFT_CLOSED)')
+    const missing = await callTool(client, token, 'get_stock_draft', { draftId: 999_999 })
+    assert.include(missing.raw, '(error code: DRAFT_NOT_FOUND)')
+  })
+
+  test('draft lines need a product or a label and other suppliers cannot see the draft', async ({
+    client,
+    assert,
+  }) => {
+    const { product, token } = await supplierWithProduct()
+    const unnamed = await callTool(client, token, 'create_stock_draft', {
+      items: [{ amount: 2, purchasePrice: 9.9 }],
+    })
+    assert.isTrue(unnamed.isError)
+    assert.include(unnamed.raw, '(error code: VALIDATION)')
+
+    const created = await callTool(client, token, 'create_stock_draft', {
+      items: [{ productId: product.id, amount: 2, purchasePrice: 9.9 }],
+    })
+    assert.isFalse(created.isError)
+    const other = await UserFactory.apply('supplier').create()
+    const foreign = await callTool(client, await createToken(other), 'get_stock_draft', {
+      draftId: created.data.draftId,
+    })
+    assert.include(foreign.raw, '(error code: DRAFT_NOT_FOUND)')
+  })
+
+  test('record_inventory_count writes the shortfall off and classify_inventory_loss names it', async ({
+    client,
+    assert,
+  }) => {
+    const { supplier, category, product, token } = await supplierWithProduct()
+    const intact = await ProductFactory.merge({ categoryId: category.id }).create()
+    const lot = await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountSupplied: 5,
+      amountLeft: 5,
+      price: 20,
+    }).create()
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: intact.id,
+      amountSupplied: 3,
+      amountLeft: 3,
+    }).create()
+
+    const counted = await callTool(client, token, 'record_inventory_count', {
+      scope: 'mine',
+      note: 'páteční inventura',
+      items: [
+        { productId: product.id, expected: 5, counted: 3 },
+        { productId: intact.id, expected: 3, counted: 3 },
+      ],
+    })
+    assert.isFalse(counted.isError)
+    assert.equal(counted.data.scope, 'mine')
+    assert.equal(counted.data.products, 2)
+    assert.equal(counted.data.lossQuantity, 2)
+    assert.equal(counted.data.surplusQuantity, 0)
+    assert.match(counted.data.detailUrl, new RegExp(`/supplier/inventory/${counted.data.countId}$`))
+    const line = counted.data.items.find((i: any) => i.productId === product.id)
+    assert.equal(line.applied, -2)
+    assert.equal(line.product, product.displayName)
+    const row = await db.from('deliveries').where('id', lot.id).first()
+    assert.equal(row.amount_left, 3)
+    assert.equal(row.amount_lost, 2)
+    const adjustment = await db.from('stock_adjustments').where('product_id', product.id).first()
+    assert.equal(adjustment.reason, 'inventory')
+
+    const classified = await callTool(client, token, 'classify_inventory_loss', {
+      countId: counted.data.countId,
+      productId: product.id,
+      reason: 'expired',
+    })
+    assert.isFalse(classified.isError)
+    assert.isTrue(classified.data.changed)
+    assert.equal(classified.data.product, product.displayName)
+    const reclassified = await db.from('stock_adjustments').where('product_id', product.id).first()
+    assert.equal(reclassified.reason, 'expired')
+
+    const same = await callTool(client, token, 'classify_inventory_loss', {
+      countId: counted.data.countId,
+      productId: product.id,
+      reason: 'expired',
+    })
+    assert.isFalse(same.data.changed)
+
+    const nothing = await callTool(client, token, 'classify_inventory_loss', {
+      countId: counted.data.countId,
+      productId: intact.id,
+      reason: 'stolen',
+    })
+    assert.isTrue(nothing.isError)
+    assert.include(nothing.raw, '(error code: NOTHING_TO_CLASSIFY)')
+  })
+
+  test('record_inventory_count rejects unknown products and strangers cannot classify', async ({
+    client,
+    assert,
+  }) => {
+    const { supplier, product, token } = await supplierWithProduct()
+    await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountSupplied: 5,
+      amountLeft: 5,
+    }).create()
+
+    const unknown = await callTool(client, token, 'record_inventory_count', {
+      scope: 'all',
+      items: [{ productId: 999_999, expected: 1, counted: 0 }],
+    })
+    assert.isTrue(unknown.isError)
+    assert.include(unknown.raw, '(error code: PRODUCT_NOT_FOUND)')
+
+    const counted = await callTool(client, token, 'record_inventory_count', {
+      scope: 'all',
+      items: [{ productId: product.id, expected: 5, counted: 4 }],
+    })
+    const stranger = await UserFactory.apply('supplier').create()
+    const forbidden = await callTool(
+      client,
+      await createToken(stranger),
+      'classify_inventory_loss',
+      {
+        countId: counted.data.countId,
+        productId: product.id,
+        reason: 'stolen',
+      }
+    )
+    assert.isTrue(forbidden.isError)
+    assert.include(forbidden.raw, '(error code: FORBIDDEN)')
+  })
+
+  test('shopping-list lines can be added and edited from chat', async ({ client, assert }) => {
+    const { product, token } = await supplierWithProduct()
+
+    const custom = await callTool(client, token, 'add_shopping_list_line', {
+      label: 'Mléko do kávy',
+      quantity: 2,
+      unitCost: 24.9,
+    })
+    assert.isFalse(custom.isError)
+    assert.match(custom.data.key, /^c-\d+$/)
+    assert.equal(custom.data.line.name, 'Mléko do kávy')
+    assert.equal(custom.data.line.quantity, 2)
+    assert.equal(custom.data.line.unitCost, 24.9)
+
+    const edited = await callTool(client, token, 'update_shopping_list_line', {
+      key: custom.data.key,
+      quantity: 3,
+      isChecked: true,
+      note: 'Petr chtěl',
+    })
+    assert.isFalse(edited.isError)
+    assert.equal(edited.data.line.quantity, 3)
+    assert.isTrue(edited.data.line.checked)
+    assert.equal(edited.data.line.note, 'Petr chtěl')
+
+    const byProduct = await callTool(client, token, 'add_shopping_list_line', {
+      productId: product.id,
+      quantity: 6,
+    })
+    assert.equal(byProduct.data.key, `p-${product.id}`)
+    assert.equal(byProduct.data.line.productId, product.id)
+    const list = await callTool(client, token, 'get_shopping_list', {})
+    assert.includeMembers(
+      list.data.lines.map((l: any) => l.key),
+      [custom.data.key, `p-${product.id}`]
+    )
+
+    const hidden = await callTool(client, token, 'update_shopping_list_line', {
+      key: `p-${product.id}`,
+      isRemoved: true,
+    })
+    // A line the planner did not suggest disappears once hidden; a planned one stays as removed.
+    assert.isTrue(hidden.data.line === null || hidden.data.line.removed === true)
+    assert.include(hidden.data.note, 'Saved')
+    const after = await callTool(client, token, 'get_shopping_list', {})
+    assert.notInclude(
+      after.data.lines.map((l: any) => l.key),
+      `p-${product.id}`
+    )
+
+    const empty = await callTool(client, token, 'update_shopping_list_line', { key: 'c-1' })
+    assert.include(empty.raw, '(error code: VALIDATION)')
+    const unknownProduct = await callTool(client, token, 'update_shopping_list_line', {
+      key: 'p-999999',
+      quantity: 1,
+    })
+    assert.include(unknownProduct.raw, '(error code: PRODUCT_NOT_FOUND)')
+    const nothing = await callTool(client, token, 'add_shopping_list_line', { quantity: 1 })
+    assert.include(nothing.raw, '(error code: VALIDATION)')
+  })
+
+  test('get_finance_summary explains its units and links the report', async ({
+    client,
+    assert,
+  }) => {
+    const { token } = await supplierWithProduct()
+    const finance = await callTool(client, token, 'get_finance_summary', {})
+    assert.include(finance.data.note, 'lossRate')
+    assert.include(finance.data.note, '/supplier/finance')
+  })
+
+  test('tools/list carries annotations: reads are flagged read-only, writes are not', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const response = await mcpPost(client, await createToken(admin), {
+      jsonrpc: '2.0',
+      id: 7,
+      method: 'tools/list',
+      params: {},
+    })
+    const tools: Array<{ name: string; annotations?: Record<string, unknown> }> =
+      parseMcpBody(response).result.tools
+    assert.isAbove(tools.length, 30)
+
+    const readOnlyTools = [
+      'list_products',
+      'list_categories',
+      'get_my_orders',
+      'get_my_invoices',
+      'get_payment_qr',
+      'get_recommendations',
+      'get_stock',
+      'recent_deliveries',
+      'list_catalog_products',
+      'uninvoiced_summary',
+      'list_issued_invoices',
+      'get_shopping_list',
+      'list_product_groups',
+      'list_stock_drafts',
+      'get_stock_draft',
+      'get_finance_summary',
+      'dashboard_stats',
+      'list_users',
+      'list_all_orders',
+      'list_all_invoices',
+      'get_audit_logs',
+    ]
+    const destructiveTools = [
+      'buy_product',
+      'add_stock',
+      'generate_invoices',
+      'generate_invoices_for_user',
+      'approve_payment',
+      'reject_payment',
+      'storno_order',
+      'write_off_stock',
+      'void_delivery',
+      'correct_delivery',
+      'commit_stock_draft',
+      'discard_stock_draft',
+      'record_inventory_count',
+    ]
+
+    for (const tool of tools) {
+      const a = tool.annotations
+      assert.isObject(a, `${tool.name} has no annotations`)
+      assert.isString(a!.title, `${tool.name} has no title`)
+      assert.isFalse(a!.openWorldHint, `${tool.name} should be openWorldHint: false`)
+      assert.isBoolean(a!.readOnlyHint, `${tool.name} readOnlyHint`)
+      assert.isBoolean(a!.destructiveHint, `${tool.name} destructiveHint`)
+      assert.isBoolean(a!.idempotentHint, `${tool.name} idempotentHint`)
+      if (readOnlyTools.includes(tool.name)) {
+        assert.isTrue(a!.readOnlyHint, `${tool.name} should be read-only`)
+        assert.isFalse(a!.destructiveHint, `${tool.name} should not be destructive`)
+      } else {
+        assert.isFalse(a!.readOnlyHint, `${tool.name} should not be read-only`)
+      }
+      if (destructiveTools.includes(tool.name)) {
+        assert.isTrue(a!.destructiveHint, `${tool.name} should be destructive`)
+      }
+    }
+    const names = tools.map((t) => t.name)
+    assert.includeMembers(names, readOnlyTools)
+    assert.includeMembers(names, destructiveTools)
+  })
+
+  test('every eval scenario names tools its role really gets from the live server', async ({
+    assert,
+  }) => {
+    const [customerTools, supplierTools, adminTools] = await Promise.all([
+      liveToolDefinitions('customer'),
+      liveToolDefinitions('supplier'),
+      liveToolDefinitions('admin'),
+    ])
+    const byRole = {
+      customer: customerTools.map((t) => t.function.name),
+      supplier: supplierTools.map((t) => t.function.name),
+      admin: adminTools.map((t) => t.function.name),
+    }
+    assert.isAbove(byRole.customer.length, 5)
+    assert.includeMembers(byRole.supplier, byRole.customer)
+    assert.includeMembers(byRole.admin, byRole.supplier)
+    assert.notInclude(byRole.customer, 'add_stock')
+    assert.notInclude(byRole.supplier, 'list_users')
+
+    const ids = evalScenarios.map((s) => s.id)
+    assert.lengthOf(new Set(ids), ids.length, 'scenario ids must be unique')
+    for (const scenario of evalScenarios) {
+      const names = byRole[scenario.role]
+      for (const tool of [scenario.expectedTool, ...(scenario.allowedTools ?? [])]) {
+        assert.include(names, tool, `${scenario.id}: ${scenario.role} has no tool "${tool}"`)
+      }
+    }
+
+    // Every mutating supplier tool is exercised by at least one scenario.
+    const covered = new Set(
+      evalScenarios.flatMap((s) => [s.expectedTool, ...(s.allowedTools ?? [])])
+    )
+    for (const name of [
+      'add_stock',
+      'create_stock_draft',
+      'update_stock_draft',
+      'discard_stock_draft',
+      'commit_stock_draft',
+      'write_off_stock',
+      'void_delivery',
+      'correct_delivery',
+      'record_inventory_count',
+      'classify_inventory_loss',
+      'update_shopping_list_line',
+      'add_shopping_list_line',
+      'generate_invoices',
+    ]) {
+      assert.isTrue(covered.has(name), `no eval scenario covers ${name}`)
+    }
   })
 })

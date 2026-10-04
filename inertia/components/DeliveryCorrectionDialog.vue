@@ -19,6 +19,7 @@ export interface CorrectableDelivery {
   amountSupplied: number
   amountLeft: number
   price: number
+  purchasePrice: number | null
   soldCount: number
   invoicedCount: number
   uninvoicedCount: number
@@ -36,12 +37,15 @@ const { t, tp } = useI18n()
 const page = usePage()
 
 // Field errors from a server-side validation failure (Inertia shares them as `errors`).
-function serverError(field: 'amount' | 'price' | 'reason'): string | null {
+function serverError(field: 'amount' | 'price' | 'purchasePrice' | 'reason'): string | null {
   const value = (page.props.errors as Record<string, string | string[]> | undefined)?.[field]
   return (Array.isArray(value) ? value[0] : value) ?? null
 }
 const amountMessage = computed(() => amountError.value ?? serverError('amount'))
 const priceMessage = computed(() => priceError.value ?? serverError('price'))
+const purchasePriceMessage = computed(
+  () => purchasePriceError.value ?? serverError('purchasePrice')
+)
 const reasonMessage = computed(() => reasonError.value ?? serverError('reason'))
 
 // Why "Save" is disabled, shown as text rather than a tooltip (touch, screen readers).
@@ -52,11 +56,16 @@ const submitHint = computed(() => {
   return null
 })
 
-const form = ref<DeliveryCorrectionFormState>({ amount: null, price: null, reason: '' })
+const form = ref<DeliveryCorrectionFormState>({
+  amount: null,
+  price: null,
+  purchasePrice: null,
+  reason: '',
+})
 const submitting = ref(false)
 const current = computed(() => props.delivery)
 
-const { amountError, priceError, reasonEmpty, reasonError, noChange, isValid } =
+const { amountError, priceError, purchasePriceError, reasonEmpty, reasonError, noChange, isValid } =
   useDeliveryCorrectionValidation(form, current)
 
 watch(
@@ -66,6 +75,7 @@ watch(
     form.value = {
       amount: props.delivery.amountSupplied,
       price: props.delivery.price,
+      purchasePrice: props.delivery.purchasePrice,
       reason: '',
     }
   },
@@ -187,6 +197,8 @@ function submit() {
     {
       amount: form.value.amount,
       price: form.value.price,
+      // Always sent: null clears a recorded purchase price.
+      purchasePrice: form.value.purchasePrice,
       reason: form.value.reason.trim(),
     },
     {
@@ -221,7 +233,7 @@ function submit() {
       </p>
 
       <template v-else>
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div>
             <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300"
               >{{ t('supplier.correction_amount') }} *</label
@@ -268,6 +280,29 @@ function submit() {
               v-if="priceMessage"
               class="mt-1 block text-xs leading-snug text-red-500 dark:text-red-400"
               >{{ priceMessage }}</small
+            >
+          </div>
+          <div>
+            <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300">{{
+              t('supplier.deliveries_purchase_price')
+            }}</label>
+            <InputNumber
+              v-model="form.purchasePrice"
+              fluid
+              highlightOnFocus
+              :min="0"
+              :max="DELIVERY_MAX_PRICE"
+              :minFractionDigits="2"
+              :maxFractionDigits="2"
+              :suffix="' ' + t('common.currency')"
+              :placeholder="t('supplier.deliveries_purchase_placeholder')"
+              :invalid="!!purchasePriceMessage"
+              data-testid="correction-purchase-price"
+            />
+            <small
+              v-if="purchasePriceMessage"
+              class="mt-1 block text-xs leading-snug text-red-500 dark:text-red-400"
+              >{{ purchasePriceMessage }}</small
             >
           </div>
         </div>

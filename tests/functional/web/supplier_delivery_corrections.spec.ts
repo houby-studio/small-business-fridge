@@ -10,7 +10,10 @@ import DeliveryService from '#services/delivery_service'
 import InvoiceService from '#services/invoice_service'
 import AdminService from '#services/admin_service'
 import NotificationService from '#services/notification_service'
+import InventoryService from '#services/inventory_service'
 import DeliveryCorrection from '#models/delivery_correction'
+import StockDraft from '#models/stock_draft'
+import StockDraftItem from '#models/stock_draft_item'
 import db from '@adonisjs/lucid/services/db'
 
 const cleanAll = async () => {
@@ -19,6 +22,11 @@ const cleanAll = async () => {
   await db.from('orders').delete()
   await db.from('invoices').delete()
   await db.from('delivery_corrections').delete()
+  await db.from('stock_adjustments').delete()
+  await db.from('inventory_count_items').delete()
+  await db.from('inventory_counts').delete()
+  await db.from('stock_draft_items').delete()
+  await db.from('stock_drafts').delete()
   await db.from('deliveries').delete()
   await db.from('products').delete()
   await db.from('categories').delete()
@@ -38,7 +46,9 @@ function assertFullyTranslated(
   }
 }
 
-async function setup(options: { amount?: number; price?: number } = {}) {
+async function setup(
+  options: { amount?: number; price?: number; purchasePrice?: number | null } = {}
+) {
   const supplier = await UserFactory.apply('supplier').create()
   const category = await CategoryFactory.create()
   const product = await ProductFactory.merge({ categoryId: category.id }).create()
@@ -48,11 +58,14 @@ async function setup(options: { amount?: number; price?: number } = {}) {
     amountSupplied: options.amount ?? 10,
     amountLeft: options.amount ?? 10,
     price: options.price ?? 1,
+    purchasePrice: options.purchasePrice ?? null,
   }).create()
   return { supplier, product, delivery }
 }
 
-test.group('Web Supplier - delivery warnings', (group) => {
+const inertia = { 'x-inertia': 'true', 'x-inertia-version': '1' }
+
+test.group('Web Supplier - warnings before a draft is stocked', (group) => {
   group.each.setup(cleanAll)
   group.each.teardown(cleanAll)
 
@@ -61,50 +74,65 @@ test.group('Web Supplier - delivery warnings', (group) => {
     assert,
   }) => {
     const { supplier, product } = await setup({ amount: 12, price: 25 })
+    const draft = await StockDraft.create({
+      supplierId: supplier.id,
+      source: 'web',
+      status: 'open',
+    })
+    const items = [{ productId: product.id, amount: 12, price: 25 }]
 
     const warned = await client
-      .post('/supplier/deliveries')
-      .header('x-inertia', 'true')
-      .header('x-inertia-version', '1')
-      .header('referer', 'http://localhost/supplier/stock')
+      .post(`/supplier/stock/drafts/${draft.id}/commit`)
+      .headers(inertia)
+      .header('referer', `/supplier/stock/drafts/${draft.id}`)
       .loginAs(supplier)
       .withCsrfToken()
-      .json({ productId: product.id, amount: 12, price: 25 })
+      .json({ items })
       .redirects(1)
 
     warned.assertStatus(200)
-    const warning = warned.body().props.flash.deliveryWarning
-    assert.exists(warning)
-    assert.equal(warning.duplicate.amount, 12)
-    assert.equal(warning.productId, product.id)
+    const warnings = warned.body().props.flash.draftWarnings
+    assert.lengthOf(warnings, 1)
+    assert.equal(warnings[0].index, 0)
+    assert.equal(warnings[0].productId, product.id)
+    assert.equal(warnings[0].productName, product.displayName)
+    assert.equal(warnings[0].duplicate.amount, 12)
+    assert.isNull(warnings[0].unusualPrice)
+    // Nothing stocked, the reviewed lines are kept and the page shows them.
     assert.lengthOf(await db.from('deliveries').where('product_id', product.id), 1)
+    assert.lengthOf(await StockDraftItem.query().where('stockDraftId', draft.id), 1)
+    assert.equal(warned.body().props.draft.status, 'open')
+    assert.equal(warned.body().props.draft.items[0].productId, product.id)
 
     const confirmed = await client
-      .post('/supplier/deliveries')
+      .post(`/supplier/stock/drafts/${draft.id}/commit`)
       .loginAs(supplier)
       .withCsrfToken()
-      .json({ productId: product.id, amount: 12, price: 25, confirmWarnings: true })
+      .json({ items, confirmWarnings: true })
       .redirects(0)
 
     confirmed.assertStatus(302)
+    assert.equal(confirmed.header('location'), '/supplier/stock')
     assert.lengthOf(await db.from('deliveries').where('product_id', product.id), 2)
+    await draft.refresh()
+    assert.equal(draft.status, 'committed')
   })
 
   test('an unusual price is flagged before stocking', async ({ client, assert }) => {
     const { product } = await setup({ amount: 12, price: 25 })
     const other = await UserFactory.apply('supplier').create()
+    const draft = await StockDraft.create({ supplierId: other.id, source: 'web', status: 'open' })
 
     const warned = await client
-      .post('/supplier/deliveries')
-      .header('x-inertia', 'true')
-      .header('x-inertia-version', '1')
-      .header('referer', 'http://localhost/supplier/stock')
+      .post(`/supplier/stock/drafts/${draft.id}/commit`)
+      .headers(inertia)
+      .header('referer', `/supplier/stock/drafts/${draft.id}`)
       .loginAs(other)
       .withCsrfToken()
-      .json({ productId: product.id, amount: 12, price: 250 })
+      .json({ items: [{ productId: product.id, amount: 12, price: 250 }] })
       .redirects(1)
 
-    const warning = warned.body().props.flash.deliveryWarning
+    const [warning] = warned.body().props.flash.draftWarnings
     assert.isNull(warning.duplicate)
     assert.equal(warning.unusualPrice.lastPrice, 25)
     assert.lengthOf(await db.from('deliveries').where('supplier_id', other.id), 0)
@@ -154,6 +182,46 @@ test.group('Web Supplier - delivery corrections', (group) => {
     }
   })
 
+  test('PUT corrects the purchase price alone and returns to the history', async ({
+    client,
+    assert,
+  }) => {
+    const { supplier, delivery } = await setup({ amount: 10, price: 20, purchasePrice: 14.9 })
+    const buyer = await UserFactory.create()
+    await new OrderService().purchase(buyer.id, delivery.id, 'web')
+
+    const response = await client
+      .put(`/supplier/deliveries/${delivery.id}`)
+      .loginAs(supplier)
+      .withCsrfToken()
+      .header('referer', '/supplier/deliveries?scope=all&page=2')
+      .json({ amount: 10, price: 20, purchasePrice: 12.5, reason: 'Receipt says 12.50' })
+      .redirects(0)
+
+    response.assertStatus(302)
+    assert.equal(response.header('location'), '/supplier/deliveries?scope=all&page=2')
+    await delivery.refresh()
+    assert.equal(delivery.purchasePrice, 12.5)
+    assert.equal(delivery.price, 20)
+    const correction = await DeliveryCorrection.findByOrFail('deliveryId', delivery.id)
+    assert.equal(correction.oldPurchasePrice, 14.9)
+    assert.equal(correction.newPurchasePrice, 12.5)
+    assert.equal(correction.repricedOrderCount, 0)
+    const [order] = await db.from('orders').where('delivery_id', delivery.id)
+    assert.equal(Number(order.unit_price), 20)
+
+    // Three decimals are refused by validation before the service sees them.
+    const refused = await client
+      .put(`/supplier/deliveries/${delivery.id}`)
+      .loginAs(supplier)
+      .withCsrfToken()
+      .json({ amount: 10, price: 20, purchasePrice: 12.505, reason: 'Too precise' })
+      .redirects(0)
+    refused.assertStatus(302)
+    await delivery.refresh()
+    assert.equal(delivery.purchasePrice, 12.5)
+  })
+
   test('PUT rejects an amount below the sold count', async ({ client, assert }) => {
     const { supplier, delivery } = await setup({ amount: 5, price: 10 })
     const buyer = await UserFactory.create()
@@ -162,8 +230,8 @@ test.group('Web Supplier - delivery corrections', (group) => {
 
     const response = await client
       .put(`/supplier/deliveries/${delivery.id}`)
-      .header('x-inertia', 'true')
-      .header('x-inertia-version', '1')
+      .headers(inertia)
+      .header('referer', '/supplier/deliveries')
       .loginAs(supplier)
       .withCsrfToken()
       .json({ amount: 1, price: 10, reason: 'Wrong count' })
@@ -181,8 +249,8 @@ test.group('Web Supplier - delivery corrections', (group) => {
 
     const response = await client
       .put(`/supplier/deliveries/${delivery.id}`)
-      .header('x-inertia', 'true')
-      .header('x-inertia-version', '1')
+      .headers(inertia)
+      .header('referer', '/supplier/deliveries')
       .loginAs(supplier)
       .withCsrfToken()
       .json({ amount: 50, price: 10, reason: 'Top up' })
@@ -299,28 +367,87 @@ test.group('Web Supplier - delivery corrections', (group) => {
     assert.isTrue(row.canCorrect)
   })
 
-  test('store scope lists other suppliers without letting them be corrected', async ({
+  test('scope=all lists other suppliers without letting them be corrected', async ({
     client,
     assert,
   }) => {
     const { delivery } = await setup({ amount: 10, price: 5 })
     const other = await UserFactory.apply('supplier').create()
 
-    const mine = await client
-      .get('/supplier/deliveries')
-      .loginAs(other)
-      .header('X-Inertia', 'true')
-      .header('X-Inertia-Version', '1')
+    const mine = await client.get('/supplier/deliveries').loginAs(other).headers(inertia)
     assert.lengthOf(mine.body().props.recentDeliveries.data, 0)
+    assert.equal(mine.body().props.filters.scope, 'mine')
+    assert.equal(mine.body().props.filters.type, 'deliveries')
+    // The other table is not loaded for this view.
+    assert.deepEqual(mine.body().props.adjustments.data, [])
 
-    const store = await client
-      .get('/supplier/deliveries?scope=store')
-      .loginAs(other)
-      .header('X-Inertia', 'true')
-      .header('X-Inertia-Version', '1')
-    const row = store.body().props.recentDeliveries.data[0]
+    const all = await client.get('/supplier/deliveries?scope=all').loginAs(other).headers(inertia)
+    const row = all.body().props.recentDeliveries.data[0]
     assert.equal(row.id, delivery.id)
     assert.isFalse(row.canCorrect)
+    assert.equal(all.body().props.filters.scope, 'all')
+  })
+
+  test('type=adjustments lists write-offs and inventory differences of my lots', async ({
+    client,
+    assert,
+  }) => {
+    const { supplier, product, delivery } = await setup({
+      amount: 10,
+      price: 5,
+      purchasePrice: 3.5,
+    })
+    const colleague = await UserFactory.apply('supplier').create()
+    // A colleague writes off two pieces — FIFO takes them from my lot.
+    await new InventoryService().writeOff(colleague, {
+      productId: product.id,
+      quantity: 2,
+      reason: 'expired',
+      note: 'prošlé',
+    })
+
+    const page = await client
+      .get('/supplier/deliveries?type=adjustments')
+      .loginAs(supplier)
+      .headers(inertia)
+    page.assertStatus(200)
+    const { adjustments, recentDeliveries, filters } = page.body().props
+    assert.equal(filters.type, 'adjustments')
+    assert.deepEqual(recentDeliveries.data, [])
+    assert.equal(adjustments.meta.total, 1)
+    const [row] = adjustments.data
+    assert.equal(row.productId, product.id)
+    assert.equal(row.productName, product.displayName)
+    assert.equal(row.kind, 'loss')
+    assert.equal(row.quantity, 2)
+    assert.equal(row.reason, 'expired')
+    assert.equal(row.note, 'prošlé')
+    assert.equal(row.unitCost, 3.5)
+    assert.equal(row.unitPrice, 5)
+    assert.equal(row.lotSupplierName, supplier.displayName)
+    assert.equal(row.actorName, colleague.displayName)
+    assert.isNull(row.inventoryCountId)
+    assert.isString(row.createdAt)
+    await delivery.refresh()
+    assert.equal(delivery.amountLost, 2)
+
+    // The colleague recorded it, but it is not their loss — only scope=all shows it to them.
+    const theirs = await client
+      .get('/supplier/deliveries?type=adjustments')
+      .loginAs(colleague)
+      .headers(inertia)
+    assert.deepEqual(theirs.body().props.adjustments.data, [])
+    const everyone = await client
+      .get('/supplier/deliveries?type=adjustments&scope=all')
+      .loginAs(colleague)
+      .headers(inertia)
+    assert.equal(everyone.body().props.adjustments.meta.total, 1)
+
+    const byProduct = await client
+      .get(`/supplier/deliveries?type=adjustments&productId=${product.id + 1}`)
+      .loginAs(supplier)
+      .headers(inertia)
+    assert.deepEqual(byProduct.body().props.adjustments.data, [])
   })
 })
 

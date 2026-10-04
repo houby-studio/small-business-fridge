@@ -46,26 +46,51 @@ function parseAllergenIds() {
     })
 }
 
+/**
+ * The purchase group, from FormData ('' or 'null' = none) or JSON. Absent = not sent, so
+ * an older client never clears a group it does not know about. Nullable because the
+ * bodyparser turns the empty FormData value into null, which `optional()` alone would drop.
+ */
+function parseProductGroupId() {
+  return vine
+    .any()
+    .nullable()
+    .optional()
+    .transform((v) => {
+      if (v === undefined) return undefined
+      if (v === null || v === '' || v === 'null') return null
+      const n = Number(v)
+      return Number.isInteger(n) && n > 0 ? n : null
+    })
+}
+
+/** Shared with the MCP zod schemas and mirrored in inertia/composables/use_product_form_validation.ts */
+export const PRODUCT_NAME_MAX = 255
+export const PRODUCT_DESCRIPTION_MAX = 1000
+export const PRODUCT_BARCODE_MAX = 100
+
 export const createProductValidator = vine.compile(
   vine.object({
-    displayName: vine.string().trim().minLength(1).maxLength(255),
-    description: vine.string().trim().maxLength(1000),
+    displayName: vine.string().trim().minLength(1).maxLength(PRODUCT_NAME_MAX),
+    description: vine.string().trim().maxLength(PRODUCT_DESCRIPTION_MAX),
     categoryId: vine.number().positive(),
-    barcode: vine.string().trim().maxLength(100).optional(),
+    barcode: vine.string().trim().maxLength(PRODUCT_BARCODE_MAX).optional(),
     image: vine.file({ size: '5mb', extnames: ['jpg', 'jpeg', 'png', 'webp'] }),
     allergenIds: parseAllergenIds(),
+    productGroupId: parseProductGroupId(),
     ...offContributionFields,
   })
 )
 
 export const updateProductValidator = vine.compile(
   vine.object({
-    displayName: vine.string().trim().minLength(1).maxLength(255),
-    description: vine.string().trim().maxLength(1000),
+    displayName: vine.string().trim().minLength(1).maxLength(PRODUCT_NAME_MAX),
+    description: vine.string().trim().maxLength(PRODUCT_DESCRIPTION_MAX),
     categoryId: vine.number().positive(),
-    barcode: vine.string().trim().maxLength(100).optional(),
+    barcode: vine.string().trim().maxLength(PRODUCT_BARCODE_MAX).optional(),
     image: vine.file({ size: '5mb', extnames: ['jpg', 'jpeg', 'png', 'webp'] }).optional(),
     allergenIds: parseAllergenIds(),
+    productGroupId: parseProductGroupId(),
     ...offContributionFields,
   })
 )

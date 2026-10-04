@@ -1,6 +1,7 @@
 import Product from '#models/product'
 import Category from '#models/category'
 import Allergen from '#models/allergen'
+import ProductGroup from '#models/product_group'
 import type { MultipartFile } from '@adonisjs/core/bodyparser'
 import app from '@adonisjs/core/services/app'
 import { randomUUID } from 'node:crypto'
@@ -17,6 +18,7 @@ export default class ProductService {
     barcode?: string | null
     image: MultipartFile
     allergenIds?: number[]
+    productGroupId?: number | null
   }): Promise<Product> {
     // Save the upload before opening the transaction — it is slow I/O and would hold the
     // keypad-id lock for its duration.
@@ -31,6 +33,7 @@ export default class ProductService {
           imagePath,
           categoryId: data.categoryId,
           barcode: data.barcode || null,
+          productGroupId: await this.existingGroupId(data.productGroupId),
         },
         { client: trx }
       )
@@ -56,6 +59,8 @@ export default class ProductService {
       barcode?: string | null
       image?: MultipartFile | null
       allergenIds?: number[]
+      /** Undefined = keep the current group. */
+      productGroupId?: number | null
     }
   ): Promise<Product> {
     const product = await Product.findOrFail(productId)
@@ -64,6 +69,9 @@ export default class ProductService {
     product.description = data.description
     product.categoryId = data.categoryId
     product.barcode = data.barcode || null
+    if (data.productGroupId !== undefined) {
+      product.productGroupId = await this.existingGroupId(data.productGroupId)
+    }
 
     if (data.image) {
       product.imagePath = await this.saveImage(data.image)
@@ -80,7 +88,8 @@ export default class ProductService {
 
   /**
    * The `{ from, to }` map for a `product.updated` audit entry. Both products need
-   * `category` and `allergens` preloaded; category and allergens are logged by name.
+   * `category` and `allergens` preloaded (and `productGroup` for its name); category,
+   * group and allergens are logged by name.
    */
   static auditChanges(
     before: Product,
@@ -100,6 +109,13 @@ export default class ProductService {
       changes.category = {
         from: before.category?.name ?? `#${before.categoryId}`,
         to: after.category?.name ?? `#${after.categoryId}`,
+      }
+    }
+    if ((before.productGroupId ?? null) !== (after.productGroupId ?? null)) {
+      changes.productGroup = {
+        from:
+          before.productGroup?.name ?? (before.productGroupId ? `#${before.productGroupId}` : '—'),
+        to: after.productGroup?.name ?? (after.productGroupId ? `#${after.productGroupId}` : '—'),
       }
     }
     if (before.imagePath !== after.imagePath) {
@@ -138,10 +154,12 @@ export default class ProductService {
     const query = Product.query()
       .preload('category')
       .preload('allergens')
+      .preload('productGroup')
       .orderBy('displayName', 'asc')
 
-    if (filters?.search) {
-      const term = `%${filters.search}%`
+    // Every word has to match somewhere: "cola zero" finds "Coca-Cola Zero", in any order.
+    for (const token of ProductService.searchTokens(filters?.search)) {
+      const term = `%${token}%`
       query.where((q) => {
         q.whereRaw('display_name ILIKE ?', [term]).orWhereRaw('barcode ILIKE ?', [term])
       })
@@ -154,6 +172,14 @@ export default class ProductService {
     return query.paginate(page, perPage)
   }
 
+  /** The words of a search, with LIKE wildcards escaped so "0,5_l" means what it says. */
+  static searchTokens(search: string | undefined): string[] {
+    return (search ?? '')
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((token) => token.replace(/[\\%_]/g, '\\$&'))
+  }
+
   /**
    * Get a product by ID with relationships.
    */
@@ -162,7 +188,19 @@ export default class ProductService {
       .where('id', productId)
       .preload('category')
       .preload('allergens')
+      .preload('productGroup')
       .firstOrFail()
+  }
+
+  /** Purchase groups for the product form, alphabetically. */
+  async getProductGroups() {
+    return ProductGroup.query().orderBy('name', 'asc')
+  }
+
+  /** A group id that still exists, or null — a stale form must not fail the whole save. */
+  private async existingGroupId(groupId: number | null | undefined): Promise<number | null> {
+    if (!groupId) return null
+    return (await ProductGroup.find(groupId)) ? groupId : null
   }
 
   /**

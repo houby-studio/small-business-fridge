@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { Head, router } from '@inertiajs/vue3'
+import { computed, ref } from 'vue'
+import { Head, Link, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
@@ -10,6 +10,7 @@ import Select from 'primevue/select'
 import { useI18n } from '~/composables/use_i18n'
 import { useListFilters } from '~/composables/use_list_filters'
 import FilterBar from '~/components/FilterBar.vue'
+import PageTabs from '~/components/PageTabs.vue'
 import PaginatedDataTable from '~/components/PaginatedDataTable.vue'
 
 interface ProductRow {
@@ -20,6 +21,7 @@ interface ProductRow {
   barcode: string | null
   category: { id: number; name: string; color: string } | null
   allergens: { id: number; name: string }[]
+  productGroup: { id: number; name: string } | null
 }
 
 interface PaginatedProducts {
@@ -41,10 +43,19 @@ const props = defineProps<{
 const { t } = useI18n()
 const ALL = '__all__'
 
+const tabs = computed(() => [
+  { label: t('common.tab_products'), url: '/supplier/products', testId: 'tab-products' },
+  {
+    label: t('common.tab_product_groups'),
+    url: '/supplier/product-groups',
+    testId: 'tab-product-groups',
+  },
+])
+
 const filterSearch = ref(props.filters.search ?? '')
 const filterCategoryId = ref(props.filters.categoryId || ALL)
 
-const categoryOptions = ref([
+const categoryOptions = computed(() => [
   { label: t('common.all'), value: ALL },
   ...props.categories.map((c) => ({ label: c.name, value: String(c.id) })),
 ])
@@ -72,48 +83,53 @@ function clearFilters() {
 function formatAllergenList(allergens: ProductRow['allergens']) {
   return allergens.map((allergen) => allergen.name).join(', ')
 }
+
+/** "Stock" adds the product as a line of the supplier's open draft (příjemka). */
+function receive(productId: number) {
+  router.post('/supplier/stock/drafts', { productId })
+}
 </script>
 
 <template>
   <AppLayout>
     <Head :title="t('supplier.products_list_title')" />
 
-    <div class="mb-6 flex items-center justify-between">
+    <div class="mb-3 flex items-center justify-between gap-3">
       <h1 class="text-2xl font-bold text-gray-900 dark:text-zinc-100">
-        {{ t('supplier.products_list_heading') }}
+        {{ t('supplier.products_list_title') }}
       </h1>
       <Button
         :label="t('supplier.products_new_title')"
         icon="pi pi-plus"
-        size="small"
+        data-testid="product-create"
         @click="router.get('/supplier/products/new')"
       />
     </div>
+    <PageTabs :tabs="tabs" />
 
-    <!-- Filter bar -->
     <FilterBar @apply="applyFilters" @clear="clearFilters">
       <div>
-        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
-          t('supplier.products_search')
+        <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300">{{
+          t('common.product')
         }}</label>
-        <InputText v-model="filterSearch" class="w-56" @keydown.enter="applyFilters" />
+        <InputText v-model="filterSearch" class="w-48" @keydown.enter="applyFilters" />
       </div>
       <div>
-        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
-          t('supplier.products_filter_category')
+        <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300">{{
+          t('common.category')
         }}</label>
         <Select
           v-model="filterCategoryId"
           :options="categoryOptions"
           optionLabel="label"
           optionValue="value"
-          class="w-44"
+          class="w-48"
         />
       </div>
     </FilterBar>
 
     <PaginatedDataTable :value="products.data" :meta="products.meta" @page="onPageChange">
-      <Column header="#" style="width: 60px">
+      <Column :header="t('common.keypad_code')" style="width: 60px">
         <template #body="{ data }">{{ data.keypadId }}</template>
       </Column>
       <Column :header="t('supplier.products_image_label')" style="width: 60px">
@@ -145,6 +161,14 @@ function formatAllergenList(allergens: ProductRow['allergens']) {
           <span v-else class="text-gray-400 dark:text-zinc-500">—</span>
         </template>
       </Column>
+      <Column :header="t('shopping.kind_group')">
+        <template #body="{ data }">
+          <Link v-if="data.productGroup" href="/supplier/product-groups" class="hover:underline">{{
+            data.productGroup.name
+          }}</Link>
+          <span v-else class="text-gray-400 dark:text-zinc-500">—</span>
+        </template>
+      </Column>
       <Column :header="t('supplier.products_barcode_label')">
         <template #body="{ data }">{{ data.barcode ?? '—' }}</template>
       </Column>
@@ -156,15 +180,28 @@ function formatAllergenList(allergens: ProductRow['allergens']) {
           <span v-else class="text-gray-400 dark:text-zinc-500">—</span>
         </template>
       </Column>
-      <Column :header="t('common.actions')" style="width: 100px">
+      <Column :header="t('common.actions')" style="width: 110px">
         <template #body="{ data }">
-          <Button
-            icon="pi pi-pencil"
-            size="small"
-            severity="secondary"
-            text
-            @click="router.get(`/supplier/products/${data.id}/edit`)"
-          />
+          <div class="flex gap-1">
+            <Button
+              icon="pi pi-plus"
+              severity="secondary"
+              text
+              size="small"
+              :aria-label="t('supplier.stock_receive')"
+              data-testid="product-row-receive"
+              @click="receive(data.id)"
+            />
+            <Button
+              icon="pi pi-pencil"
+              severity="info"
+              text
+              size="small"
+              :aria-label="t('common.edit')"
+              data-testid="product-row-edit"
+              @click="router.get(`/supplier/products/${data.id}/edit`)"
+            />
+          </div>
         </template>
       </Column>
 

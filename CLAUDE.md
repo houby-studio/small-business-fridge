@@ -74,7 +74,7 @@ npm run test:e2e         # Playwright end-to-end suite
 │   └── composables/              # useFlash, useI18n
 ├── resources/
 │   ├── views/emails/             # Edge email templates
-│   └── lang/{cs,en}/            # 11 translation files each
+│   └── lang/{cs,en}/            # one JSON file per namespace, same set in both
 ├── tests/
 │   ├── unit/                     # Pure logic tests (no HTTP)
 │   ├── functional/               # HTTP route tests (Japa + AdonisJS plugins)
@@ -134,10 +134,11 @@ test.group('Foo web routes', (group) => {
 })
 ```
 
-**Run just one test file**:
+**Run just one test file** (the positional argument is a _suite_ name, so filter by path
+substring instead):
 
 ```bash
-node ace test tests/functional/web/shop.spec.ts
+node ace test --files shop.spec --no-color
 ```
 
 **Run just unit or functional suite**:
@@ -255,19 +256,23 @@ router.get('/orders', { ...params, page: 2 }, { preserveState: true })
 
 **Per-page `only` values** (reference for existing pages):
 
-| Page                      | `only` props                      |
-| ------------------------- | --------------------------------- |
-| `/orders`                 | `['orders', 'filters']`           |
-| `/invoices`               | `['invoices', 'filters']`         |
-| `/admin/orders`           | `['orders', 'filters']`           |
-| `/admin/invoices`         | `['invoices', 'filters']`         |
-| `/admin/users`            | `['users', 'filters']`            |
-| `/admin/audit`            | `['logs', 'filters']`             |
-| `/audit`                  | `['logs', 'filters']`             |
-| `/supplier/payments`      | `['invoices', 'filters']`         |
-| `/supplier/deliveries`    | `['recentDeliveries', 'filters']` |
-| `/supplier/products`      | `['products', 'filters']`         |
-| `/shop` (category filter) | `['products', 'filters']`         |
+| Page                      | `only` props                                     |
+| ------------------------- | ------------------------------------------------ |
+| `/orders`                 | `['orders', 'filters']`                          |
+| `/invoices`               | `['invoices', 'filters']`                        |
+| `/admin/orders`           | `['orders', 'filters']`                          |
+| `/admin/invoices`         | `['invoices', 'filters']`                        |
+| `/admin/users`            | `['users', 'filters']`                           |
+| `/admin/audit`            | `['logs', 'filters']`                            |
+| `/audit`                  | `['logs', 'filters']`                            |
+| `/supplier/payments`      | `['invoices', 'filters']`                        |
+| `/supplier/stock`         | `['stock', 'filters']`                           |
+| `/supplier/deliveries`    | `['recentDeliveries', 'adjustments', 'filters']` |
+| `/supplier/products`      | `['products', 'filters']`                        |
+| `/supplier/finance`       | `['products', 'filters']`                        |
+| `/supplier/inventory`     | `['counts', 'filters']`                          |
+| `/supplier/shopping-list` | `['list']`                                       |
+| `/shop` (category filter) | `['products', 'filters']`                        |
 
 **Server-side sorting pattern** (for new paginated service methods):
 
@@ -318,7 +323,8 @@ When adding user-facing text:
 
 1. Add key to **both** `resources/lang/cs/` and `resources/lang/en/` in the relevant file
 2. Use the `useI18n()` composable in Vue: `{{ t('shop.addToCart') }}`
-3. 11 files per locale: `messages, common, auth, shop, orders, invoices, supplier, admin, kiosk, emails, profile`
+3. One file per namespace, the same set in both locales: `messages, common, auth, shop, orders,
+invoices, supplier, admin, kiosk, emails, profile, audit, rating, shopping, inventory, finance`
 4. Email templates use Edge i18n helpers
 
 ---
@@ -546,6 +552,22 @@ Use only these color classes — never invent new variants:
 | Verified            | `bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200` |
 
 Badge wrapper: `inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium`
+
+### Explaining Text — InfoHint, Not Paragraphs
+
+No paragraph under a page title. A page explains itself through its heading, its controls and
+an **empty state**. When a detail genuinely needs words, put them behind
+`<InfoHint :text="..." />` (`inertia/components/InfoHint.vue`: an (i) button opening a PrimeVue
+Popover, or a Dialog with `mode="dialog"` for longer text). Field hints stay under ~60
+characters, dialog messages under ~80. Never name internal tooling (MCP tool names, "workspace")
+in UI copy.
+
+### Sub-pages as Tabs
+
+A section with several views (Sklad: Stav · Historie · Inventura; Produkty: Produkty · Skupiny)
+uses `<PageTabs :tabs="[{ label, url, testId }]" />` under a shared `h1`. Tabs are route-based —
+each one is its own Inertia page with its own URL — so nothing is kept in SPA state and every
+view stays bookmarkable. Do not add a navigation entry for something that is a tab.
 
 ### Page Header Pattern
 

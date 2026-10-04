@@ -66,6 +66,8 @@
   "nav_activity": "Activity",
   "nav_supplier": "Supplier",
   "nav_stock": "Stock",
+  "nav_shopping_list": "Shopping list",
+  "nav_finance": "Earnings",
   "nav_products": "Products",
   "nav_billing": "Billing",
   "nav_payments": "Payments",
@@ -80,5 +82,16 @@
   "page_not_found": "Page not found.",
   "server_error": "Server error.",
   "back_to_home": "Back to home",
-  "version": "Version"
+  "version": "Version",
+  "more_info": "More information",
+  "scope": "Scope",
+  "scope_all": "Whole fridge",
+  "scope_mine": "Mine only",
+  "tab_stock_state": "Stock",
+  "tab_stock_history": "History",
+  "tab_inventory": "Inventory count",
+  "tab_products": "Products",
+  "tab_product_groups": "Groups",
+  "nav_receiving": "Receiving",
+  "keypad_code": "Code"
 }

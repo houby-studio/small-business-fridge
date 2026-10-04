@@ -1,11 +1,21 @@
 import { z } from 'zod'
 import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import { type CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import type User from '#models/user'
 import AdminService from '#services/admin_service'
 import InvoiceService from '#services/invoice_service'
 import AuditService from '#services/audit_service'
-import { ok, fail, mapDomainError, pageMeta } from '#mcp/tools/helpers'
+import {
+  ok,
+  mapDomainError,
+  pageMeta,
+  readOnly,
+  destructive,
+  idempotentWrite,
+} from '#mcp/tools/helpers'
+
+const page = () => z.number().int().min(1).optional().describe('Page number (default 1)')
+const perPage = () =>
+  z.number().int().min(1).max(100).optional().describe('Items per page (default 20)')
 
 /**
  * Admin-only tools: user management, global order/invoice views, storno,
@@ -15,14 +25,16 @@ export function registerAdminTools(server: McpServer, user: User) {
   // ── dashboard_stats ─────────────────────────────────────────────────────────
   server.tool(
     'dashboard_stats',
-    'Get the admin dashboard statistics (users, orders, revenue, stock overview).',
+    'The admin dashboard in numbers: users, orders, revenue and stock across the whole ' +
+      'instance. For your own earnings as a supplier use get_finance_summary.',
     {},
-    async (): Promise<CallToolResult> => {
+    readOnly('Dashboard statistics'),
+    async () => {
       try {
         const stats = await new AdminService().getDashboardStats()
         return ok(stats)
       } catch (err) {
-        return fail(`Error fetching dashboard stats: ${String(err)}`)
+        return mapDomainError(err, 'Fetching dashboard stats failed')
       }
     }
   )
@@ -30,16 +42,18 @@ export function registerAdminTools(server: McpServer, user: User) {
   // ── list_users ──────────────────────────────────────────────────────────────
   server.tool(
     'list_users',
-    'List user accounts with role and status filters.',
+    'User accounts with role, status and keypad ID — the way to get a userId for ' +
+      'update_user or a buyerId for generate_invoices_for_user.',
     {
       role: z.enum(['customer', 'supplier', 'admin']).optional().describe('Filter by role'),
       disabled: z.enum(['enabled', 'disabled']).optional().describe('Filter by account status'),
-      page: z.number().int().min(1).optional().describe('Page number (default 1)'),
-      perPage: z.number().int().min(1).max(100).optional().describe('Items per page (default 20)'),
+      page: page(),
+      perPage: perPage(),
     },
-    async ({ role, disabled, page, perPage }): Promise<CallToolResult> => {
+    readOnly('Users'),
+    async ({ role, disabled, page: pageNo, perPage: size }) => {
       try {
-        const users = await new AdminService().getUsers(page ?? 1, perPage ?? 20, {
+        const users = await new AdminService().getUsers(pageNo ?? 1, size ?? 20, {
           role,
           disabled,
         })
@@ -56,7 +70,7 @@ export function registerAdminTools(server: McpServer, user: User) {
           })),
         })
       } catch (err) {
-        return fail(`Error listing users: ${String(err)}`)
+        return mapDomainError(err, 'Listing users failed')
       }
     }
   )
@@ -64,16 +78,18 @@ export function registerAdminTools(server: McpServer, user: User) {
   // ── update_user ─────────────────────────────────────────────────────────────
   server.tool(
     'update_user',
-    'Update a user account: change role, enable/disable, or change keypad ID. ' +
-      'A user with uninvoiced orders or unpaid invoices cannot be disabled, and the ' +
-      'last active admin cannot be demoted or disabled.',
+    'Change a user account: role, enabled/disabled, keypad ID. Only the fields you pass ' +
+      'change. A user with uninvoiced orders or unpaid invoices cannot be disabled ' +
+      '(generate_invoices_for_user first), and the last active admin cannot be demoted or ' +
+      'disabled.',
     {
-      userId: z.number().int().positive().describe('User to update'),
+      userId: z.number().int().positive().describe('User to update (list_users)'),
       role: z.enum(['customer', 'supplier', 'admin']).optional().describe('New role'),
       isDisabled: z.boolean().optional().describe('Disable (true) or enable (false) the account'),
       keypadId: z.number().int().positive().optional().describe('New keypad ID'),
     },
-    async ({ userId, role, isDisabled, keypadId }): Promise<CallToolResult> => {
+    idempotentWrite('Update user'),
+    async ({ userId, role, isDisabled, keypadId }) => {
       try {
         const updated = await new AdminService().updateUser(
           userId,
@@ -97,18 +113,20 @@ export function registerAdminTools(server: McpServer, user: User) {
   // ── list_all_orders ─────────────────────────────────────────────────────────
   server.tool(
     'list_all_orders',
-    'List all orders across all users (admin view) with filters.',
+    "Every user's purchases across the instance (admin view), newest first, with filters. " +
+      'For your own purchases use get_my_orders.',
     {
       buyerId: z.number().int().positive().optional().describe('Filter by buyer'),
       supplierId: z.number().int().positive().optional().describe('Filter by supplier'),
       channel: z.enum(['web', 'kiosk', 'scanner']).optional().describe('Filter by channel'),
       invoiced: z.enum(['yes', 'no']).optional().describe('Filter by invoiced status'),
-      page: z.number().int().min(1).optional().describe('Page number (default 1)'),
-      perPage: z.number().int().min(1).max(100).optional().describe('Items per page (default 20)'),
+      page: page(),
+      perPage: perPage(),
     },
-    async ({ buyerId, supplierId, channel, invoiced, page, perPage }): Promise<CallToolResult> => {
+    readOnly('All orders'),
+    async ({ buyerId, supplierId, channel, invoiced, page: pageNo, perPage: size }) => {
       try {
-        const orders = await new AdminService().getAllOrders(page ?? 1, perPage ?? 20, {
+        const orders = await new AdminService().getAllOrders(pageNo ?? 1, size ?? 20, {
           buyerId,
           supplierId,
           channel,
@@ -129,7 +147,7 @@ export function registerAdminTools(server: McpServer, user: User) {
           })),
         })
       } catch (err) {
-        return fail(`Error listing orders: ${String(err)}`)
+        return mapDomainError(err, 'Listing orders failed')
       }
     }
   )
@@ -137,17 +155,19 @@ export function registerAdminTools(server: McpServer, user: User) {
   // ── list_all_invoices ───────────────────────────────────────────────────────
   server.tool(
     'list_all_invoices',
-    'List all invoices across all users (admin view) with filters.',
+    'Every invoice across the instance (admin view), newest first, with filters. For ' +
+      'invoices you issued use list_issued_invoices, for ones you received get_my_invoices.',
     {
       buyerId: z.number().int().positive().optional().describe('Filter by buyer'),
       supplierId: z.number().int().positive().optional().describe('Filter by supplier'),
       status: z.enum(['paid', 'unpaid', 'awaiting']).optional().describe('Filter by status'),
-      page: z.number().int().min(1).optional().describe('Page number (default 1)'),
-      perPage: z.number().int().min(1).max(100).optional().describe('Items per page (default 20)'),
+      page: page(),
+      perPage: perPage(),
     },
-    async ({ buyerId, supplierId, status, page, perPage }): Promise<CallToolResult> => {
+    readOnly('All invoices'),
+    async ({ buyerId, supplierId, status, page: pageNo, perPage: size }) => {
       try {
-        const invoices = await new AdminService().getAllInvoices(page ?? 1, perPage ?? 20, {
+        const invoices = await new AdminService().getAllInvoices(pageNo ?? 1, size ?? 20, {
           buyerId,
           supplierId,
           status,
@@ -164,7 +184,7 @@ export function registerAdminTools(server: McpServer, user: User) {
           })),
         })
       } catch (err) {
-        return fail(`Error listing invoices: ${String(err)}`)
+        return mapDomainError(err, 'Listing invoices failed')
       }
     }
   )
@@ -172,12 +192,14 @@ export function registerAdminTools(server: McpServer, user: User) {
   // ── storno_order ────────────────────────────────────────────────────────────
   server.tool(
     'storno_order',
-    'Cancel (storno) an order — restores the stock and deletes the order. ' +
-      'Only possible while the order is not invoiced yet.',
+    "Cancel (storno) a purchase — the piece returns to its lot's stock and the order is " +
+      'deleted. Only while the order is not invoiced yet; find orderId with list_all_orders. ' +
+      'For a wrongly stocked lot use void_delivery instead.',
     {
-      orderId: z.number().int().positive().describe('Order to cancel'),
+      orderId: z.number().int().positive().describe('Order to cancel (list_all_orders)'),
     },
-    async ({ orderId }): Promise<CallToolResult> => {
+    destructive('Storno order'),
+    async ({ orderId }) => {
       try {
         await new AdminService().stornoOrder(orderId, user.id)
 
@@ -191,12 +213,14 @@ export function registerAdminTools(server: McpServer, user: User) {
   // ── generate_invoices_for_user ──────────────────────────────────────────────
   server.tool(
     'generate_invoices_for_user',
-    'Generate invoices for ALL uninvoiced orders of a buyer, across all suppliers ' +
-      '(one invoice per supplier). Useful before disabling a user account.',
+    'Invoice ALL uninvoiced orders of one buyer across every supplier (one invoice per ' +
+      'supplier) — typically before disabling their account. This e-mails the buyer and ' +
+      'cannot be undone. For your own sales use generate_invoices(buyerId).',
     {
-      buyerId: z.number().int().positive().describe('Buyer to invoice'),
+      buyerId: z.number().int().positive().describe('Buyer to invoice (list_users)'),
     },
-    async ({ buyerId }): Promise<CallToolResult> => {
+    destructive('Invoice one buyer everywhere'),
+    async ({ buyerId }) => {
       try {
         const invoices = await new InvoiceService().generateInvoicesForUser(user.id, buyerId)
         return ok({
@@ -205,7 +229,10 @@ export function registerAdminTools(server: McpServer, user: User) {
             supplierId: inv.supplierId,
             totalCost: inv.totalCost,
           })),
-          note: invoices.length === 0 ? 'No uninvoiced orders for this buyer.' : undefined,
+          note:
+            invoices.length === 0
+              ? 'No uninvoiced orders for this buyer.'
+              : `${invoices.length} invoice(s) issued; the buyer was e-mailed.`,
         })
       } catch (err) {
         return mapDomainError(err, 'Generating invoices failed')
@@ -213,10 +240,11 @@ export function registerAdminTools(server: McpServer, user: User) {
     }
   )
 
-  // ── manage_categories ───────────────────────────────────────────────────────
+  // ── create_category ─────────────────────────────────────────────────────────
   server.tool(
     'create_category',
-    'Create a new product category.',
+    'Create a product category — only when list_categories has no fitting one. Products ' +
+      'and purchase groups then reference it by categoryId.',
     {
       name: z.string().min(1).max(50).describe('Category name'),
       color: z
@@ -224,7 +252,8 @@ export function registerAdminTools(server: McpServer, user: User) {
         .regex(/^#[0-9a-fA-F]{6}$/)
         .describe('Hex color, e.g. #3b82f6'),
     },
-    async ({ name, color }): Promise<CallToolResult> => {
+    idempotentWrite('Create category'),
+    async ({ name, color }) => {
       try {
         const category = await new AdminService().createCategory(name, color, user.id)
         return ok({ categoryId: category.id, name: category.name, color: category.color })
@@ -237,22 +266,26 @@ export function registerAdminTools(server: McpServer, user: User) {
   // ── get_audit_logs ──────────────────────────────────────────────────────────
   server.tool(
     'get_audit_logs',
-    'Query the system audit log. Actions include: order.created, invoice.generated, ' +
-      'payment.requested/approved/rejected, delivery.created, product.created/updated, ' +
-      'user.updated, user.login, order.storno and more.',
+    'Who did what and when — the system audit log. Actions include order.created, ' +
+      'invoice.generated, payment.requested/approved/rejected, delivery.created/corrected/' +
+      'voided, stock_draft.*, stock.written_off, inventory.committed, product.created/' +
+      'updated, user.updated, user.login, order.storno. Filter by action, entity or user.',
     {
       action: z.string().optional().describe('Filter by exact action, e.g. "order.created"'),
       entityType: z
         .string()
         .optional()
-        .describe('Filter by entity type: order, invoice, delivery, product, user, category'),
+        .describe(
+          'Filter by entity type: order, invoice, delivery, product, user, category, stock_draft, inventory_count'
+        ),
       userId: z.number().int().positive().optional().describe('Filter by actor or target user'),
-      page: z.number().int().min(1).optional().describe('Page number (default 1)'),
-      perPage: z.number().int().min(1).max(100).optional().describe('Items per page (default 20)'),
+      page: page(),
+      perPage: perPage(),
     },
-    async ({ action, entityType, userId, page, perPage }): Promise<CallToolResult> => {
+    readOnly('Audit log'),
+    async ({ action, entityType, userId, page: pageNo, perPage: size }) => {
       try {
-        const logs = await AuditService.getAll(page ?? 1, perPage ?? 20, {
+        const logs = await AuditService.getAll(pageNo ?? 1, size ?? 20, {
           action,
           entityType,
           userId,
@@ -271,7 +304,7 @@ export function registerAdminTools(server: McpServer, user: User) {
           })),
         })
       } catch (err) {
-        return fail(`Error querying audit logs: ${String(err)}`)
+        return mapDomainError(err, 'Querying audit logs failed')
       }
     }
   )

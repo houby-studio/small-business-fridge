@@ -12,7 +12,16 @@ export const DELIVERY_MAX_AMOUNT = 10_000
 export interface DeliveryCorrectionFormState {
   amount: number | null
   price: number | null
+  /** What the supplier paid per piece; null = not recorded. */
+  purchasePrice: number | null
   reason: string
+}
+
+export interface CorrectableDeliveryState {
+  amountSupplied: number
+  price: number
+  purchasePrice: number | null
+  soldCount: number
 }
 
 /**
@@ -21,7 +30,7 @@ export interface DeliveryCorrectionFormState {
  */
 export function useDeliveryCorrectionValidation(
   form: Ref<DeliveryCorrectionFormState>,
-  current: Ref<{ amountSupplied: number; price: number; soldCount: number } | null>
+  current: Ref<CorrectableDeliveryState | null>
 ) {
   const { t } = useI18n()
 
@@ -48,6 +57,16 @@ export function useDeliveryCorrectionValidation(
     return null
   })
 
+  // Optional: empty clears the recorded purchase price. Two decimals, like the validator.
+  const purchasePriceError = computed(() => {
+    const v = form.value.purchasePrice
+    if (v === null) return null
+    if (v < 0 || v > DELIVERY_MAX_PRICE || Math.round(v * 100) !== v * 100) {
+      return t('supplier.correction_purchase_price_hint', { max: DELIVERY_MAX_PRICE })
+    }
+    return null
+  })
+
   // An empty reason only blocks the submit; the dialog shows a neutral hint instead of an
   // error, so a freshly opened dialog does not look broken.
   const reasonEmpty = computed(() => form.value.reason.trim().length === 0)
@@ -68,17 +87,28 @@ export function useDeliveryCorrectionValidation(
     () =>
       current.value !== null &&
       form.value.amount === current.value.amountSupplied &&
-      form.value.price === current.value.price
+      form.value.price === current.value.price &&
+      form.value.purchasePrice === current.value.purchasePrice
   )
 
   const isValid = computed(
     () =>
       !amountError.value &&
       !priceError.value &&
+      !purchasePriceError.value &&
       !reasonEmpty.value &&
       !reasonError.value &&
       !noChange.value
   )
 
-  return { minAmount, amountError, priceError, reasonEmpty, reasonError, noChange, isValid }
+  return {
+    minAmount,
+    amountError,
+    priceError,
+    purchasePriceError,
+    reasonEmpty,
+    reasonError,
+    noChange,
+    isValid,
+  }
 }

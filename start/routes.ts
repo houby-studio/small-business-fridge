@@ -40,6 +40,14 @@ const SupplierInvoiceController = () => import('#controllers/web/supplier/invoic
 const SupplierPaymentsController = () => import('#controllers/web/supplier/payments_controller')
 const SupplierStockController = () => import('#controllers/web/supplier/stock_controller')
 const SupplierProductsController = () => import('#controllers/web/supplier/products_controller')
+const SupplierShoppingListController = () =>
+  import('#controllers/web/supplier/shopping_list_controller')
+const SupplierProductGroupsController = () =>
+  import('#controllers/web/supplier/product_groups_controller')
+const SupplierStockDraftsController = () =>
+  import('#controllers/web/supplier/stock_drafts_controller')
+const SupplierInventoryController = () => import('#controllers/web/supplier/inventory_controller')
+const SupplierFinanceController = () => import('#controllers/web/supplier/finance_controller')
 const SupplierProductImagesController = () =>
   import('#controllers/web/supplier/product_images_controller')
 const SupplierProductSuggestionsController = () =>
@@ -309,9 +317,8 @@ router
 
 router
   .group(() => {
-    // Deliveries (add stock)
+    // Delivery history and corrections (stock is added through drafts below)
     router.get('/deliveries', [SupplierDeliveriesController, 'index'])
-    router.post('/deliveries', [SupplierDeliveriesController, 'store'])
     router.put('/deliveries/:id', [SupplierDeliveriesController, 'update']).where('id', /^\d+$/)
     router.delete('/deliveries/:id', [SupplierDeliveriesController, 'destroy']).where('id', /^\d+$/)
 
@@ -326,6 +333,54 @@ router
 
     // Stock overview
     router.get('/stock', [SupplierStockController, 'index'])
+
+    // Bulk stocking drafts (prepared over MCP, by the shopping list or by hand)
+    router.get('/stock/drafts', [SupplierStockDraftsController, 'index'])
+    router.post('/stock/drafts', [SupplierStockDraftsController, 'store'])
+    router.get('/stock/drafts/:id', [SupplierStockDraftsController, 'show']).where('id', /^\d+$/)
+    router.put('/stock/drafts/:id', [SupplierStockDraftsController, 'update']).where('id', /^\d+$/)
+    router
+      .post('/stock/drafts/:id/commit', [SupplierStockDraftsController, 'commit'])
+      .where('id', /^\d+$/)
+    router
+      .delete('/stock/drafts/:id', [SupplierStockDraftsController, 'destroy'])
+      .where('id', /^\d+$/)
+
+    // Shrinkage: write-offs and inventories
+    router.post('/stock/write-offs', [SupplierInventoryController, 'writeOff'])
+    router.get('/inventory', [SupplierInventoryController, 'index'])
+    router.post('/inventory', [SupplierInventoryController, 'store'])
+    router.get('/inventory/:id', [SupplierInventoryController, 'show']).where('id', /^\d+$/)
+    router
+      .put('/inventory/:id/products/:productId', [SupplierInventoryController, 'reclassify'])
+      .where('id', /^\d+$/)
+      .where('productId', /^\d+$/)
+
+    // Shopping list
+    router.get('/shopping-list', [SupplierShoppingListController, 'index'])
+    router.put('/shopping-list', [SupplierShoppingListController, 'updateSettings'])
+    router.post('/shopping-list/lines', [SupplierShoppingListController, 'addLine'])
+    router
+      .put('/shopping-list/lines/:key', [SupplierShoppingListController, 'updateLine'])
+      .where('key', /^[gpc]-\d+$/)
+    router
+      .delete('/shopping-list/lines/:key', [SupplierShoppingListController, 'resetLine'])
+      .where('key', /^[gpc]-\d+$/)
+    router.post('/shopping-list/complete', [SupplierShoppingListController, 'complete'])
+
+    // Purchase groups (interchangeable products the shopping list plans as one line)
+    router.get('/product-groups', [SupplierProductGroupsController, 'index'])
+    router.post('/product-groups', [SupplierProductGroupsController, 'store'])
+    router
+      .put('/product-groups/:id', [SupplierProductGroupsController, 'update'])
+      .where('id', /^\d+$/)
+    router
+      .delete('/product-groups/:id', [SupplierProductGroupsController, 'destroy'])
+      .where('id', /^\d+$/)
+
+    // Earnings, shrinkage and margin
+    router.get('/finance', [SupplierFinanceController, 'index'])
+    router.put('/finance/settings', [SupplierFinanceController, 'updateSettings'])
 
     // Product management
     router.get('/products', [SupplierProductsController, 'index'])

@@ -6,6 +6,7 @@ import type { InferSharedProps } from '@adonisjs/inertia/types'
 import db from '@adonisjs/lucid/services/db'
 import env from '#start/env'
 import buildInfo from '#services/build_info'
+import StockDraftService from '#services/shopping/stock_draft_service'
 import { readFileSync, readdirSync } from 'node:fs'
 import {
   applyCurrencyPlaceholder,
@@ -107,6 +108,13 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
         impersonation ? { asName: impersonation.asName } : undefined
       ),
       locale,
+      /**
+       * Badge on the "Naskladnění" nav item: open stocking drafts with at least one line.
+       * A plain function, so it is evaluated on full visits and skipped by partial reloads
+       * that do not ask for it.
+       */
+      openDraftCount: () =>
+        user && user.isSupplier ? new StockDraftService().countOpen(user.id) : 0,
       appName: env.get('APP_NAME', 'Fridgora'),
       /**
        * Plain value, not `always()`, so it rides along with the first render and is then

@@ -38,6 +38,13 @@ export default class DeliveryCorrection extends BaseModel {
   @column()
   declare newPrice: number
 
+  /** Purchase price before and after; both null when the lot never had one. */
+  @column({ consume: (value: string | null) => (value === null ? null : Number(value)) })
+  declare oldPurchasePrice: number | null
+
+  @column({ consume: (value: string | null) => (value === null ? null : Number(value)) })
+  declare newPurchasePrice: number | null
+
   @column()
   declare repricedOrderCount: number
 

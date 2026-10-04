@@ -36,11 +36,18 @@ declare module '@adonisjs/inertia/types' {
     'ratings/feed': ExtractProps<(typeof import('../../inertia/pages/ratings/feed.vue'))['default']>
     'shop/index': ExtractProps<(typeof import('../../inertia/pages/shop/index.vue'))['default']>
     'supplier/deliveries/index': ExtractProps<(typeof import('../../inertia/pages/supplier/deliveries/index.vue'))['default']>
+    'supplier/finance/index': ExtractProps<(typeof import('../../inertia/pages/supplier/finance/index.vue'))['default']>
+    'supplier/inventory/index': ExtractProps<(typeof import('../../inertia/pages/supplier/inventory/index.vue'))['default']>
+    'supplier/inventory/show': ExtractProps<(typeof import('../../inertia/pages/supplier/inventory/show.vue'))['default']>
     'supplier/invoice/index': ExtractProps<(typeof import('../../inertia/pages/supplier/invoice/index.vue'))['default']>
     'supplier/payments/index': ExtractProps<(typeof import('../../inertia/pages/supplier/payments/index.vue'))['default']>
+    'supplier/product_groups/index': ExtractProps<(typeof import('../../inertia/pages/supplier/product_groups/index.vue'))['default']>
     'supplier/products/create': ExtractProps<(typeof import('../../inertia/pages/supplier/products/create.vue'))['default']>
     'supplier/products/edit': ExtractProps<(typeof import('../../inertia/pages/supplier/products/edit.vue'))['default']>
     'supplier/products/index': ExtractProps<(typeof import('../../inertia/pages/supplier/products/index.vue'))['default']>
+    'supplier/shopping_list/index': ExtractProps<(typeof import('../../inertia/pages/supplier/shopping_list/index.vue'))['default']>
+    'supplier/stock_drafts/index': ExtractProps<(typeof import('../../inertia/pages/supplier/stock_drafts/index.vue'))['default']>
+    'supplier/stock_drafts/show': ExtractProps<(typeof import('../../inertia/pages/supplier/stock_drafts/show.vue'))['default']>
     'supplier/stock/index': ExtractProps<(typeof import('../../inertia/pages/supplier/stock/index.vue'))['default']>
   }
 }

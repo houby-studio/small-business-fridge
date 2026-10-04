@@ -46,6 +46,8 @@ export interface SharedProps {
   build?: BuildInfo
   currencyCode?: string
   currency?: string
+  /** Open stocking drafts with at least one line — the badge on "Naskladnění" (suppliers only). */
+  openDraftCount?: number
   [key: string]: unknown
 }
 

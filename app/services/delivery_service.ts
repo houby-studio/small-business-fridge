@@ -8,6 +8,7 @@ import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 import AuditService from '#services/audit_service'
 import { DomainError } from '#services/domain_error'
 import { normalizeImagePath } from '#helpers/image_url'
+import { roundMoney, suggestSellingPrice } from '#services/shopping/pricing'
 
 /** A repeated delivery of the same product by the same supplier within this window is flagged. */
 export const DUPLICATE_WINDOW_MINUTES = 30
@@ -18,6 +19,10 @@ export const DUPLICATE_WINDOW_MINUTES = 30
  */
 export const UNUSUAL_PRICE_RATIO = 1.5
 export const UNUSUAL_PRICE_MIN_DIFF = 5
+/** A product with this many pieces or fewer counts as low on stock. */
+export const LOW_STOCK_THRESHOLD = 4
+
+export type AddStockErrorCode = 'PRICE_REQUIRED'
 
 export type DeliveryCorrectionErrorCode =
   | 'DELIVERY_NOT_FOUND'
@@ -28,6 +33,10 @@ export type DeliveryCorrectionErrorCode =
   | 'NO_CHANGE'
   | 'DELIVERY_HAS_ORDERS'
 
+/** Whose deliveries a listing covers: the whole fridge or only the viewer's own lots. */
+export type StockScope = 'all' | 'mine'
+export type StockState = 'all' | 'low' | 'out'
+
 export interface StockWarnings {
   duplicate: { amount: number; price: number; minutesAgo: number } | null
   unusualPrice: {
@@ -36,6 +45,57 @@ export interface StockWarnings {
     lastSupplierName: string
     lastCreatedAt: string
   } | null
+}
+
+export interface StockRow {
+  productId: number
+  productName: string
+  imagePath: string | null
+  categoryName: string | null
+  categoryColor: string | null
+  totalSupplied: number
+  totalRemaining: number
+  totalSold: number
+  deliveryCount: number
+  totalStockValue: number
+  /** Pieces sold in the last 30 days. */
+  soldInPeriod: number
+  /** Deliveries stocked in the last 30 days. */
+  deliveredInPeriod: number
+}
+
+export interface StockInsights {
+  lowStockCount: number
+  outOfStockCount: number
+  activeProducts: number
+  period: '30d'
+  categoryBreakdown: Array<{
+    categoryName: string | null
+    categoryColor: string | null
+    totalRemaining: number
+    productCount: number
+  }>
+  lowStockItems: StockRow[]
+  topMovers: StockRow[]
+}
+
+export interface StockOverview {
+  data: StockRow[]
+  meta: { total: number; perPage: number; currentPage: number; lastPage: number }
+  totals: { totalProducts: number; totalRemaining: number; totalStockValue: number }
+  /** Products with LOW_STOCK_THRESHOLD pieces or fewer — regardless of the stockState filter. */
+  lowStockCount: number
+  /** Only computed with `withInsights` (the MCP get_stock tool); the web does not need it. */
+  insights?: StockInsights
+}
+
+export interface StockFilters {
+  categoryId?: number
+  sortBy?: string
+  sortOrder?: string
+  scope?: StockScope
+  stockState?: StockState
+  withInsights?: boolean
 }
 
 export interface DeliveryCorrectionResult {
@@ -52,29 +112,77 @@ export interface CorrectionOptions {
   impersonatorId?: number
 }
 
+export interface CorrectionInput {
+  amount: number
+  price: number
+  /** Omitted = unchanged, null = clear, number = the corrected purchase price. */
+  purchasePrice?: number | null
+  reason: string
+}
+
+const STOCK_SORT_COLUMNS: Record<string, string> = {
+  productName: 'product_name',
+  totalRemaining: 'total_remaining',
+  totalSold: 'total_sold',
+  soldInPeriod: 'sold_in_period',
+  totalStockValue: 'total_stock_value',
+  totalSupplied: 'total_supplied',
+}
+
 export default class DeliveryService {
   /**
-   * Add stock for a product — create a new delivery record.
+   * Add stock for a product — create a new delivery record. `purchasePrice` is what the
+   * supplier paid per piece, when they track it. Without a selling price it is derived from
+   * the purchase price and `marginPercent`. Pass `client` to stock inside a larger
+   * transaction (a bulk draft): the audit entry then rolls back with it. `actorId` is who
+   * really stocked when it is not the supplier (an admin committing their draft).
    */
   async addStock(
     supplierId: number,
     productId: number,
     amount: number,
-    price: number
+    price: number | null,
+    options: {
+      purchasePrice?: number | null
+      marginPercent?: number
+      actorId?: number
+      client?: TransactionClientContract
+    } = {}
   ): Promise<Delivery> {
-    const delivery = await Delivery.create({
-      supplierId,
-      productId,
-      amountSupplied: amount,
-      amountLeft: amount,
-      price,
-    })
+    const purchasePrice =
+      options.purchasePrice === null || options.purchasePrice === undefined
+        ? null
+        : roundMoney(options.purchasePrice)
+    const unitPrice =
+      price ??
+      (purchasePrice === null
+        ? null
+        : suggestSellingPrice(purchasePrice, options.marginPercent ?? 0))
+    if (unitPrice === null) throw new DomainError<AddStockErrorCode>('PRICE_REQUIRED')
 
-    await AuditService.log(supplierId, 'delivery.created', 'delivery', delivery.id, null, {
-      productId,
-      amount,
-      price,
-    })
+    const delivery = await Delivery.create(
+      {
+        supplierId,
+        productId,
+        amountSupplied: amount,
+        amountLeft: amount,
+        amountLost: 0,
+        price: unitPrice,
+        purchasePrice,
+      },
+      { client: options.client }
+    )
+
+    const actorId = options.actorId ?? supplierId
+    await AuditService.log(
+      actorId,
+      'delivery.created',
+      'delivery',
+      delivery.id,
+      actorId !== supplierId ? supplierId : null,
+      { productId, amount, price: unitPrice, ...(purchasePrice !== null && { purchasePrice }) },
+      { client: options.client }
+    )
 
     return delivery
   }
@@ -137,14 +245,16 @@ export default class DeliveryService {
   }
 
   /**
-   * Correct the amount and/or price of a delivery after it was stocked.
+   * Correct the amount, the selling price and/or the purchase price of a delivery after it
+   * was stocked.
    *
    * - The amount can only go down, and never below what was already sold. Topping up an old
    *   delivery would let it jump the FIFO queue ahead of newer deliveries by other
    *   suppliers, so extra pieces always come in as a new delivery.
-   * - A new price applies to the remaining stock and to every purchase from this delivery
-   *   that is not invoiced yet. Invoiced purchases keep their price — an issued invoice
-   *   never changes.
+   * - A new selling price applies to the remaining stock and to every purchase from this
+   *   delivery that is not invoiced yet. Invoiced purchases keep their price — an issued
+   *   invoice never changes.
+   * - The purchase price is the supplier's own cost; changing it never touches an order.
    *
    * The delivery row is locked first (as purchases do), then the uninvoiced orders (as
    * invoice generation does), so neither can interleave with the correction.
@@ -152,7 +262,7 @@ export default class DeliveryService {
   async correctDelivery(
     actor: CorrectionActor,
     deliveryId: number,
-    input: { amount: number; price: number; reason: string },
+    input: CorrectionInput,
     options: CorrectionOptions = {}
   ): Promise<DeliveryCorrectionResult> {
     const result = await db.transaction(async (trx) => {
@@ -167,7 +277,14 @@ export default class DeliveryService {
       }
 
       const priceChanged = input.price !== delivery.price
-      if (input.amount === delivery.amountSupplied && !priceChanged) {
+      const newPurchasePrice =
+        input.purchasePrice === undefined
+          ? delivery.purchasePrice
+          : input.purchasePrice === null
+            ? null
+            : roundMoney(input.purchasePrice)
+      const purchasePriceChanged = newPurchasePrice !== delivery.purchasePrice
+      if (input.amount === delivery.amountSupplied && !priceChanged && !purchasePriceChanged) {
         throw new DomainError<DeliveryCorrectionErrorCode>('NO_CHANGE')
       }
 
@@ -182,6 +299,8 @@ export default class DeliveryService {
           newAmountSupplied: input.amount,
           oldPrice: delivery.price,
           newPrice: input.price,
+          oldPurchasePrice: delivery.purchasePrice,
+          newPurchasePrice,
           repricedOrderCount: 0,
         },
         { client: trx }
@@ -224,6 +343,7 @@ export default class DeliveryService {
       delivery.amountSupplied = input.amount
       delivery.amountLeft = input.amount - sold
       delivery.price = input.price
+      delivery.purchasePrice = newPurchasePrice
       await delivery.save()
 
       return { delivery, correction, repricedOrderIds }
@@ -246,6 +366,9 @@ export default class DeliveryService {
         ...(correction.oldPrice !== correction.newPrice && {
           price: { from: correction.oldPrice, to: correction.newPrice },
           repricedOrderCount: correction.repricedOrderCount,
+        }),
+        ...(correction.oldPurchasePrice !== correction.newPurchasePrice && {
+          purchasePrice: { from: correction.oldPurchasePrice, to: correction.newPurchasePrice },
         }),
       }
     )
@@ -287,6 +410,8 @@ export default class DeliveryService {
           newAmountSupplied: 0,
           oldPrice: delivery.price,
           newPrice: delivery.price,
+          oldPurchasePrice: delivery.purchasePrice,
+          newPurchasePrice: delivery.purchasePrice,
           repricedOrderCount: 0,
         },
         { client: trx }
@@ -342,135 +467,154 @@ export default class DeliveryService {
   }
 
   /**
-   * Get stock overview for a supplier — all their deliveries with product info.
-   * Groups by product, shows supplied/remaining/sold amounts.
-   * Supports filtering by category, sorting, and pagination.
-   * Activity insights are calculated from the last 30 days.
+   * Stock overview grouped by product: supplied / remaining / sold, stock value and the
+   * last 30 days of activity. `scope` narrows it to the viewer's own lots, `stockState` to
+   * products running low or sold out. Sorted, filtered and paginated in SQL; the totals and
+   * the low-stock count always cover every product of the scope and category.
    */
   async getStockForSupplier(
     supplierId: number,
     page: number = 1,
     perPage: number = 20,
-    filters?: {
-      categoryId?: number
-      sortBy?: string
-      sortOrder?: string
-      scope?: 'store' | 'mine'
-    }
-  ) {
-    const sortByMap: Record<string, string> = {
-      productName: 'product_name',
-      totalRemaining: 'total_remaining',
-      totalSold: 'total_sold',
-    }
-    const safeSort = sortByMap[filters?.sortBy ?? ''] ?? 'product_name'
-    const sortDir: 'asc' | 'desc' = filters?.sortOrder === 'asc' ? 'asc' : 'desc'
+    filters: StockFilters = {}
+  ): Promise<StockOverview> {
+    const scope: StockScope = filters.scope === 'mine' ? 'mine' : 'all'
+    const stockState: StockState =
+      filters.stockState === 'low' || filters.stockState === 'out' ? filters.stockState : 'all'
+    const sortColumn = STOCK_SORT_COLUMNS[filters.sortBy ?? ''] ?? 'product_name'
+    const sortDir: 'asc' | 'desc' = filters.sortOrder === 'desc' ? 'desc' : 'asc'
     const periodStart = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
 
-    let query = db
-      .from('deliveries')
-      .join('products', 'deliveries.product_id', 'products.id')
-      .leftJoin('categories', 'products.category_id', 'categories.id')
-      .whereNull('deliveries.voided_at')
-      .select(
-        'products.id as product_id',
-        'products.display_name as product_name',
-        'products.image_path',
-        'categories.id as category_id',
-        'categories.name as category_name',
-        'categories.color as category_color',
-        db.rawQuery('SUM(deliveries.amount_supplied)::int as total_supplied'),
-        db.rawQuery('SUM(deliveries.amount_left)::int as total_remaining'),
-        db.rawQuery('SUM(deliveries.amount_supplied - deliveries.amount_left)::int as total_sold'),
-        db.rawQuery('COUNT(deliveries.id)::int as delivery_count'),
-        db.rawQuery('SUM(deliveries.price * deliveries.amount_left)::numeric as total_stock_value')
-      )
-      .groupBy(
-        'products.id',
-        'products.display_name',
-        'products.image_path',
-        'categories.id',
-        'categories.name',
-        'categories.color'
-      )
+    const bindings: Record<string, unknown> = {
+      supplierId,
+      categoryId: filters.categoryId ?? null,
+      periodStart,
+      lowThreshold: LOW_STOCK_THRESHOLD,
+    }
+    const mine = scope === 'mine'
+    const ownOnly = (column: string) => (mine ? `AND ${column} = :supplierId` : '')
+    const byCategory = filters.categoryId ? 'AND p.category_id = :categoryId' : ''
 
-    if (filters?.scope === 'mine') {
-      query = query.where('deliveries.supplier_id', supplierId)
+    // Every product of the scope with its lots summed up; the 30-day activity comes from two
+    // small grouped subqueries joined in, so a page can be sorted by it in SQL.
+    const grouped = `
+      WITH sold AS (
+        SELECT d.product_id, COUNT(*)::int AS sold_in_period
+          FROM orders o
+          JOIN deliveries d ON d.id = o.delivery_id
+         WHERE o.created_at >= :periodStart ${ownOnly('d.supplier_id')}
+         GROUP BY d.product_id
+      ), delivered AS (
+        SELECT product_id, COUNT(*)::int AS delivered_in_period
+          FROM deliveries
+         WHERE voided_at IS NULL AND created_at >= :periodStart ${ownOnly('supplier_id')}
+         GROUP BY product_id
+      ), grouped AS (
+        SELECT p.id AS product_id,
+               p.display_name AS product_name,
+               p.image_path,
+               c.name AS category_name,
+               c.color AS category_color,
+               SUM(d.amount_supplied)::int AS total_supplied,
+               SUM(d.amount_left)::int AS total_remaining,
+               SUM(d.amount_supplied - d.amount_left - d.amount_lost)::int AS total_sold,
+               COUNT(d.id)::int AS delivery_count,
+               SUM(d.price * d.amount_left)::numeric AS total_stock_value,
+               COALESCE(s.sold_in_period, 0)::int AS sold_in_period,
+               COALESCE(dl.delivered_in_period, 0)::int AS delivered_in_period
+          FROM deliveries d
+          JOIN products p ON p.id = d.product_id
+          LEFT JOIN categories c ON c.id = p.category_id
+          LEFT JOIN sold s ON s.product_id = p.id
+          LEFT JOIN delivered dl ON dl.product_id = p.id
+         WHERE d.voided_at IS NULL ${ownOnly('d.supplier_id')} ${byCategory}
+         GROUP BY p.id, p.display_name, p.image_path, c.name, c.color,
+                  s.sold_in_period, dl.delivered_in_period
+      )`
+    const stateWhere =
+      stockState === 'out'
+        ? 'WHERE total_remaining = 0'
+        : stockState === 'low'
+          ? 'WHERE total_remaining BETWEEN 1 AND :lowThreshold'
+          : ''
+
+    type Rows<T> = { rows: T[] }
+    const [pageRows, summary] = await Promise.all([
+      db.rawQuery<Rows<Record<string, any>>>(
+        `${grouped}
+         SELECT * FROM grouped ${stateWhere}
+          ORDER BY ${sortColumn} ${sortDir}, product_name ASC, product_id ASC
+          LIMIT :limit OFFSET :offset`,
+        { ...bindings, limit: perPage, offset: (page - 1) * perPage }
+      ),
+      db.rawQuery<Rows<Record<string, any>>>(
+        `${grouped}
+         SELECT COUNT(*)::int AS total_products,
+                COALESCE(SUM(total_remaining), 0)::int AS total_remaining,
+                COALESCE(SUM(total_stock_value), 0)::numeric AS total_stock_value,
+                COUNT(*) FILTER (WHERE total_remaining = 0)::int AS out_count,
+                COUNT(*) FILTER (WHERE total_remaining BETWEEN 1 AND :lowThreshold)::int AS low_count
+           FROM grouped`,
+        bindings
+      ),
+    ])
+
+    const sums = summary.rows[0] ?? {}
+    const totalProducts = Number(sums.total_products ?? 0)
+    const outCount = Number(sums.out_count ?? 0)
+    const lowCount = Number(sums.low_count ?? 0)
+    const total = stockState === 'out' ? outCount : stockState === 'low' ? lowCount : totalProducts
+
+    const overview: StockOverview = {
+      data: pageRows.rows.map(DeliveryService.mapStockRow),
+      meta: {
+        total,
+        perPage,
+        currentPage: page,
+        lastPage: Math.max(1, Math.ceil(total / perPage)),
+      },
+      totals: {
+        totalProducts,
+        totalRemaining: Number(sums.total_remaining ?? 0),
+        totalStockValue: Number(sums.total_stock_value ?? 0),
+      },
+      lowStockCount: lowCount + outCount,
     }
 
-    if (filters?.categoryId) {
-      query = query.where('products.category_id', filters.categoryId)
+    if (filters.withInsights) {
+      const all = await db.rawQuery<Rows<Record<string, any>>>(
+        `${grouped} SELECT * FROM grouped ORDER BY product_name ASC`,
+        bindings
+      )
+      overview.insights = DeliveryService.buildInsights(all.rows.map(DeliveryService.mapStockRow))
     }
 
-    query = query.orderByRaw(`${safeSort} ${sortDir}`)
+    return overview
+  }
 
-    const allRows = await query
-
-    const allMapped = allRows.map((r) => ({
-      productId: r.product_id,
+  private static mapStockRow(r: Record<string, any>): StockRow {
+    return {
+      productId: Number(r.product_id),
       productName: r.product_name,
       imagePath: normalizeImagePath(r.image_path),
-      categoryName: r.category_name,
-      categoryColor: r.category_color,
-      totalSupplied: r.total_supplied,
-      totalRemaining: r.total_remaining,
-      totalSold: r.total_sold,
-      deliveryCount: r.delivery_count,
+      categoryName: r.category_name ?? null,
+      categoryColor: r.category_color ?? null,
+      totalSupplied: Number(r.total_supplied),
+      totalRemaining: Number(r.total_remaining),
+      totalSold: Number(r.total_sold),
+      deliveryCount: Number(r.delivery_count),
       totalStockValue: Number(r.total_stock_value),
-    }))
-
-    const productIds = allMapped.map((r) => r.productId)
-    let soldInPeriodByProduct = new Map<number, number>()
-    let deliveredInPeriodByProduct = new Map<number, number>()
-
-    if (productIds.length > 0) {
-      let soldQuery = db
-        .from('orders')
-        .join('deliveries', 'orders.delivery_id', 'deliveries.id')
-        .whereIn('deliveries.product_id', productIds)
-        .where('orders.created_at', '>=', periodStart)
-        .groupBy('deliveries.product_id')
-        .select('deliveries.product_id as productId')
-        .select(db.rawQuery('COUNT(*)::int as sold_in_period'))
-
-      let deliveredQuery = db
-        .from('deliveries')
-        .whereIn('deliveries.product_id', productIds)
-        .whereNull('deliveries.voided_at')
-        .where('deliveries.created_at', '>=', periodStart)
-        .groupBy('deliveries.product_id')
-        .select('deliveries.product_id as productId')
-        .select(db.rawQuery('COUNT(*)::int as delivered_in_period'))
-
-      if (filters?.scope === 'mine') {
-        soldQuery = soldQuery.where('deliveries.supplier_id', supplierId)
-        deliveredQuery = deliveredQuery.where('deliveries.supplier_id', supplierId)
-      }
-
-      const [soldRows, deliveredRows] = await Promise.all([soldQuery, deliveredQuery])
-      soldInPeriodByProduct = new Map(
-        soldRows.map((row) => [Number(row.productId), Number(row.sold_in_period)])
-      )
-      deliveredInPeriodByProduct = new Map(
-        deliveredRows.map((row) => [Number(row.productId), Number(row.delivered_in_period)])
-      )
+      soldInPeriod: Number(r.sold_in_period),
+      deliveredInPeriod: Number(r.delivered_in_period),
     }
+  }
 
-    const mappedWithPeriod = allMapped.map((row) => ({
-      ...row,
-      soldInPeriod: soldInPeriodByProduct.get(row.productId) ?? 0,
-      deliveredInPeriod: deliveredInPeriodByProduct.get(row.productId) ?? 0,
-    }))
-
-    const total = mappedWithPeriod.length
-    const lastPage = Math.max(1, Math.ceil(total / perPage))
-    const start = (page - 1) * perPage
-    const data = mappedWithPeriod.slice(start, start + perPage)
-    const lowStockItems = mappedWithPeriod
+  private static buildInsights(rows: StockRow[]): StockInsights {
+    const lowStockItems = rows
       .filter(
         (r) =>
           r.totalRemaining > 0 &&
-          r.totalRemaining <= 4 &&
+          r.totalRemaining <= LOW_STOCK_THRESHOLD &&
           (r.soldInPeriod > 0 || r.deliveredInPeriod > 0)
       )
       .sort((a, b) => {
@@ -479,21 +623,13 @@ export default class DeliveryService {
       })
       .slice(0, 12)
 
-    const topMovers = mappedWithPeriod
+    const topMovers = rows
       .filter((r) => r.soldInPeriod > 0)
       .sort((a, b) => b.soldInPeriod - a.soldInPeriod)
       .slice(0, 8)
 
-    const categoryMap = new Map<
-      string,
-      {
-        categoryName: string | null
-        categoryColor: string | null
-        totalRemaining: number
-        productCount: number
-      }
-    >()
-    for (const row of mappedWithPeriod) {
+    const categoryMap = new Map<string, StockInsights['categoryBreakdown'][number]>()
+    for (const row of rows) {
       const key = row.categoryName ?? '__uncategorized__'
       const current = categoryMap.get(key) ?? {
         categoryName: row.categoryName ?? null,
@@ -502,37 +638,25 @@ export default class DeliveryService {
         productCount: 0,
       }
       current.totalRemaining += row.totalRemaining
-      if (row.totalRemaining > 0) {
-        current.productCount += 1
-      }
+      if (row.totalRemaining > 0) current.productCount += 1
       categoryMap.set(key, current)
     }
-    const categoryBreakdown = [...categoryMap.values()].sort(
-      (a, b) => b.totalRemaining - a.totalRemaining
-    )
 
     return {
-      data,
-      meta: { total, perPage, currentPage: page, lastPage },
-      totals: {
-        totalProducts: total,
-        totalRemaining: mappedWithPeriod.reduce((s, r) => s + r.totalRemaining, 0),
-        totalStockValue: mappedWithPeriod.reduce((s, r) => s + r.totalStockValue, 0),
-      },
-      insights: {
-        lowStockCount: lowStockItems.length,
-        outOfStockCount: mappedWithPeriod.filter((r) => r.totalRemaining === 0).length,
-        activeProducts: mappedWithPeriod.filter((r) => r.totalRemaining > 0).length,
-        period: '30d' as const,
-        categoryBreakdown,
-        lowStockItems,
-        topMovers,
-      },
+      lowStockCount: lowStockItems.length,
+      outOfStockCount: rows.filter((r) => r.totalRemaining === 0).length,
+      activeProducts: rows.filter((r) => r.totalRemaining > 0).length,
+      period: '30d',
+      categoryBreakdown: [...categoryMap.values()].sort(
+        (a, b) => b.totalRemaining - a.totalRemaining
+      ),
+      lowStockItems,
+      topMovers,
     }
   }
 
   /**
-   * Get recent deliveries for a supplier (or the whole store) with optional product filter
+   * Get recent deliveries for a supplier (or the whole fridge) with optional product filter
    * and sort. Corrections are preloaded newest first so the history can show them.
    */
   async getRecentDeliveries(
@@ -543,7 +667,7 @@ export default class DeliveryService {
       productId?: number
       sortBy?: string
       sortOrder?: string
-      scope?: 'store' | 'mine'
+      scope?: StockScope
     }
   ) {
     const SORT_WHITELIST = ['createdAt', 'price']
@@ -557,7 +681,7 @@ export default class DeliveryService {
       .orderBy(safeSort, sortDir)
       .orderBy('id', sortDir)
 
-    if (filters?.scope !== 'store') {
+    if (filters?.scope !== 'all') {
       query.where('supplierId', supplierId)
     }
 
@@ -603,28 +727,39 @@ export default class DeliveryService {
     return stats
   }
 
-  async getRecentDeliveriesFeed(
-    supplierId: number,
-    limit: number = 8,
-    scope: 'store' | 'mine' = 'store'
-  ) {
-    const query = Delivery.query()
-      .preload('product', (q) => q.preload('category'))
-      .preload('supplier')
-      .orderBy('createdAt', 'desc')
-      .limit(limit)
-
-    if (scope === 'mine') {
-      query.where('supplierId', supplierId)
-    }
-
-    return query
-  }
-
   /**
-   * Get all products (for the delivery form dropdown).
+   * Get all products (for the delivery history filter).
    */
   async getAllProducts() {
     return Product.query().preload('category').orderBy('displayName', 'asc')
+  }
+
+  /**
+   * Selling and purchase price of every product's newest lot (or only of `productIds`) —
+   * the stocking form shows them as a reminder and suggests them for the next lot.
+   */
+  async getLastPrices(
+    productIds?: number[]
+  ): Promise<Map<number, { price: number; purchasePrice: number | null }>> {
+    if (productIds && productIds.length === 0) return new Map()
+    const result = await db.rawQuery<{
+      rows: Array<{ product_id: number; price: number; purchase_price: string | null }>
+    }>(
+      `SELECT DISTINCT ON (product_id) product_id, price, purchase_price
+         FROM deliveries
+        WHERE voided_at IS NULL
+          ${productIds ? 'AND product_id = ANY(:productIds)' : ''}
+        ORDER BY product_id, created_at DESC, id DESC`,
+      productIds ? { productIds } : {}
+    )
+    return new Map(
+      result.rows.map((row) => [
+        Number(row.product_id),
+        {
+          price: Number(row.price),
+          purchasePrice: row.purchase_price === null ? null : Number(row.purchase_price),
+        },
+      ])
+    )
   }
 }

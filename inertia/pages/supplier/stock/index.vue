@@ -1,25 +1,25 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted } from 'vue'
-import { Head, Link, router, usePage } from '@inertiajs/vue3'
+import { ref, computed } from 'vue'
+import { Head, Link, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
-import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
-import Card from 'primevue/card'
 import Select from 'primevue/select'
 import InputNumber from 'primevue/inputnumber'
 import Dialog from 'primevue/dialog'
+import Textarea from 'primevue/textarea'
 import { useI18n } from '~/composables/use_i18n'
 import { useListFilters } from '~/composables/use_list_filters'
-import { useSelectEnterKey } from '~/composables/use_select_enter_key'
-import { formatDate } from '~/composables/use_format_date'
 import FilterBar from '~/components/FilterBar.vue'
-import {
-  DELIVERY_MAX_AMOUNT,
-  DELIVERY_MAX_PRICE,
-} from '~/composables/use_delivery_correction_validation'
+import InfoHint from '~/components/InfoHint.vue'
+import PageTabs from '~/components/PageTabs.vue'
 import PaginatedDataTable from '~/components/PaginatedDataTable.vue'
+import IncomeLimitBanner, {
+  type IncomeLimitStatus,
+} from '~/components/supplier/IncomeLimitBanner.vue'
+import { useMoney } from '~/composables/use_pricing'
+import { WRITE_OFF_REASONS, ADJUSTMENT_NOTE_MAX } from '~/composables/use_shopping_validation'
 
 interface StockRow {
   productId: number
@@ -36,357 +36,170 @@ interface StockRow {
   totalStockValue: number
 }
 
-interface CategoryBreakdownRow {
-  categoryName: string | null
-  categoryColor: string | null
-  totalRemaining: number
-  productCount: number
-}
-
 interface StockResult {
   data: StockRow[]
   meta: { total: number; perPage: number; currentPage: number; lastPage: number }
   totals: { totalProducts: number; totalRemaining: number; totalStockValue: number }
-  insights: {
-    lowStockCount: number
-    activeProducts: number
-    period: '30d'
-    categoryBreakdown: CategoryBreakdownRow[]
-    lowStockItems: StockRow[]
-    topMovers: StockRow[]
-  }
+  lowStockCount: number
 }
 
-interface CategoryOption {
-  id: number
-  name: string
-  color: string
-}
-
-interface ProductOption {
-  id: number
-  displayName: string
-}
-
-interface RecentDeliveryRow {
-  id: number
-  createdAt: string
-  amountSupplied: number
-  amountLeft: number
-  price: number
-  productName: string
-  supplierName: string
-  voidedAt: string | null
-}
-
-interface DeliveryWarning {
-  duplicate: { amount: number; price: number; minutesAgo: number } | null
-  unusualPrice: {
-    lastPrice: number
-    lastSupplierId: number
-    lastSupplierName: string
-    lastCreatedAt: string
-  } | null
-  productId: number
-  amount: number
-  price: number
-}
+type StockScope = 'all' | 'mine'
+type StockState = 'all' | 'low' | 'out'
 
 const props = defineProps<{
   stock: StockResult
-  recentDeliveries: RecentDeliveryRow[]
-  categories: CategoryOption[]
-  products: ProductOption[]
-  preselect: number | null
+  categories: Array<{ id: number; name: string; color: string }>
   filters: {
     categoryId: string
     sortBy: string
     sortOrder: string
-    scope: string
+    scope: StockScope
+    stockState: StockState
   }
+  openDraftCount: number
+  incomeLimit: IncomeLimitStatus | null
 }>()
 
-const { t } = useI18n()
+const { t, tp } = useI18n()
+const { money } = useMoney()
 const ALL = '__all__'
 
+const tabs = computed(() => [
+  { label: t('common.tab_stock_state'), url: '/supplier/stock', testId: 'tab-stock-state' },
+  {
+    label: t('common.tab_stock_history'),
+    url: '/supplier/deliveries',
+    testId: 'tab-stock-history',
+  },
+  { label: t('common.tab_inventory'), url: '/supplier/inventory', testId: 'tab-inventory' },
+])
+
+// ─── Filters (server-side; `only` keeps shared data off the wire) ─────────────
 const filterCategoryId = ref(props.filters.categoryId || ALL)
+const filterScope = ref<StockScope>(props.filters.scope === 'mine' ? 'mine' : 'all')
+const filterStockState = ref<StockState>(props.filters.stockState || 'all')
 const filterSortBy = ref(props.filters.sortBy || 'productName')
 const filterSortOrder = ref(props.filters.sortOrder || 'asc')
-const filterScope = ref(props.filters.scope === 'mine' ? 'mine' : 'store')
 const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
 
-const selectedProduct = ref<number | null>(props.preselect ?? null)
-const amount = ref<number | null>(null)
-const price = ref<number | null>(null)
-const submitting = ref(false)
-const showFullTable = ref(false)
-const productSelect = ref<any>(null)
-const amountInput = ref<any>(null)
-const priceInput = ref<any>(null)
-
+const scopeOptions = computed(() => [
+  { label: t('common.scope_all'), value: 'all' },
+  { label: t('common.scope_mine'), value: 'mine' },
+])
 const categoryOptions = computed(() => [
   { label: t('common.all'), value: ALL },
   ...props.categories.map((c) => ({ label: c.name, value: String(c.id) })),
 ])
-
-const quickProductOptions = computed(() =>
-  props.products.map((p) => ({ label: p.displayName, value: Number(p.id) }))
-)
-
-const scopeOptions = computed(() => [
-  { label: t('supplier.stock_scope_store'), value: 'store' },
-  { label: t('supplier.stock_scope_mine'), value: 'mine' },
+const stockStateOptions = computed(() => [
+  { label: t('common.all'), value: 'all' },
+  { label: t('supplier.stock_state_low', { count: props.stock.lowStockCount }), value: 'low' },
+  { label: t('supplier.stock_out_of_stock'), value: 'out' },
 ])
-
-const insightPeriodLabel = computed(() => t('supplier.stock_period_30d'))
-
-function focusAmountField() {
-  const el = amountInput.value?.$el as HTMLElement | undefined
-  const input = el?.querySelector('input') as HTMLInputElement | null
-  if (!input) return
-
-  input.focus()
-  window.setTimeout(() => {
-    input.focus()
-  }, 0)
-  window.setTimeout(() => {
-    input.focus()
-  }, 120)
-}
-
-function focusPriceField() {
-  const el = priceInput.value?.$el as HTMLElement | undefined
-  const input = el?.querySelector('input') as HTMLInputElement | null
-  input?.focus()
-}
-
-const { onSelectShow } = useSelectEnterKey([
-  {
-    selectRef: productSelect,
-    getOptions: () => quickProductOptions.value,
-    getLabel: (o) => o.label,
-    getValue: (o) => o.value,
-    onSelect: (v) => {
-      selectedProduct.value = v as number
-      nextTick(() => focusAmountField())
-      window.setTimeout(() => focusAmountField(), 120)
-    },
-  },
-])
-
-function openProductSelectAndFocusSearch() {
-  const instance = productSelect.value
-  const root = instance?.$el as HTMLElement | undefined
-  const trigger = root?.querySelector('[role="combobox"]') as HTMLElement | null
-  trigger?.focus()
-
-  if (typeof instance?.show === 'function') {
-    instance.show()
-  } else {
-    trigger?.click()
-  }
-
-  nextTick(() => onSelectShow())
-}
-
-function onProductEnter(event: KeyboardEvent) {
-  if (productSelect.value?.overlayVisible === true) return // handled by useSelectEnterKey
-  event.preventDefault()
-  openProductSelectAndFocusSearch()
-}
-
-function onProductSelectHide() {
-  if (selectedProduct.value && !amount.value) {
-    nextTick(() => {
-      focusAmountField()
-    })
-  }
-}
-
-function onProductChange() {
-  nextTick(() => {
-    focusAmountField()
-  })
-}
-
-onMounted(() => {
-  if (props.preselect) {
-    nextTick(() => {
-      focusAmountField()
-    })
-  }
-})
 
 function buildFilterParams() {
   return {
     categoryId: filterCategoryId.value === ALL ? undefined : filterCategoryId.value,
+    scope: filterScope.value === 'all' ? undefined : filterScope.value,
+    stockState: filterStockState.value === 'all' ? undefined : filterStockState.value,
     sortBy: filterSortBy.value || undefined,
     sortOrder: filterSortOrder.value || undefined,
-    scope: filterScope.value === 'store' ? undefined : filterScope.value,
   }
 }
 
-// applyFilters/navigateClear reload recentDeliveries too; sort/page reload only stock+filters
-const { applyFilters, navigateClear } = useListFilters({
+const { applyFilters, navigateClear, onPageChange, navigateSort } = useListFilters({
   route: '/supplier/stock',
-  onlyProps: ['stock', 'filters', 'recentDeliveries'],
+  onlyProps: ['stock', 'filters'],
   buildParams: buildFilterParams,
   getCurrentPage: () => props.stock.meta.currentPage,
 })
 
 function clearFilters() {
   filterCategoryId.value = ALL
+  filterScope.value = 'all'
+  filterStockState.value = 'all'
   filterSortBy.value = 'productName'
   filterSortOrder.value = 'asc'
-  filterScope.value = 'store'
   navigateClear()
 }
 
-function onPageChange(event: any) {
-  router.get(
-    '/supplier/stock',
-    { ...buildFilterParams(), page: event.page + 1 },
-    { preserveState: true, only: ['stock', 'filters'] }
-  )
-}
-
-function onSort(event: any) {
+function onSort(event: { sortField: string; sortOrder: number }) {
   filterSortBy.value = event.sortField
   filterSortOrder.value = event.sortOrder === 1 ? 'asc' : 'desc'
-  router.get(
-    '/supplier/stock',
-    {
-      ...buildFilterParams(),
-      sortBy: event.sortField,
-      sortOrder: event.sortOrder === 1 ? 'asc' : 'desc',
-      page: 1,
-    },
-    { preserveState: true, only: ['stock', 'filters'] }
-  )
+  navigateSort()
 }
 
-const deliveryWarning = ref<DeliveryWarning | null>(null)
-const warningVisible = ref(false)
-
-const warningProductName = computed(
-  () =>
-    props.products.find((p) => Number(p.id) === deliveryWarning.value?.productId)?.displayName ?? ''
+const summary = computed(() =>
+  tp('supplier.stock_summary', props.stock.totals.totalProducts, {
+    pieces: props.stock.totals.totalRemaining,
+    value: money(props.stock.totals.totalStockValue),
+  })
 )
 
-const warningItems = computed(() => {
-  const warning = deliveryWarning.value
-  if (!warning) return []
+// ─── Stocking goes through the supplier's draft (příjemka) ────────────────────
+function receive(productId?: number) {
+  router.post('/supplier/stock/drafts', productId ? { productId } : {})
+}
 
-  const items: Array<{ kind: 'duplicate' | 'price'; title: string; detail: string; hint: string }> =
-    []
+function stockBadgeClass(remaining: number): string {
+  if (remaining === 0) return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+  if (remaining <= 4) return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200'
+  return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
+}
 
-  if (warning.duplicate) {
-    items.push({
-      kind: 'duplicate',
-      title: t('supplier.warning_duplicate_title'),
-      detail: t('supplier.warning_duplicate_detail', {
-        minutes: warning.duplicate.minutesAgo,
-        amount: warning.duplicate.amount,
-        price: warning.duplicate.price,
-      }),
-      hint: t('supplier.warning_duplicate_hint'),
-    })
-  }
-  if (warning.unusualPrice) {
-    items.push({
-      kind: 'price',
-      title: t('supplier.warning_price_title'),
-      detail: t('supplier.warning_price_detail', {
-        price: warning.unusualPrice.lastPrice,
-        supplier:
-          warning.unusualPrice.lastSupplierId === currentUserId.value
-            ? t('supplier.warning_price_you')
-            : warning.unusualPrice.lastSupplierName,
-        // Keep the date on one line on narrow screens.
-        date: formatDate(warning.unusualPrice.lastCreatedAt).replace(/ /g, '\u00a0'),
-      }),
-      hint: t('supplier.warning_price_hint'),
-    })
-  }
-  return items
+// ─── Write-off (pieces you know about: damaged, expired, stolen) ───────────────
+type WriteOffReason = (typeof WRITE_OFF_REASONS)[number]
+const writeOffVisible = ref(false)
+const writeOffTarget = ref<{ productId: number; productName: string; stock: number } | null>(null)
+const writeOffQuantity = ref<number | null>(1)
+const writeOffReason = ref<WriteOffReason>('expired')
+const writeOffNote = ref('')
+const writeOffSubmitting = ref(false)
+const writeOffReasons = computed(() =>
+  WRITE_OFF_REASONS.map((reason) => ({ label: t(`inventory.reason_${reason}`), value: reason }))
+)
+const writeOffError = computed(() => {
+  const target = writeOffTarget.value
+  const quantity = writeOffQuantity.value
+  if (!target) return ''
+  if (!quantity || quantity < 1) return t('inventory.write_off_quantity_min')
+  if (quantity > target.stock) return t('inventory.write_off_quantity_max', { max: target.stock })
+  return ''
 })
 
-const page = usePage()
-const currentUserId = computed(() => (page.props.user as { id: number } | undefined)?.id)
+function openWriteOff(row: StockRow) {
+  writeOffTarget.value = {
+    productId: row.productId,
+    productName: row.productName,
+    stock: row.totalRemaining,
+  }
+  writeOffQuantity.value = 1
+  writeOffReason.value = 'expired'
+  writeOffNote.value = ''
+  writeOffVisible.value = true
+}
 
-function submitQuickDelivery(confirmWarnings = false) {
-  // Enter in the price field bypasses the disabled button, so guard here too — a second
-  // Enter while the first request is in flight used to stock the delivery twice.
-  if (submitting.value) return
-  if (!selectedProduct.value || !amount.value || !price.value) return
-
-  submitting.value = true
+function submitWriteOff() {
+  if (!writeOffTarget.value || writeOffError.value || writeOffSubmitting.value) return
+  writeOffSubmitting.value = true
   router.post(
-    '/supplier/deliveries',
+    '/supplier/stock/write-offs',
     {
-      productId: selectedProduct.value,
-      amount: amount.value,
-      price: price.value,
-      ...(confirmWarnings ? { confirmWarnings: true } : {}),
+      productId: writeOffTarget.value.productId,
+      quantity: writeOffQuantity.value,
+      reason: writeOffReason.value,
+      ...(writeOffNote.value.trim() ? { note: writeOffNote.value.trim() } : {}),
     },
     {
-      preserveState: true,
       preserveScroll: true,
-      onSuccess: (page) => {
-        const warning = (page.props.flash as Record<string, unknown> | undefined)
-          ?.deliveryWarning as DeliveryWarning | undefined
-        if (warning) {
-          // Nothing was stored — keep the form as typed and ask for confirmation.
-          deliveryWarning.value = warning
-          warningVisible.value = true
-          return
-        }
-        // Clear the warning first so the dialog's hide handler does not refocus the price.
-        deliveryWarning.value = null
-        warningVisible.value = false
-        selectedProduct.value = null
-        amount.value = null
-        price.value = null
-        nextTick(() => {
-          openProductSelectAndFocusSearch()
-        })
+      preserveState: true,
+      onSuccess: () => {
+        writeOffVisible.value = false
       },
       onFinish: () => {
-        submitting.value = false
+        writeOffSubmitting.value = false
       },
     }
   )
-}
-
-function onAmountEnter() {
-  focusPriceField()
-}
-
-function onPriceEnter() {
-  if (selectedProduct.value && amount.value && price.value) {
-    submitQuickDelivery()
-  }
-}
-
-function confirmWarningDelivery() {
-  submitQuickDelivery(true)
-}
-
-function cancelWarningDelivery() {
-  warningVisible.value = false
-  deliveryWarning.value = null
-  nextTick(() => focusPriceField())
-}
-
-/** Esc and the close icon hide the dialog without going through "Edit values". */
-function onWarningHide() {
-  if (deliveryWarning.value) cancelWarningDelivery()
-}
-
-function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
-  if (remaining >= 5) return 'success'
-  if (remaining > 0) return 'warn'
-  return 'danger'
 }
 </script>
 
@@ -394,250 +207,47 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
   <AppLayout>
     <Head :title="t('supplier.stock_title')" />
 
-    <div class="mb-6 flex items-center justify-between">
+    <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold text-gray-900 dark:text-zinc-100">
-        {{ t('supplier.stock_heading') }}
+        {{ t('supplier.stock_title') }}
       </h1>
-      <div class="flex gap-2">
-        <Link href="/supplier/products/new">
-          <Button :label="t('supplier.stock_new_product')" icon="pi pi-plus" size="small" />
+      <div class="flex flex-wrap items-center gap-3">
+        <Link
+          v-if="openDraftCount > 0"
+          href="/supplier/stock/drafts"
+          class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-200 dark:hover:bg-amber-900/50"
+          data-testid="stock-drafts-waiting"
+        >
+          {{ tp('supplier.stock_drafts_waiting', openDraftCount) }}
         </Link>
-        <Link href="/supplier/deliveries">
-          <Button
-            :label="t('supplier.stock_delivery_history')"
-            icon="pi pi-box"
-            size="small"
-            severity="secondary"
-          />
-        </Link>
+        <Button
+          :label="t('supplier.stock_receive')"
+          icon="pi pi-plus"
+          data-testid="stock-receive"
+          @click="receive()"
+        />
       </div>
     </div>
-    <p class="mb-4 text-sm text-gray-500 dark:text-zinc-400">
-      {{ t('supplier.stock_scope_hint') }}
-    </p>
+    <PageTabs :tabs="tabs" />
 
-    <Card class="mb-6">
-      <template #content>
-        <form
-          @submit.prevent="submitQuickDelivery()"
-          class="grid grid-cols-1 items-end gap-2 lg:grid-cols-12"
-        >
-          <div class="min-w-0 lg:col-span-6">
-            <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300">{{
-              t('supplier.deliveries_product')
-            }}</label>
-            <Select
-              ref="productSelect"
-              v-model="selectedProduct"
-              fluid
-              :options="quickProductOptions"
-              optionLabel="label"
-              optionValue="value"
-              :placeholder="t('supplier.deliveries_product')"
-              filter
-              @show="onSelectShow"
-              @hide="onProductSelectHide"
-              @change="onProductChange"
-              @keydown.enter.capture.prevent="onProductEnter"
-            />
-          </div>
-          <div class="min-w-0 lg:col-span-2" @keydown.enter.prevent="onAmountEnter">
-            <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300">{{
-              t('supplier.deliveries_amount')
-            }}</label>
-            <InputNumber
-              ref="amountInput"
-              v-model="amount"
-              fluid
-              :min="1"
-              :max="DELIVERY_MAX_AMOUNT"
-              :placeholder="t('common.pieces')"
-            />
-          </div>
-          <div class="lg:col-span-2" @keydown.enter.prevent="onPriceEnter">
-            <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300">{{
-              t('supplier.deliveries_price')
-            }}</label>
-            <InputNumber
-              ref="priceInput"
-              v-model="price"
-              fluid
-              :min="1"
-              :max="DELIVERY_MAX_PRICE"
-              :suffix="' ' + t('common.currency')"
-              :placeholder="t('common.currency')"
-            />
-          </div>
-          <div class="lg:col-span-2 lg:flex lg:justify-end">
-            <Button
-              type="submit"
-              fluid
-              :label="t('supplier.deliveries_submit')"
-              icon="pi pi-plus"
-              :loading="submitting"
-              :disabled="!selectedProduct || !amount || !price || submitting"
-            />
-          </div>
-        </form>
-      </template>
-    </Card>
+    <IncomeLimitBanner v-if="incomeLimit" :status="incomeLimit" class="mb-4" />
 
-    <Dialog
-      v-model:visible="warningVisible"
-      :header="t('supplier.warning_title')"
-      :style="{ width: '28rem', maxWidth: 'calc(100vw - 2rem)' }"
-      modal
-      :draggable="false"
-      data-testid="delivery-warning-dialog"
-      @hide="onWarningHide"
-    >
-      <div v-if="deliveryWarning" class="space-y-5">
-        <p class="text-sm text-gray-700 dark:text-zinc-300" data-testid="delivery-warning-summary">
-          <span class="text-gray-500 dark:text-zinc-400">{{ t('supplier.warning_now') }}:</span>
-          {{ warningProductName }} ·
-          {{ t('supplier.warning_amount', { amount: deliveryWarning.amount }) }}
-          <span
-            :class="
-              deliveryWarning.unusualPrice
-                ? 'font-semibold text-amber-700 dark:text-amber-300'
-                : 'font-medium text-gray-900 dark:text-zinc-100'
-            "
-            >{{ t('supplier.warning_unit_price', { price: deliveryWarning.price }) }}</span
-          >
-        </p>
-        <section
-          v-for="item in warningItems"
-          :key="item.kind"
-          class="flex gap-3"
-          :data-testid="`delivery-warning-${item.kind}`"
-        >
-          <span
-            class="pi pi-exclamation-triangle mt-0.5 text-lg text-amber-600 dark:text-amber-400"
-            aria-hidden="true"
-          />
-          <div class="min-w-0 flex-1 space-y-1">
-            <p class="font-semibold text-gray-900 dark:text-zinc-100">{{ item.title }}</p>
-            <p class="text-sm text-gray-700 dark:text-zinc-300">{{ item.detail }}</p>
-            <p class="text-sm text-gray-500 dark:text-zinc-400">{{ item.hint }}</p>
-          </div>
-        </section>
-      </div>
-      <template #footer>
-        <Button
-          autofocus
-          :label="t('supplier.warning_edit')"
-          severity="secondary"
-          text
-          data-testid="delivery-warning-edit"
-          @click="cancelWarningDelivery"
-        />
-        <Button
-          :label="t('supplier.warning_confirm')"
-          :disabled="submitting"
-          :loading="submitting"
-          data-testid="delivery-warning-confirm"
-          @click="confirmWarningDelivery"
-        />
-      </template>
-    </Dialog>
-
-    <!-- Summary cards (totals across all filtered results) -->
-    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <Card class="sbf-stat sbf-stat-green">
-        <template #content>
-          <div class="flex items-center gap-4">
-            <div
-              class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-green-100 dark:bg-green-950/40"
-            >
-              <span class="pi pi-warehouse text-xl text-green-600 dark:text-green-400" />
-            </div>
-            <div>
-              <div class="text-3xl font-bold text-gray-900 dark:text-zinc-100">
-                {{ stock.totals.totalRemaining }}
-                <span class="text-lg font-medium">{{ t('common.pieces') }}</span>
-              </div>
-              <div class="text-sm text-gray-500 dark:text-zinc-400">
-                {{ t('supplier.stock_total_in_stock') }}
-              </div>
-            </div>
-          </div>
-        </template>
-      </Card>
-      <Card class="sbf-stat sbf-stat-purple">
-        <template #content>
-          <div class="flex items-center gap-4">
-            <div
-              class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-purple-100 dark:bg-purple-950/40"
-            >
-              <span class="pi pi-chart-bar text-xl text-purple-600 dark:text-purple-400" />
-            </div>
-            <div>
-              <div class="text-2xl font-bold text-gray-900 dark:text-zinc-100">
-                {{ t('common.price_with_currency', { price: stock.totals.totalStockValue }) }}
-              </div>
-              <div class="text-sm text-gray-500 dark:text-zinc-400">
-                {{ t('supplier.stock_total_value') }}
-              </div>
-            </div>
-          </div>
-        </template>
-      </Card>
-      <Card class="sbf-stat sbf-stat-amber">
-        <template #content>
-          <div class="flex items-center gap-4">
-            <div
-              class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-950/40"
-            >
-              <span class="pi pi-exclamation-triangle text-xl text-amber-600 dark:text-amber-400" />
-            </div>
-            <div>
-              <div class="text-3xl font-bold text-amber-600 dark:text-amber-400">
-                {{ stock.insights.lowStockCount }}
-              </div>
-              <div class="text-sm text-gray-500 dark:text-zinc-400">
-                {{ t('supplier.stock_low_stock') }}
-              </div>
-            </div>
-          </div>
-        </template>
-      </Card>
-      <Card class="sbf-stat sbf-stat-blue">
-        <template #content>
-          <div class="flex items-center gap-4">
-            <div
-              class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-950/40"
-            >
-              <span class="pi pi-check-circle text-xl text-blue-600 dark:text-blue-400" />
-            </div>
-            <div>
-              <div class="text-3xl font-bold text-blue-600 dark:text-blue-400">
-                {{ stock.insights.activeProducts }}
-              </div>
-              <div class="text-sm text-gray-500 dark:text-zinc-400">
-                {{ t('supplier.stock_in_stock_types') }}
-              </div>
-            </div>
-          </div>
-        </template>
-      </Card>
-    </div>
-
-    <!-- Filter bar -->
     <FilterBar @apply="applyFilters" @clear="clearFilters">
       <div>
-        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
-          t('supplier.stock_scope')
+        <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300">{{
+          t('common.scope')
         }}</label>
         <Select
           v-model="filterScope"
           :options="scopeOptions"
           optionLabel="label"
           optionValue="value"
-          class="w-44"
+          class="w-48"
+          data-testid="stock-scope"
         />
       </div>
       <div>
-        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
+        <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300">{{
           t('common.category')
         }}</label>
         <Select
@@ -645,180 +255,29 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
           :options="categoryOptions"
           optionLabel="label"
           optionValue="value"
-          class="w-44"
+          class="w-48"
+        />
+      </div>
+      <div>
+        <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300">{{
+          t('supplier.stock_state')
+        }}</label>
+        <Select
+          v-model="filterStockState"
+          :options="stockStateOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="w-48"
+          data-testid="stock-state"
         />
       </div>
     </FilterBar>
 
-    <Card class="mb-6">
-      <template #title>{{ t('supplier.stock_category_breakdown') }}</template>
-      <template #content>
-        <DataTable
-          :value="stock.insights.categoryBreakdown"
-          :paginator="false"
-          size="small"
-          stripedRows
-          class="rounded-lg border"
-        >
-          <Column :header="t('common.category')">
-            <template #body="{ data }">
-              <Tag
-                :value="data.categoryName || t('supplier.stock_uncategorized')"
-                class="text-xs"
-                :style="{
-                  backgroundColor: data.categoryColor || '#6b7280',
-                  color: '#fff',
-                }"
-              />
-            </template>
-          </Column>
-          <Column :header="t('supplier.stock_in_stock')" style="width: 150px">
-            <template #body="{ data }">{{ data.totalRemaining }} {{ t('common.pieces') }}</template>
-          </Column>
-          <Column :header="t('supplier.stock_types_count')" style="width: 150px">
-            <template #body="{ data }">{{ data.productCount }}</template>
-          </Column>
-          <template #empty>
-            <div class="py-4 text-center text-gray-500 dark:text-zinc-400">
-              {{ t('common.no_data') }}
-            </div>
-          </template>
-        </DataTable>
-      </template>
-    </Card>
-
-    <div class="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <Card>
-        <template #title>{{ t('supplier.stock_attention') }}</template>
-        <template #subtitle>{{
-          t('supplier.stock_period_hint', { period: insightPeriodLabel })
-        }}</template>
-        <template #content>
-          <DataTable
-            :value="stock.insights.lowStockItems"
-            :paginator="false"
-            size="small"
-            stripedRows
-            class="rounded-lg border"
-          >
-            <Column :header="t('common.product')">
-              <template #body="{ data }">{{ data.productName }}</template>
-            </Column>
-            <Column :header="t('supplier.stock_in_stock')" style="width: 120px">
-              <template #body="{ data }">
-                <Tag
-                  :value="`${data.totalRemaining} ${t('common.pieces')}`"
-                  :severity="stockSeverity(data.totalRemaining)"
-                  class="text-xs"
-                />
-              </template>
-            </Column>
-            <Column :header="t('supplier.stock_sold_period')" style="width: 140px">
-              <template #body="{ data }">{{ data.soldInPeriod }} {{ t('common.pieces') }}</template>
-            </Column>
-            <template #empty>
-              <div class="py-4 text-center text-gray-500 dark:text-zinc-400">
-                {{ t('supplier.stock_no_attention_period', { period: insightPeriodLabel }) }}
-              </div>
-            </template>
-          </DataTable>
-        </template>
-      </Card>
-
-      <Card>
-        <template #title>{{ t('supplier.stock_top_movers') }}</template>
-        <template #subtitle>{{
-          t('supplier.stock_period_hint', { period: insightPeriodLabel })
-        }}</template>
-        <template #content>
-          <DataTable
-            :value="stock.insights.topMovers"
-            :paginator="false"
-            size="small"
-            stripedRows
-            class="rounded-lg border"
-          >
-            <Column :header="t('common.product')">
-              <template #body="{ data }">{{ data.productName }}</template>
-            </Column>
-            <Column :header="t('supplier.stock_sold_period')" style="width: 140px">
-              <template #body="{ data }">{{ data.soldInPeriod }} {{ t('common.pieces') }}</template>
-            </Column>
-            <template #empty>
-              <div class="py-4 text-center text-gray-500 dark:text-zinc-400">
-                {{ t('supplier.stock_no_movers_period', { period: insightPeriodLabel }) }}
-              </div>
-            </template>
-          </DataTable>
-        </template>
-      </Card>
-    </div>
-
-    <Card class="mb-6">
-      <template #title>{{ t('supplier.deliveries_recent') }}</template>
-      <template #content>
-        <DataTable
-          :value="recentDeliveries"
-          :paginator="false"
-          size="small"
-          stripedRows
-          class="rounded-lg border"
-        >
-          <Column :header="t('common.date')" style="width: 140px">
-            <template #body="{ data }">{{ formatDate(data.createdAt) }}</template>
-          </Column>
-          <Column :header="t('common.product')">
-            <template #body="{ data }">
-              {{ data.productName }}
-              <span
-                v-if="data.voidedAt"
-                class="ml-1 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800 dark:bg-zinc-700 dark:text-zinc-200"
-                >{{ t('supplier.deliveries_status_voided') }}</span
-              >
-            </template>
-          </Column>
-          <Column
-            v-if="filters.scope === 'store'"
-            :header="t('common.supplier')"
-            style="width: 180px"
-          >
-            <template #body="{ data }">{{ data.supplierName }}</template>
-          </Column>
-          <Column :header="t('supplier.deliveries_amount')" style="width: 120px">
-            <template #body="{ data }">{{ data.amountSupplied }} {{ t('common.pieces') }}</template>
-          </Column>
-          <Column :header="t('supplier.deliveries_remaining')" style="width: 120px">
-            <template #body="{ data }">{{ data.amountLeft }} {{ t('common.pieces') }}</template>
-          </Column>
-          <Column :header="t('common.price')" style="width: 120px">
-            <template #body="{ data }">{{
-              t('common.price_with_currency', { price: data.price })
-            }}</template>
-          </Column>
-          <template #empty>
-            <div class="py-4 text-center text-gray-500 dark:text-zinc-400">
-              {{ t('supplier.deliveries_none') }}
-            </div>
-          </template>
-        </DataTable>
-      </template>
-    </Card>
-
-    <div class="mb-3 flex items-center justify-between">
-      <h2 class="text-lg font-semibold text-gray-800 dark:text-zinc-200">
-        {{ t('supplier.stock_full_table') }}
-      </h2>
-      <Button
-        :label="showFullTable ? t('supplier.stock_hide_table') : t('supplier.stock_show_table')"
-        :icon="showFullTable ? 'pi pi-eye-slash' : 'pi pi-table'"
-        size="small"
-        severity="secondary"
-        @click="showFullTable = !showFullTable"
-      />
-    </div>
+    <p class="mb-2 text-sm text-gray-500 dark:text-zinc-400" data-testid="stock-summary">
+      {{ summary }}
+    </p>
 
     <PaginatedDataTable
-      v-if="showFullTable"
       :value="stock.data"
       :meta="stock.meta"
       :sortField="filterSortBy"
@@ -830,7 +289,7 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
         <template #body="{ data }">
           <div class="flex items-center gap-3">
             <div
-              class="flex h-9 w-9 items-center justify-center rounded-md bg-gray-100 p-0.5 dark:bg-zinc-800"
+              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-gray-100 p-0.5 dark:bg-zinc-800"
             >
               <img
                 v-if="data.imagePath"
@@ -840,66 +299,92 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
               />
               <span v-else class="pi pi-image text-sm text-gray-300 dark:text-zinc-600" />
             </div>
-            <div>
-              <div class="font-medium">{{ data.productName }}</div>
+            <div class="flex min-w-0 flex-col items-start gap-0.5">
+              <Link
+                :href="`/supplier/products/${data.productId}/edit`"
+                class="font-medium text-gray-900 hover:underline dark:text-zinc-100"
+                >{{ data.productName }}</Link
+              >
               <Tag
                 v-if="data.categoryName"
                 :value="data.categoryName"
-                class="mt-0.5 text-xs"
+                class="text-xs"
                 :style="{ backgroundColor: data.categoryColor, color: '#fff' }"
               />
             </div>
           </div>
         </template>
       </Column>
-      <Column :header="t('supplier.stock_stocked')" style="width: 120px">
-        <template #body="{ data }">{{ data.totalSupplied }} {{ t('common.pieces') }}</template>
-      </Column>
       <Column
         :header="t('supplier.stock_in_stock')"
         field="totalRemaining"
         sortable
-        style="width: 130px"
+        headerClass="sbf-col-number"
+        bodyClass="sbf-col-number"
       >
         <template #body="{ data }">
-          <Tag
-            :value="`${data.totalRemaining} ${t('common.pieces')}`"
-            :severity="stockSeverity(data.totalRemaining)"
-            class="text-xs"
-          />
+          <span
+            class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+            :class="stockBadgeClass(data.totalRemaining)"
+            >{{ data.totalRemaining }} {{ t('common.pieces') }}</span
+          >
         </template>
       </Column>
-      <Column :header="t('supplier.stock_sold')" field="totalSold" sortable style="width: 120px">
-        <template #body="{ data }">{{ data.totalSold }} {{ t('common.pieces') }}</template>
+      <Column
+        :header="t('supplier.stock_sold_30d')"
+        field="soldInPeriod"
+        sortable
+        headerClass="sbf-col-number"
+        bodyClass="sbf-col-number"
+      >
+        <template #body="{ data }">{{ data.soldInPeriod }} {{ t('common.pieces') }}</template>
       </Column>
-      <Column :header="t('supplier.stock_total_value')" style="width: 120px">
+      <Column
+        :header="t('supplier.stock_stocked')"
+        field="totalSupplied"
+        sortable
+        headerClass="sbf-col-number hidden md:table-cell"
+        bodyClass="sbf-col-number hidden md:table-cell"
+      >
         <template #body="{ data }">
-          <span class="font-semibold">{{
-            t('common.price_with_currency', { price: data.totalStockValue })
-          }}</span>
+          <Link
+            :href="`/supplier/deliveries?productId=${data.productId}&scope=all`"
+            class="hover:underline"
+            >{{ data.totalSupplied }} {{ t('common.pieces') }}</Link
+          >
         </template>
       </Column>
-      <Column :header="t('common.actions')" style="width: 130px">
+      <Column
+        :header="t('supplier.stock_value')"
+        field="totalStockValue"
+        sortable
+        headerClass="sbf-col-price hidden md:table-cell"
+        bodyClass="sbf-col-price hidden md:table-cell"
+      >
+        <template #body="{ data }">{{ money(data.totalStockValue) }}</template>
+      </Column>
+      <Column :header="t('common.actions')" headerClass="sbf-col-action" bodyClass="sbf-col-action">
         <template #body="{ data }">
           <div class="flex gap-1">
-            <Link :href="`/supplier/stock?preselect=${data.productId}`">
-              <Button
-                icon="pi pi-box"
-                :aria-label="t('supplier.deliveries_submit')"
-                size="small"
-                severity="secondary"
-                text
-              />
-            </Link>
-            <Link :href="`/supplier/products/${data.productId}/edit`">
-              <Button
-                icon="pi pi-pencil"
-                :aria-label="t('common.edit')"
-                size="small"
-                severity="secondary"
-                text
-              />
-            </Link>
+            <Button
+              icon="pi pi-plus"
+              severity="secondary"
+              text
+              size="small"
+              :aria-label="t('supplier.stock_receive')"
+              data-testid="stock-row-receive"
+              @click="receive(data.productId)"
+            />
+            <Button
+              v-if="data.totalRemaining > 0"
+              icon="pi pi-minus-circle"
+              severity="warn"
+              text
+              size="small"
+              :aria-label="t('inventory.write_off')"
+              data-testid="stock-row-write-off"
+              @click="openWriteOff(data)"
+            />
           </div>
         </template>
       </Column>
@@ -910,5 +395,86 @@ function stockSeverity(remaining: number): 'success' | 'warn' | 'danger' {
         </div>
       </template>
     </PaginatedDataTable>
+
+    <Dialog
+      v-model:visible="writeOffVisible"
+      :header="t('inventory.write_off_title')"
+      style="width: 560px; max-width: calc(100vw - 2rem)"
+      modal
+      :draggable="false"
+      data-testid="write-off-dialog"
+    >
+      <div v-if="writeOffTarget" class="space-y-4">
+        <p class="text-sm text-gray-700 dark:text-zinc-300">
+          {{ writeOffTarget.productName }} ·
+          {{ t('inventory.write_off_in_stock', { count: writeOffTarget.stock }) }}
+        </p>
+        <p
+          class="inline-flex items-center gap-1 text-sm text-gray-500 dark:text-zinc-400"
+          data-testid="write-off-hint"
+        >
+          {{ t('inventory.write_off_hint') }}
+          <InfoHint :text="t('inventory.write_off_fifo')" />
+        </p>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300"
+              >{{ t('inventory.write_off_quantity') }} *</label
+            >
+            <InputNumber
+              v-model="writeOffQuantity"
+              inputId="write-off-quantity"
+              :min="1"
+              :max="writeOffTarget.stock"
+              fluid
+              :invalid="!!writeOffError"
+            />
+            <small v-if="writeOffError" class="text-red-500 dark:text-red-400">{{
+              writeOffError
+            }}</small>
+          </div>
+          <div>
+            <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300"
+              >{{ t('inventory.write_off_reason') }} *</label
+            >
+            <Select
+              v-model="writeOffReason"
+              :options="writeOffReasons"
+              optionLabel="label"
+              optionValue="value"
+              class="w-full"
+            />
+          </div>
+        </div>
+        <div>
+          <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300">{{
+            t('inventory.write_off_note')
+          }}</label>
+          <Textarea
+            v-model="writeOffNote"
+            rows="2"
+            class="w-full"
+            :maxlength="ADJUSTMENT_NOTE_MAX"
+            autoResize
+          />
+        </div>
+      </div>
+      <template #footer>
+        <Button
+          :label="t('common.cancel')"
+          severity="secondary"
+          text
+          @click="writeOffVisible = false"
+        />
+        <Button
+          :label="t('inventory.write_off_confirm')"
+          severity="danger"
+          :disabled="!!writeOffError || writeOffSubmitting"
+          :loading="writeOffSubmitting"
+          data-testid="write-off-confirm"
+          @click="submitWriteOff"
+        />
+      </template>
+    </Dialog>
   </AppLayout>
 </template>

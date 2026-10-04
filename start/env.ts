@@ -149,6 +149,16 @@ export default await Env.create(new URL('../', import.meta.url), {
 
   /*
   |----------------------------------------------------------
+  | Supplier finance (docs/shopping-list.md)
+  |----------------------------------------------------------
+  | Yearly limit a supplier should stay under (e.g. the Czech tax exemption for occasional
+  | income). Unset or 0 = no limit and no alert.
+  */
+  SUPPLIER_INCOME_LIMIT: Env.schema.number.optional(),
+  SUPPLIER_INCOME_LIMIT_WARN_PERCENT: Env.schema.number.optional(),
+
+  /*
+  |----------------------------------------------------------
   | Scheduler cron expressions (all default to Mon-Fri)
   |----------------------------------------------------------
   */

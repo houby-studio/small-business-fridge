@@ -7,6 +7,7 @@
  */
 import { computed, watch } from 'vue'
 import Checkbox from 'primevue/checkbox'
+import InfoHint from '~/components/InfoHint.vue'
 import { useI18n } from '~/composables/use_i18n'
 import { isPublicGtin } from '~/composables/use_gtin'
 
@@ -52,8 +53,14 @@ watch(visible, (shown) => {
     </div>
     <p class="mt-1 ml-7 text-xs text-gray-500 dark:text-zinc-400">
       {{ what }}
-      <template v-if="hasOwnPhoto">{{ t('supplier.off_contribute_license') }}</template>
-      <template v-else-if="!alreadyShared">{{ t('supplier.off_contribute_no_photo') }}</template>
+      <template v-if="!hasOwnPhoto && !alreadyShared">{{
+        t('supplier.off_contribute_no_photo')
+      }}</template>
+      <InfoHint
+        v-if="hasOwnPhoto"
+        :text="t('supplier.off_contribute_license').trim()"
+        test-id="product-off-license"
+      />
     </p>
   </div>
 </template>

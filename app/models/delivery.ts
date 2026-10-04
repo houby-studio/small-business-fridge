@@ -22,8 +22,20 @@ export default class Delivery extends BaseModel {
   @column()
   declare amountLeft: number
 
+  /** What customers pay per piece, in whole currency units. */
   @column()
   declare price: number
+
+  /** What the supplier paid per piece (null = not recorded). */
+  @column({ consume: (value: string | null) => (value === null ? null : Number(value)) })
+  declare purchasePrice: number | null
+
+  /**
+   * Net shrinkage of the lot from write-offs and inventories (negative when an inventory
+   * found more pieces). Sold = amountSupplied - amountLeft - amountLost.
+   */
+  @column()
+  declare amountLost: number
 
   /** Set when the delivery was voided (nothing sold from it); its amounts are then zero. */
   @column.dateTime()

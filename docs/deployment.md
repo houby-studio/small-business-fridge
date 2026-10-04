@@ -303,8 +303,11 @@ own name in the UI and emails.
 | `PRODUCT_IMAGE_OPENFOODFACTS_URL` | No | No | `https://world.openfoodfacts.org` | OFF server for lookups and contributions |
 | `PRODUCT_IMAGE_OPENFOODFACTS_USER` | No | No | — | Instance's OFF account — enables contributing EAN, name and photos |
 | `PRODUCT_IMAGE_OPENFOODFACTS_PASSWORD` | No | Yes | — | Password of that OFF account |
+| `SUPPLIER_INCOME_LIMIT` | No | No | — | Yearly amount a supplier should stay under — only sales to other people count; past it there is only a warning |
+| `SUPPLIER_INCOME_LIMIT_WARN_PERCENT` | No | No | `80` | Warn from this share of the limit |
 
-All product image settings: [docs/product-images.md](product-images.md).
+All product image settings: [docs/product-images.md](product-images.md). The income limit:
+[docs/shopping-list.md](shopping-list.md#earnings-and-the-yearly-limit).
 
 ---
 

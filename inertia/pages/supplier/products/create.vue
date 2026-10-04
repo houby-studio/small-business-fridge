@@ -16,6 +16,9 @@ import ProductImagePicker, {
 } from '~/components/supplier/ProductImagePicker.vue'
 import ProductBarcodeField from '~/components/supplier/ProductBarcodeField.vue'
 import ProductOffContribution from '~/components/supplier/ProductOffContribution.vue'
+import ProductGroupField, {
+  type ProductGroupOption,
+} from '~/components/supplier/ProductGroupField.vue'
 import { useProductSuggestions } from '~/composables/use_product_suggestions'
 
 interface CategoryOption {
@@ -32,6 +35,7 @@ interface AllergenOption {
 const props = defineProps<{
   categories: CategoryOption[]
   allergens: AllergenOption[]
+  productGroups: ProductGroupOption[]
   imageCapabilities: ProductImageCapabilities
   aiSuggestions: boolean
 }>()
@@ -43,6 +47,7 @@ const form = useForm({
   categoryId: null as number | null,
   barcode: '',
   allergenIds: [] as number[],
+  productGroupId: null as number | null,
   image: null as File | null,
   offContribute: false,
   offOriginal: null as File | null,
@@ -183,6 +188,8 @@ function submit() {
     .transform((data) => ({
       ...offFields(data),
       allergenIds: JSON.stringify(data.allergenIds),
+      // FormData has no null — an empty value means "no group".
+      productGroupId: data.productGroupId ?? '',
     }))
     .post('/supplier/products', {
       forceFormData: true,
@@ -375,6 +382,13 @@ useInitialFocus(() => document.getElementById('product-barcode'))
                 >
               </div>
             </div>
+
+            <ProductGroupField
+              v-model="form.productGroupId"
+              :groups="productGroups"
+              :categoryId="form.categoryId"
+              inputId="create-product-group"
+            />
 
             <ProductOffContribution
               v-model="form.offContribute"

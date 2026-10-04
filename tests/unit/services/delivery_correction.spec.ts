@@ -30,7 +30,9 @@ const cleanAll = async () => {
   await db.from('users').delete()
 }
 
-async function setup(options: { amount?: number; price?: number } = {}) {
+async function setup(
+  options: { amount?: number; price?: number; purchasePrice?: number | null } = {}
+) {
   const supplier = await UserFactory.apply('supplier').create()
   const category = await CategoryFactory.create()
   const product = await ProductFactory.merge({ categoryId: category.id }).create()
@@ -41,8 +43,9 @@ async function setup(options: { amount?: number; price?: number } = {}) {
     amountSupplied: amount,
     amountLeft: amount,
     price: options.price ?? 1,
+    purchasePrice: options.purchasePrice ?? null,
   }).create()
-  return { supplier, product, delivery }
+  return { supplier, category, product, delivery }
 }
 
 async function expectDomainError(fn: () => Promise<unknown>, code: string) {
@@ -189,11 +192,94 @@ test.group('DeliveryService.correctDelivery', (group) => {
   })
 
   test('rejects a correction that changes nothing', async () => {
-    const { supplier, delivery } = await setup({ amount: 5, price: 10 })
+    const { supplier, delivery } = await setup({ amount: 5, price: 10, purchasePrice: 7.5 })
     await expectDomainError(
       () => service.correctDelivery(supplier, delivery.id, { amount: 5, price: 10, reason: 'x' }),
       'NO_CHANGE'
     )
+    // The same purchase price spelled out is still no change.
+    await expectDomainError(
+      () =>
+        service.correctDelivery(supplier, delivery.id, {
+          amount: 5,
+          price: 10,
+          purchasePrice: 7.5,
+          reason: 'x',
+        }),
+      'NO_CHANGE'
+    )
+  })
+
+  test('corrects the purchase price without touching any order', async ({ assert }) => {
+    const { supplier, delivery } = await setup({ amount: 10, price: 20, purchasePrice: 14.9 })
+    const buyer = await UserFactory.create()
+    const order = await orderService.purchase(buyer.id, delivery.id, 'web')
+
+    // A value that rounds to the current cents is not a change.
+    await expectDomainError(
+      () =>
+        service.correctDelivery(supplier, delivery.id, {
+          amount: 10,
+          price: 20,
+          purchasePrice: 14.904,
+          reason: 'x',
+        }),
+      'NO_CHANGE'
+    )
+
+    const { correction } = await service.correctDelivery(supplier, delivery.id, {
+      amount: 10,
+      price: 20,
+      purchasePrice: 12.5,
+      reason: 'Receipt says 12.50',
+    })
+
+    assert.equal(correction.oldPurchasePrice, 14.9)
+    assert.equal(correction.newPurchasePrice, 12.5)
+    assert.equal(correction.oldPrice, 20)
+    assert.equal(correction.newPrice, 20)
+    assert.equal(correction.repricedOrderCount, 0)
+
+    const reloaded = await Delivery.findOrFail(delivery.id)
+    assert.equal(reloaded.purchasePrice, 12.5)
+    assert.equal(reloaded.price, 20)
+    await order.refresh()
+    assert.equal(order.unitPrice, 20)
+    assert.isNull(order.priceCorrectionId)
+
+    const log = await db.from('audit_logs').where('action', 'delivery.corrected').firstOrFail()
+    assert.deepEqual(log.metadata.purchasePrice, { from: 14.9, to: 12.5 })
+    assert.notProperty(log.metadata, 'price')
+    assert.notProperty(log.metadata, 'amountSupplied')
+  })
+
+  test('a null purchase price clears it; omitting it keeps it', async ({ assert }) => {
+    const { supplier, delivery } = await setup({ amount: 10, price: 20, purchasePrice: 14.9 })
+
+    await service.correctDelivery(supplier, delivery.id, {
+      amount: 9,
+      price: 20,
+      reason: 'One fewer, cost untouched',
+    })
+    const kept = await Delivery.findOrFail(delivery.id)
+    assert.equal(kept.purchasePrice, 14.9)
+
+    const { correction } = await service.correctDelivery(supplier, delivery.id, {
+      amount: 9,
+      price: 20,
+      purchasePrice: null,
+      reason: 'Never tracked the cost of this one',
+    })
+    assert.equal(correction.oldPurchasePrice, 14.9)
+    assert.isNull(correction.newPurchasePrice)
+    const cleared = await Delivery.findOrFail(delivery.id)
+    assert.isNull(cleared.purchasePrice)
+    const log = await db
+      .from('audit_logs')
+      .where('action', 'delivery.corrected')
+      .orderBy('id', 'desc')
+      .firstOrFail()
+    assert.deepEqual(log.metadata.purchasePrice, { from: 14.9, to: null })
   })
 
   test('another supplier cannot correct the delivery, an admin can', async ({ assert }) => {
@@ -397,5 +483,180 @@ test.group('Order unit price snapshot', (group) => {
     assert.equal(invoice!.totalCost, 10)
     const stored = await Invoice.findOrFail(invoice!.id)
     assert.equal(stored.totalCost, 10)
+  })
+})
+
+test.group('DeliveryService.addStock', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('derives the selling price from the purchase price and the margin', async ({ assert }) => {
+    const { supplier, product } = await setup()
+    const delivery = await service.addStock(supplier.id, product.id, 6, null, {
+      purchasePrice: 14.904,
+      marginPercent: 5,
+    })
+    assert.equal(delivery.price, 16)
+    assert.equal(delivery.purchasePrice, 14.9)
+    assert.equal(delivery.amountLeft, 6)
+
+    const log = await db
+      .from('audit_logs')
+      .where('action', 'delivery.created')
+      .where('entity_id', delivery.id)
+      .firstOrFail()
+    assert.equal(log.user_id, supplier.id)
+    assert.isNull(log.target_user_id)
+    assert.equal(log.metadata.price, 16)
+    assert.equal(log.metadata.purchasePrice, 14.9)
+  })
+
+  test('needs a selling price or a purchase price to derive one from', async ({ assert }) => {
+    const { supplier, product } = await setup()
+    await expectDomainError(
+      () => service.addStock(supplier.id, product.id, 1, null, { marginPercent: 10 }),
+      'PRICE_REQUIRED'
+    )
+    assert.lengthOf(await Delivery.query().where('productId', product.id), 1)
+  })
+
+  test('names the actor when someone else stocks for the supplier', async ({ assert }) => {
+    const { supplier, product } = await setup()
+    const admin = await UserFactory.apply('admin').create()
+    const delivery = await service.addStock(supplier.id, product.id, 2, 10, { actorId: admin.id })
+    assert.equal(delivery.supplierId, supplier.id)
+
+    const log = await db
+      .from('audit_logs')
+      .where('action', 'delivery.created')
+      .where('entity_id', delivery.id)
+      .firstOrFail()
+    assert.equal(log.user_id, admin.id)
+    assert.equal(log.target_user_id, supplier.id)
+  })
+})
+
+test.group('DeliveryService.getStockForSupplier', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  async function shelf() {
+    const supplier = await UserFactory.apply('supplier').create()
+    const colleague = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const other = await CategoryFactory.create()
+    const named = async (displayName: string, categoryId = category.id) =>
+      ProductFactory.merge({ categoryId, displayName }).create()
+    const zebra = await named('Zebra')
+    const ananas = await named('Ananas')
+    const mango = await named('Mango', other.id)
+    const stock = (productId: number, left: number, supplied = 10, supplierId = supplier.id) =>
+      DeliveryFactory.merge({
+        supplierId,
+        productId,
+        amountSupplied: supplied,
+        amountLeft: left,
+        price: 10,
+      }).create()
+    await stock(zebra.id, 0)
+    await stock(ananas.id, 3)
+    await stock(mango.id, 10, 10, colleague.id)
+    return { supplier, colleague, category, zebra, ananas, mango }
+  }
+
+  test('sorts by product name A→Z unless asked otherwise', async ({ assert }) => {
+    const { supplier } = await shelf()
+
+    const byDefault = await service.getStockForSupplier(supplier.id)
+    assert.deepEqual(
+      byDefault.data.map((r) => r.productName),
+      ['Ananas', 'Mango', 'Zebra']
+    )
+
+    const reversed = await service.getStockForSupplier(supplier.id, 1, 20, {
+      sortBy: 'productName',
+      sortOrder: 'desc',
+    })
+    assert.deepEqual(
+      reversed.data.map((r) => r.productName),
+      ['Zebra', 'Mango', 'Ananas']
+    )
+
+    const byRemaining = await service.getStockForSupplier(supplier.id, 1, 20, {
+      sortBy: 'totalRemaining',
+      sortOrder: 'desc',
+    })
+    assert.deepEqual(
+      byRemaining.data.map((r) => r.totalRemaining),
+      [10, 3, 0]
+    )
+
+    // An unknown column falls back to the name instead of reaching SQL.
+    const unknown = await service.getStockForSupplier(supplier.id, 1, 20, { sortBy: 'drop' })
+    assert.equal(unknown.data[0].productName, 'Ananas')
+  })
+
+  test('filters by stock state while the counts cover the whole scope', async ({ assert }) => {
+    const { supplier, ananas, zebra, category } = await shelf()
+
+    const all = await service.getStockForSupplier(supplier.id)
+    assert.equal(all.meta.total, 3)
+    assert.equal(all.totals.totalProducts, 3)
+    assert.equal(all.totals.totalRemaining, 13)
+    assert.equal(all.totals.totalStockValue, 130)
+    // Running low (3) and sold out (0) both count.
+    assert.equal(all.lowStockCount, 2)
+    assert.isUndefined(all.insights)
+
+    const low = await service.getStockForSupplier(supplier.id, 1, 20, { stockState: 'low' })
+    assert.deepEqual(
+      low.data.map((r) => r.productId),
+      [ananas.id]
+    )
+    assert.equal(low.meta.total, 1)
+    assert.equal(low.totals.totalProducts, 3)
+    assert.equal(low.lowStockCount, 2)
+
+    const out = await service.getStockForSupplier(supplier.id, 1, 20, { stockState: 'out' })
+    assert.deepEqual(
+      out.data.map((r) => r.productId),
+      [zebra.id]
+    )
+    assert.equal(out.meta.total, 1)
+
+    // Scope and category narrow the counts too.
+    const mine = await service.getStockForSupplier(supplier.id, 1, 20, { scope: 'mine' })
+    assert.equal(mine.totals.totalProducts, 2)
+    assert.equal(mine.lowStockCount, 2)
+    const inCategory = await service.getStockForSupplier(supplier.id, 1, 20, {
+      categoryId: category.id,
+      stockState: 'out',
+    })
+    assert.equal(inCategory.totals.totalProducts, 2)
+    assert.deepEqual(
+      inCategory.data.map((r) => r.productId),
+      [zebra.id]
+    )
+  })
+
+  test('paginates in SQL and computes insights only on request', async ({ assert }) => {
+    const { supplier } = await shelf()
+
+    const page1 = await service.getStockForSupplier(supplier.id, 1, 2)
+    assert.lengthOf(page1.data, 2)
+    assert.deepEqual(page1.meta, { total: 3, perPage: 2, currentPage: 1, lastPage: 2 })
+    const page2 = await service.getStockForSupplier(supplier.id, 2, 2)
+    assert.deepEqual(
+      page2.data.map((r) => r.productName),
+      ['Zebra']
+    )
+
+    const withInsights = await service.getStockForSupplier(supplier.id, 1, 2, {
+      withInsights: true,
+    })
+    assert.exists(withInsights.insights)
+    assert.equal(withInsights.insights!.outOfStockCount, 1)
+    assert.equal(withInsights.insights!.activeProducts, 2)
+    assert.lengthOf(withInsights.insights!.categoryBreakdown, 2)
   })
 })

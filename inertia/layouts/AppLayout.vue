@@ -63,17 +63,46 @@ function handleScroll() {
 // ─── Active nav link ─────────────────────────────────────────────────────────
 const currentPath = computed(() => page.url.split('?')[0])
 
-function isActive(url: string | undefined): boolean {
-  if (!url) return false
-  return currentPath.value === url || currentPath.value.startsWith(url + '/')
-}
-
 type NavItem = {
   label?: string | ((...args: any[]) => string)
   icon?: string
   url?: string
   items?: NavItem[]
   compactIconOnly?: boolean
+  /** A small red count next to the label (only rendered when > 0). */
+  badge?: number
+}
+
+function matchesPath(url: string): boolean {
+  return currentPath.value === url || currentPath.value.startsWith(url + '/')
+}
+
+/**
+ * Pages that are tabs of a menu entry, so the entry stays lit while the user is on them
+ * (Sklad: Stav · Historie · Inventura; Produkty: Produkty · Skupiny).
+ */
+const NAV_TAB_URLS: Record<string, string[]> = {
+  '/supplier/stock': ['/supplier/deliveries', '/supplier/inventory'],
+  '/supplier/products': ['/supplier/product-groups'],
+}
+
+/** Length of the longest URL (the item's own or one of its tabs) the current path is under. */
+function matchedLength(url: string): number {
+  return Math.max(
+    -1,
+    ...[url, ...(NAV_TAB_URLS[url] ?? [])].filter(matchesPath).map((match) => match.length)
+  )
+}
+
+/**
+ * The longest matching item wins, so `/supplier/stock/drafts` lights up "Naskladnění"
+ * alone and not "Sklad" (`/supplier/stock`) next to it.
+ */
+function isActive(url: string | undefined): boolean {
+  if (!url) return false
+  const own = matchedLength(url)
+  if (own < 0) return false
+  return !leafUrls.value.some((other) => other !== url && matchedLength(other) > own)
 }
 
 function isSubmenuActive(item: NavItem): boolean {
@@ -124,7 +153,19 @@ const menuItems = computed(() => {
       compactIconOnly: true,
       items: [
         { label: t('common.nav_stock'), icon: 'pi pi-warehouse', url: '/supplier/stock' },
+        {
+          label: t('common.nav_receiving'),
+          icon: 'pi pi-truck',
+          url: '/supplier/stock/drafts',
+          badge: page.props.openDraftCount ?? 0,
+        },
+        {
+          label: t('common.nav_shopping_list'),
+          icon: 'pi pi-shopping-bag',
+          url: '/supplier/shopping-list',
+        },
         { label: t('common.nav_products'), icon: 'pi pi-tags', url: '/supplier/products' },
+        { label: t('common.nav_finance'), icon: 'pi pi-wallet', url: '/supplier/finance' },
         { label: t('common.nav_billing'), icon: 'pi pi-file-export', url: '/supplier/invoice' },
         { label: t('common.nav_payments'), icon: 'pi pi-credit-card', url: '/supplier/payments' },
       ],
@@ -150,6 +191,18 @@ const menuItems = computed(() => {
   }
 
   return items
+})
+
+const leafUrls = computed(() => {
+  const urls: string[] = []
+  const collect = (list: NavItem[]) => {
+    for (const item of list) {
+      if (item.url) urls.push(item.url)
+      if (item.items) collect(item.items)
+    }
+  }
+  collect(menuItems.value)
+  return urls
 })
 
 function logout() {
@@ -234,6 +287,12 @@ onUnmounted(() => {
           >
             <span :class="[item.icon, 'mr-2']" />
             <span class="sbf-nav-item-label">{{ item.label }}</span>
+            <span
+              v-if="item.badge"
+              class="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-semibold text-white"
+              data-testid="nav-receiving-badge"
+              >{{ item.badge }}</span
+            >
           </Link>
           <a
             v-else

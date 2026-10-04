@@ -4,6 +4,7 @@ import type { BelongsTo, HasMany, ManyToMany } from '@adonisjs/lucid/types/relat
 import Allergen from '#models/allergen'
 import Category from '#models/category'
 import Delivery from '#models/delivery'
+import ProductGroup from '#models/product_group'
 import User from '#models/user'
 
 export default class Product extends BaseModel {
@@ -28,6 +29,10 @@ export default class Product extends BaseModel {
   @column()
   declare barcode: string | null
 
+  /** Purchase group the shopping list plans this product in (null = planned on its own). */
+  @column()
+  declare productGroupId: number | null
+
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
 
@@ -38,6 +43,9 @@ export default class Product extends BaseModel {
 
   @belongsTo(() => Category)
   declare category: BelongsTo<typeof Category>
+
+  @belongsTo(() => ProductGroup)
+  declare productGroup: BelongsTo<typeof ProductGroup>
 
   @hasMany(() => Delivery)
   declare deliveries: HasMany<typeof Delivery>

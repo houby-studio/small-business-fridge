@@ -8,6 +8,7 @@ import OffContributionService from '#services/product_images/off_contribution_se
 import type { BackgroundMode } from '#services/product_images/product_image_service'
 import { resolvePage } from '#helpers/pagination'
 import ProductService from '#services/product_service'
+import StockDraftService from '#services/shopping/stock_draft_service'
 import { createProductValidator, updateProductValidator } from '#validators/product'
 import AuditService from '#services/audit_service'
 import { normalizeImagePath } from '#helpers/image_url'
@@ -42,6 +43,9 @@ export default class ProductsController {
             ? { id: p.category.id, name: p.category.name, color: p.category.color }
             : null,
           allergens: p.allergens.map((a) => ({ id: a.id, name: a.name })),
+          productGroup: p.productGroup
+            ? { id: p.productGroup.id, name: p.productGroup.name }
+            : null,
         })),
         meta: paginator.getMeta(),
       },
@@ -52,14 +56,16 @@ export default class ProductsController {
 
   async create({ inertia }: HttpContext) {
     const service = new ProductService()
-    const [categories, allergens] = await Promise.all([
+    const [categories, allergens, groups] = await Promise.all([
       service.getCategories(),
       service.getAllergens(),
+      service.getProductGroups(),
     ])
 
     return inertia.render('supplier/products/create', {
       categories: categories.map((c) => ({ id: c.id, name: c.name, color: c.color })),
       allergens: allergens.map((a) => ({ id: a.id, name: a.name })),
+      productGroups: groups.map((g) => ({ id: g.id, name: g.name, categoryId: g.categoryId })),
       imageCapabilities: ProductImageService.capabilities(),
       aiSuggestions: ProductSuggestionService.isAiAvailable(),
     })
@@ -78,6 +84,7 @@ export default class ProductsController {
         barcode: data.barcode,
         image: data.image,
         allergenIds: data.allergenIds,
+        productGroupId: data.productGroupId,
       })
     } catch (err) {
       if (isUniqueViolation(err, 'barcode')) {
@@ -97,15 +104,18 @@ export default class ProductsController {
       message: i18n.t('messages.product_created', { name: product.displayName }),
     })
 
-    return response.redirect(`/supplier/stock?preselect=${product.id}`)
+    // Straight on to stocking it: the product lands as a line on the supplier's draft.
+    const { draft, item } = await new StockDraftService().appendProduct(auth.user!.id, product.id)
+    return response.redirect(`/supplier/stock/drafts/${draft.id}?focus=${item.id}`)
   }
 
   async edit({ params, inertia }: HttpContext) {
     const service = new ProductService()
-    const [product, categories, allergens] = await Promise.all([
+    const [product, categories, allergens, groups] = await Promise.all([
       service.getProduct(params.id),
       service.getCategories(),
       service.getAllergens(),
+      service.getProductGroups(),
     ])
 
     return inertia.render('supplier/products/edit', {
@@ -121,6 +131,7 @@ export default class ProductsController {
           ? { id: product.category.id, name: product.category.name }
           : null,
         allergenIds: product.allergens.map((a) => a.id),
+        productGroupId: product.productGroupId,
         // Name and EAN go to Open Food Facts once; after that only a new own photo is offered.
         offShared: product.barcode
           ? !!(await OffContribution.query()
@@ -131,6 +142,7 @@ export default class ProductsController {
       },
       categories: categories.map((c) => ({ id: c.id, name: c.name, color: c.color })),
       allergens: allergens.map((a) => ({ id: a.id, name: a.name })),
+      productGroups: groups.map((g) => ({ id: g.id, name: g.name, categoryId: g.categoryId })),
       imageCapabilities: ProductImageService.capabilities(),
       aiSuggestions: ProductSuggestionService.isAiAvailable(),
     })
@@ -151,6 +163,7 @@ export default class ProductsController {
         barcode: data.barcode,
         image: data.image,
         allergenIds: data.allergenIds,
+        productGroupId: data.productGroupId,
       })
     } catch (err) {
       if (isUniqueViolation(err, 'barcode')) {
@@ -162,6 +175,7 @@ export default class ProductsController {
 
     await product.load('category')
     await product.load('allergens')
+    await product.load('productGroup')
 
     const changes = ProductService.auditChanges(beforeProduct, product)
 
@@ -180,7 +194,7 @@ export default class ProductsController {
       message: i18n.t('messages.product_updated', { name: product.displayName }),
     })
 
-    return response.redirect('/supplier/stock')
+    return response.redirect('/supplier/products')
   }
 
   /**

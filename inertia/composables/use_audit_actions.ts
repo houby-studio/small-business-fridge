@@ -49,6 +49,18 @@ export const AUDIT_ACTION_I18N_KEYS: Record<string, string> = {
   'profile.iban_verified': 'audit.action_profile_iban_verified',
   'profile.email_verified': 'audit.action_profile_email_verified',
   'user.anonymized': 'audit.action_user_anonymized',
+  'product_group.created': 'audit.action_product_group_created',
+  'product_group.updated': 'audit.action_product_group_updated',
+  'product_group.deleted': 'audit.action_product_group_deleted',
+  'stock_draft.created': 'audit.action_stock_draft_created',
+  'stock_draft.committed': 'audit.action_stock_draft_committed',
+  'stock_draft.discarded': 'audit.action_stock_draft_discarded',
+  'shopping_list.completed': 'audit.action_shopping_list_completed',
+  'stock.written_off': 'audit.action_stock_written_off',
+  'stock.adjusted': 'audit.action_stock_adjusted',
+  'stock.reclassified': 'audit.action_stock_reclassified',
+  'inventory.committed': 'audit.action_inventory_committed',
+  'supplier.settings_updated': 'audit.action_supplier_settings_updated',
 }
 
 export type TranslateFn = (key: string) => string

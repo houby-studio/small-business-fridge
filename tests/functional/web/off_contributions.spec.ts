@@ -111,7 +111,7 @@ test.group('Web Supplier - contributing to Open Food Facts', (group) => {
       client
     )
     response.assertStatus(302)
-    assert.match(response.header('location') ?? '', /^\/supplier\/stock\?preselect=\d+$/)
+    assert.match(response.header('location') ?? '', /^\/supplier\/stock\/drafts\/\d+\?focus=\d+$/)
     assert.lengthOf(await OffContribution.all(), 0)
   })
 

@@ -1,5 +1,7 @@
 import { BaseCommand, flags } from '@adonisjs/core/ace'
 import { DateTime } from 'luxon'
+import type { ChatCompletionFunctionTool } from 'openai/resources/chat/completions'
+import type { EvalRole } from '#mcp/eval_scenarios'
 
 /**
  * Well-known Azure OpenAI deployment → display label mapping.
@@ -16,6 +18,8 @@ const MODEL_LABELS: Record<string, string> = {
   'gpt-4-turbo': 'GPT-4 Turbo',
   'gpt-35-turbo': 'GPT-3.5 Turbo',
 }
+
+const ROLES: EvalRole[] = ['customer', 'supplier', 'admin']
 
 export default class McpEval extends BaseCommand {
   static commandName = 'mcp:eval'
@@ -38,9 +42,15 @@ export default class McpEval extends BaseCommand {
   })
   declare scenarios: string | undefined
 
+  @flags.string({
+    description:
+      'System prompt to send before the user message: "workflow" prepends the role\'s ' +
+      'workflow prompt (prompts.ts). Default: none — measures the tool descriptions alone',
+  })
+  declare system: string | undefined
+
   async run() {
     const { evalScenarios } = await import('#mcp/eval_scenarios')
-    const { evalToolDefinitions } = await import('#mcp/eval_tool_definitions')
     const { default: McpEvalRun } = await import('#models/mcp_eval_run')
     const { default: McpEvalResult } = await import('#models/mcp_eval_result')
 
@@ -51,24 +61,34 @@ export default class McpEval extends BaseCommand {
     const deployment = (this.model || deploymentFromEnv).trim()
     const apiVersion = process.env.AZURE_OPENAI_API_VERSION ?? '2024-12-01-preview'
 
+    if (this.system !== undefined && this.system !== 'workflow') {
+      this.logger.error(`Unknown --system="${this.system}". Supported: workflow`)
+      this.exitCode = 1
+      return
+    }
+    const withWorkflowPrompt = this.system === 'workflow'
+
     if (!endpoint) {
       this.logger.error('AZURE_OPENAI_ENDPOINT environment variable is not set')
       this.logger.error('Set it to your Azure OpenAI resource endpoint, e.g.:')
       this.logger.error('  export AZURE_OPENAI_ENDPOINT=https://my-resource.openai.azure.com/')
+      this.exitCode = 1
       return
     }
     if (!apiKey) {
       this.logger.error('AZURE_OPENAI_API_KEY environment variable is not set')
+      this.exitCode = 1
       return
     }
     if (!deployment) {
       this.logger.error(
         'No deployment specified. Pass --model=<deployment-name> or set AZURE_OPENAI_DEPLOYMENT'
       )
+      this.exitCode = 1
       return
     }
 
-    const modelLabel = MODEL_LABELS[deployment] ?? deployment
+    const modelLabel = `${MODEL_LABELS[deployment] ?? deployment}${withWorkflowPrompt ? ' (+workflow prompt)' : ''}`
 
     // ── Filter scenarios ──────────────────────────────────────────────────────
     const scenarioFilter = this.scenarios ? this.scenarios.split(',').map((s) => s.trim()) : null
@@ -78,11 +98,32 @@ export default class McpEval extends BaseCommand {
 
     if (selectedScenarios.length === 0) {
       this.logger.error('No matching scenarios found')
+      this.exitCode = 1
       return
     }
 
+    // ── Tool definitions from the live MCP server, per role ───────────────────
+    // The server is the single source of truth: what tools/list returns is what Claude
+    // Desktop or Copilot see, so the eval cannot drift from it.
+    const toolsByRole = new Map<EvalRole, ChatCompletionFunctionTool[]>()
+    const systemByRole = new Map<EvalRole, string>()
+    const rolesNeeded = new Set(selectedScenarios.map((s) => s.role))
+    for (const role of ROLES) {
+      if (!rolesNeeded.has(role)) continue
+      toolsByRole.set(role, await liveToolDefinitions(role))
+      if (withWorkflowPrompt) {
+        const { buildWorkflowGuide } = await import('#mcp/prompts')
+        systemByRole.set(
+          role,
+          buildWorkflowGuide(role === 'supplier' || role === 'admin', role === 'admin')
+        )
+      }
+    }
+
     this.logger.info(
-      `Starting MCP eval: deployment=${deployment}, scenarios=${selectedScenarios.length}`
+      `Starting MCP eval: deployment=${deployment}, scenarios=${selectedScenarios.length}, ` +
+        `system=${withWorkflowPrompt ? 'workflow' : 'none'}, tools: ` +
+        [...toolsByRole.entries()].map(([role, tools]) => `${role}=${tools.length}`).join(' ')
     )
 
     // ── Create run record ─────────────────────────────────────────────────────
@@ -143,12 +184,16 @@ export default class McpEval extends BaseCommand {
         let isError = false
 
         try {
+          const system = systemByRole.get(scenario.role)
           const response = await client.chat.completions.create({
             model: deployment,
             max_completion_tokens: 1024,
-            tools: evalToolDefinitions,
+            tools: toolsByRole.get(scenario.role)!,
             tool_choice: 'required',
-            messages: [{ role: 'user', content: scenario.userMessage }],
+            messages: [
+              ...(system ? [{ role: 'system' as const, content: system }] : []),
+              { role: 'user', content: scenario.userMessage },
+            ],
           })
 
           const toolUseBlock = response.choices[0]?.message.tool_calls?.[0]
@@ -186,7 +231,7 @@ export default class McpEval extends BaseCommand {
 
         const icon = validationResult.passed ? '✅' : '❌'
         this.logger.info(
-          `${icon} ${scenario.id}: ${validationResult.passed ? 'PASS' : 'FAIL'} (${durationMs}ms)` +
+          `${icon} ${scenario.id} [${scenario.role}]: ${validationResult.passed ? 'PASS' : 'FAIL'} (${durationMs}ms)` +
             (validationResult.reason !== 'Correct' ? ` — ${validationResult.reason}` : '')
         )
 
@@ -228,5 +273,47 @@ export default class McpEval extends BaseCommand {
     this.logger.info(
       `Run ID: ${run.id} — results stored in mcp_eval_runs / mcp_eval_results tables`
     )
+  }
+}
+
+/**
+ * The tools a user of `role` gets from the MCP server, in OpenAI function-calling shape.
+ * Registration reads only the role, so an unsaved in-memory user is enough; `tools/list`
+ * already returns the input schema as JSON Schema.
+ */
+export async function liveToolDefinitions(role: EvalRole): Promise<ChatCompletionFunctionTool[]> {
+  const { Client } = await import('@modelcontextprotocol/sdk/client/index.js')
+  const { InMemoryTransport } = await import('@modelcontextprotocol/sdk/inMemory.js')
+  const { createMcpServer } = await import('#mcp/server')
+  const { default: User } = await import('#models/user')
+
+  const user = new User()
+  user.id = 0
+  user.role = role
+  user.marginPercent = 0
+
+  const server = createMcpServer(user)
+  const [clientSide, serverSide] = InMemoryTransport.createLinkedPair()
+  await server.connect(serverSide)
+  const client = new Client({ name: 'mcp-eval', version: '1.0.0' })
+  await client.connect(clientSide)
+  try {
+    const { tools } = await client.listTools()
+    return tools.map((tool) => {
+      // OpenAI wants a bare JSON Schema object; the draft marker the SDK adds is noise there.
+      const parameters = { ...(tool.inputSchema as Record<string, unknown>) }
+      delete parameters.$schema
+      return {
+        type: 'function' as const,
+        function: {
+          name: tool.name,
+          description: tool.description ?? '',
+          parameters,
+        },
+      }
+    })
+  } finally {
+    await client.close()
+    await server.close()
   }
 }

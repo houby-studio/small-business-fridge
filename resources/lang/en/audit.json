@@ -73,5 +73,17 @@
   "impersonation_started": "Started acting on your behalf",
   "impersonation_ended": "Stopped acting on your behalf",
   "impersonation_ended_logout": "Stopped acting on your behalf (logged out)",
-  "impersonation_ended_invalid": "Acting on your behalf ended (account no longer active)"
+  "impersonation_ended_invalid": "Acting on your behalf ended (account no longer active)",
+  "action_product_group_created": "Purchase group created",
+  "action_product_group_updated": "Purchase group updated",
+  "action_product_group_deleted": "Purchase group deleted",
+  "action_stock_draft_created": "Stocking draft created",
+  "action_stock_draft_committed": "Stocking draft stocked",
+  "action_stock_draft_discarded": "Stocking draft discarded",
+  "action_shopping_list_completed": "Shopping list completed",
+  "action_stock_written_off": "Stock written off",
+  "action_stock_adjusted": "An inventory changed your stock",
+  "action_stock_reclassified": "Shortfall reason changed",
+  "action_inventory_committed": "Inventory",
+  "action_supplier_settings_updated": "Margin changed"
 }

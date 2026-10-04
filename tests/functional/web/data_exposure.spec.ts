@@ -9,6 +9,7 @@ import OrderService from '#services/order_service'
 import InvoiceService from '#services/invoice_service'
 import DeliveryService from '#services/delivery_service'
 import AuditService from '#services/audit_service'
+import StockDraft from '#models/stock_draft'
 import {
   CORRECTION_REASON_MAX_LENGTH,
   CORRECTION_REASON_MIN_LENGTH,
@@ -22,6 +23,8 @@ const cleanAll = async () => {
   await db.from('orders').delete()
   await db.from('invoices').delete()
   await db.from('delivery_corrections').delete()
+  await db.from('stock_draft_items').delete()
+  await db.from('stock_drafts').delete()
   await db.from('deliveries').delete()
   await db.from('products').delete()
   await db.from('categories').delete()
@@ -149,21 +152,28 @@ test.group('Delivery amount and price limits', (group) => {
     const supplier = await UserFactory.apply('supplier').create()
     const category = await CategoryFactory.create()
     const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    const draft = await StockDraft.create({
+      supplierId: supplier.id,
+      source: 'web',
+      status: 'open',
+    })
 
-    await client
-      .post('/supplier/deliveries')
-      .loginAs(supplier)
-      .withCsrfToken()
-      .json({ productId: product.id, amount: 2.5, price: 10, confirmWarnings: true })
-      .redirects(0)
-    await client
-      .post('/supplier/deliveries')
-      .loginAs(supplier)
-      .withCsrfToken()
-      .json({ productId: product.id, amount: 2, price: 9.5, confirmWarnings: true })
-      .redirects(0)
+    for (const line of [
+      { productId: product.id, amount: 2.5, price: 10 },
+      { productId: product.id, amount: 2, price: 9.5 },
+    ]) {
+      const response = await client
+        .post(`/supplier/stock/drafts/${draft.id}/commit`)
+        .loginAs(supplier)
+        .withCsrfToken()
+        .json({ items: [line], confirmWarnings: true })
+        .redirects(0)
+      response.assertStatus(302)
+    }
 
     assert.lengthOf(await db.from('deliveries').where('product_id', product.id), 0)
+    await draft.refresh()
+    assert.equal(draft.status, 'open')
   })
 
   test('the frontend validation mirror uses the same limits as the backend', ({ assert }) => {

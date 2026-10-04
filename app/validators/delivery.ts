@@ -7,20 +7,18 @@ export const CORRECTION_REASON_MAX_LENGTH = 500
 export const DELIVERY_MAX_PRICE = 100_000
 export const DELIVERY_MAX_AMOUNT = 10_000
 
-export const createDeliveryValidator = vine.compile(
-  vine.object({
-    productId: vine.number().positive(),
-    amount: vine.number().withoutDecimals().min(1).max(DELIVERY_MAX_AMOUNT),
-    price: vine.number().withoutDecimals().min(1).max(DELIVERY_MAX_PRICE),
-    // Set once the supplier has seen and confirmed the duplicate / unusual price warning.
-    confirmWarnings: vine.boolean().optional(),
-  })
-)
-
 export const correctDeliveryValidator = vine.compile(
   vine.object({
     amount: vine.number().withoutDecimals().min(1).max(DELIVERY_MAX_AMOUNT),
     price: vine.number().withoutDecimals().min(1).max(DELIVERY_MAX_PRICE),
+    /** What the supplier paid per piece: omitted = unchanged, null = clear, number = new. */
+    purchasePrice: vine
+      .number()
+      .min(0)
+      .max(DELIVERY_MAX_PRICE)
+      .decimal([0, 2])
+      .nullable()
+      .optional(),
     reason: vine
       .string()
       .trim()

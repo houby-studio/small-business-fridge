@@ -1,50 +1,45 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect } from '@playwright/test'
 import { loginAs } from './helpers/auth'
-
-const PIXEL_PNG = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAGCAYAAADkOT91AAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEklEQVR4nGM4IafxHxkz0EIAAMbhMTmfCC9yAAAAAElFTkSuQmCC',
-  'base64'
-)
-
-/** Create an own product so the seeded catalogue and its stock stay untouched. */
-async function createProduct(page: Page, name: string): Promise<string> {
-  await page.goto('/supplier/products/new')
-  await page.locator('#product-name').fill(name)
-  await page.locator('#product-description').fill('E2E review follow-up')
-  await page.getByRole('combobox').first().click()
-  await page.getByRole('option', { name: 'Nealko' }).click()
-  await page.locator('input[type="file"]').setInputFiles({
-    name: 'e2e-followup.png',
-    mimeType: 'image/png',
-    buffer: PIXEL_PNG,
-  })
-  await page.getByRole('button', { name: 'Vytvořit produkt' }).click()
-  await expect(page).toHaveURL(/\/supplier\/stock\?preselect=\d+/)
-  return page.url().match(/preselect=(\d+)/)![1]
-}
-
-async function stock(page: Page, amount: string, price: string) {
-  await page.getByPlaceholder('ks').fill(amount)
-  await page.keyboard.press('Enter')
-  await page.getByPlaceholder('Kč').fill(price)
-  await page.keyboard.press('Enter')
-}
+import { commitDraft, createProduct, stockPreselected } from './helpers/products'
 
 test.describe('Delivery review follow-ups', () => {
-  test('an unusual price is flagged and Esc returns to the price field', async ({ page }) => {
+  test('an unusual price is flagged at commit and Esc returns to the price field', async ({
+    page,
+  }) => {
     await loginAs(page, 'supplier')
-    const productId = await createProduct(page, `E2E Cena ${Date.now()}`)
-    await stock(page, '3', '20')
-    await expect(page.getByText('Naskladněno 3 ks za 20 Kč/ks.')).toBeVisible()
+    const name = `E2E Cena ${Date.now()}`
+    await createProduct(page, name)
+    await stockPreselected(page, '3', '20')
 
-    await page.goto(`/supplier/stock?preselect=${productId}`)
-    await stock(page, '3', '200')
-    const dialog = page.getByTestId('delivery-warning-dialog')
-    await expect(dialog.getByTestId('delivery-warning-price')).toContainText('20 Kč/ks')
+    // Ten times the last price: the server flags the line before anything is stocked.
+    await page.goto('/supplier/stock')
+    await page.getByTestId('stock-receive').click()
+    const filter = page.locator('.p-select-overlay .p-select-filter')
+    await expect(filter).toBeFocused()
+    await filter.fill(name)
+    await page.keyboard.press('Enter')
+    // The last prices come along as values, so the keyboard flow can Enter through them.
+    await expect(page.getByTestId('draft-row-purchase-price').first()).toHaveValue('')
+    await expect(page.getByTestId('draft-row-price').first()).toHaveValue('20 Kč')
+    await page.locator(':focus').fill('3')
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('Enter')
+    await page.locator(':focus').fill('200')
+    await page.keyboard.press('Enter')
+    await page.getByTestId('draft-commit').click()
+
+    const dialog = page.getByTestId('draft-warning-dialog')
+    await expect(dialog.getByTestId('draft-warning-price')).toContainText('20 Kč/ks')
+    await expect(dialog.getByTestId('draft-warning-price')).toContainText('vy,')
+    await expect(dialog.getByTestId('draft-warning-cancel')).toBeFocused()
 
     await page.keyboard.press('Escape')
     await expect(dialog).toBeHidden()
-    await expect(page.getByPlaceholder('Kč')).toBeFocused()
+    const price = page.getByTestId('draft-row-price').first()
+    await expect(price).toHaveValue('200 Kč')
+    await expect(price).toBeFocused()
+
+    await commitDraft(page)
   })
 
   test('the Supplier column follows the applied scope filter', async ({ page }) => {
@@ -54,12 +49,13 @@ test.describe('Delivery review follow-ups', () => {
     await expect(supplierHeader).toHaveCount(0)
 
     await page.getByTestId('deliveries-scope').click()
-    await page.getByRole('option', { name: 'Celý sklad' }).click()
+    await page.getByRole('option', { name: 'Celá lednice' }).click()
     // Not applied yet — the table still shows the old rows, so no column either.
     await expect(supplierHeader).toHaveCount(0)
 
     await page.getByRole('button', { name: 'Použít filtry' }).click()
     await expect(supplierHeader).toBeVisible()
+    await expect(page).toHaveURL(/scope=all/)
   })
 
   test("a supplier's Activity names the admin who voided their delivery", async ({
@@ -69,14 +65,13 @@ test.describe('Delivery review follow-ups', () => {
     await loginAs(page, 'supplier')
     const productName = `E2E Aktivita ${Date.now()}`
     const productId = await createProduct(page, productName)
-    await stock(page, '2', '15')
-    await expect(page.getByText('Naskladněno 2 ks za 15 Kč/ks.')).toBeVisible()
+    await stockPreselected(page, '2', '15')
 
     const adminContext = await browser.newContext()
     const admin = await adminContext.newPage()
     await loginAs(admin, 'admin')
-    await admin.goto(`/supplier/deliveries?scope=store&productId=${productId}`)
-    await admin.getByRole('button', { name: 'Stornovat naskladnění' }).first().click()
+    await admin.goto(`/supplier/deliveries?scope=all&productId=${productId}`)
+    await admin.getByRole('button', { name: 'Stornovat dodávku' }).first().click()
     const dialog = admin.getByTestId('delivery-correction-dialog')
     await dialog.getByTestId('correction-reason').fill('Kontrola admina')
     await dialog.getByRole('button', { name: 'Stornovat', exact: true }).click()
@@ -95,8 +90,7 @@ test.describe('Delivery review follow-ups', () => {
     await loginAs(page, 'supplier')
     const productName = `E2E Modal ${Date.now()}`
     const productId = await createProduct(page, productName)
-    await stock(page, '3', '20')
-    await expect(page.getByText('Naskladněno 3 ks za 20 Kč/ks.')).toBeVisible()
+    await stockPreselected(page, '3', '20')
 
     // The customer opens the shop and sees the product at 20 Kč.
     const customerContext = await browser.newContext()
@@ -108,7 +102,7 @@ test.describe('Delivery review follow-ups', () => {
 
     // Meanwhile the supplier corrects the price.
     await page.goto(`/supplier/deliveries?productId=${productId}`)
-    await page.getByRole('button', { name: 'Opravit naskladnění' }).first().click()
+    await page.getByRole('button', { name: 'Opravit dodávku' }).first().click()
     const correction = page.getByTestId('delivery-correction-dialog')
     await page.keyboard.type('22')
     await correction.getByTestId('correction-reason').fill('Nová cena')

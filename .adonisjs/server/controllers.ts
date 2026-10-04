@@ -49,12 +49,17 @@ export const controllers = {
     Shop: () => import('#controllers/web/shop_controller'),
     supplier: {
       Deliveries: () => import('#controllers/web/supplier/deliveries_controller'),
+      Finance: () => import('#controllers/web/supplier/finance_controller'),
+      Inventory: () => import('#controllers/web/supplier/inventory_controller'),
       Invoice: () => import('#controllers/web/supplier/invoice_controller'),
       Payments: () => import('#controllers/web/supplier/payments_controller'),
+      ProductGroups: () => import('#controllers/web/supplier/product_groups_controller'),
       ProductImages: () => import('#controllers/web/supplier/product_images_controller'),
       ProductSuggestions: () => import('#controllers/web/supplier/product_suggestions_controller'),
       Products: () => import('#controllers/web/supplier/products_controller'),
+      ShoppingList: () => import('#controllers/web/supplier/shopping_list_controller'),
       Stock: () => import('#controllers/web/supplier/stock_controller'),
+      StockDrafts: () => import('#controllers/web/supplier/stock_drafts_controller'),
     },
   },
 }
