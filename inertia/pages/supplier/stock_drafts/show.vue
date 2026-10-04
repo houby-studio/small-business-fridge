@@ -686,8 +686,13 @@ onBeforeUnmount(() => {
     <Head :title="t('shopping.draft_title')" />
     <ConfirmDialog />
 
-    <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
-      <div class="flex items-center gap-2">
+    <!--
+      Header: title and source on the left, the draft's note beside it on wide screens (it
+      is the one thing worth writing about a whole draft), the date and the quiet save state
+      on the right. On a phone the three stack: title, date + save state, then the note.
+    -->
+    <div class="mb-6 flex flex-col gap-3 lg:flex-row lg:items-end lg:gap-8">
+      <div class="order-1 flex min-w-0 items-center gap-2">
         <Link href="/supplier/stock/drafts">
           <Button
             icon="pi pi-arrow-left"
@@ -705,9 +710,55 @@ onBeforeUnmount(() => {
           >{{ t(`shopping.draft_source_${draft.source}`) }}</span
         >
       </div>
-      <span class="text-sm text-gray-500 dark:text-zinc-400">{{
-        formatDate(draft.createdAt)
-      }}</span>
+      <div v-if="isOpen" class="order-3 w-full lg:order-2 lg:mr-auto lg:w-96">
+        <label for="draft-note" class="mb-1 block text-sm text-gray-700 dark:text-zinc-300">{{
+          t('shopping.draft_note_label')
+        }}</label>
+        <InputText
+          id="draft-note"
+          v-model="note"
+          fluid
+          :maxlength="STOCK_DRAFT_NOTE_MAX"
+          :placeholder="t('shopping.draft_note_placeholder')"
+          data-testid="draft-note"
+        />
+      </div>
+      <p
+        v-else-if="draft.note"
+        class="order-3 text-sm text-gray-700 lg:order-2 lg:mr-auto lg:pb-2 dark:text-zinc-300"
+      >
+        {{ draft.note }}
+      </p>
+      <div
+        class="order-2 flex items-center justify-between gap-x-4 text-sm text-gray-500 lg:order-3 lg:flex-col lg:items-end lg:gap-y-0.5 dark:text-zinc-400"
+      >
+        <span>{{ formatDate(draft.createdAt) }}</span>
+        <span
+          v-if="isOpen"
+          class="inline-flex items-center gap-1 text-xs"
+          :class="saveState === 'error' ? 'text-amber-700 dark:text-amber-300' : ''"
+          :data-state="saveState"
+          data-testid="draft-save-state"
+        >
+          <span
+            :class="
+              saveState === 'saved'
+                ? 'pi pi-check'
+                : saveState === 'error'
+                  ? 'pi pi-exclamation-triangle'
+                  : 'pi pi-spin pi-spinner'
+            "
+            aria-hidden="true"
+          />
+          {{
+            saveState === 'saved'
+              ? t('shopping.draft_saved')
+              : saveState === 'error'
+                ? t('shopping.draft_save_failed')
+                : t('shopping.draft_saving')
+          }}
+        </span>
+      </div>
     </div>
 
     <Message
@@ -726,7 +777,7 @@ onBeforeUnmount(() => {
       }}
     </Message>
 
-    <!-- Column headers, once (the rows stack on small screens, so no headers there) -->
+    <!-- Column headers, once; on a phone each line carries its own small labels instead -->
     <div
       class="mb-1 hidden grid-cols-12 gap-2 px-3 text-sm text-gray-700 md:grid dark:text-zinc-300"
     >
@@ -742,11 +793,17 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
+    <!--
+      One card per line. On md+ a single grid row: product, amount, purchase, selling, remove.
+      On a phone the same cells reflow (`order-*`, DOM and Tab order stay put): the product with
+      the remove button on the first row, the three numbers side by side on the second, each
+      with its own small label because the column headers are hidden there.
+    -->
     <div class="space-y-2" data-testid="draft-rows">
       <div
         v-for="row in rows"
         :key="row.uid"
-        class="grid grid-cols-[1fr_1fr_1fr_2.5rem] items-start gap-2 rounded-lg border bg-white p-3 md:grid-cols-12 dark:bg-zinc-900"
+        class="grid grid-cols-12 items-start gap-x-2 gap-y-3 rounded-lg border bg-white p-3 md:gap-2 dark:bg-zinc-900"
         :class="
           row.touched && rowProblem(row)
             ? 'border-amber-300 dark:border-amber-700'
@@ -755,7 +812,7 @@ onBeforeUnmount(() => {
         data-testid="draft-row"
         :data-product-id="row.productId ?? ''"
       >
-        <div class="col-span-4 min-w-0 md:col-span-5">
+        <div class="order-1 col-span-10 min-w-0 md:order-none md:col-span-5">
           <Select
             :ref="keep(selectRefs, row.uid)"
             :modelValue="row.productId"
@@ -798,10 +855,19 @@ onBeforeUnmount(() => {
             @click="newProductFromRow(row)"
           />
         </div>
-        <div class="md:col-span-2" @keydown.enter.prevent="onAmountEnter(row)">
+        <div
+          class="order-3 col-span-3 md:order-none md:col-span-2"
+          @keydown.enter.prevent="onAmountEnter(row)"
+        >
+          <label
+            :for="`draft-amount-${row.uid}`"
+            class="mb-1 block text-xs text-gray-700 md:hidden dark:text-zinc-300"
+            >{{ t('supplier.deliveries_amount') }}</label
+          >
           <InputNumber
             :ref="keep(amountRefs, row.uid)"
             v-model="row.amount"
+            :inputId="`draft-amount-${row.uid}`"
             :min="1"
             :max="DELIVERY_MAX_AMOUNT"
             fluid
@@ -812,10 +878,19 @@ onBeforeUnmount(() => {
             :pt="{ pcInputText: { root: { 'data-testid': 'draft-row-amount' } } }"
           />
         </div>
-        <div class="md:col-span-2" @keydown.enter.prevent="onPurchaseEnter(row)">
+        <div
+          class="order-4 col-span-4 md:order-none md:col-span-2"
+          @keydown.enter.prevent="onPurchaseEnter(row)"
+        >
+          <label
+            :for="`draft-purchase-${row.uid}`"
+            class="mb-1 block text-xs text-gray-700 md:hidden dark:text-zinc-300"
+            >{{ t('supplier.deliveries_purchase_price') }}</label
+          >
           <InputNumber
             :ref="keep(purchaseRefs, row.uid)"
             v-model="row.purchasePrice"
+            :inputId="`draft-purchase-${row.uid}`"
             :min="0"
             :max="DELIVERY_MAX_PRICE"
             :minFractionDigits="2"
@@ -828,10 +903,19 @@ onBeforeUnmount(() => {
             :pt="{ pcInputText: { root: { 'data-testid': 'draft-row-purchase-price' } } }"
           />
         </div>
-        <div class="md:col-span-2" @keydown.enter.prevent="onPriceEnter(row)">
+        <div
+          class="order-5 col-span-5 md:order-none md:col-span-2"
+          @keydown.enter.prevent="onPriceEnter(row)"
+        >
+          <label
+            :for="`draft-price-${row.uid}`"
+            class="mb-1 block text-xs text-gray-700 md:hidden dark:text-zinc-300"
+            >{{ t('supplier.deliveries_price') }}</label
+          >
           <InputNumber
             :ref="keep(priceRefs, row.uid)"
             v-model="row.price"
+            :inputId="`draft-price-${row.uid}`"
             :min="1"
             :max="DELIVERY_MAX_PRICE"
             fluid
@@ -844,7 +928,9 @@ onBeforeUnmount(() => {
             @blur="materializePrice(row)"
           />
         </div>
-        <div class="flex justify-end md:col-span-1">
+        <div
+          class="order-2 col-span-2 flex min-h-10 items-center justify-end md:order-none md:col-span-1"
+        >
           <Button
             v-if="isOpen && !row.ghost"
             icon="pi pi-times"
@@ -858,7 +944,7 @@ onBeforeUnmount(() => {
         </div>
         <div
           v-if="lastPricesText(row) || (row.touched && rowProblem(row)) || rowWarning(row)"
-          class="col-span-4 flex flex-wrap gap-x-3 text-xs md:col-span-12"
+          class="order-6 col-span-12 flex flex-wrap gap-x-3 gap-y-0.5 text-xs md:order-none"
         >
           <span v-if="lastPricesText(row)" class="text-gray-500 dark:text-zinc-400">{{
             lastPricesText(row)
@@ -876,82 +962,61 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <div
-      class="mt-4 flex flex-col gap-3 border-t border-gray-200 pt-4 md:flex-row md:items-center md:justify-between dark:border-zinc-700"
-    >
-      <div
-        class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-700 dark:text-zinc-300"
-        data-testid="draft-totals"
-      >
-        <span>{{
-          t('shopping.draft_summary', { lines: lines.length, pieces: totals.pieces })
-        }}</span>
-        <span>{{ t('shopping.draft_total_purchase', { amount: money(totals.purchase) }) }}</span>
-        <span>{{ t('shopping.draft_total_selling', { amount: money(totals.selling) }) }}</span>
-        <span v-if="totals.profit !== null" class="font-semibold">{{
-          t('shopping.draft_total_profit', { amount: money(totals.profit) })
-        }}</span>
-      </div>
-      <div v-if="isOpen" class="flex flex-wrap items-center gap-2">
-        <InputText
-          v-model="note"
-          class="w-full md:w-56"
-          :maxlength="STOCK_DRAFT_NOTE_MAX"
-          :placeholder="t('shopping.draft_note')"
-          :aria-label="t('shopping.draft_note')"
-          data-testid="draft-note"
-        />
-        <Button
-          :label="t('shopping.draft_discard')"
-          severity="danger"
-          text
-          data-testid="draft-discard"
-          @click="discard"
-        />
-        <span
-          class="inline-flex items-center gap-1 text-xs"
-          :class="
-            saveState === 'error'
-              ? 'text-amber-700 dark:text-amber-300'
-              : 'text-gray-500 dark:text-zinc-400'
-          "
-          :data-state="saveState"
-          data-testid="draft-save-state"
+    <!--
+      Footer: the totals on the left, the two actions on the right — Discard as a quiet text
+      button, Stock as the one filled button. On a phone the actions stack under the totals
+      with Stock full width where the thumb is and Discard beneath it.
+    -->
+    <div class="mt-6 border-t border-gray-200 pt-4 dark:border-zinc-700">
+      <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div class="space-y-1">
+          <div
+            class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-700 dark:text-zinc-300"
+            data-testid="draft-totals"
+          >
+            <span>{{
+              t('shopping.draft_summary', { lines: lines.length, pieces: totals.pieces })
+            }}</span>
+            <span>{{
+              t('shopping.draft_total_purchase', { amount: money(totals.purchase) })
+            }}</span>
+            <span>{{ t('shopping.draft_total_selling', { amount: money(totals.selling) }) }}</span>
+            <span v-if="totals.profit !== null" class="font-semibold">{{
+              t('shopping.draft_total_profit', { amount: money(totals.profit) })
+            }}</span>
+          </div>
+          <!-- Why Stock is greyed out — read before the button, on every screen size -->
+          <p
+            v-if="isOpen && problems > 0 && lines.some((row) => row.touched)"
+            class="text-xs text-amber-700 dark:text-amber-300"
+          >
+            {{ t('shopping.draft_problems', { count: problems }) }}
+          </p>
+        </div>
+        <div
+          v-if="isOpen"
+          class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end"
         >
-          <span
-            :class="
-              saveState === 'saved'
-                ? 'pi pi-check'
-                : saveState === 'error'
-                  ? 'pi pi-exclamation-triangle'
-                  : 'pi pi-spin pi-spinner'
-            "
-            aria-hidden="true"
+          <Button
+            :label="t('shopping.draft_discard')"
+            severity="danger"
+            text
+            class="w-full sm:w-auto"
+            data-testid="draft-discard"
+            @click="discard"
           />
-          {{
-            saveState === 'saved'
-              ? t('shopping.draft_saved')
-              : saveState === 'error'
-                ? t('shopping.draft_save_failed')
-                : t('shopping.draft_saving')
-          }}
-        </span>
-        <Button
-          :label="commitLabel"
-          icon="pi pi-check"
-          :loading="submitting === 'commit'"
-          :disabled="!canCommit"
-          data-testid="draft-commit"
-          @click="commit()"
-        />
+          <Button
+            :label="commitLabel"
+            icon="pi pi-check"
+            class="w-full sm:w-auto"
+            :loading="submitting === 'commit'"
+            :disabled="!canCommit"
+            data-testid="draft-commit"
+            @click="commit()"
+          />
+        </div>
       </div>
     </div>
-    <p
-      v-if="isOpen && problems > 0 && lines.some((row) => row.touched)"
-      class="mt-2 text-xs text-amber-700 dark:text-amber-300"
-    >
-      {{ t('shopping.draft_problems', { count: problems }) }}
-    </p>
 
     <!-- Duplicate / unusual price check, done by the server at commit -->
     <Dialog

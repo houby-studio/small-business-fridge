@@ -68,6 +68,8 @@
   "draft_committed_info": "The draft was stocked on {date}.",
   "draft_discarded_info": "The draft was discarded.",
   "draft_note": "Note",
+  "draft_note_label": "Note on the draft",
+  "draft_note_placeholder": "e.g. Lidl, Tuesday's receipt",
   "draft_label": "On the receipt: {label}",
   "draft_label_list": "From the list: {label}",
   "draft_other_products": "Other products",

@@ -68,6 +68,8 @@
   "draft_committed_info": "Příjemka byla naskladněna {date}.",
   "draft_discarded_info": "Příjemka byla zahozena.",
   "draft_note": "Poznámka",
+  "draft_note_label": "Poznámka k příjemce",
+  "draft_note_placeholder": "např. Lidl, účtenka z úterý",
   "draft_label": "Na účtence: {label}",
   "draft_label_list": "Ze seznamu: {label}",
   "draft_other_products": "Ostatní produkty",
