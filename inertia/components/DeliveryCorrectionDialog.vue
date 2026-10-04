@@ -295,7 +295,7 @@ function submit() {
               :minFractionDigits="2"
               :maxFractionDigits="2"
               :suffix="' ' + t('common.currency')"
-              :placeholder="t('supplier.deliveries_purchase_placeholder')"
+              :placeholder="t('common.currency')"
               :invalid="!!purchasePriceMessage"
               data-testid="correction-purchase-price"
             />

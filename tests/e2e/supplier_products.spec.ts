@@ -198,10 +198,10 @@ test.describe('Supplier products flow', () => {
     await page.keyboard.press('Enter')
 
     // Enter walks amount → purchase price (optional, may stay empty) → selling price.
-    await expect(page.locator(':focus')).toHaveAttribute('placeholder', 'nákup')
+    await expect(page.locator(':focus')).toHaveAttribute('placeholder', 'Kč')
     await page.keyboard.press('Enter')
 
-    await expect(page.locator(':focus')).toHaveAttribute('placeholder', 'Kč')
+    await expect(page.locator(':focus')).toHaveAttribute('data-testid', 'draft-row-price')
     await page.locator(':focus').fill('49')
     await page.keyboard.press('Enter')
 

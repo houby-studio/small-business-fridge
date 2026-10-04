@@ -73,7 +73,7 @@
   "draft_other_products": "Other products",
   "draft_group": "group {name}",
   "draft_pick_product": "Pick a product",
-  "draft_price_suggested": "suggested {price}",
+  "draft_price_suggested": "suggested {price} {currency}",
   "draft_problem_product": "Pick a product.",
   "draft_problem_amount": "Enter a quantity.",
   "draft_problem_price": "Enter a selling or a purchase price.",
@@ -114,5 +114,7 @@
   "validation_unit_cost_max": "The price can be at most {max} {currency}.",
   "draft_commit_count": "Stock ({count} item · {pieces} pcs)|Stock ({count} items · {pieces} pcs)",
   "draft_remove_line": "Remove line",
-  "draft_empty": "Empty draft"
+  "draft_empty": "Empty draft",
+  "draft_new_product": "New product",
+  "list_hint": "The suggestions are recomputed every time you open the list, from current sales and stock. Your quantity and price edits, ticks, dismissed and own lines stay until you finish shopping."
 }

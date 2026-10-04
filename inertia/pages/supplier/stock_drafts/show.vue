@@ -187,10 +187,18 @@ const labelKey = computed(() =>
   props.draft.source === 'mcp' ? 'shopping.draft_label' : 'shopping.draft_label_list'
 )
 
+/**
+ * The selling price offered when the supplier types none: what the product sold for last
+ * time, never below the purchase price plus the margin — or that alone for a new product.
+ */
 function suggestedPrice(row: Row): number | null {
-  return row.purchasePrice !== null && row.purchasePrice > 0
-    ? suggestSellingPrice(row.purchasePrice, props.marginPercent)
-    : null
+  const fromMargin =
+    row.purchasePrice !== null && row.purchasePrice > 0
+      ? suggestSellingPrice(row.purchasePrice, props.marginPercent)
+      : null
+  const last = (row.productId ? productById.value.get(row.productId)?.lastPrice : null) ?? null
+  if (fromMargin !== null && last !== null) return Math.max(fromMargin, last)
+  return fromMargin ?? last
 }
 
 function effectivePrice(row: Row): number | null {
@@ -312,7 +320,7 @@ const openSelect = {
     return openSelectEntry()?.instance ?? null
   },
 } as Ref<any>
-useSelectEnterKey([
+const { onSelectFilter } = useSelectEnterKey([
   {
     selectRef: openSelect,
     getOptions: () => {
@@ -378,19 +386,17 @@ function whenOverlaysSettled(action: () => void, attempts = 40) {
 }
 
 /**
- * Picking a product fills the last prices in as values (not placeholders), so the keyboard
- * flow can Enter straight through them. A missing selling price comes from the margin.
+ * Picking a product fills the last purchase price in as a value (what you paid is a fact to
+ * correct), while the selling price stays a visible suggestion until Enter or stocking
+ * accepts it.
  */
 function pickProduct(row: Row, productId: number) {
   rememberFadingOverlay(row.uid)
   row.productId = productId
   row.touched = true
   const product = productById.value.get(productId)
-  if (product) {
-    if (row.purchasePrice === null && product.lastPurchasePrice !== null) {
-      row.purchasePrice = product.lastPurchasePrice
-    }
-    if (row.price === null) row.price = product.lastPrice ?? suggestedPrice(row)
+  if (product && row.purchasePrice === null && product.lastPurchasePrice !== null) {
+    row.purchasePrice = product.lastPurchasePrice
   }
   if (row.ghost) {
     row.ghost = false
@@ -416,20 +422,20 @@ function onAmountEnter(row: Row) {
   focusField(purchaseRefs, row.uid)
 }
 
-/** An empty selling price follows the purchase price just typed. */
-function fillSuggestedPrice(row: Row) {
-  if (row.price === null) row.price = suggestedPrice(row)
-}
-
 function onPurchaseEnter(row: Row) {
   row.touched = true
-  fillSuggestedPrice(row)
   focusField(priceRefs, row.uid)
+}
+
+/** Leaving the selling price with Enter or Tab accepts the suggestion shown in it. */
+function materializePrice(row: Row) {
+  if (row.price === null) row.price = suggestedPrice(row)
 }
 
 /** Enter in the price confirms the line and moves on to the next empty one. */
 function onPriceEnter(row: Row) {
   row.touched = true
+  materializePrice(row)
   if (rowProblem(row)) return
   ensureGhost()
   const ghost = rows.value.find((r) => r.ghost)
@@ -442,7 +448,8 @@ function removeRow(uid: number) {
 }
 
 // ─── Save / commit / discard ──────────────────────────────────────────────────
-function payload() {
+/** `materialize` turns the suggested selling prices into real ones — stocking needs them. */
+function payload(materialize = false) {
   return {
     note: note.value.trim() || null,
     items: lines.value.map((row) => ({
@@ -451,9 +458,34 @@ function payload() {
       label: row.label,
       amount: row.amount ?? 1,
       purchasePrice: row.purchasePrice,
-      price: row.price,
+      price: materialize ? (row.price ?? suggestedPrice(row)) : row.price,
     })),
   }
+}
+
+/**
+ * "Nový produkt" on a line: the draft is saved as it is, the product form opens with the
+ * line's text prefilled, and saving the product brings the supplier back to this line.
+ */
+function newProductFromRow(row: Row) {
+  if (submitting.value || !isOpen.value) return
+  const lineIndex = row.ghost ? lines.value.length : lines.value.indexOf(row)
+  const query = {
+    draftId: props.draft.id,
+    lineIndex,
+    ...(row.label ? { name: row.label } : {}),
+    ...(row.productGroupId ? { groupId: row.productGroupId } : {}),
+  }
+  const open = () => router.get('/supplier/products/new', query)
+  if (lines.value.length === 0) return open()
+  submitting.value = 'save'
+  router.put(`/supplier/stock/drafts/${props.draft.id}`, payload(), {
+    preserveScroll: true,
+    onSuccess: open,
+    onFinish: () => {
+      submitting.value = null
+    },
+  })
 }
 
 function save() {
@@ -482,7 +514,7 @@ function commit(confirmWarnings = false) {
   submitting.value = 'commit'
   router.post(
     `/supplier/stock/drafts/${props.draft.id}/commit`,
-    { ...payload(), ...(confirmWarnings ? { confirmWarnings: true } : {}) },
+    { ...payload(true), ...(confirmWarnings ? { confirmWarnings: true } : {}) },
     {
       preserveScroll: true,
       preserveState: true,
@@ -650,12 +682,14 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKeydown))
             :optionGroupLabel="row.productGroupId ? 'label' : undefined"
             :optionGroupChildren="row.productGroupId ? 'items' : undefined"
             filter
+            autoOptionFocus
             fluid
             :disabled="!isOpen"
             :invalid="row.touched && !row.productId"
             :placeholder="t('shopping.draft_pick_product')"
             data-testid="draft-row-product"
             @show="nextTick(() => focusOwnFilter(row.uid))"
+            @filter="onSelectFilter"
             @change="onProductChange(row, $event)"
             @keydown.enter.capture="onProductEnter(row, $event)"
           />
@@ -668,6 +702,18 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKeydown))
               · {{ t('shopping.draft_group', { name: groupName.get(row.productGroupId)! }) }}</span
             >
           </div>
+          <Button
+            v-if="isOpen && !row.productId"
+            :label="t('shopping.draft_new_product')"
+            icon="pi pi-plus"
+            severity="secondary"
+            text
+            size="small"
+            class="mt-1 -ml-2"
+            :disabled="submitting !== null"
+            data-testid="draft-row-new-product"
+            @click="newProductFromRow(row)"
+          />
         </div>
         <div class="md:col-span-2" @keydown.enter.prevent="onAmountEnter(row)">
           <InputNumber
@@ -695,9 +741,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKeydown))
             highlightOnFocus
             :disabled="!isOpen"
             :suffix="' ' + t('common.currency')"
-            :placeholder="t('supplier.deliveries_purchase_placeholder')"
+            :placeholder="t('common.currency')"
             :pt="{ pcInputText: { root: { 'data-testid': 'draft-row-purchase-price' } } }"
-            @blur="fillSuggestedPrice(row)"
           />
         </div>
         <div class="md:col-span-2" @keydown.enter.prevent="onPriceEnter(row)">
@@ -713,6 +758,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKeydown))
             :suffix="' ' + t('common.currency')"
             :placeholder="pricePlaceholder(row)"
             :pt="{ pcInputText: { root: { 'data-testid': 'draft-row-price' } } }"
+            @blur="materializePrice(row)"
           />
         </div>
         <div class="flex justify-end md:col-span-1">

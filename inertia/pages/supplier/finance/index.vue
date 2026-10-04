@@ -458,14 +458,6 @@ const hasShrinkageBreakdown = computed(
             }}
           </dd>
         </dl>
-        <p class="text-sm text-gray-500 dark:text-zinc-400" data-testid="finance-break-even">
-          {{
-            t('finance.break_even', {
-              margin: percent(summary.breakEvenMarginPercent, 2),
-              rate: percent(summary.shrinkage.lossRate * 100),
-            })
-          }}
-        </p>
         <p
           v-if="marginBelowBreakEven"
           class="text-sm text-amber-700 dark:text-amber-300"
@@ -500,11 +492,13 @@ const hasShrinkageBreakdown = computed(
           :label="
             t('finance.margin_use_break_even', {
               margin: percent(summary.breakEvenMarginPercent, 2),
+              rate: percent(summary.shrinkage.lossRate * 100),
             })
           "
+          icon="pi pi-arrow-circle-down"
           severity="secondary"
-          text
           size="small"
+          data-testid="finance-break-even"
           @click="useBreakEven"
         />
       </div>

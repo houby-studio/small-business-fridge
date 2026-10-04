@@ -12,15 +12,18 @@ test.describe('Supplier purchase price, shrinkage and earnings', () => {
     await expect(focused).toHaveAttribute('placeholder', 'ks')
     await focused.fill('5')
     await page.keyboard.press('Enter')
-    await expect(page.locator(':focus')).toHaveAttribute('placeholder', 'nákup')
+    await expect(page.locator(':focus')).toHaveAttribute('placeholder', 'Kč')
     await page.locator(':focus').fill('19,9')
     await page.keyboard.press('Enter')
 
-    // Enter in the purchase price fills the selling price in as a value, not a placeholder.
+    // The selling price is shown as a suggestion (purchase price + margin, rounded up);
+    // Enter accepts it as the real value.
     const price = page.locator(':focus')
     await expect(price).toHaveAttribute('data-testid', 'draft-row-price')
-    await expect(price).toHaveValue('20 Kč')
+    await expect(price).toHaveAttribute('placeholder', 'návrh 20 Kč')
+    await expect(price).toHaveValue('')
     await page.keyboard.press('Enter')
+    await expect(page.getByTestId('draft-row-price').first()).toHaveValue('20 Kč')
     // Enter in the price opens the next line's product search; close it before stocking.
     await page.keyboard.press('Escape')
     await commitDraft(page)
@@ -86,6 +89,10 @@ test.describe('Supplier purchase price, shrinkage and earnings', () => {
     await expect(page.locator('#sbf-boot-loader')).toHaveCount(0)
     await expect(page.getByTestId('finance-reason-stolen')).toContainText('Odcizené')
     await expect(page.getByTestId('finance-reason-expired')).toContainText('Prošlé')
+    // With shrinkage on the books, the margin dialog offers the margin that covers it.
+    await page.getByTestId('finance-margin-edit').click()
+    await expect(page.getByTestId('finance-break-even')).toContainText('pokryje manko')
+    await page.keyboard.press('Escape')
     await expect(page.getByTestId('finance-history-link')).toHaveAttribute(
       'href',
       '/supplier/deliveries?type=adjustments&scope=mine'
@@ -139,7 +146,8 @@ test.describe('Supplier purchase price, shrinkage and earnings', () => {
     await page.getByRole('button', { name: 'Nastavení marže' }).click()
     const dialog = page.getByTestId('finance-margin-dialog')
     await expect(dialog).toBeVisible()
-    await expect(dialog.getByTestId('finance-break-even')).toContainText('pokryje marže aspoň')
+    // A fresh supplier has no shrinkage, so there is no break-even margin to offer.
+    await expect(dialog.getByTestId('finance-break-even')).toHaveCount(0)
     await expect(dialog.getByTestId('finance-margin-help')).toContainText('0 % = za nákupní cenu')
     const margin = dialog.getByTestId('finance-margin')
     const before = (await margin.textContent())!.trim()

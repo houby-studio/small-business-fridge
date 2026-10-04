@@ -73,7 +73,7 @@
   "draft_other_products": "Ostatní produkty",
   "draft_group": "skupina {name}",
   "draft_pick_product": "Vyber produkt",
-  "draft_price_suggested": "návrh {price}",
+  "draft_price_suggested": "návrh {price} {currency}",
   "draft_problem_product": "Vyber produkt.",
   "draft_problem_amount": "Zadej množství.",
   "draft_problem_price": "Zadej prodejní nebo nákupní cenu.",
@@ -114,5 +114,7 @@
   "validation_unit_cost_max": "Cena může být nejvýš {max} {currency}.",
   "draft_commit_count": "Naskladnit ({count} položka · {pieces} ks)|Naskladnit ({count} položky · {pieces} ks)|Naskladnit ({count} položek · {pieces} ks)",
   "draft_remove_line": "Odebrat řádek",
-  "draft_empty": "Prázdná příjemka"
+  "draft_empty": "Prázdná příjemka",
+  "draft_new_product": "Nový produkt",
+  "list_hint": "Návrhy se přepočítávají při každém otevření podle aktuálních prodejů a zásob. Tvoje úpravy množství a cen, zaškrtnutí, odebrané i vlastní položky zůstávají, dokud nákup nedokončíš."
 }

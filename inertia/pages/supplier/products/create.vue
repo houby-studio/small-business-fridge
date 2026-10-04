@@ -38,16 +38,18 @@ const props = defineProps<{
   productGroups: ProductGroupOption[]
   imageCapabilities: ProductImageCapabilities
   aiSuggestions: boolean
+  /** Set when the supplier came from a stocking draft line ("Nový produkt" on the line). */
+  fromDraft: { id: number; lineIndex: number | null; name: string; groupId: number | null } | null
 }>()
 const { t } = useI18n()
 
 const form = useForm({
-  displayName: '',
+  displayName: props.fromDraft?.name ?? '',
   description: '',
   categoryId: null as number | null,
   barcode: '',
   allergenIds: [] as number[],
-  productGroupId: null as number | null,
+  productGroupId: props.fromDraft?.groupId ?? null,
   image: null as File | null,
   offContribute: false,
   offOriginal: null as File | null,
@@ -190,6 +192,10 @@ function submit() {
       allergenIds: JSON.stringify(data.allergenIds),
       // FormData has no null — an empty value means "no group".
       productGroupId: data.productGroupId ?? '',
+      // Back to the draft line the supplier came from, with the new product in it.
+      ...(props.fromDraft
+        ? { draftId: props.fromDraft.id, lineIndex: props.fromDraft.lineIndex ?? '' }
+        : {}),
     }))
     .post('/supplier/products', {
       forceFormData: true,
@@ -200,6 +206,10 @@ function submit() {
 }
 
 function goBack() {
+  if (props.fromDraft) {
+    router.get(`/supplier/stock/drafts/${props.fromDraft.id}`)
+    return
+  }
   if (window.history.length > 1) {
     window.history.back()
     return

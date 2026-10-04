@@ -31,6 +31,44 @@ test.describe('Stock receiving (příjemka)', () => {
     await expect(row).toContainText('30 Kč')
   })
 
+  test('a product missing from the catalogue is created from the draft line and comes back to it', async ({
+    page,
+  }) => {
+    await loginAs(page, 'supplier')
+    const name = `E2E Nový z příjemky ${Date.now()}`
+    await page.goto('/supplier/stock')
+    await page.getByTestId('stock-receive').click()
+    await expect(page).toHaveURL(/\/supplier\/stock\/drafts\/(\d+)/)
+    const draftUrl = page.url().split('?')[0]
+    await page.keyboard.press('Escape')
+
+    // "Nový produkt" on the empty line saves the draft and opens the product form.
+    await page.getByTestId('draft-row-new-product').last().click()
+    await expect(page).toHaveURL(/\/supplier\/products\/new\?.*draftId=\d+/)
+    await page.locator('#product-name').fill(name)
+    await page.locator('#product-description').fill('E2E z příjemky')
+    await page.getByRole('combobox').first().click()
+    await page.getByRole('option', { name: 'Nealko' }).click()
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'e2e-draft.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAGCAYAAADkOT91AAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEklEQVR4nGM4IafxHxkz0EIAAMbhMTmfCC9yAAAAAElFTkSuQmCC',
+        'base64'
+      ),
+    })
+    await page.getByRole('button', { name: 'Vytvořit produkt' }).click()
+
+    // Back on the very same draft, the new product sits in a line with the amount focused.
+    await expect(page).toHaveURL(
+      new RegExp(`^${draftUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\?focus=\\d+$`)
+    )
+    const row = page.locator('[data-testid="draft-row"]', { hasText: name })
+    await expect(row).toHaveCount(1)
+    await expect(page.locator(':focus')).toHaveAttribute('placeholder', 'ks')
+    await stockPreselected(page, '2', '25')
+  })
+
   test('an existing product is stocked from the stock page by typing its name', async ({
     page,
   }) => {

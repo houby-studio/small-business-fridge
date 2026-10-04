@@ -18,9 +18,12 @@ test.describe('Delivery review follow-ups', () => {
     await expect(filter).toBeFocused()
     await filter.fill(name)
     await page.keyboard.press('Enter')
-    // The last prices come along as values, so the keyboard flow can Enter through them.
+    // The last selling price comes along as a suggestion the keyboard flow can Enter through.
     await expect(page.getByTestId('draft-row-purchase-price').first()).toHaveValue('')
-    await expect(page.getByTestId('draft-row-price').first()).toHaveValue('20 Kč')
+    await expect(page.getByTestId('draft-row-price').first()).toHaveAttribute(
+      'placeholder',
+      'návrh 20 Kč'
+    )
     await page.locator(':focus').fill('3')
     await page.keyboard.press('Enter')
     await page.keyboard.press('Enter')

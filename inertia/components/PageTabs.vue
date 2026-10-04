@@ -30,7 +30,7 @@ const activeUrl = computed(() => {
 
 <template>
   <nav
-    class="mb-6 flex gap-1 overflow-x-auto border-b border-gray-200 dark:border-zinc-700"
+    class="mb-6 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-gray-200 dark:border-zinc-700"
     role="tablist"
   >
     <Link

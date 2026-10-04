@@ -132,8 +132,21 @@ export function useSelectEnterKey<T>(bindings: SelectBinding<T>[]) {
     nextTick(() => focusSelectSearchField())
   }
 
+  /**
+   * Bind to `@filter`: PrimeVue drops the highlight on every keystroke, so this puts it back
+   * on the first match. Enter then takes the highlighted option, and ArrowDown moves to the
+   * second one instead of merely highlighting the first — what the eye expects.
+   */
+  function onSelectFilter() {
+    const instance = openBinding()?.selectRef.value
+    if (!instance || typeof instance.findFirstFocusedOptionIndex !== 'function') return
+    nextTick(() => {
+      instance.focusedOptionIndex = instance.findFirstFocusedOptionIndex()
+    })
+  }
+
   onMounted(() => document.addEventListener('keydown', onFilterSearchEnter, true))
   onBeforeUnmount(() => document.removeEventListener('keydown', onFilterSearchEnter, true))
 
-  return { onSelectShow }
+  return { onSelectShow, onSelectFilter }
 }

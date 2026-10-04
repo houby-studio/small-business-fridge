@@ -113,6 +113,23 @@ createInertiaApp({
             cssLayer: false,
           },
         },
+        // An icon-only button says what it does on hover too: its aria-label doubles as the
+        // native tooltip (the v-tooltip directive crashes here, see CLAUDE.md).
+        pt: {
+          button: {
+            root: ({
+              props: button,
+              attrs,
+            }: {
+              props: { label?: string; ariaLabel?: string }
+              attrs: Record<string, unknown>
+            }) => {
+              const label = button.ariaLabel ?? attrs['aria-label']
+              return !button.label && typeof label === 'string' ? { title: label } : {}
+            },
+          },
+        },
+        ptOptions: { mergeSections: true, mergeProps: true },
       })
       .use(ToastService)
       .use(ConfirmationService)

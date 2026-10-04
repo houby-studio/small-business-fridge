@@ -300,6 +300,43 @@ test.group('StockDraftService', (group) => {
     assert.lengthOf(await db.from('audit_logs').where('action', 'stock_draft.created'), 1)
   })
 
+  test('setLineProduct fills the line the supplier came from, else appends the product', async ({
+    assert,
+  }) => {
+    const { supplier, category, product } = await supplierWithProduct()
+    const created = await ProductFactory.merge({ categoryId: category.id }).create()
+    const draft = await service.create(supplier.id, {
+      source: 'shopping_list',
+      items: [
+        { label: 'Energy drink bez cukru', amount: 12, purchasePrice: 24.9 },
+        { productId: product.id, label: 'Pepsi', amount: 6, price: 15 },
+      ],
+    })
+
+    // The unmatched first line gets the new product and keeps its pieces and price.
+    const first = await service.setLineProduct(supplier, draft.id, 0, created.id)
+    assert.equal(first.item.productId, created.id)
+    assert.equal(first.item.amount, 12)
+    assert.equal(Number(first.item.purchasePrice), 24.9)
+
+    // A line that already has a product is left alone: the product becomes a new line.
+    const second = await service.setLineProduct(supplier, draft.id, 1, created.id)
+    const items = await StockDraftItem.query().where('stockDraftId', draft.id).orderBy('sortOrder')
+    assert.lengthOf(items, 3)
+    assert.equal(items[1].productId, product.id)
+    assert.equal(second.item.productId, created.id)
+    assert.equal(second.item.sortOrder, 2)
+
+    // An index past the end appends too; a closed draft refuses.
+    await service.setLineProduct(supplier, draft.id, 99, created.id)
+    assert.lengthOf(await StockDraftItem.query().where('stockDraftId', draft.id), 4)
+    await service.discard(supplier, draft.id)
+    await assert.rejects(
+      () => service.setLineProduct(supplier, draft.id, 0, created.id),
+      /DRAFT_CLOSED/
+    )
+  })
+
   test('countOpen skips empty drafts, listOpen flags them', async ({ assert }) => {
     const { supplier, product } = await supplierWithProduct()
     const empty = await service.create(supplier.id, { source: 'web', items: [] })

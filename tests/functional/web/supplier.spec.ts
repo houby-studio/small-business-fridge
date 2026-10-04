@@ -12,6 +12,7 @@ import Product from '#models/product'
 import Allergen from '#models/allergen'
 import StockDraft from '#models/stock_draft'
 import StockDraftItem from '#models/stock_draft_item'
+import StockDraftService from '#services/shopping/stock_draft_service'
 import db from '@adonisjs/lucid/services/db'
 
 const cleanAll = async () => {
@@ -352,6 +353,59 @@ test.group('Web Supplier - products', (group) => {
     assert.equal(item.stockDraftId, draft.id)
     assert.equal(item.productId, product.id)
     assert.equal(item.amount, 1)
+  })
+
+  test('a product created from a draft line lands in that line, a stale draft falls back', async ({
+    client,
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const drafts = new StockDraftService()
+    const draft = await drafts.create(supplier.id, {
+      source: 'shopping_list',
+      items: [{ label: 'Bake rolls', amount: 6, purchasePrice: 21.9 }],
+    })
+    const pngImage = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9WlH0JkAAAAASUVORK5CYII=',
+      'base64'
+    )
+    const post = (name: string, draftId: number) =>
+      client
+        .post('/supplier/products')
+        .loginAs(supplier)
+        .withCsrfToken()
+        .field('displayName', name)
+        .field('description', 'Z příjemky')
+        .field('categoryId', category.id)
+        .field('allergenIds', JSON.stringify([]))
+        .field('draftId', draftId)
+        .field('lineIndex', 0)
+        .file('image', pngImage, { filename: 'line.png', contentType: 'image/png' })
+        .redirects(0)
+
+    const response = await post('Bake Rolls česnek', draft.id)
+    response.assertStatus(302)
+    const product = await Product.findByOrFail('displayName', 'Bake Rolls česnek')
+    const items = await StockDraftItem.query().where('stockDraftId', draft.id)
+    assert.lengthOf(items, 1)
+    assert.equal(items[0].productId, product.id)
+    assert.equal(items[0].amount, 6)
+    assert.equal(
+      response.header('location'),
+      `/supplier/stock/drafts/${draft.id}?focus=${items[0].id}`
+    )
+
+    // The draft was stocked or discarded meanwhile: the product still has somewhere to go.
+    await drafts.discard(supplier, draft.id)
+    const fallback = await post('Bake Rolls sýr', draft.id)
+    fallback.assertStatus(302)
+    const location = fallback.header('location') || ''
+    const match = location.match(/^\/supplier\/stock\/drafts\/(\d+)\?focus=\d+$/)
+    assert.isNotNull(match, location)
+    assert.notEqual(Number(match![1]), draft.id)
+    const fallbackDraft = await StockDraft.findOrFail(Number(match![1]))
+    assert.equal(fallbackDraft.source, 'web')
   })
 
   test('updating product via PUT persists changes and returns to the product list', async ({

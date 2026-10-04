@@ -157,6 +157,49 @@ export default class StockDraftService {
     return { draft, item }
   }
 
+  /**
+   * A product created from a draft line: the line at `lineIndex` (in sort order) gets the
+   * product when it has none yet, otherwise the product is appended as a new line. Used by
+   * the product form when the supplier came from a draft.
+   */
+  async setLineProduct(
+    actor: Pick<User, 'id' | 'role'>,
+    draftId: number,
+    lineIndex: number,
+    productId: number
+  ): Promise<{ draft: StockDraft; item: StockDraftItem }> {
+    const product = await Product.find(productId)
+    if (!product) throw new DomainError<StockDraftErrorCode>('PRODUCT_NOT_FOUND')
+
+    return db.transaction(async (trx) => {
+      const draft = await this.lockOpen(actor, draftId, trx)
+      const items = await StockDraftItem.query({ client: trx })
+        .where('stockDraftId', draft.id)
+        .orderBy('sortOrder', 'asc')
+        .orderBy('id', 'asc')
+      const line = items[lineIndex]
+      if (line && line.productId === null) {
+        line.productId = productId
+        await line.useTransaction(trx).save()
+        return { draft, item: line }
+      }
+      const item = await StockDraftItem.create(
+        {
+          stockDraftId: draft.id,
+          productId,
+          productGroupId: null,
+          label: null,
+          amount: 1,
+          purchasePrice: null,
+          price: null,
+          sortOrder: items.length ? Math.max(...items.map((i) => i.sortOrder)) + 1 : 0,
+        },
+        { client: trx }
+      )
+      return { draft, item }
+    })
+  }
+
   async listOpen(supplierId: number) {
     const drafts = await StockDraft.query()
       .where('supplierId', supplierId)

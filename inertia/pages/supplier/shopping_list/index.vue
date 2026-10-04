@@ -366,8 +366,16 @@ function completeList() {
     <ConfirmDialog />
 
     <div class="mb-6 flex flex-wrap items-center justify-between gap-2">
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-zinc-100">
+      <h1
+        class="inline-flex items-center gap-1 text-2xl font-bold text-gray-900 dark:text-zinc-100"
+      >
         {{ t('shopping.heading') }}
+        <InfoHint
+          mode="dialog"
+          :title="t('shopping.heading')"
+          :text="t('shopping.list_hint')"
+          test-id="shopping-list-hint"
+        />
       </h1>
       <div class="flex flex-wrap gap-2">
         <Button

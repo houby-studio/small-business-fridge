@@ -13,6 +13,7 @@ import { createProductValidator, updateProductValidator } from '#validators/prod
 import AuditService from '#services/audit_service'
 import { normalizeImagePath } from '#helpers/image_url'
 import { isUniqueViolation } from '#services/unique_violation'
+import { isDomainError } from '#services/domain_error'
 import ProductImageService from '#services/product_images/product_image_service'
 import ProductSuggestionService from '#services/product_ai/product_suggestion_service'
 
@@ -54,7 +55,7 @@ export default class ProductsController {
     })
   }
 
-  async create({ inertia }: HttpContext) {
+  async create({ inertia, request }: HttpContext) {
     const service = new ProductService()
     const [categories, allergens, groups] = await Promise.all([
       service.getCategories(),
@@ -62,7 +63,21 @@ export default class ProductsController {
       service.getProductGroups(),
     ])
 
+    // Coming from a stocking draft line: remember where to return and prefill the line's text.
+    const draftId = Number(request.input('draftId'))
+    const lineIndex = Number(request.input('lineIndex'))
+    const fromDraft =
+      Number.isInteger(draftId) && draftId > 0
+        ? {
+            id: draftId,
+            lineIndex: Number.isInteger(lineIndex) && lineIndex >= 0 ? lineIndex : null,
+            name: String(request.input('name') ?? '').slice(0, 255),
+            groupId: Number(request.input('groupId')) > 0 ? Number(request.input('groupId')) : null,
+          }
+        : null
+
     return inertia.render('supplier/products/create', {
+      fromDraft,
       categories: categories.map((c) => ({ id: c.id, name: c.name, color: c.color })),
       allergens: allergens.map((a) => ({ id: a.id, name: a.name })),
       productGroups: groups.map((g) => ({ id: g.id, name: g.name, categoryId: g.categoryId })),
@@ -104,8 +119,26 @@ export default class ProductsController {
       message: i18n.t('messages.product_created', { name: product.displayName }),
     })
 
-    // Straight on to stocking it: the product lands as a line on the supplier's draft.
-    const { draft, item } = await new StockDraftService().appendProduct(auth.user!.id, product.id)
+    // Straight on to stocking it: back to the draft line the supplier came from, or onto
+    // their manual draft.
+    const drafts = new StockDraftService()
+    const draftId = Number(request.input('draftId'))
+    if (Number.isInteger(draftId) && draftId > 0) {
+      const lineIndex = Number(request.input('lineIndex'))
+      try {
+        const { draft, item } = await drafts.setLineProduct(
+          auth.user!,
+          draftId,
+          Number.isInteger(lineIndex) && lineIndex >= 0 ? lineIndex : Number.MAX_SAFE_INTEGER,
+          product.id
+        )
+        return response.redirect(`/supplier/stock/drafts/${draft.id}?focus=${item.id}`)
+      } catch (error) {
+        if (!isDomainError(error)) throw error
+        // The draft is gone or closed meanwhile — fall through to the manual draft.
+      }
+    }
+    const { draft, item } = await drafts.appendProduct(auth.user!.id, product.id)
     return response.redirect(`/supplier/stock/drafts/${draft.id}?focus=${item.id}`)
   }
 

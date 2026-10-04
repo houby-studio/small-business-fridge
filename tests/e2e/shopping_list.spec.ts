@@ -141,7 +141,7 @@ test.describe('Supplier shopping list', () => {
     await expect(lines.first()).toContainText(name)
     await expect(page.getByTestId('draft-row-price').first()).toHaveAttribute(
       'placeholder',
-      'návrh 13'
+      'návrh 13 Kč'
     )
 
     // The button says what it does; there is no second confirmation.
