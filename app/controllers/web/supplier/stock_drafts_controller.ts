@@ -104,8 +104,8 @@ export default class StockDraftsController {
   async update({ params, request, response, auth, session, i18n }: HttpContext) {
     const data = await request.validateUsing(stockDraftValidator)
     try {
+      // The page saves on every change, so a successful save is silent — the footer says so.
       await new StockDraftService().update(auth.user!, Number(params.id), data)
-      session.flash('alert', { type: 'success', message: i18n.t('messages.stock_draft_saved') })
     } catch (error) {
       this.flashError(error, session, i18n)
     }

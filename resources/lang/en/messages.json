@@ -111,7 +111,6 @@
   "product_group_deleted": "The purchase group was deleted.",
   "product_group_not_found": "The purchase group does not exist.",
   "product_group_category_missing": "The chosen category does not exist.",
-  "stock_draft_saved": "The stocking draft was saved.",
   "stock_draft_committed": "Stocked {pieces} pcs ({count, plural, one {# lot} other {# lots}}).",
   "stock_draft_discarded": "The stocking draft was discarded.",
   "stock_draft_not_found": "The stocking draft does not exist.",

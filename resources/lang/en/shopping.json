@@ -116,5 +116,8 @@
   "draft_remove_line": "Remove line",
   "draft_empty": "Empty draft",
   "draft_new_product": "New product",
-  "list_hint": "The suggestions are recomputed every time you open the list, from current sales and stock. Your quantity and price edits, ticks, dismissed and own lines stay until you finish shopping."
+  "list_hint": "The suggestions are recomputed every time you open the list, from current sales and stock. Your quantity and price edits, ticks, dismissed and own lines stay until you finish shopping.",
+  "draft_saved": "Saved",
+  "draft_saving": "Saving…",
+  "draft_save_failed": "Saving failed"
 }

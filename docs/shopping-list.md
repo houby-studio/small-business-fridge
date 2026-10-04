@@ -40,8 +40,13 @@ stocking form:
   the selling price confirms the line and opens the next one. Ctrl+Enter stocks the draft. One
   item is stocked in three interactions: type the product and press Enter, type the amount and
   press Enter, press **Stock**.
-- An empty selling price is the purchase price plus the supplier's margin, rounded up to whole
-  crowns.
+- An empty selling price is a suggestion the line shows in grey: the product's last selling
+  price, never below the purchase price plus the supplier's margin (rounded up to whole crowns).
+  Enter, Tab or stocking accepts it.
+- Every change saves itself after a short pause (the footer says _Uloženo_ / _Ukládám…_); leaving
+  the page waits for a pending save, so nothing is lost without a Save button.
+- _Nový produkt_ on a line without a product saves the draft, opens the product form with the
+  line's text and group prefilled, and saving the product returns to that very line.
 - Before stocking, every line is checked for a **duplicate** (the same supplier stocked the same
   product within 30 minutes) and an **unusual price** (1.5× away from the last delivery). The
   draft page shows them in one dialog with _Stock anyway_; MCP returns them and asks for

@@ -116,5 +116,8 @@
   "draft_remove_line": "Odebrat řádek",
   "draft_empty": "Prázdná příjemka",
   "draft_new_product": "Nový produkt",
-  "list_hint": "Návrhy se přepočítávají při každém otevření podle aktuálních prodejů a zásob. Tvoje úpravy množství a cen, zaškrtnutí, odebrané i vlastní položky zůstávají, dokud nákup nedokončíš."
+  "list_hint": "Návrhy se přepočítávají při každém otevření podle aktuálních prodejů a zásob. Tvoje úpravy množství a cen, zaškrtnutí, odebrané i vlastní položky zůstávají, dokud nákup nedokončíš.",
+  "draft_saved": "Uloženo",
+  "draft_saving": "Ukládám…",
+  "draft_save_failed": "Uložení selhalo"
 }

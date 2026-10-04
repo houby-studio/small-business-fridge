@@ -31,6 +31,40 @@ test.describe('Stock receiving (příjemka)', () => {
     await expect(row).toContainText('30 Kč')
   })
 
+  test('a draft saves itself: a fresh edit survives leaving the page right away', async ({
+    page,
+  }) => {
+    await loginAs(page, 'supplier')
+    await page.goto('/supplier/stock')
+    await page.getByTestId('stock-receive').click()
+    await expect(page).toHaveURL(/\/supplier\/stock\/drafts\/\d+/)
+    const draftUrl = page.url().split('?')[0]
+
+    // Pick a product by typing, Enter lands in the amount.
+    const filter = page.locator('.p-select-overlay .p-select-filter')
+    await expect(filter).toBeFocused()
+    await filter.fill('Kofola')
+    await page.keyboard.press('Enter')
+    await expect(page.locator(':focus')).toHaveAttribute('placeholder', 'ks')
+    await page.locator(':focus').fill('7')
+    await page.keyboard.press('Tab')
+    await expect(page.getByTestId('draft-save-state')).toHaveAttribute('data-state', 'saved')
+
+    // A change made a moment before leaving is stored before the page goes away.
+    const amount = page.getByTestId('draft-row-amount').first()
+    await amount.fill('9')
+    await page.keyboard.press('Tab')
+    await page.getByRole('button', { name: 'Zpět' }).click()
+    await expect(page).toHaveURL(/\/supplier\/stock\/drafts$/)
+
+    await page.goto(draftUrl)
+    await expect(page.getByTestId('draft-row-amount').first()).toHaveValue('9')
+    await page.keyboard.press('Escape')
+    await page.getByTestId('draft-discard').click()
+    await page.locator('.p-confirmdialog').getByRole('button', { name: 'Zahodit' }).click()
+    await expect(page).toHaveURL(/\/supplier\/stock\/drafts$/)
+  })
+
   test('a product missing from the catalogue is created from the draft line and comes back to it', async ({
     page,
   }) => {

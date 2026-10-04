@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, type Ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, type Ref } from 'vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import Button from 'primevue/button'
@@ -137,7 +137,7 @@ const rows = ref<Row[]>([
   ...(props.draft.status === 'open' ? [ghostRow()] : []),
 ])
 const note = ref(props.draft.note ?? '')
-const submitting = ref<'save' | 'commit' | null>(null)
+const submitting = ref<'commit' | null>(null)
 
 /** The lines that count: everything but the trailing empty one. */
 const lines = computed(() => rows.value.filter((row) => !row.ghost))
@@ -476,29 +476,86 @@ function newProductFromRow(row: Row) {
     ...(row.label ? { name: row.label } : {}),
     ...(row.productGroupId ? { groupId: row.productGroupId } : {}),
   }
-  const open = () => router.get('/supplier/products/new', query)
-  if (lines.value.length === 0) return open()
-  submitting.value = 'save'
-  router.put(`/supplier/stock/drafts/${props.draft.id}`, payload(), {
+  flushSave(() => router.get('/supplier/products/new', query))
+}
+
+// ─── Autosave ─────────────────────────────────────────────────────────────────
+// Every change is saved after a short pause, so nothing is lost when the supplier walks away;
+// the footer says "Uloženo" / "Ukládám…". Nothing is stocked by a save.
+type SaveState = 'saved' | 'pending' | 'saving' | 'error'
+const saveState = ref<SaveState>('saved')
+let saveTimer: ReturnType<typeof setTimeout> | null = null
+let saveInFlight = false
+let saveQueued = false
+let lastSaved = JSON.stringify(payload())
+const afterSave: Array<() => void> = []
+
+const hasUnsavedChanges = computed(() => saveState.value !== 'saved')
+
+function scheduleSave() {
+  if (!isOpen.value || submitting.value === 'commit') return
+  if (JSON.stringify(payload()) === lastSaved) {
+    if (!saveInFlight && !saveTimer) saveState.value = 'saved'
+    return
+  }
+  saveState.value = 'pending'
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = setTimeout(() => flushSave(), 700)
+}
+
+/** Saves now (a pending save first) and calls `done` once the draft is stored. */
+function flushSave(done?: () => void) {
+  if (saveTimer) {
+    clearTimeout(saveTimer)
+    saveTimer = null
+  }
+  if (done) afterSave.push(done)
+  if (!isOpen.value || submitting.value === 'commit') return runAfterSave()
+  const body = payload()
+  const snapshot = JSON.stringify(body)
+  if (snapshot === lastSaved && !saveInFlight) {
+    saveState.value = 'saved'
+    return runAfterSave()
+  }
+  if (saveInFlight) {
+    saveQueued = true
+    return
+  }
+  saveInFlight = true
+  saveState.value = 'saving'
+  router.put(`/supplier/stock/drafts/${props.draft.id}`, body, {
     preserveScroll: true,
-    onSuccess: open,
+    preserveState: true,
+    only: ['draft'],
+    onSuccess: () => {
+      lastSaved = snapshot
+      saveState.value = 'saved'
+    },
+    onError: () => {
+      saveState.value = 'error'
+    },
     onFinish: () => {
-      submitting.value = null
+      saveInFlight = false
+      if (saveQueued) {
+        saveQueued = false
+        flushSave()
+      } else {
+        runAfterSave()
+      }
     },
   })
 }
 
-function save() {
-  if (submitting.value || !isOpen.value) return
-  submitting.value = 'save'
-  router.put(`/supplier/stock/drafts/${props.draft.id}`, payload(), {
-    preserveScroll: true,
-    preserveState: true,
-    onFinish: () => {
-      submitting.value = null
-    },
-  })
+function runAfterSave() {
+  while (afterSave.length) afterSave.shift()!()
 }
+
+function cancelSave() {
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = null
+}
+
+watch([rows, note], scheduleSave, { deep: true })
 
 const warnings = ref<DraftWarning[]>([])
 const warningVisible = ref(false)
@@ -511,6 +568,7 @@ function commit(confirmWarnings = false) {
   // the warning dialog and swallow its Esc.
   openSelectEntry()?.instance.hide()
 
+  cancelSave()
   submitting.value = 'commit'
   router.post(
     `/supplier/stock/drafts/${props.draft.id}/commit`,
@@ -563,7 +621,10 @@ function discard() {
     acceptLabel: t('shopping.draft_discard'),
     rejectLabel: t('common.cancel'),
     destructive: true,
-    accept: () => router.delete(`/supplier/stock/drafts/${props.draft.id}`),
+    accept: () => {
+      cancelSave()
+      router.delete(`/supplier/stock/drafts/${props.draft.id}`)
+    },
   })
 }
 
@@ -574,7 +635,25 @@ function onGlobalKeydown(event: KeyboardEvent) {
   commit()
 }
 
+/**
+ * Leaving the page (Zpět, the menu, a tab) first stores a pending change — the navigation
+ * is held back for the few hundred milliseconds the save takes, then replayed.
+ */
+let stopBeforeVisit: (() => void) | null = null
+function onBeforeUnload(event: BeforeUnloadEvent) {
+  if (hasUnsavedChanges.value) event.preventDefault()
+}
+
 onMounted(() => {
+  stopBeforeVisit = router.on('before', (event) => {
+    const visit = event.detail.visit
+    if (visit.method !== 'get' || !hasUnsavedChanges.value || !isOpen.value) return
+    event.preventDefault()
+    flushSave(() =>
+      router.visit(visit.url, { method: 'get', preserveScroll: visit.preserveScroll })
+    )
+  })
+  window.addEventListener('beforeunload', onBeforeUnload)
   document.addEventListener('keydown', onGlobalKeydown)
   if (!isOpen.value) return
   const focused = props.focusItemId
@@ -595,7 +674,11 @@ onMounted(() => {
   }
 })
 
-onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKeydown))
+onBeforeUnmount(() => {
+  stopBeforeVisit?.()
+  window.removeEventListener('beforeunload', onBeforeUnload)
+  document.removeEventListener('keydown', onGlobalKeydown)
+})
 </script>
 
 <template>
@@ -825,15 +908,34 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKeydown))
           data-testid="draft-discard"
           @click="discard"
         />
-        <Button
-          :label="t('common.save')"
-          severity="secondary"
-          text
-          :loading="submitting === 'save'"
-          :disabled="submitting !== null"
-          data-testid="draft-save"
-          @click="save"
-        />
+        <span
+          class="inline-flex items-center gap-1 text-xs"
+          :class="
+            saveState === 'error'
+              ? 'text-amber-700 dark:text-amber-300'
+              : 'text-gray-500 dark:text-zinc-400'
+          "
+          :data-state="saveState"
+          data-testid="draft-save-state"
+        >
+          <span
+            :class="
+              saveState === 'saved'
+                ? 'pi pi-check'
+                : saveState === 'error'
+                  ? 'pi pi-exclamation-triangle'
+                  : 'pi pi-spin pi-spinner'
+            "
+            aria-hidden="true"
+          />
+          {{
+            saveState === 'saved'
+              ? t('shopping.draft_saved')
+              : saveState === 'error'
+                ? t('shopping.draft_save_failed')
+                : t('shopping.draft_saving')
+          }}
+        </span>
         <Button
           :label="commitLabel"
           icon="pi pi-check"

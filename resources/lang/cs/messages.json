@@ -111,7 +111,6 @@
   "product_group_deleted": "Nákupní skupina byla smazána.",
   "product_group_not_found": "Nákupní skupina neexistuje.",
   "product_group_category_missing": "Vybraná kategorie neexistuje.",
-  "stock_draft_saved": "Příjemka byla uložena.",
   "stock_draft_committed": "Naskladněno {pieces} ks ({count, plural, one {# dodávka} few {# dodávky} other {# dodávek}}).",
   "stock_draft_discarded": "Příjemka byla zahozena.",
   "stock_draft_not_found": "Příjemka neexistuje.",
