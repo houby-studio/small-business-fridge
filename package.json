@@ -67,7 +67,7 @@
     "@poppinss/ts-exec": "^1.4.4",
     "@tailwindcss/vite": "^4.1.18",
     "@types/luxon": "^3.7.1",
-    "@types/node": "^24.19.0",
+    "@types/node": "^26.6.4",
     "@types/pg": "^8.16.0",
     "@types/proxy-addr": "^2.0.3",
     "@types/qrcode": "^1.5.6",
