@@ -41,7 +41,7 @@ jobs:
     steps:
       # The default checkout is github.sha — the exact commit CI tested and the token attests.
       # For a pull request that is the merge commit, not the branch head.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Emulates arm64 for the one stage that has to run on the target architecture (the
       # production `npm ci`); everything else builds natively, see the top of the Dockerfile.
@@ -182,7 +182,7 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -233,7 +233,7 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           sparse-checkout: docker
 
