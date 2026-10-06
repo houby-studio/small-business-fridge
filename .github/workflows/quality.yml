@@ -396,7 +396,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Download JUnit reports
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           pattern: junit-*
           path: reports
