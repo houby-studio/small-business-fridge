@@ -185,7 +185,7 @@ jobs:
           test -s test-results/junit-japa.xml
 
       - name: Publish Japa test results
-        uses: mikepenz/action-junit-report@v4
+        uses: mikepenz/action-junit-report@v5
         if: always()
         with:
           report_paths: 'test-results/junit-japa.xml'
@@ -318,7 +318,7 @@ jobs:
           test -s test-results/junit-e2e-auth-matrix.xml
 
       - name: Publish Playwright Auth Matrix results
-        uses: mikepenz/action-junit-report@v4
+        uses: mikepenz/action-junit-report@v5
         if: always()
         with:
           report_paths: 'test-results/junit-e2e-auth-matrix.xml'
@@ -403,7 +403,7 @@ jobs:
 
       # The shards each wrote a partial junit-e2e.xml; one check run covers all of them.
       - name: Publish Playwright E2E results
-        uses: mikepenz/action-junit-report@v4
+        uses: mikepenz/action-junit-report@v5
         if: always()
         with:
           report_paths: 'reports/junit-e2e-[0-9]*/junit-e2e.xml'
