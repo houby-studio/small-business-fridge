@@ -4,37 +4,41 @@
     <meta charset="utf-8" />
   </head>
   <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <h2 style="color: #4CAF50;">{{ i18n.t('emails.restock_heading') }}</h2>
     @if(items.length === 1)
-      <p>{{ i18n.t('emails.restock_intro', { name, productName, supplierName }) }}</p>
+      <h2 style="color: #4CAF50;">{{ i18n.t('emails.restock_heading') }}</h2>
+      <p>{{ i18n.t('emails.restock_intro', { name }) }}</p>
     @else
-      <p>{{ i18n.t('emails.restock_intro_many', { name, count: items.length }) }}</p>
+      <h2 style="color: #4CAF50;">{{ i18n.t('emails.restock_heading_many') }}</h2>
+      <p>{{ i18n.t('emails.restock_intro_many', { name }) }}</p>
     @end
 
-    <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-      <tr style="background: #4CAF50; color: white;">
-        <td style="padding: 10px; font-weight: bold;">{{ i18n.t('emails.purchase_product') }}</td>
-        <td style="padding: 10px; text-align: right;">
-          {{ i18n.t('emails.restock_amount_header') }}
-        </td>
-        <td style="padding: 10px; text-align: right;">
-          {{ i18n.t('emails.restock_price_header') }}
-        </td>
-      </tr>
+    <table
+      style="width: 100%; border-collapse: separate; border-spacing: 0 8px; margin: 12px 0 20px;"
+    >
       @each(item in items)
         <tr>
-          <td style="padding: 8px; border: 1px solid #ddd;">{{ item.productName }}</td>
-          <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">
-            {{ item.amount }}
+          <td
+            style="padding: 12px 14px; border: 1px solid #ddd; border-right: none; border-left: 4px solid #4CAF50; border-radius: 4px 0 0 4px;"
+          >
+            <div style="font-size: 16px; font-weight: bold;">{{ item.productName }}</div>
+            <div style="color: #888; font-size: 13px; margin-top: 4px;">
+              {{
+                i18n.t('emails.restock_item_meta', {
+                  supplier: item.supplierName,
+                  amount: item.amount,
+                })
+              }}
+            </div>
           </td>
-          <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">
-            {{ item.price }}
-            {{ currency }}
+          <td
+            style="padding: 12px 14px; border: 1px solid #ddd; border-left: none; border-radius: 0 4px 4px 0; text-align: right; white-space: nowrap; font-size: 16px; font-weight: bold;"
+          >
+            {{ i18n.t('common.price_with_currency', { price: item.price }) }}
           </td>
         </tr>
       @end
     </table>
-    <p><strong>{{ i18n.t('emails.restock_note') }}</strong></p>
+
     <p style="margin: 24px 0; text-align: center;">
       <a
         href="{{ shopUrl }}"
