@@ -3,13 +3,14 @@ import { ref, computed, watch } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
-import InputNumber from 'primevue/inputnumber'
+import InputNumber from '~/components/NumberInput.vue'
 import Textarea from 'primevue/textarea'
+import InfoHint from '~/components/InfoHint.vue'
 import { useI18n } from '~/composables/use_i18n'
+import { useMoney } from '~/composables/use_pricing'
 import {
   useDeliveryCorrectionValidation,
   CORRECTION_REASON_MAX_LENGTH,
-  DELIVERY_MAX_PRICE,
   type DeliveryCorrectionFormState,
 } from '~/composables/use_delivery_correction_validation'
 
@@ -34,6 +35,7 @@ const props = defineProps<{
 const visible = defineModel<boolean>('visible', { required: true })
 
 const { t, tp } = useI18n()
+const { amount: formatAmount } = useMoney()
 const page = usePage()
 
 // Field errors from a server-side validation failure (Inertia shares them as `errors`).
@@ -131,7 +133,9 @@ const impact = computed(() => {
 
   const invoiced =
     d.invoicedCount > 0
-      ? tp('supplier.correction_impact_invoiced', d.invoicedCount, { price: d.price })
+      ? tp('supplier.correction_impact_invoiced', d.invoicedCount, {
+          price: formatAmount(d.price),
+        })
       : ''
 
   if (d.uninvoicedCount > 0) {
@@ -139,7 +143,7 @@ const impact = computed(() => {
       priceDiffTotal.value > 0
         ? 'supplier.correction_impact_more'
         : 'supplier.correction_impact_less',
-      { count: d.uninvoicedCount, diff: Math.abs(priceDiffTotal.value) }
+      { count: d.uninvoicedCount, diff: formatAmount(Math.abs(priceDiffTotal.value)) }
     )
     const email = tp('supplier.correction_impact_email', d.uninvoicedBuyerCount)
     return { reachesBuyers: true, text: [repriced, email, invoiced].filter(Boolean).join(' ') }
@@ -221,13 +225,14 @@ function submit() {
     :draggable="false"
     data-testid="delivery-correction-dialog"
   >
-    <div v-if="delivery" class="space-y-4">
+    <!-- A form, so Enter in any number field submits (the textarea keeps Enter for new lines). -->
+    <form v-if="delivery" id="delivery-correction-form" class="space-y-4" @submit.prevent="submit">
       <p v-if="isVoid" class="text-sm text-gray-700 dark:text-zinc-300">
         {{
           t('supplier.void_description', {
             amount: delivery.amountSupplied,
             product: delivery.productName,
-            price: delivery.price,
+            price: formatAmount(delivery.price),
           })
         }}
       </p>
@@ -243,7 +248,6 @@ function submit() {
               fluid
               highlightOnFocus
               :min="1"
-              :max="delivery.amountSupplied"
               :disabled="allSold"
               :suffix="' ' + t('common.pieces')"
               :invalid="!!amountMessage"
@@ -262,27 +266,6 @@ function submit() {
             >
           </div>
           <div>
-            <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300"
-              >{{ t('supplier.correction_price') }} *</label
-            >
-            <InputNumber
-              v-model="form.price"
-              :pt="{ pcInputText: { root: { autofocus: true } } }"
-              fluid
-              highlightOnFocus
-              :min="1"
-              :max="DELIVERY_MAX_PRICE"
-              :suffix="' ' + t('common.currency')"
-              :invalid="!!priceMessage"
-              data-testid="correction-price"
-            />
-            <small
-              v-if="priceMessage"
-              class="mt-1 block text-xs leading-snug text-red-500 dark:text-red-400"
-              >{{ priceMessage }}</small
-            >
-          </div>
-          <div>
             <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300">{{
               t('supplier.deliveries_purchase_price')
             }}</label>
@@ -291,7 +274,6 @@ function submit() {
               fluid
               highlightOnFocus
               :min="0"
-              :max="DELIVERY_MAX_PRICE"
               :minFractionDigits="2"
               :maxFractionDigits="2"
               :suffix="' ' + t('common.currency')"
@@ -303,6 +285,32 @@ function submit() {
               v-if="purchasePriceMessage"
               class="mt-1 block text-xs leading-snug text-red-500 dark:text-red-400"
               >{{ purchasePriceMessage }}</small
+            >
+          </div>
+          <div>
+            <div class="mb-1 flex items-center gap-1">
+              <label class="block text-sm text-gray-700 dark:text-zinc-300"
+                >{{ t('supplier.correction_price') }} *</label
+              >
+              <InfoHint
+                :text="t('supplier.correction_price_hint')"
+                testId="correction-price-hint"
+              />
+            </div>
+            <InputNumber
+              v-model="form.price"
+              :pt="{ pcInputText: { root: { autofocus: true } } }"
+              fluid
+              highlightOnFocus
+              :min="1"
+              :suffix="' ' + t('common.currency')"
+              :invalid="!!priceMessage"
+              data-testid="correction-price"
+            />
+            <small
+              v-if="priceMessage"
+              class="mt-1 block text-xs leading-snug text-red-500 dark:text-red-400"
+              >{{ priceMessage }}</small
             >
           </div>
         </div>
@@ -359,7 +367,7 @@ function submit() {
           >
         </div>
       </div>
-    </div>
+    </form>
 
     <template #footer>
       <Button :label="t('common.cancel')" severity="secondary" text @click="close" />
@@ -367,18 +375,20 @@ function submit() {
         v-if="isVoid"
         :label="t('supplier.void_submit')"
         severity="danger"
+        type="submit"
+        form="delivery-correction-form"
         :disabled="!voidValid || submitting"
         :loading="submitting"
         data-testid="correction-submit"
-        @click="submit"
       />
       <Button
         v-else
         :label="t('supplier.correction_submit')"
+        type="submit"
+        form="delivery-correction-form"
         :disabled="!isValid || submitting"
         :loading="submitting"
         data-testid="correction-submit"
-        @click="submit"
       />
     </template>
   </Dialog>

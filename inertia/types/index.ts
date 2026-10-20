@@ -48,6 +48,8 @@ export interface SharedProps {
   currency?: string
   /** Open stocking drafts with at least one line — the badge on "Naskladnění" (suppliers only). */
   openDraftCount?: number
+  /** Someone else has stocked the fridge too, so the "Rozsah" filter means something. */
+  hasOtherSuppliers?: boolean
   [key: string]: unknown
 }
 

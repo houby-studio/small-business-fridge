@@ -63,7 +63,7 @@ export function registerCustomerTools(server: McpServer, user: User) {
             isFavorite: p.isFavorite,
           })),
           count: products.length,
-          note: 'Prices are in CZK. Pass deliveryId to buy_product to purchase.',
+          hint: 'Prices are in CZK. Pass deliveryId to buy_product to purchase.',
         })
       } catch (err) {
         return mapDomainError(err, 'Listing products failed')
@@ -179,7 +179,7 @@ export function registerCustomerTools(server: McpServer, user: User) {
           purchased: orderIds.length,
           unitPrice: price,
           totalCost,
-          note: 'Purchase confirmed. Payment happens later via invoice (see get_my_invoices).',
+          hint: 'Purchase confirmed. Payment happens later via invoice (see get_my_invoices).',
         })
       } catch (err) {
         return mapDomainError(err, 'Purchase failed')
@@ -258,7 +258,7 @@ export function registerCustomerTools(server: McpServer, user: User) {
             orderCount: inv.orders?.length ?? 0,
             createdAt: inv.createdAt?.toISO() ?? null,
           })),
-          note:
+          hint:
             'CZK. For an unpaid invoice: pay via bank transfer (get_payment_qr gives the QR/SPD ' +
             'payment string), then call request_payment to notify the supplier.',
         })
@@ -308,7 +308,7 @@ export function registerCustomerTools(server: McpServer, user: User) {
           iban: invoice.supplier.iban,
           receiver: invoice.supplier.displayName,
           spdCode: qr.code,
-          note: 'CZK. After paying, call request_payment so the supplier can confirm.',
+          hint: 'CZK. After paying, call request_payment so the supplier can confirm.',
         })
       } catch (err) {
         return mapDomainError(err, 'Generating the payment QR failed')
@@ -320,7 +320,7 @@ export function registerCustomerTools(server: McpServer, user: User) {
   server.tool(
     'request_payment',
     'Report that you paid an invoice you received (you are the buyer) — after the bank ' +
-      'transfer went out. The supplier then confirms or rejects it. To confirm money that ' +
+      'transfer went out. The supplier is e-mailed and then confirms or rejects it. To confirm money that ' +
       'arrived for an invoice you ISSUED use approve_payment.',
     {
       invoiceId: z.number().int().positive().describe('Invoice you received (get_my_invoices)'),
@@ -332,7 +332,7 @@ export function registerCustomerTools(server: McpServer, user: User) {
         return ok({
           invoiceId: invoice.id,
           status: 'awaiting',
-          note: 'Payment reported. The supplier will confirm it.',
+          hint: 'Payment reported. The supplier was e-mailed and will confirm it.',
         })
       } catch (err) {
         return mapDomainError(err, 'Payment request failed')
@@ -352,7 +352,11 @@ export function registerCustomerTools(server: McpServer, user: User) {
     async ({ invoiceId }) => {
       try {
         const invoice = await new InvoiceService().cancelPaymentRequest(invoiceId, user.id)
-        return ok({ invoiceId: invoice.id, status: 'unpaid' })
+        return ok({
+          invoiceId: invoice.id,
+          status: 'unpaid',
+          hint: 'Withdrawn. The supplier was e-mailed.',
+        })
       } catch (err) {
         return mapDomainError(err, 'Cancelling the payment request failed')
       }
@@ -373,7 +377,7 @@ export function registerCustomerTools(server: McpServer, user: User) {
       try {
         const ids = await new RecommendationService().getRecommendedIds(user.id, limit ?? 4)
         if (ids.length === 0) {
-          return ok({ recommendations: [], note: 'No recommendations yet — buy something first.' })
+          return ok({ recommendations: [], hint: 'No recommendations yet — buy something first.' })
         }
         const products = await Product.query().whereIn('id', ids).preload('category')
         const byId = new Map(products.map((p) => [p.id, p]))
@@ -386,7 +390,7 @@ export function registerCustomerTools(server: McpServer, user: User) {
               displayName: p!.displayName,
               category: p!.category?.name ?? null,
             })),
-          note: 'Use list_products to get current price/stock, then buy_product.',
+          hint: 'Use list_products to get current price/stock, then buy_product.',
         })
       } catch (err) {
         return mapDomainError(err, 'Fetching recommendations failed')

@@ -8,7 +8,23 @@ import db from '@adonisjs/lucid/services/db'
 import InvoiceService from '#services/invoice_service'
 import { revokeLongLivedCredentials } from '#services/credential_revocation'
 import AuditService from '#services/audit_service'
+import NotificationService from '#services/notification_service'
+import { runAfterResponse } from '#services/side_effects'
 import { DateTime } from 'luxon'
+import DeliveryService, { type OpenBusiness } from '#services/delivery_service'
+import { DomainError } from '#services/domain_error'
+
+/**
+ * A supplier cannot be switched off (disabled, or demoted to customer) while their stock is
+ * still on the shelf or purchases from it are not invoiced — nobody could bill or move
+ * them any more. Unpaid invoices do not block: an admin can confirm those payments later.
+ */
+export class SupplierHasOpenBusiness extends DomainError<'SUPPLIER_HAS_OPEN_BUSINESS'> {
+  constructor(readonly business: OpenBusiness) {
+    super('SUPPLIER_HAS_OPEN_BUSINESS')
+    this.name = 'SupplierHasOpenBusiness'
+  }
+}
 
 export default class AdminService {
   /**
@@ -186,6 +202,15 @@ export default class AdminService {
       }
     }
 
+    const disabling = data.isDisabled === true && !user.isDisabled
+    const leavingSupplier = user.role !== 'customer' && nextRole === 'customer'
+    if (disabling || leavingSupplier) {
+      const business = await new DeliveryService().openBusinessOf(user.id)
+      if (business.lotsWithStock > 0 || business.uninvoicedOrders > 0) {
+        throw new SupplierHasOpenBusiness(business)
+      }
+    }
+
     if (data.keypadId !== undefined && data.keypadId !== user.keypadId) {
       if (isReservedUserKeypadId(data.keypadId)) {
         throw new Error('KEYPAD_ID_RESERVED')
@@ -286,7 +311,9 @@ export default class AdminService {
 
   /**
    * Delete a category.
-   * Throws 'CATEGORY_HAS_PRODUCTS' if any product still references this category.
+   * Throws 'CATEGORY_HAS_PRODUCTS' if any product still references this category, and
+   * 'CATEGORY_HAS_GROUPS' if purchase groups do — suppliers plan with those, so they are
+   * moved or deleted on purpose, never swept away with the category.
    */
   async deleteCategory(categoryId: number) {
     const category = await Category.findOrFail(categoryId)
@@ -294,6 +321,10 @@ export default class AdminService {
     const hasProducts = await db.from('products').where('category_id', category.id).first()
     if (hasProducts) {
       throw new Error('CATEGORY_HAS_PRODUCTS')
+    }
+    const hasGroups = await db.from('product_groups').where('category_id', category.id).first()
+    if (hasGroups) {
+      throw new Error('CATEGORY_HAS_GROUPS')
     }
 
     await category.delete()
@@ -469,8 +500,12 @@ export default class AdminService {
   /**
    * Storno (cancel) an order — restore stock and remove the order.
    */
+  /**
+   * Cancels an uninvoiced purchase. The buyer is told, and so is the supplier whose stock it
+   * came from (unless they cancelled it themselves) — for every channel, web or MCP.
+   */
   async stornoOrder(orderId: number, actorId: number) {
-    return db.transaction(async (trx) => {
+    const cancelled = await db.transaction(async (trx) => {
       // Lock order: delivery first, then the order — the same order a delivery correction
       // takes (delivery, then its orders). Locking the order first deadlocked against a
       // correction of the same delivery.
@@ -482,7 +517,8 @@ export default class AdminService {
 
       const order = await Order.query({ client: trx })
         .where('id', orderId)
-        .preload('delivery')
+        .preload('buyer')
+        .preload('delivery', (q) => q.preload('product').preload('supplier'))
         .forUpdate()
         .firstOrFail()
 
@@ -490,11 +526,10 @@ export default class AdminService {
         throw new Error('ORDER_ALREADY_INVOICED')
       }
 
-      // Restore stock with an atomic increment rather than read-modify-write. The preloaded
-      // delivery is not row-locked (forUpdate() applies to `orders`), so a concurrent
-      // purchase or storno on the same delivery would otherwise overwrite the other's
-      // amountLeft and quietly lose a unit of stock.
-      await trx.from('deliveries').where('id', order.deliveryId).increment('amount_left', 1)
+      // The piece goes back to stock under the lot locks (returnPieces). A lot handed over
+      // to another supplier since gives it to the lot that took over its stock, so the
+      // leaving supplier gets no stock back.
+      const returnedTo = await new DeliveryService().returnPieces(order.deliveryId, 1, trx)
 
       // Delete the order
       await order.useTransaction(trx).delete()
@@ -512,11 +547,26 @@ export default class AdminService {
           supplierId: order.delivery.supplierId,
           price: order.unitPrice,
           channel: order.channel,
+          // When the cancelled purchase was made — an inventory in progress replays a storno
+          // of a purchase its sheet already showed (InventoryService.expectedAtCount).
+          orderCreatedAt: order.createdAt.toISO(),
+          ...(returnedTo.id !== order.deliveryId && { returnedToDeliveryId: returnedTo.id }),
         },
         { client: trx }
       )
 
       return order
     })
+
+    const notifications = new NotificationService()
+    runAfterResponse(
+      () => notifications.sendStornoNotification(cancelled),
+      `storno e-mail for order #${orderId}`
+    )
+    runAfterResponse(async () => {
+      const actor = await User.find(actorId)
+      if (actor) await notifications.sendStornoToSupplier(cancelled, actor)
+    }, `supplier notice about storno of order #${orderId}`)
+    return cancelled
   }
 }

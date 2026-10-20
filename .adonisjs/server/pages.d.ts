@@ -46,7 +46,6 @@ declare module '@adonisjs/inertia/types' {
     'supplier/products/edit': ExtractProps<(typeof import('../../inertia/pages/supplier/products/edit.vue'))['default']>
     'supplier/products/index': ExtractProps<(typeof import('../../inertia/pages/supplier/products/index.vue'))['default']>
     'supplier/shopping_list/index': ExtractProps<(typeof import('../../inertia/pages/supplier/shopping_list/index.vue'))['default']>
-    'supplier/stock_drafts/index': ExtractProps<(typeof import('../../inertia/pages/supplier/stock_drafts/index.vue'))['default']>
     'supplier/stock_drafts/show': ExtractProps<(typeof import('../../inertia/pages/supplier/stock_drafts/show.vue'))['default']>
     'supplier/stock/index': ExtractProps<(typeof import('../../inertia/pages/supplier/stock/index.vue'))['default']>
   }

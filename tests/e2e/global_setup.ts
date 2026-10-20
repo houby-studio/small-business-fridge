@@ -425,6 +425,17 @@ export default async function globalSetup() {
       deliveryIds[prod.keypadId] = result.rows[0].id
     }
 
+    // A second supplier has stocked the fridge once (long ago, voided — no stock, no orders),
+    // so the "Rozsah" filter is shown to `supplier`: it is hidden while every delivery is
+    // the user's own. Deterministic, instead of depending on which spec ran first.
+    await client.query(
+      `INSERT INTO deliveries (supplier_id, product_id, amount_supplied, amount_left, price,
+         voided_at, created_at, updated_at)
+       SELECT u.id, $1, 1, 0, 1, NOW() - interval '400 days', NOW() - interval '400 days', NOW()
+       FROM users u WHERE u.email = 'supplier2@localhost'`,
+      [productIds[products[0].keypadId]]
+    )
+
     // 8. Delete existing invoices (they reference orders)
     await client.query(`DELETE FROM invoices WHERE supplier_id = $1`, [supplierId])
 

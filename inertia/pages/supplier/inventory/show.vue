@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
-import { Head, Link, router } from '@inertiajs/vue3'
+import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
 import Select from 'primevue/select'
+import InfoHint from '~/components/InfoHint.vue'
 import { useI18n } from '~/composables/use_i18n'
 import { useMoney } from '~/composables/use_pricing'
 import { formatDate } from '~/composables/use_format_date'
@@ -34,10 +35,14 @@ const props = defineProps<{
       productId: number
       productName: string
       expectedQty: number
+      sheetQty: number | null
       countedQty: number
       appliedQty: number
     }>
     adjustments: Adjustment[]
+    /** Loss net of surplus — at purchase prices (selling price where unknown) and at selling prices. */
+    lossCost: number
+    lossValue: number
   }
 }>()
 
@@ -51,16 +56,12 @@ const productName = computed(
   () => new Map(props.count.items.map((item) => [item.productId, item.productName]))
 )
 const changedItems = computed(() => props.count.items.filter((item) => item.appliedQty !== 0))
-const totals = computed(() => {
-  let lossValue = 0
-  let lossCost = 0
-  for (const a of props.count.adjustments) {
-    const sign = a.kind === 'loss' ? 1 : -1
-    lossValue += sign * a.quantity * a.unitPrice
-    lossCost += sign * a.quantity * (a.unitCost ?? a.unitPrice)
-  }
-  return { lossValue, lossCost: Math.round(lossCost * 100) / 100 }
-})
+// Totals come from the server — a colleague's purchase prices are not sent per lot.
+const totals = computed(() => ({
+  lossValue: props.count.lossValue,
+  lossCost: props.count.lossCost,
+}))
+const hasUnclassified = computed(() => [...savedReasons.value.values()].includes('inventory'))
 
 // ─── Why the pieces are missing ────────────────────────────────────────────────
 // All loss rows of a product share one reason (they are reclassified together).
@@ -121,9 +122,13 @@ function diffClass(diff: number) {
     <Head :title="t('inventory.detail_title', { id: count.id })" />
 
     <div class="mb-2 flex items-center gap-2">
-      <Link href="/supplier/inventory">
-        <Button icon="pi pi-arrow-left" severity="secondary" text :aria-label="t('common.back')" />
-      </Link>
+      <Button
+        icon="pi pi-arrow-left"
+        severity="secondary"
+        text
+        :aria-label="t('common.back')"
+        @click="router.get('/supplier/inventory')"
+      />
       <h1 class="text-2xl font-bold text-gray-900 dark:text-zinc-100">
         {{ t('inventory.detail_title', { id: count.id }) }}
       </h1>
@@ -174,7 +179,7 @@ function diffClass(diff: number) {
     <h2 class="mb-2 text-lg font-semibold text-gray-800 dark:text-zinc-200">
       {{ t('inventory.differences') }}
     </h2>
-    <p v-if="savedReasons.size > 0" class="mb-3 text-sm text-gray-500 dark:text-zinc-400">
+    <p v-if="hasUnclassified" class="mb-3 text-sm text-gray-500 dark:text-zinc-400">
       {{ t('inventory.classify_hint') }}
     </p>
     <DataTable :value="changedItems" stripedRows class="mb-6 rounded-lg border" dataKey="productId">
@@ -182,7 +187,15 @@ function diffClass(diff: number) {
         <template #body="{ data }">{{ data.productName }}</template>
       </Column>
       <Column :header="t('inventory.expected_column')">
-        <template #body="{ data }">{{ data.expectedQty }} {{ t('common.pieces') }}</template>
+        <template #body="{ data }">
+          <span class="inline-flex items-center gap-1"
+            >{{ data.expectedQty }} {{ t('common.pieces') }}
+            <InfoHint
+              v-if="data.sheetQty !== null"
+              :text="t('inventory.sheet_qty_hint', { sheet: data.sheetQty })"
+              :test-id="`count-sheet-qty-${data.productId}`"
+          /></span>
+        </template>
       </Column>
       <Column :header="t('inventory.counted_column')">
         <template #body="{ data }">{{ data.countedQty }} {{ t('common.pieces') }}</template>
@@ -190,7 +203,7 @@ function diffClass(diff: number) {
       <Column :header="t('inventory.applied_column')">
         <template #body="{ data }">
           <span class="font-semibold" :class="diffClass(data.appliedQty)">{{
-            data.appliedQty > 0 ? `+${data.appliedQty}` : data.appliedQty
+            data.appliedQty > 0 ? `+${data.appliedQty}` : `\u2212${-data.appliedQty}`
           }}</span>
         </template>
       </Column>

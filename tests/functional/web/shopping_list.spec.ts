@@ -1,6 +1,7 @@
 import '#tests/test_context'
 import { test } from '@japa/runner'
 import { readFileSync } from 'node:fs'
+import { DateTime } from 'luxon'
 import db from '@adonisjs/lucid/services/db'
 import mail from '@adonisjs/mail/services/main'
 import { UserFactory } from '#database/factories/user_factory'
@@ -15,6 +16,7 @@ import StockDraftItem from '#models/stock_draft_item'
 import type User from '#models/user'
 import {
   ADJUSTMENT_NOTE_MAX,
+  INVENTORY_MAX_COUNT,
   INVENTORY_SCOPES,
   LOSS_REASONS,
   WRITE_OFF_REASONS,
@@ -28,6 +30,7 @@ import {
   STOCK_DRAFT_NOTE_MAX,
 } from '#validators/shopping'
 import { MAX_HORIZON_DAYS, MIN_HORIZON_DAYS } from '#services/shopping/demand_math'
+import { DELIVERY_MAX_AMOUNT } from '#validators/delivery'
 import { MAX_MARGIN_PERCENT } from '#services/shopping/pricing'
 
 const cleanAll = async () => {
@@ -251,6 +254,8 @@ test.group('Web Supplier - shopping validation mirror', () => {
     assert.equal(constant('STOCK_DRAFT_NOTE_MAX'), STOCK_DRAFT_NOTE_MAX)
     assert.equal(constant('STOCK_DRAFT_MAX_ITEMS'), STOCK_DRAFT_MAX_ITEMS)
     assert.equal(constant('ADJUSTMENT_NOTE_MAX'), ADJUSTMENT_NOTE_MAX)
+    assert.equal(constant('INVENTORY_MAX_COUNT'), INVENTORY_MAX_COUNT)
+    assert.equal(constant('SHOPPING_MAX_QUANTITY'), DELIVERY_MAX_AMOUNT)
     assert.equal(constant('MIN_HORIZON_DAYS'), MIN_HORIZON_DAYS)
     assert.equal(constant('MAX_HORIZON_DAYS'), MAX_HORIZON_DAYS)
     assert.equal(constant('MAX_MARGIN_PERCENT'), MAX_MARGIN_PERCENT)
@@ -323,6 +328,122 @@ test.group('Web Supplier - purchase groups', (group) => {
       'product_group.updated',
       'product_group.deleted',
     ])
+  })
+
+  test('a group taking a product over from another group says so in the audit', async ({
+    client,
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const bars = await ProductGroup.create({ name: 'Tyčinky', categoryId: category.id })
+    const twix = await ProductFactory.merge({
+      categoryId: category.id,
+      productGroupId: bars.id,
+    }).create()
+
+    await client
+      .post('/supplier/product-groups')
+      .loginAs(supplier)
+      .withCsrfToken()
+      .header('referer', '/supplier/product-groups')
+      .json({ name: 'Čokoláda', categoryId: category.id, productIds: [twix.id] })
+      .redirects(0)
+
+    const audit = await db.from('audit_logs').where('action', 'product_group.created').first()
+    assert.deepEqual(audit.metadata.movedFromGroupIds, [bars.id])
+  })
+
+  test('archived products are not offered to a list or a group (F6)', async ({
+    client,
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const bars = await ProductGroup.create({ name: 'Tyčinky', categoryId: category.id })
+    const active = await ProductFactory.merge({ categoryId: category.id }).create()
+    const archived = await ProductFactory.merge({
+      categoryId: category.id,
+      archivedAt: DateTime.now(),
+    }).create()
+    const archivedMember = await ProductFactory.merge({
+      categoryId: category.id,
+      productGroupId: bars.id,
+      archivedAt: DateTime.now(),
+    }).create()
+
+    const list = await client.get('/supplier/shopping-list').loginAs(supplier).headers(inertia)
+    const listIds = list.body().props.products.map((p: { id: number }) => p.id)
+    assert.include(listIds, active.id)
+    assert.notInclude(listIds, archived.id)
+    assert.notInclude(listIds, archivedMember.id)
+
+    const groups = await client.get('/supplier/product-groups').loginAs(supplier).headers(inertia)
+    const groupIds = groups.body().props.products.map((p: { id: number }) => p.id)
+    assert.include(groupIds, active.id)
+    assert.notInclude(groupIds, archived.id)
+    // Still a member of its group, so the group shows it.
+    assert.include(groupIds, archivedMember.id)
+  })
+
+  test('a category with purchase groups cannot be deleted (D-03)', async ({ client, assert }) => {
+    const admin = await UserFactory.apply('admin').create()
+    const category = await CategoryFactory.create()
+    await ProductGroup.create({ name: 'Energy', categoryId: category.id })
+
+    const response = await client
+      .delete(`/admin/categories/${category.id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .headers(inertia)
+      .redirects(1)
+    assert.equal(response.body().props.flash.alert.type, 'warn')
+    assert.lengthOf(await ProductGroup.all(), 1)
+
+    // The database refuses it too — no group is swept away by a hand-written delete.
+    await assert.rejects(() => db.from('categories').where('id', category.id).delete())
+    assert.lengthOf(await ProductGroup.all(), 1)
+  })
+
+  test('the database refuses impossible supplier rows (BE-13)', async ({ assert }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const draft = await StockDraft.create({
+      supplierId: supplier.id,
+      source: 'web',
+      status: 'open',
+    })
+    const now = new Date()
+    const insertLine = (amount: number) =>
+      db.table('stock_draft_items').insert({
+        stock_draft_id: draft.id,
+        amount,
+        created_at: now,
+        updated_at: now,
+      })
+    await insertLine(1)
+    await assert.rejects(() => insertLine(0), /stock_draft_items_amount_check/)
+    await assert.rejects(
+      () => db.from('users').where('id', supplier.id).update({ margin_percent: 150 }),
+      /users_margin_percent_check/
+    )
+    const list = await ShoppingList.create({
+      supplierId: supplier.id,
+      status: 'active',
+      horizonDays: null,
+      scope: 'mine',
+      categoryIds: [],
+    })
+    await assert.rejects(
+      () =>
+        db.table('shopping_list_items').insert({
+          shopping_list_id: list.id,
+          kind: 'product',
+          label: 'bez produktu',
+          created_at: now,
+          updated_at: now,
+        }),
+      /shopping_list_items_kind_refs_check/
+    )
   })
 
   test('the product form puts a product into a group and takes it out', async ({
@@ -450,7 +571,7 @@ test.group('Web Supplier - stocking drafts', (group) => {
 
     const page = await client.get(`/supplier/stock/drafts/${draft.id}`).loginAs(other).redirects(0)
     page.assertStatus(302)
-    assert.equal(page.header('location'), '/supplier/stock/drafts')
+    assert.equal(page.header('location'), '/supplier/stock')
 
     await client
       .delete(`/supplier/stock/drafts/${draft.id}`)
@@ -526,47 +647,5 @@ test.group('Web Supplier - stocking drafts', (group) => {
       .json({ productId: 999_999 })
       .redirects(1)
     assert.equal(unknown.body().props.flash.alert.type, 'danger')
-  })
-
-  test('the draft list flags empty drafts and the badge counts only filled ones', async ({
-    client,
-    assert,
-  }) => {
-    const supplier = await UserFactory.apply('supplier').create()
-    const category = await CategoryFactory.create()
-    const product = await ProductFactory.merge({ categoryId: category.id }).create()
-    const empty = await StockDraft.create({
-      supplierId: supplier.id,
-      source: 'web',
-      status: 'open',
-    })
-    const filled = await StockDraft.create({
-      supplierId: supplier.id,
-      source: 'mcp',
-      status: 'open',
-    })
-    await StockDraftItem.create({
-      stockDraftId: filled.id,
-      productId: product.id,
-      amount: 2,
-      price: 10,
-      sortOrder: 0,
-    })
-
-    const list = await client.get('/supplier/stock/drafts').loginAs(supplier).headers(inertia)
-    list.assertStatus(200)
-    assert.deepEqual(
-      list
-        .body()
-        .props.drafts.map((d: any) => [d.id, d.source, d.isEmpty])
-        .sort((a: any[], b: any[]) => a[0] - b[0]),
-      [
-        [empty.id, 'web', true],
-        [filled.id, 'mcp', false],
-      ]
-    )
-
-    const stock = await client.get('/supplier/stock').loginAs(supplier).headers(inertia)
-    assert.equal(stock.body().props.openDraftCount, 1)
   })
 })

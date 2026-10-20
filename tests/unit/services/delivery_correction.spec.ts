@@ -5,7 +5,10 @@ import { UserFactory } from '#database/factories/user_factory'
 import { DeliveryFactory } from '#database/factories/delivery_factory'
 import { ProductFactory } from '#database/factories/product_factory'
 import { CategoryFactory } from '#database/factories/category_factory'
+import mail from '@adonisjs/mail/services/main'
+import { settleSideEffects } from '#services/side_effects'
 import DeliveryService from '#services/delivery_service'
+import InventoryService from '#services/inventory_service'
 import OrderService from '#services/order_service'
 import InvoiceService from '#services/invoice_service'
 import { isDomainError } from '#services/domain_error'
@@ -24,6 +27,9 @@ const cleanAll = async () => {
   await db.from('orders').delete()
   await db.from('invoices').delete()
   await db.from('delivery_corrections').delete()
+  await db.from('stock_adjustments').delete()
+  await db.from('inventory_count_items').delete()
+  await db.from('inventory_counts').delete()
   await db.from('deliveries').delete()
   await db.from('products').delete()
   await db.from('categories').delete()
@@ -604,8 +610,9 @@ test.group('DeliveryService.getStockForSupplier', (group) => {
     assert.equal(all.totals.totalProducts, 3)
     assert.equal(all.totals.totalRemaining, 13)
     assert.equal(all.totals.totalStockValue, 130)
-    // Running low (3) and sold out (0) both count.
-    assert.equal(all.lowStockCount, 2)
+    // "Low" counts exactly what the low filter lists (3 pieces); sold out (0) apart.
+    assert.equal(all.lowStockCount, 1)
+    assert.equal(all.outStockCount, 1)
     assert.isUndefined(all.insights)
 
     const low = await service.getStockForSupplier(supplier.id, 1, 20, { stockState: 'low' })
@@ -615,19 +622,20 @@ test.group('DeliveryService.getStockForSupplier', (group) => {
     )
     assert.equal(low.meta.total, 1)
     assert.equal(low.totals.totalProducts, 3)
-    assert.equal(low.lowStockCount, 2)
+    assert.equal(low.lowStockCount, low.meta.total)
 
     const out = await service.getStockForSupplier(supplier.id, 1, 20, { stockState: 'out' })
     assert.deepEqual(
       out.data.map((r) => r.productId),
       [zebra.id]
     )
-    assert.equal(out.meta.total, 1)
+    assert.equal(out.meta.total, out.outStockCount)
 
     // Scope and category narrow the counts too.
     const mine = await service.getStockForSupplier(supplier.id, 1, 20, { scope: 'mine' })
     assert.equal(mine.totals.totalProducts, 2)
-    assert.equal(mine.lowStockCount, 2)
+    assert.equal(mine.lowStockCount, 1)
+    assert.equal(mine.outStockCount, 1)
     const inCategory = await service.getStockForSupplier(supplier.id, 1, 20, {
       categoryId: category.id,
       stockState: 'out',
@@ -658,5 +666,244 @@ test.group('DeliveryService.getStockForSupplier', (group) => {
     assert.equal(withInsights.insights!.outOfStockCount, 1)
     assert.equal(withInsights.insights!.activeProducts, 2)
     assert.lengthOf(withInsights.insights!.categoryBreakdown, 2)
+  })
+})
+
+test.group('DeliveryService — the selling price rule (BE-05)', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('a lot without a selling price never undercuts the product price', async ({ assert }) => {
+    // The product sells for 18 Kč; 14.90 at 0 % would be 15.
+    const { supplier, product } = await setup({ price: 18 })
+    const delivery = await service.addStock(supplier.id, product.id, 6, null, {
+      purchasePrice: 14.9,
+      marginPercent: 0,
+    })
+    assert.equal(delivery.price, 18)
+  })
+
+  test('the margin wins when it lands above the last price', async ({ assert }) => {
+    const { supplier, product } = await setup({ price: 12 })
+    assert.equal(await service.resolveSellingPrice(product.id, null, 14.9, 5), 16)
+    // A typed selling price is kept as it is, even below the last one.
+    assert.equal(await service.resolveSellingPrice(product.id, 10, 14.9, 5), 10)
+    assert.isNull(await service.resolveSellingPrice(product.id, null, null, 5))
+    const delivery = await service.addStock(supplier.id, product.id, 1, null, {
+      purchasePrice: 14.9,
+      marginPercent: 5,
+    })
+    assert.equal(delivery.price, 16)
+  })
+
+  test('a voided lot does not set the price to keep', async ({ assert }) => {
+    const { supplier, product, delivery } = await setup({ price: 99 })
+    await service.voidDelivery(supplier, delivery.id, 'typo')
+    assert.equal(await service.resolveSellingPrice(product.id, null, 14.9, 0), 15)
+  })
+})
+
+test.group('DeliveryService.getStockWarnings — purchase price (PRO-12)', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  async function ownLot(supplierId: number, productId: number, purchasePrice: number) {
+    const lot = await DeliveryFactory.merge({
+      supplierId,
+      productId,
+      amountSupplied: 24,
+      amountLeft: 24,
+      price: 18,
+      purchasePrice,
+    }).create()
+    // Old enough not to count as a double submit.
+    await db
+      .from('deliveries')
+      .where('id', lot.id)
+      .update({ created_at: DateTime.now().minus({ days: 3 }).toJSDate() })
+    return lot
+  }
+
+  test('a pack price typed per piece is flagged against my last purchase', async ({ assert }) => {
+    const { supplier, product } = await setup({ price: 18, purchasePrice: 14.9 })
+    await db
+      .from('deliveries')
+      .where('product_id', product.id)
+      .update({
+        created_at: DateTime.now().minus({ days: 3 }).toJSDate(),
+      })
+
+    const flagged = await service.getStockWarnings(supplier.id, product.id, 18, {
+      purchasePrice: 89.9,
+    })
+    assert.isNull(flagged?.duplicate)
+    assert.isNull(flagged?.unusualPrice)
+    assert.equal(flagged?.unusualPurchasePrice?.lastPurchasePrice, 14.9)
+    assert.isString(flagged?.unusualPurchasePrice?.lastCreatedAt)
+
+    // Within the usual range — and no purchase price at all — is fine.
+    assert.isNull(
+      await service.getStockWarnings(supplier.id, product.id, 18, { purchasePrice: 16.5 })
+    )
+    assert.isNull(await service.getStockWarnings(supplier.id, product.id, 18))
+  })
+
+  test("a colleague's purchase price is never the yardstick", async ({ assert }) => {
+    const { product } = await setup({ price: 18, purchasePrice: 89.9 })
+    const me = await UserFactory.apply('supplier').create()
+
+    // Only the colleague has bought this product — nothing of mine to compare with.
+    assert.isNull(await service.getStockWarnings(me.id, product.id, 18, { purchasePrice: 14.9 }))
+
+    // My own older lot is what counts, even when a colleague's lot is newer.
+    await ownLot(me.id, product.id, 90)
+    const flagged = await service.getStockWarnings(me.id, product.id, 18, { purchasePrice: 14.9 })
+    assert.equal(flagged?.unusualPurchasePrice?.lastPurchasePrice, 90)
+  })
+})
+
+test.group('DeliveryService.getLastPrices — private purchase prices', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('prefills my purchase price, the selling price of anyone', async ({ assert }) => {
+    const { supplier: me, product } = await setup({ price: 16, purchasePrice: 12.5 })
+    const colleague = await UserFactory.apply('supplier').create()
+    await db
+      .from('deliveries')
+      .where('product_id', product.id)
+      .update({
+        created_at: DateTime.now().minus({ days: 3 }).toJSDate(),
+      })
+    // The colleague stocked later, cheaper, and at a new selling price.
+    await DeliveryFactory.merge({
+      supplierId: colleague.id,
+      productId: product.id,
+      amountSupplied: 5,
+      amountLeft: 5,
+      price: 17,
+      purchasePrice: 9.9,
+    }).create()
+
+    const mine = await service.getLastPrices([product.id], { purchasePriceOf: me.id })
+    assert.deepEqual(mine.get(product.id), { price: 17, purchasePrice: 12.5 })
+
+    const stranger = await UserFactory.apply('supplier').create()
+    const theirs = await service.getLastPrices(undefined, { purchasePriceOf: stranger.id })
+    assert.deepEqual(theirs.get(product.id), { price: 17, purchasePrice: null })
+  })
+
+  test('only admins and the lot owner see a purchase price', ({ assert }) => {
+    assert.isTrue(DeliveryService.canSeePurchasePrice({ id: 1, role: 'supplier' }, 1))
+    assert.isFalse(DeliveryService.canSeePurchasePrice({ id: 2, role: 'supplier' }, 1))
+    assert.isTrue(DeliveryService.canSeePurchasePrice({ id: 2, role: 'admin' }, 1))
+  })
+})
+
+test.group('DeliveryService — corrections after shrinkage', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('a corrected purchase price revalues the write-offs of the lot (PRO-11)', async ({
+    assert,
+  }) => {
+    const { supplier, product, delivery } = await setup({
+      amount: 10,
+      price: 20,
+      purchasePrice: 149,
+    })
+    await new InventoryService().writeOff(supplier, {
+      productId: product.id,
+      quantity: 2,
+      reason: 'damaged',
+    })
+
+    await service.correctDelivery(supplier, delivery.id, {
+      amount: 10,
+      price: 20,
+      purchasePrice: 14.9,
+      reason: 'Typo in the purchase price',
+    })
+
+    const adjustments = await db.from('stock_adjustments').where('delivery_id', delivery.id)
+    assert.lengthOf(adjustments, 1)
+    assert.equal(Number(adjustments[0].unit_cost), 14.9)
+    // The selling price stays what it was when the pieces were lost.
+    assert.equal(Number(adjustments[0].unit_price), 20)
+  })
+
+  test('a lot with a write-off but no sale cannot be voided (BE-15)', async ({ assert }) => {
+    const { supplier, product, delivery } = await setup({ amount: 10, price: 20 })
+    await new InventoryService().writeOff(supplier, {
+      productId: product.id,
+      quantity: 1,
+      reason: 'expired',
+    })
+
+    await expectDomainError(
+      () => service.voidDelivery(supplier, delivery.id, 'Stocked twice'),
+      'DELIVERY_HAS_ADJUSTMENTS'
+    )
+    const reloaded = await Delivery.findOrFail(delivery.id)
+    assert.isNull(reloaded.voidedAt)
+    assert.equal(reloaded.amountLeft, 9)
+  })
+})
+
+test.group('DeliveryService.notifyCorrection — every channel e-mails (BE-02)', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  /** The service mails after the response; wait for exactly those tasks, none may fail. */
+  async function sentMails(
+    assert: { deepEqual: (a: unknown, b: unknown) => void },
+    fakeMailer: ReturnType<typeof mail.fake>
+  ) {
+    assert.deepEqual(await settleSideEffects(), [])
+    return fakeMailer.messages.sent()
+  }
+
+  test('an admin repricing through the service alone mails buyers and the supplier', async ({
+    assert,
+  }) => {
+    const fakeMailer = mail.fake()
+    try {
+      const { supplier, delivery } = await setup({ amount: 10, price: 20 })
+      const admin = await UserFactory.apply('admin').create()
+      const buyer = await UserFactory.create()
+      await orderService.purchase(buyer.id, delivery.id, 'web')
+
+      // No controller involved — exactly what the MCP correct_delivery tool does.
+      await service.correctDelivery(admin, delivery.id, {
+        amount: 10,
+        price: 25,
+        reason: 'Admin fixed the price',
+      })
+
+      const sent = await sentMails(assert, fakeMailer)
+      assert.isTrue(sent.some((message) => message.hasTo(buyer.email)))
+      assert.isTrue(sent.some((message) => message.hasTo(supplier.email)))
+    } finally {
+      mail.restore()
+    }
+  })
+
+  test('an admin void mails the supplier; a supplier fixing their own lot mails nobody', async ({
+    assert,
+  }) => {
+    const fakeMailer = mail.fake()
+    try {
+      const own = await setup({ amount: 4, price: 10 })
+      await service.voidDelivery(own.supplier, own.delivery.id, 'Duplicate')
+      assert.lengthOf(await sentMails(assert, fakeMailer), 0)
+
+      const foreign = await setup({ amount: 4, price: 10 })
+      const admin = await UserFactory.apply('admin').create()
+      await service.voidDelivery(admin, foreign.delivery.id, 'Duplicate')
+      const sent = await sentMails(assert, fakeMailer)
+      assert.isTrue(sent.some((message) => message.hasTo(foreign.supplier.email)))
+    } finally {
+      mail.restore()
+    }
   })
 })

@@ -12,6 +12,37 @@
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
 }
 
+/*
+ * Tailwind 4 draws a bare `border` in currentColor, which turns every table frame white in
+ * dark mode. Give colourless borders the app's neutral line colour instead; an explicit
+ * `border-*` colour utility still wins (utilities sit above the base layer).
+ */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200);
+  }
+
+  [data-theme='dark'] *,
+  [data-theme='dark'] ::after,
+  [data-theme='dark'] ::before {
+    border-color: var(--color-zinc-700);
+  }
+}
+
+/* A field keeps its red "invalid" border while focused (the focus border is neutral grey). */
+.p-inputtext.p-invalid:enabled:focus,
+.p-textarea.p-invalid:enabled:focus,
+.p-invalid .p-inputtext:enabled:focus,
+.p-select.p-invalid.p-focus,
+.p-multiselect.p-invalid.p-focus,
+.p-datepicker.p-invalid .p-inputtext:enabled:focus {
+  border-color: var(--p-form-field-invalid-border-color);
+}
+
 /* ─── Brand gradient animation ─────────────────────────────────────── */
 @keyframes sbf-gradient-shift {
   0%,
@@ -296,6 +327,30 @@
 
   .sbf-nav .sbf-nav-profile-name {
     display: none;
+  }
+}
+
+/*
+ * An admin carries two extra menus (Dodavatel + Admin), which does not fit a 1366 px laptop
+ * next to a longer instance name: the sign-out button ended up off-screen. Up to 1439 px the
+ * crowded bar shows the secondary entries as icons (their label stays as title/aria-label).
+ */
+@media (min-width: 1200px) and (max-width: 1439px) {
+  .sbf-nav-crowded .sbf-nav-compact-target {
+    min-width: 2.4rem;
+    justify-content: center;
+  }
+
+  .sbf-nav-crowded .sbf-nav-compact-target > .pi:first-child {
+    margin-right: 0 !important;
+  }
+
+  .sbf-nav-crowded .sbf-nav-compact-target .sbf-nav-item-label {
+    display: none;
+  }
+
+  .sbf-nav-crowded .sbf-nav-compact-target .pi-angle-down {
+    margin-left: 0.25rem !important;
   }
 }
 

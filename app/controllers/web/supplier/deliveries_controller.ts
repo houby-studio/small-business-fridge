@@ -1,15 +1,16 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import db from '@adonisjs/lucid/services/db'
 import { resolvePage } from '#helpers/pagination'
 import { listRedirectUrl } from '#helpers/list_redirect'
 import DeliveryService, { type StockScope } from '#services/delivery_service'
 import type { DeliveryCorrectionErrorCode } from '#services/delivery_service'
-import StockHistoryService from '#services/stock_history_service'
-import NotificationService from '#services/notification_service'
+import StockHistoryService, { ADJUSTMENT_REASONS } from '#services/stock_history_service'
 import { isDomainError } from '#services/domain_error'
+import StockDraftService from '#services/shopping/stock_draft_service'
 import { correctDeliveryValidator, voidDeliveryValidator } from '#validators/delivery'
 import { normalizeImagePath } from '#helpers/image_url'
-import logger from '@adonisjs/core/services/logger'
-import type DeliveryCorrection from '#models/delivery_correction'
+import { positiveInt } from '#helpers/query_params'
+import type { StockAdjustmentReason } from '#models/stock_adjustment'
 
 const CORRECTION_ERROR_MESSAGES: Record<DeliveryCorrectionErrorCode, string> = {
   DELIVERY_NOT_FOUND: 'messages.delivery_correction_not_found',
@@ -19,9 +20,11 @@ const CORRECTION_ERROR_MESSAGES: Record<DeliveryCorrectionErrorCode, string> = {
   AMOUNT_INCREASE_NOT_ALLOWED: 'messages.delivery_correction_amount_increase',
   NO_CHANGE: 'messages.delivery_correction_no_change',
   DELIVERY_HAS_ORDERS: 'messages.delivery_void_has_orders',
+  DELIVERY_HAS_ADJUSTMENTS: 'messages.delivery_void_has_adjustments',
+  DELIVERY_TRANSFERRED: 'messages.delivery_void_transferred',
 }
 
-type HistoryType = 'deliveries' | 'adjustments'
+type HistoryType = 'deliveries' | 'adjustments' | 'drafts'
 
 const PER_PAGE = 20
 
@@ -34,31 +37,57 @@ export default class DeliveriesController {
     const service = new DeliveryService()
     const user = auth.user!
     const page = resolvePage(request.input('page', 1))
-    const productId = request.input('productId')
+    const productId = positiveInt(request.input('productId'))
     const sortBy = request.input('sortBy')
     const sortOrder = request.input('sortOrder')
-    const scope: StockScope = request.input('scope') === 'all' ? 'all' : 'mine'
-    const type: HistoryType = request.input('type') === 'adjustments' ? 'adjustments' : 'deliveries'
+    const scope: StockScope = request.input('scope') === 'mine' ? 'mine' : 'all'
+    const typeInput = request.input('type')
+    const type: HistoryType =
+      typeInput === 'adjustments' || typeInput === 'drafts' ? typeInput : 'deliveries'
+    const reasonInput = request.input('reason')
+    const reason = ADJUSTMENT_REASONS.find((r) => r === reasonInput) as
+      | StockAdjustmentReason
+      | undefined
     const listFilters = {
-      productId: productId ? Number(productId) : undefined,
+      productId,
       sortBy: sortBy || undefined,
       sortOrder: sortOrder || undefined,
       scope,
     }
     const empty = { data: [], meta: { total: 0, perPage: PER_PAGE, currentPage: 1, lastPage: 1 } }
 
-    const [products, recentDeliveries, adjustments] = await Promise.all([
+    const [products, recentDeliveries, adjustments, drafts] = await Promise.all([
       service.getAllProducts(),
       type === 'deliveries'
         ? service.getRecentDeliveries(user.id, page, PER_PAGE, listFilters)
         : null,
       type === 'adjustments'
-        ? new StockHistoryService().listAdjustments(user.id, page, PER_PAGE, listFilters)
+        ? new StockHistoryService().listAdjustments(user, page, PER_PAGE, {
+            ...listFilters,
+            reason,
+          })
+        : empty,
+      // Stocked drafts (příjemky): a colleague's purchase totals stay hidden.
+      type === 'drafts'
+        ? new StockDraftService().listHistory(user, page, PER_PAGE, listFilters)
         : empty,
     ])
 
-    const orderStats = await service.getOrderStatsForDeliveries(
-      recentDeliveries?.all().map((d) => d.id) ?? []
+    const deliveryIds = recentDeliveries?.all().map((d) => d.id) ?? []
+    const [orderStats, draftRows] = await Promise.all([
+      service.getOrderStatsForDeliveries(deliveryIds),
+      // The draft a lot was stocked from — linked only for whoever may open it.
+      deliveryIds.length
+        ? db
+            .from('stock_draft_items')
+            .join('stock_drafts', 'stock_drafts.id', 'stock_draft_items.stock_draft_id')
+            .whereIn('stock_draft_items.delivery_id', deliveryIds)
+            .if(user.role !== 'admin', (q) => q.where('stock_drafts.supplier_id', user.id))
+            .select('stock_draft_items.delivery_id', 'stock_draft_items.stock_draft_id')
+        : [],
+    ])
+    const draftByDelivery = new Map(
+      draftRows.map((row) => [Number(row.delivery_id), Number(row.stock_draft_id)])
     )
 
     return inertia.render('supplier/deliveries/index', {
@@ -73,14 +102,21 @@ export default class DeliveriesController {
             meta: recentDeliveries.serialize().meta,
             data: recentDeliveries.all().map((d) => {
               const stats = orderStats.get(d.id)
-              const lastCorrection = d.corrections[0]
+              // A handover is shown on its own line, not as a correction.
+              const corrections = d.corrections.filter((c) => c.kind !== 'transfer')
+              const lastCorrection = corrections[0]
+              const handover = d.corrections.find((c) => c.kind === 'transfer')
+              const handedTo = d.transferredTo[0]
               return {
                 id: d.id,
                 createdAt: d.createdAt.toISO(),
                 amountSupplied: d.amountSupplied,
                 amountLeft: d.amountLeft,
                 price: d.price,
-                purchasePrice: d.purchasePrice,
+                // A colleague's purchase price is their private cost.
+                purchasePrice: DeliveryService.canSeePurchasePrice(user, d.supplierId)
+                  ? d.purchasePrice
+                  : null,
                 lostCount: d.amountLost,
                 voidedAt: d.voidedAt?.toISO() ?? null,
                 product: {
@@ -88,14 +124,39 @@ export default class DeliveriesController {
                   category: d.product?.category ? { name: d.product.category.name } : undefined,
                 },
                 supplierName: d.supplier?.displayName ?? '—',
-                // What is gone from the lot: sold, plus written off — a correction may not go below it.
-                soldCount: d.amountSupplied - d.amountLeft,
+                // What is gone from the lot: sold, plus written off — a correction may not go below
+                // it. Pieces an inventory found make the lot grow, never a negative count.
+                soldCount: Math.max(0, d.amountSupplied - d.amountLeft),
                 invoicedCount: stats?.invoicedCount ?? 0,
                 uninvoicedCount: stats?.uninvoicedCount ?? 0,
                 uninvoicedBuyerCount: stats?.uninvoicedBuyerCount ?? 0,
-                correctionCount: d.corrections.length,
+                correctionCount: corrections.length,
+                stockDraftId: draftByDelivery.get(d.id) ?? null,
+                transfer: handover
+                  ? handedTo
+                    ? {
+                        direction: 'out' as const,
+                        counterpart: handedTo.supplier?.displayName ?? '—',
+                        // What the new lot got — found pieces included.
+                        pieces:
+                          handedTo.corrections[0]?.newAmountSupplied ?? handedTo.amountSupplied,
+                        at: handover.createdAt.toISO(),
+                      }
+                    : {
+                        direction: 'in' as const,
+                        counterpart: d.transferredFrom?.supplier?.displayName ?? '—',
+                        pieces: handover.newAmountSupplied,
+                        at: handover.createdAt.toISO(),
+                      }
+                  : null,
                 lastCorrection: lastCorrection
-                  ? { reason: lastCorrection.reason, createdAt: lastCorrection.createdAt.toISO() }
+                  ? {
+                      kind: lastCorrection.kind,
+                      reason: lastCorrection.reason,
+                      oldPrice: lastCorrection.oldPrice,
+                      newPrice: lastCorrection.newPrice,
+                      createdAt: lastCorrection.createdAt.toISO(),
+                    }
                   : null,
                 canCorrect: user.isAdmin || d.supplierId === user.id,
               }
@@ -103,12 +164,14 @@ export default class DeliveriesController {
           }
         : empty,
       adjustments,
+      drafts,
       filters: {
-        productId: productId || '',
+        productId: productId ? String(productId) : '',
         sortBy: sortBy || '',
         sortOrder: sortOrder || '',
         scope,
         type,
+        reason: reason ?? '',
       },
     })
   }
@@ -118,20 +181,13 @@ export default class DeliveriesController {
     const data = await request.validateUsing(correctDeliveryValidator)
 
     try {
-      const { delivery, correction, repricedOrderIds } =
-        await new DeliveryService().correctDelivery(auth.user!, Number(params.id), data, {
-          impersonatorId: ctx.impersonator?.id,
-        })
-
-      const notifications = new NotificationService()
-      if (correction.repricedOrderCount > 0) {
-        notifications
-          .sendPriceCorrectionNotifications(correction.id, repricedOrderIds)
-          .catch((err) => {
-            logger.error({ err }, `Failed to send price correction emails for #${correction.id}`)
-          })
-      }
-      this.notifySupplierOfForeignChange(notifications, delivery.supplierId, correction)
+      // The service sends the buyer and supplier e-mails (`DeliveryService.notifyCorrection`).
+      const { correction } = await new DeliveryService().correctDelivery(
+        auth.user!,
+        Number(params.id),
+        data,
+        { impersonatorId: ctx.impersonator?.id }
+      )
 
       session.flash('alert', {
         type: 'success',
@@ -154,32 +210,15 @@ export default class DeliveriesController {
     const data = await request.validateUsing(voidDeliveryValidator)
 
     try {
-      const { delivery, correction } = await new DeliveryService().voidDelivery(
-        auth.user!,
-        Number(params.id),
-        data.reason,
-        { impersonatorId: ctx.impersonator?.id }
-      )
-      this.notifySupplierOfForeignChange(new NotificationService(), delivery.supplierId, correction)
+      await new DeliveryService().voidDelivery(auth.user!, Number(params.id), data.reason, {
+        impersonatorId: ctx.impersonator?.id,
+      })
       session.flash('alert', { type: 'success', message: i18n.t('messages.delivery_voided') })
     } catch (error) {
       this.flashCorrectionError(error, session, i18n)
     }
 
     return response.redirect(listRedirectUrl(request, '/supplier/deliveries'))
-  }
-
-  /** An admin (not the supplier) changed the delivery — let the supplier know. */
-  private notifySupplierOfForeignChange(
-    notifications: NotificationService,
-    supplierId: number,
-    correction: DeliveryCorrection
-  ) {
-    // Their own change — unless an admin made it while impersonating them.
-    if (correction.actorId === supplierId && !correction.impersonatorId) return
-    notifications.sendDeliveryCorrectionToSupplier(correction.id).catch((err) => {
-      logger.error({ err }, `Failed to notify supplier about correction #${correction.id}`)
-    })
   }
 
   private flashCorrectionError(

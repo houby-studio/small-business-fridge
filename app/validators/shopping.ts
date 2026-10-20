@@ -67,6 +67,10 @@ const stockDraftItem = vine.object({
   label: vine.string().trim().maxLength(SHOPPING_LABEL_MAX).nullable().optional(),
   amount: vine.number().withoutDecimals().min(1).max(DELIVERY_MAX_AMOUNT),
   purchasePrice: vine.number().min(0).max(DELIVERY_MAX_PRICE).decimal([0, 2]).nullable().optional(),
+  /** Still the shopping list's estimate — the page clears it once the price is typed. */
+  purchasePriceEstimated: vine.boolean().optional(),
+  /** Who put the line on the draft; a saved line sends back what it had. */
+  source: vine.enum(['web', 'shopping_list', 'assistant'] as const).optional(),
   price: vine.number().withoutDecimals().min(1).max(DELIVERY_MAX_PRICE).nullable().optional(),
 })
 
@@ -76,6 +80,8 @@ export const stockDraftValidator = vine.compile(
     items: vine.array(stockDraftItem).maxLength(STOCK_DRAFT_MAX_ITEMS),
     /** Set once the supplier has seen the duplicate / unusual price warnings of a commit. */
     confirmWarnings: vine.boolean().optional(),
+    /** The draft version the page loaded; a save over a newer one is refused (DRAFT_STALE). */
+    version: vine.number().withoutDecimals().min(0).optional(),
   })
 )
 

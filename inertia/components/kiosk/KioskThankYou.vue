@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ProductImage from '~/components/ProductImage.vue'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from '~/composables/use_i18n'
 
@@ -87,17 +88,13 @@ onUnmounted(() => {
             :key="item.deliveryId"
             class="flex items-center gap-4 rounded-2xl bg-gray-800 p-4"
           >
-            <img
-              v-if="item.imagePath"
-              :src="item.imagePath"
-              :alt="item.displayName"
-              class="h-14 w-14 flex-shrink-0 rounded-xl object-contain"
-            />
-            <div
-              v-else
-              class="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl bg-gray-700"
-            >
-              <i class="pi pi-box text-xl text-gray-500" />
+            <div class="h-14 w-14 flex-shrink-0 rounded-xl">
+              <ProductImage
+                :src="item.imagePath"
+                :alt="item.displayName"
+                :color="'#6b7280'"
+                iconClass="text-2xl"
+              />
             </div>
             <div class="min-w-0 flex-1">
               <p class="truncate text-lg font-semibold text-white">{{ item.displayName }}</p>

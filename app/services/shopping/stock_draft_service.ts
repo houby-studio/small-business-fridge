@@ -1,25 +1,41 @@
 import { DateTime } from 'luxon'
 import db from '@adonisjs/lucid/services/db'
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
-import logger from '@adonisjs/core/services/logger'
 import StockDraft, { type StockDraftSource } from '#models/stock_draft'
-import StockDraftItem from '#models/stock_draft_item'
+import StockDraftItem, { type StockDraftLineSource } from '#models/stock_draft_item'
 import Product from '#models/product'
 import ProductGroup from '#models/product_group'
 import type Delivery from '#models/delivery'
 import type User from '#models/user'
-import DeliveryService, { type StockWarnings } from '#services/delivery_service'
+import DeliveryService, {
+  type DeliveryCorrectionResult,
+  type StockWarnings,
+} from '#services/delivery_service'
 import NotificationService from '#services/notification_service'
 import AuditService from '#services/audit_service'
+import { runAfterResponse } from '#services/side_effects'
 import { DomainError } from '#services/domain_error'
-import { roundMoney, suggestSellingPrice } from '#services/shopping/pricing'
+import { roundMoney, suggestDraftPrice } from '#services/shopping/pricing'
 
 export type StockDraftErrorCode =
   | 'DRAFT_NOT_FOUND'
   | 'DRAFT_CLOSED'
   | 'DRAFT_EMPTY'
   | 'DRAFT_INCOMPLETE'
+  | 'DRAFT_STALE'
   | 'PRODUCT_NOT_FOUND'
+  | 'GROUP_NOT_FOUND'
+  | 'DRAFT_NOT_COMMITTED'
+  | 'DRAFT_VOIDED'
+  | 'DRAFT_HAS_SALES'
+  | 'DRAFT_TRANSFERRED'
+
+/** How far back the "Naskladněné" history of stocked drafts goes. */
+export const STOCKED_HISTORY_DAYS = 30
+/** Empty open drafts older than this are discarded by the nightly clean-up. */
+export const EMPTY_DRAFT_TTL_DAYS = 7
+/** First half of the `pg_advisory_xact_lock(int, int)` key; the second is the supplier id. */
+const CURRENT_DRAFT_LOCK = 0x5bf1d
 
 export interface StockDraftItemInput {
   productId?: number | null
@@ -27,6 +43,10 @@ export interface StockDraftItemInput {
   label?: string | null
   amount: number
   purchasePrice?: number | null
+  /** The purchase price is an estimate, not read from a receipt (shopping-list lines). */
+  purchasePriceEstimated?: boolean
+  /** Who put the line on the draft; a new line takes it from the caller, a saved one keeps it. */
+  source?: StockDraftLineSource
   price?: number | null
 }
 
@@ -43,6 +63,33 @@ export interface DraftCommitWarning extends StockWarnings {
   index: number
   productId: number
   productName: string
+  /** The selling price the line will be stocked at. */
+  price: number
+  /** Its purchase price is still the shopping list's estimate. */
+  estimatedPurchasePrice: boolean
+}
+
+const NO_STOCK_WARNINGS: StockWarnings = {
+  duplicate: null,
+  unusualPrice: null,
+  unusualPurchasePrice: null,
+}
+
+/**
+ * Thrown (only when asked for with `strict`) for a line naming a product or a group that does
+ * not exist, so an API caller learns which line is wrong instead of finding it unmatched.
+ */
+export class StockDraftUnknownReference extends DomainError<
+  'PRODUCT_NOT_FOUND' | 'GROUP_NOT_FOUND'
+> {
+  constructor(
+    code: 'PRODUCT_NOT_FOUND' | 'GROUP_NOT_FOUND',
+    readonly index: number,
+    readonly id: number
+  ) {
+    super(code)
+    this.name = 'StockDraftUnknownReference'
+  }
 }
 
 /**
@@ -62,7 +109,39 @@ type SanitizedItem = {
   label: string | null
   amount: number
   purchasePrice: number | null
+  purchasePriceEstimated: boolean
   price: number | null
+  source: StockDraftLineSource
+}
+
+/** The line source for what started the lines (`mcp` is how drafts name an AI assistant). */
+export function lineSource(source: StockDraftSource): StockDraftLineSource {
+  return source === 'mcp' ? 'assistant' : source
+}
+
+/** A stocked draft in the "Naskladněné" history. */
+export interface StockedDraftRow {
+  id: number
+  supplierId: number
+  supplierName: string
+  source: StockDraftSource
+  status: 'committed' | 'voided'
+  note: string | null
+  committedAt: string
+  voidedAt: string | null
+  lines: number
+  pieces: number
+  /** Σ purchase price × pieces over the lines that have one; null when none has. */
+  purchaseTotal: number | null
+  /** Lines stocked without a purchase price (the total leaves them out). */
+  linesWithoutPurchase: number
+  /** Nothing of it was sold, written off or counted yet — it can still be voided as a whole. */
+  canVoid: boolean
+}
+
+/** Opaque version of a draft for optimistic concurrency: its `updated_at` in milliseconds. */
+export function draftVersion(draft: Pick<StockDraft, 'updatedAt'>): number {
+  return draft.updatedAt.toMillis()
 }
 
 /**
@@ -73,88 +152,202 @@ type SanitizedItem = {
  */
 export default class StockDraftService {
   /**
-   * Creates a draft with its lines. Pass `client` to create it inside a larger transaction
-   * (finishing a shopping list): the draft and its audit entry then roll back with it.
+   * Adds lines to the supplier's one open draft — creating it when there is none. Whoever
+   * prepares stock (the web form, a finished shopping list, an AI assistant) lands in the
+   * same draft; each line remembers its `source`. Lines are always appended, even for a
+   * product already on the draft: two receipt lines may carry two prices, and the commit
+   * still warns about a double. A note is added to the draft's own (once). Pass `client` to
+   * do it inside a larger transaction (finishing a shopping list): the lines and the audit
+   * entry then roll back with it.
    */
+  async appendLines(
+    supplierId: number,
+    input: { source: StockDraftSource; note?: string | null; items: StockDraftItemInput[] },
+    options: { client?: TransactionClientContract; strict?: boolean } = {}
+  ): Promise<{ draft: StockDraft; added: number; created: boolean }> {
+    const source = lineSource(input.source)
+    // Prices a shopping list puts on its lines are estimates from earlier lots.
+    const estimated = source === 'shopping_list'
+    const items = await this.sanitize(
+      input.items.map((item) => ({
+        ...item,
+        source,
+        purchasePriceEstimated: item.purchasePriceEstimated ?? estimated,
+      })),
+      options.strict
+    )
+    const run = async (trx: TransactionClientContract) => {
+      await this.lockCurrentDraft(supplierId, trx)
+      const existing = await this.openDraft(supplierId, trx)
+      const draft =
+        existing ??
+        (await StockDraft.create(
+          { supplierId, source: input.source, note: null, status: 'open' },
+          { client: trx }
+        ))
+      const note = input.note?.trim()
+      if (note && !(draft.note ?? '').includes(note)) {
+        draft.note = (draft.note ? `${draft.note} · ${note}` : note).slice(0, 500)
+      }
+      const last = await trx
+        .from('stock_draft_items')
+        .where('stock_draft_id', draft.id)
+        .max('sort_order as max')
+        .first()
+      const start = last?.max === null || last?.max === undefined ? 0 : Number(last.max) + 1
+      await this.insertItems(draft.id, items, trx, start)
+      await this.touch(draft, trx)
+
+      // An empty draft opened by "Stock" is not worth an entry: its commit is logged.
+      if (items.length) {
+        await AuditService.log(
+          supplierId,
+          existing ? 'stock_draft.lines_added' : 'stock_draft.created',
+          'stock_draft',
+          draft.id,
+          null,
+          {
+            source: input.source,
+            lines: items.length,
+            pieces: items.reduce((sum, item) => sum + item.amount, 0),
+          },
+          { client: trx }
+        )
+      }
+      return { draft, added: items.length, created: !existing }
+    }
+    return options.client ? run(options.client) : db.transaction(run)
+  }
+
+  /** `appendLines`, returning the draft (the shopping list and older callers use this). */
   async create(
     supplierId: number,
     input: { source: StockDraftSource; note?: string | null; items: StockDraftItemInput[] },
-    options: { client?: TransactionClientContract } = {}
+    options: { client?: TransactionClientContract; strict?: boolean } = {}
   ): Promise<StockDraft> {
-    const items = await this.sanitize(input.items)
-    const insert = async (trx: TransactionClientContract) => {
-      const created = await StockDraft.create(
-        { supplierId, source: input.source, note: input.note?.trim() || null, status: 'open' },
-        { client: trx }
-      )
-      await this.insertItems(created.id, items, trx)
-      await AuditService.log(
-        supplierId,
-        'stock_draft.created',
-        'stock_draft',
-        created.id,
-        null,
-        {
-          source: created.source,
-          lines: items.length,
-          pieces: items.reduce((sum, item) => sum + item.amount, 0),
-        },
-        { client: trx }
-      )
-      return created
-    }
-    return options.client ? insert(options.client) : db.transaction(insert)
+    const { draft } = await this.appendLines(supplierId, input, options)
+    return draft
   }
 
   /**
-   * The supplier's current web draft: their newest open one started by hand, or a new empty
-   * one. Clicking "Stock" twice therefore lands on the same draft instead of littering the
-   * list with empty ones.
+   * The draft "Stock" opens: the supplier's one open draft, or a new empty one. Serialised
+   * per supplier (and backed by a unique index), so a double click never opens two.
    */
-  async findOrCreateWebDraft(supplierId: number): Promise<StockDraft> {
-    const existing = await StockDraft.query()
-      .where('supplierId', supplierId)
-      .where('status', 'open')
-      .where('source', 'web')
-      .orderBy('createdAt', 'desc')
-      .orderBy('id', 'desc')
-      .first()
-    if (existing) return existing
-    return this.create(supplierId, { source: 'web', items: [] })
+  async findOrCreateOpenDraft(supplierId: number): Promise<StockDraft> {
+    return db.transaction(async (trx) => {
+      await this.lockCurrentDraft(supplierId, trx)
+      return this.currentDraft(supplierId, trx)
+    })
   }
 
   /**
-   * "Stock this product": appends a line for it to the supplier's web draft, prefilled
-   * with one piece and the prices of the product's last lot (the selling price may be
-   * null — the form then suggests one from the margin).
+   * "Stock this product": adds it to the open draft (see `findOrCreateOpenDraft`) with one
+   * piece, the supplier's own last purchase price and the product's last selling price (the
+   * selling price may be null — the form then suggests one). A product already in the draft
+   * is not added twice: its line is returned with `existing: true`, for the form to focus.
    */
   async appendProduct(
     supplierId: number,
     productId: number
-  ): Promise<{ draft: StockDraft; item: StockDraftItem }> {
+  ): Promise<{ draft: StockDraft; item: StockDraftItem; existing: boolean }> {
     const product = await Product.find(productId)
     if (!product) throw new DomainError<StockDraftErrorCode>('PRODUCT_NOT_FOUND')
 
-    const draft = await this.findOrCreateWebDraft(supplierId)
-    const lastPrices = await new DeliveryService().getLastPrices([productId])
-    const last = lastPrices.get(productId)
-    const lastLine = await db
-      .from('stock_draft_items')
-      .where('stock_draft_id', draft.id)
-      .max('sort_order as max')
-      .first()
-    const item = await StockDraftItem.create({
-      stockDraftId: draft.id,
-      productId,
-      productGroupId: null,
-      label: null,
-      amount: 1,
-      purchasePrice: last?.purchasePrice ?? null,
-      price: last?.price ?? null,
-      sortOrder:
-        lastLine?.max === null || lastLine?.max === undefined ? 0 : Number(lastLine.max) + 1,
+    return db.transaction(async (trx) => {
+      await this.lockCurrentDraft(supplierId, trx)
+      const draft = await this.currentDraft(supplierId, trx)
+      const existing = await StockDraftItem.query({ client: trx })
+        .where('stockDraftId', draft.id)
+        .where('productId', productId)
+        .orderBy('sortOrder', 'asc')
+        .orderBy('id', 'asc')
+        .first()
+      if (existing) return { draft, item: existing, existing: true }
+
+      const lastPrices = await this.lastPrices(supplierId, [productId], trx)
+      const last = lastPrices.get(productId)
+      const lastLine = await trx
+        .from('stock_draft_items')
+        .where('stock_draft_id', draft.id)
+        .max('sort_order as max')
+        .first()
+      const item = await StockDraftItem.create(
+        {
+          stockDraftId: draft.id,
+          productId,
+          productGroupId: null,
+          label: null,
+          amount: 1,
+          purchasePrice: last?.purchasePrice ?? null,
+          purchasePriceEstimated: false,
+          price: last?.price ?? null,
+          source: 'web',
+          sortOrder:
+            lastLine?.max === null || lastLine?.max === undefined ? 0 : Number(lastLine.max) + 1,
+        },
+        { client: trx }
+      )
+      await this.touch(draft, trx)
+      return { draft, item, existing: false }
     })
-    return { draft, item }
+  }
+
+  /**
+   * Prices to prefill for `productIds`: the selling price of the product's newest lot by
+   * anyone (it is on the shelf for all to see), the purchase price only from the supplier's
+   * own newest lot — what a colleague paid is their business and not this supplier's cost.
+   */
+  async lastPrices(
+    supplierId: number,
+    productIds?: number[],
+    client?: TransactionClientContract
+  ): Promise<Map<number, { price: number; purchasePrice: number | null }>> {
+    if (productIds && productIds.length === 0) return new Map()
+    const result = await (client ?? db).rawQuery<{
+      rows: Array<{ product_id: number; price: number; purchase_price: string | null }>
+    }>(
+      `SELECT anyone.product_id, anyone.price, own.purchase_price
+         FROM (SELECT DISTINCT ON (product_id) product_id, price
+                 FROM deliveries
+                WHERE voided_at IS NULL
+                  ${productIds ? 'AND product_id = ANY(:productIds)' : ''}
+                ORDER BY product_id, created_at DESC, id DESC) anyone
+         LEFT JOIN (SELECT DISTINCT ON (product_id) product_id, purchase_price
+                      FROM deliveries
+                     WHERE voided_at IS NULL
+                       AND supplier_id = :supplierId
+                       AND purchase_price IS NOT NULL
+                       ${productIds ? 'AND product_id = ANY(:productIds)' : ''}
+                     ORDER BY product_id, created_at DESC, id DESC) own
+           ON own.product_id = anyone.product_id`,
+      productIds ? { productIds, supplierId } : { supplierId }
+    )
+    return new Map(
+      result.rows.map((row) => [
+        Number(row.product_id),
+        {
+          price: Number(row.price),
+          purchasePrice: row.purchase_price === null ? null : Number(row.purchase_price),
+        },
+      ])
+    )
+  }
+
+  /**
+   * Discards open drafts that never got a line and were not touched for
+   * EMPTY_DRAFT_TTL_DAYS. Nothing is lost, so nothing is audited. Returns how many.
+   */
+  async discardStaleEmpty(): Promise<number> {
+    const cutoff = DateTime.now().minus({ days: EMPTY_DRAFT_TTL_DAYS })
+    const result = await db
+      .from('stock_drafts')
+      .where('status', 'open')
+      .where('updated_at', '<', cutoff.toJSDate())
+      .whereNotExists((sub) =>
+        sub.from('stock_draft_items').whereRaw('stock_draft_items.stock_draft_id = stock_drafts.id')
+      )
+      .update({ status: 'discarded', updated_at: DateTime.now().toJSDate() })
+    return Number(Array.isArray(result) ? result[0] : result)
   }
 
   /**
@@ -181,6 +374,7 @@ export default class StockDraftService {
       if (line && line.productId === null) {
         line.productId = productId
         await line.useTransaction(trx).save()
+        await this.touch(draft, trx)
         return { draft, item: line }
       }
       const item = await StockDraftItem.create(
@@ -191,11 +385,14 @@ export default class StockDraftService {
           label: null,
           amount: 1,
           purchasePrice: null,
+          purchasePriceEstimated: false,
           price: null,
+          source: 'web',
           sortOrder: items.length ? Math.max(...items.map((i) => i.sortOrder)) + 1 : 0,
         },
         { client: trx }
       )
+      await this.touch(draft, trx)
       return { draft, item }
     })
   }
@@ -211,11 +408,29 @@ export default class StockDraftService {
       source: draft.source,
       note: draft.note,
       createdAt: draft.createdAt.toISO(),
+      updatedAt: draft.updatedAt.toISO(),
       lines: draft.items.length,
       pieces: draft.items.reduce((sum, item) => sum + item.amount, 0),
       unmatched: draft.items.filter((item) => item.productId === null).length,
       isEmpty: draft.items.length === 0,
     }))
+  }
+
+  /** The open draft in a nutshell for the stock page's chip; null when it has no lines. */
+  async openSummary(
+    supplierId: number
+  ): Promise<{ id: number; lines: number; pieces: number } | null> {
+    const row = await db
+      .from('stock_drafts as d')
+      .join('stock_draft_items as i', 'i.stock_draft_id', 'd.id')
+      .where('d.supplier_id', supplierId)
+      .where('d.status', 'open')
+      .groupBy('d.id')
+      .select('d.id')
+      .count('i.id as lines')
+      .sum('i.amount as pieces')
+      .first()
+    return row ? { id: Number(row.id), lines: Number(row.lines), pieces: Number(row.pieces) } : null
   }
 
   /** Open drafts with at least one line — what the nav badge and the stock page chip show. */
@@ -244,33 +459,45 @@ export default class StockDraftService {
     return draft
   }
 
-  /** Replaces the lines of an open draft with what the review form holds. */
+  /**
+   * Replaces the lines of an open draft with what the review form holds. With `version`
+   * (see `draftVersion`) the save is refused with DRAFT_STALE when the draft changed since
+   * the form loaded it — an assistant's fix or another tab must not be overwritten unseen.
+   */
   async update(
     actor: Pick<User, 'id' | 'role'>,
     draftId: number,
-    input: { note?: string | null; items: StockDraftItemInput[] }
+    input: { note?: string | null; items: StockDraftItemInput[]; version?: number | null },
+    options: { strict?: boolean } = {}
   ): Promise<StockDraft> {
-    const items = await this.sanitize(input.items)
+    const items = await this.sanitize(input.items, options.strict)
     await db.transaction(async (trx) => {
       const draft = await this.lockOpen(actor, draftId, trx)
-      if (input.note !== undefined) {
-        draft.note = input.note?.trim() || null
-        await draft.useTransaction(trx).save()
-      }
+      this.checkVersion(draft, input.version)
+      if (input.note !== undefined) draft.note = input.note?.trim() || null
       await this.replaceItems(draft.id, items, trx)
+      await this.touch(draft, trx)
     })
     return this.get(actor, draftId)
   }
 
   /**
-   * Lines that block stocking: no product picked yet, or no selling price and no purchase
-   * price to derive one from.
+   * Lines that block stocking: no product picked yet, or no selling price and nothing to
+   * derive one from — neither a purchase price nor (when `lastPrices` is given) an earlier
+   * selling price of the product.
    */
-  static problems(items: StockDraftItemInput[]): DraftProblem[] {
+  static problems(
+    items: StockDraftItemInput[],
+    lastPrices?: Map<number, { price: number }>
+  ): DraftProblem[] {
     const problems: DraftProblem[] = []
     items.forEach((item, index) => {
       if (!item.productId) problems.push({ index, problem: 'product' })
-      else if (!item.price && (item.purchasePrice === null || item.purchasePrice === undefined)) {
+      else if (
+        !item.price &&
+        (item.purchasePrice === null || item.purchasePrice === undefined) &&
+        !lastPrices?.get(item.productId)?.price
+      ) {
         problems.push({ index, problem: 'price' })
       }
     })
@@ -279,58 +506,68 @@ export default class StockDraftService {
 
   /**
    * Stocks every line of the draft (optionally saving the reviewed lines first) and closes
-   * it. A line without a selling price gets one from its purchase price and the owner's
-   * margin. Unless `confirmWarnings` is set, lines that look like a double submit or carry
-   * an unusual price stop the commit with `StockDraftNeedsConfirmation` — the lines stay
-   * saved, nothing is stocked.
+   * it, all in one transaction under the draft's lock — a save racing the commit waits and
+   * then finds the draft closed, so what is stocked is exactly what was checked. A line
+   * without a selling price gets `suggestDraftPrice` (the owner's margin, never below the
+   * last selling price). Unless `confirmWarnings` is set, lines that look like a double
+   * submit, carry an unusual price or still have an estimated purchase price stop the commit
+   * with `StockDraftNeedsConfirmation` — the reviewed lines are saved, nothing is stocked.
    */
   async commit(
     actor: DraftActor,
     draftId: number,
-    input?: { note?: string | null; items?: StockDraftItemInput[]; confirmWarnings?: boolean }
+    input?: {
+      note?: string | null
+      items?: StockDraftItemInput[]
+      confirmWarnings?: boolean
+      version?: number | null
+    }
   ): Promise<{ draft: StockDraft; deliveries: Delivery[] }> {
     const deliveryService = new DeliveryService()
+    const reviewed = input?.items ? await this.sanitize(input.items) : null
 
-    // The reviewed lines are saved on their own first: a warning must leave them in place.
-    if (input && (input.items || input.note !== undefined)) {
-      const reviewed = input.items ? await this.sanitize(input.items) : null
-      await db.transaction(async (trx) => {
-        const draft = await this.lockOpen(actor, draftId, trx)
-        if (input.note !== undefined) {
-          draft.note = input.note?.trim() || null
-          await draft.useTransaction(trx).save()
-        }
-        if (reviewed) await this.replaceItems(draft.id, reviewed, trx)
-      })
-    }
-
-    if (!input?.confirmWarnings) {
-      const draft = await this.get(actor, draftId)
-      if (draft.status !== 'open') throw new DomainError<StockDraftErrorCode>('DRAFT_CLOSED')
-      const warnings = await this.collectWarnings(draft, deliveryService)
-      if (warnings.length) throw new StockDraftNeedsConfirmation(warnings)
-    }
-
-    const result = await db.transaction(async (trx) => {
+    // Refusals return from the transaction instead of throwing, so the reviewed lines it
+    // saved are kept; the error is raised once it has committed.
+    const outcome = await db.transaction(async (trx) => {
       const draft = await this.lockOpen(actor, draftId, trx)
+      this.checkVersion(draft, input?.version)
+      if (input?.note !== undefined || reviewed) {
+        if (input?.note !== undefined) draft.note = input.note?.trim() || null
+        if (reviewed) await this.replaceItems(draft.id, reviewed, trx)
+        await this.touch(draft, trx)
+      }
+
       const items = await StockDraftItem.query({ client: trx })
         .where('stockDraftId', draft.id)
         .orderBy('sortOrder', 'asc')
         .orderBy('id', 'asc')
-      if (items.length === 0) throw new DomainError<StockDraftErrorCode>('DRAFT_EMPTY')
-      if (StockDraftService.problems(items).length > 0) {
-        throw new DomainError<StockDraftErrorCode>('DRAFT_INCOMPLETE')
+      if (items.length === 0) return { refused: 'DRAFT_EMPTY' as const }
+      const productIds = [...new Set(items.map((item) => item.productId!).filter(Boolean))]
+      const lastPrices = await this.lastPrices(draft.supplierId, productIds, trx)
+      if (StockDraftService.problems(items, lastPrices).length > 0) {
+        return { refused: 'DRAFT_INCOMPLETE' as const }
       }
 
       const margin = await this.ownerMargin(actor, draft, trx)
+      const prices = items.map(
+        (item) =>
+          item.price ??
+          suggestDraftPrice(item.purchasePrice, margin, lastPrices.get(item.productId!)?.price)!
+      )
 
+      if (!input?.confirmWarnings) {
+        const warnings = await this.collectWarnings(draft, items, prices, deliveryService, trx)
+        if (warnings.length) return { warnings }
+      }
+
+      const stockBefore = await this.stockLevels(productIds, trx)
       const deliveries: Delivery[] = []
-      for (const item of items) {
+      for (const [index, item] of items.entries()) {
         const delivery = await deliveryService.addStock(
           draft.supplierId,
           item.productId!,
           item.amount,
-          item.price,
+          prices[index],
           {
             purchasePrice: item.purchasePrice,
             marginPercent: margin,
@@ -366,72 +603,348 @@ export default class StockDraftService {
         { client: trx }
       )
 
-      return { draft, deliveries }
+      return { draft, deliveries, stockBefore }
     })
 
-    // Favourite-product e-mails go out only once the stock really exists.
-    const notifications = new NotificationService()
-    for (const delivery of result.deliveries) {
-      notifications.sendRestockNotification(delivery).catch((err) => {
-        logger.error({ err }, `Failed to send restock notifications for delivery #${delivery.id}`)
-      })
-    }
+    if ('refused' in outcome) throw new DomainError<StockDraftErrorCode>(outcome.refused!)
+    if ('warnings' in outcome) throw new StockDraftNeedsConfirmation(outcome.warnings!)
 
-    return result
-  }
-
-  async discard(actor: Pick<User, 'id' | 'role'>, draftId: number): Promise<void> {
-    const draft = await db.transaction(async (trx) => {
-      const locked = await this.lockOpen(actor, draftId, trx)
-      locked.status = 'discarded'
-      await locked.useTransaction(trx).save()
-      return locked
-    })
-    await AuditService.log(
-      actor.id,
-      'stock_draft.discarded',
-      'stock_draft',
-      draft.id,
-      draft.supplierId === actor.id ? null : draft.supplierId,
-      { source: draft.source }
+    // Favourite-product e-mails go out only once the stock really exists, and only for
+    // products that had run out.
+    runAfterResponse(
+      () =>
+        new NotificationService().sendRestockNotifications(outcome.deliveries, outcome.stockBefore),
+      `restock e-mails for draft #${draftId}`
     )
+
+    return { draft: outcome.draft, deliveries: outcome.deliveries }
   }
 
   /**
-   * Duplicate / unusual-price checks for every complete line, with the selling price the
-   * commit would use. Lines with problems are skipped — the commit refuses them anyway.
+   * The supplier's drafts stocked in the last STOCKED_HISTORY_DAYS (voided ones included),
+   * newest first, one page at a time. The MCP history; the web shows `listHistory`.
+   */
+  async listStocked(supplierId: number, page = 1, perPage = 10) {
+    return this.listHistory({ id: supplierId, role: 'supplier' }, page, perPage, {
+      scope: 'mine',
+      since: DateTime.now().minus({ days: STOCKED_HISTORY_DAYS }),
+      sortBy: 'committedAt',
+    })
+  }
+
+  /**
+   * Sklad › Historie › Příjemky: stocked (and voided) drafts, the viewer's own or the whole
+   * fridge's, sorted on the server (default newest number first). What a colleague paid
+   * stays theirs: their purchase totals are null, and only the owner or an admin may void.
+   */
+  async listHistory(
+    viewer: Pick<User, 'id' | 'role'>,
+    page = 1,
+    perPage = 20,
+    filters: {
+      scope?: 'all' | 'mine'
+      productId?: number
+      since?: DateTime
+      sortBy?: string
+      sortOrder?: string
+    } = {}
+  ): Promise<{
+    data: StockedDraftRow[]
+    meta: { total: number; perPage: number; currentPage: number; lastPage: number }
+  }> {
+    const sortColumns: Record<string, string> = {
+      id: 'd.id',
+      committedAt: 'd.committed_at',
+      pieces: 'pieces',
+      lines: 'lines',
+    }
+    const sortBy = sortColumns[filters.sortBy ?? ''] ? filters.sortBy! : 'id'
+    const sortOrder = filters.sortOrder === 'asc' ? 'asc' : 'desc'
+    const isAdmin = viewer.role === 'admin'
+    const query = db
+      .from('stock_drafts as d')
+      .join('users as u', 'u.id', 'd.supplier_id')
+      .whereIn('d.status', ['committed', 'voided'])
+      .if(filters.scope !== 'all', (q) => q.where('d.supplier_id', viewer.id))
+      .if(filters.since, (q) => q.where('d.committed_at', '>=', filters.since!.toJSDate()))
+      .if(filters.productId, (q) =>
+        q.whereExists((sub) =>
+          sub
+            .from('stock_draft_items as p')
+            .whereRaw('p.stock_draft_id = d.id')
+            .where('p.product_id', filters.productId!)
+        )
+      )
+      .select(
+        'd.id',
+        'd.supplier_id',
+        'u.display_name as supplier_name',
+        'd.source',
+        'd.status',
+        'd.note',
+        'd.committed_at',
+        'd.voided_at',
+        db.raw('(SELECT COUNT(*) FROM stock_draft_items i WHERE i.stock_draft_id = d.id) AS lines'),
+        db.raw(
+          '(SELECT COALESCE(SUM(i.amount), 0) FROM stock_draft_items i WHERE i.stock_draft_id = d.id) AS pieces'
+        ),
+        db.raw(
+          `(SELECT SUM(i.purchase_price * i.amount) FROM stock_draft_items i
+             WHERE i.stock_draft_id = d.id AND i.purchase_price IS NOT NULL) AS purchase_total`
+        ),
+        db.raw(
+          `(SELECT COUNT(*) FROM stock_draft_items i
+             WHERE i.stock_draft_id = d.id AND i.purchase_price IS NULL) AS lines_without_purchase`
+        ),
+        db.raw(
+          `d.status = 'committed' AND NOT EXISTS (
+             SELECT 1 FROM stock_draft_items i JOIN deliveries l ON l.id = i.delivery_id
+              WHERE i.stock_draft_id = d.id
+                AND (
+                  EXISTS (SELECT 1 FROM deliveries t WHERE t.transferred_from_id = l.id)
+                  OR (l.voided_at IS NULL
+                      AND (l.amount_left <> l.amount_supplied OR l.amount_lost <> 0))
+                )
+           ) AS can_void`
+        )
+      )
+      .orderBy(sortColumns[sortBy], sortOrder)
+      .orderBy('d.id', sortOrder)
+    const result = await query.paginate(page, perPage)
+    return {
+      data: result.all().map((row) => {
+        const own = isAdmin || Number(row.supplier_id) === viewer.id
+        return {
+          id: Number(row.id),
+          supplierId: Number(row.supplier_id),
+          supplierName: row.supplier_name as string,
+          source: row.source as StockDraftSource,
+          status: row.status as 'committed' | 'voided',
+          note: row.note as string | null,
+          committedAt: DateTime.fromJSDate(row.committed_at).toISO()!,
+          voidedAt: row.voided_at ? DateTime.fromJSDate(row.voided_at).toISO() : null,
+          lines: Number(row.lines),
+          pieces: Number(row.pieces),
+          purchaseTotal:
+            !own || row.purchase_total === null ? null : roundMoney(Number(row.purchase_total)),
+          linesWithoutPurchase: own ? Number(row.lines_without_purchase) : 0,
+          canVoid: own && Boolean(row.can_void),
+        }
+      }),
+      meta: {
+        total: result.total,
+        perPage: result.perPage,
+        currentPage: result.currentPage,
+        lastPage: result.lastPage,
+      },
+    }
+  }
+
+  /**
+   * Whether `voidStocked` would accept the draft's lots: nothing sold, lost or counted, and
+   * no lot handed over to another supplier (the pieces live on in their lot).
+   */
+  async canVoid(draftId: number): Promise<boolean> {
+    const blocking = await db
+      .from('stock_draft_items as i')
+      .join('deliveries as l', 'l.id', 'i.delivery_id')
+      .where('i.stock_draft_id', draftId)
+      .where((q) =>
+        q
+          .whereExists((t) => t.from('deliveries as t').whereRaw('t.transferred_from_id = l.id'))
+          .orWhere((live) =>
+            live
+              .whereNull('l.voided_at')
+              .where((changed) =>
+                changed
+                  .whereRaw('l.amount_left <> l.amount_supplied')
+                  .orWhere('l.amount_lost', '<>', 0)
+              )
+          )
+      )
+      .first()
+    return !blocking
+  }
+
+  /**
+   * Voids a stocked draft as a whole — a duplicate receipt, stock that never reached the
+   * fridge: every lot of it is voided (`DeliveryService.voidDelivery`) with one reason, in
+   * one transaction, and the draft becomes `voided`. Only while none of its lots has sold,
+   * lost or gained a piece (DRAFT_HAS_SALES); a lot voided on its own before is skipped.
+   */
+  async voidStocked(
+    actor: Pick<User, 'id' | 'role'>,
+    draftId: number,
+    reason: string,
+    options: { impersonatorId?: number } = {}
+  ): Promise<{ draft: StockDraft; voidedDeliveries: number }> {
+    const deliveryService = new DeliveryService()
+    const outcome = await db.transaction(async (trx) => {
+      const draft = await StockDraft.query({ client: trx }).where('id', draftId).forUpdate().first()
+      if (!draft || (draft.supplierId !== actor.id && actor.role !== 'admin')) {
+        throw new DomainError<StockDraftErrorCode>('DRAFT_NOT_FOUND')
+      }
+      if (draft.status === 'voided') throw new DomainError<StockDraftErrorCode>('DRAFT_VOIDED')
+      if (draft.status !== 'committed') {
+        throw new DomainError<StockDraftErrorCode>('DRAFT_NOT_COMMITTED')
+      }
+
+      const lines = await trx
+        .from('stock_draft_items')
+        .where('stock_draft_id', draft.id)
+        .whereNotNull('delivery_id')
+        .select('delivery_id')
+      const deliveryIds = lines.map((row) => Number(row.delivery_id))
+      // Lock the lots in id order (= the order the commit created them) and check them all
+      // before voiding any, so the answer is one clear refusal.
+      const lots = deliveryIds.length
+        ? await trx
+            .from('deliveries')
+            .whereIn('id', deliveryIds)
+            .orderBy('id', 'asc')
+            .forUpdate()
+            .select('id', 'amount_supplied', 'amount_left', 'amount_lost', 'voided_at')
+        : []
+      // A lot handed over to another supplier lives on in their lot; voiding here would not
+      // take those pieces off the shelf.
+      const transferred = lots.length
+        ? await trx
+            .from('deliveries')
+            .whereIn('transferred_from_id', deliveryIds)
+            .select('id')
+            .first()
+        : null
+      if (transferred) throw new DomainError<StockDraftErrorCode>('DRAFT_TRANSFERRED')
+      const live = lots.filter((lot) => lot.voided_at === null)
+      if (
+        live.some(
+          (lot) =>
+            Number(lot.amount_left) !== Number(lot.amount_supplied) || Number(lot.amount_lost) !== 0
+        )
+      ) {
+        throw new DomainError<StockDraftErrorCode>('DRAFT_HAS_SALES')
+      }
+
+      const results: DeliveryCorrectionResult[] = []
+      for (const lot of live) {
+        try {
+          results.push(
+            await deliveryService.voidDelivery(actor, Number(lot.id), reason, {
+              impersonatorId: options.impersonatorId,
+              client: trx,
+            })
+          )
+        } catch (error) {
+          if (
+            error instanceof DomainError &&
+            ['DELIVERY_HAS_ORDERS', 'DELIVERY_HAS_ADJUSTMENTS'].includes(error.code)
+          ) {
+            throw new DomainError<StockDraftErrorCode>('DRAFT_HAS_SALES')
+          }
+          if (error instanceof DomainError && error.code === 'DELIVERY_TRANSFERRED') {
+            throw new DomainError<StockDraftErrorCode>('DRAFT_TRANSFERRED')
+          }
+          throw error
+        }
+      }
+
+      draft.status = 'voided'
+      draft.voidedAt = DateTime.now()
+      draft.voidReason = reason
+      await draft.useTransaction(trx).save()
+      await AuditService.log(
+        actor.id,
+        'stock_draft.voided',
+        'stock_draft',
+        draft.id,
+        draft.supplierId === actor.id ? null : draft.supplierId,
+        {
+          source: draft.source,
+          reason,
+          deliveries: results.length,
+          pieces: results.reduce((sum, r) => sum + r.correction.oldAmountSupplied, 0),
+        },
+        { client: trx }
+      )
+      return { draft, results }
+    })
+
+    for (const result of outcome.results) deliveryService.notifyCorrection(result)
+    return { draft: outcome.draft, voidedDeliveries: outcome.results.length }
+  }
+
+  async discard(actor: Pick<User, 'id' | 'role'>, draftId: number): Promise<void> {
+    await db.transaction(async (trx) => {
+      const draft = await this.lockOpen(actor, draftId, trx)
+      draft.status = 'discarded'
+      await draft.useTransaction(trx).save()
+      await AuditService.log(
+        actor.id,
+        'stock_draft.discarded',
+        'stock_draft',
+        draft.id,
+        draft.supplierId === actor.id ? null : draft.supplierId,
+        { source: draft.source },
+        { client: trx }
+      )
+    })
+  }
+
+  /**
+   * Duplicate / unusual-price / estimated-cost checks for every line, with the selling
+   * price the commit will use (`prices`, parallel to `items`).
    */
   private async collectWarnings(
     draft: StockDraft,
-    deliveryService: DeliveryService
+    items: StockDraftItem[],
+    prices: number[],
+    deliveryService: DeliveryService,
+    trx: TransactionClientContract
   ): Promise<DraftCommitWarning[]> {
-    const items = draft.items
-    const complete = items.filter(
-      (item) => item.productId && (item.price || item.purchasePrice !== null)
-    )
-    if (complete.length === 0) return []
-
-    const margin = await this.ownerMargin(null, draft)
-    const products = await Product.query()
-      .whereIn('id', [...new Set(complete.map((item) => item.productId!))])
+    const products = await Product.query({ client: trx })
+      .whereIn('id', [...new Set(items.map((item) => item.productId!))])
       .select('id', 'displayName')
     const names = new Map(products.map((p) => [p.id, p.displayName]))
 
     const warnings: DraftCommitWarning[] = []
     for (const [index, item] of items.entries()) {
-      if (!complete.includes(item)) continue
-      const price = item.price ?? suggestSellingPrice(item.purchasePrice!, margin)
-      const found = await deliveryService.getStockWarnings(draft.supplierId, item.productId!, price)
-      if (found) {
+      const found = await deliveryService.getStockWarnings(
+        draft.supplierId,
+        item.productId!,
+        prices[index],
+        { purchasePrice: item.purchasePrice, client: trx }
+      )
+      const estimatedPurchasePrice = item.purchasePriceEstimated && item.purchasePrice !== null
+      if (found || estimatedPurchasePrice) {
         warnings.push({
           index,
           productId: item.productId!,
           productName: names.get(item.productId!) ?? item.label ?? '—',
-          ...found,
+          price: prices[index],
+          ...(found ?? NO_STOCK_WARNINGS),
+          estimatedPurchasePrice,
         })
       }
     }
     return warnings
+  }
+
+  /** Pieces on the shelf per product right now (non-voided lots). */
+  private async stockLevels(
+    productIds: number[],
+    trx: TransactionClientContract
+  ): Promise<Map<number, number>> {
+    if (productIds.length === 0) return new Map()
+    const rows = await trx
+      .from('deliveries')
+      .whereNull('voided_at')
+      .whereIn('product_id', productIds)
+      .groupBy('product_id')
+      .select('product_id')
+      .sum('amount_left as left')
+    const levels = new Map<number, number>(productIds.map((id) => [id, 0]))
+    for (const row of rows) levels.set(Number(row.product_id), Number(row.left ?? 0))
+    return levels
   }
 
   /** The lots belong to the draft's supplier even when an admin commits it for them. */
@@ -462,6 +975,54 @@ export default class StockDraftService {
     return draft
   }
 
+  private checkVersion(draft: StockDraft, version: number | null | undefined) {
+    if (version === null || version === undefined) return
+    if (draftVersion(draft) !== version) throw new DomainError<StockDraftErrorCode>('DRAFT_STALE')
+  }
+
+  /** Every change to a draft moves its version, even one that only touched its lines. */
+  private async touch(draft: StockDraft, trx: TransactionClientContract) {
+    const previous = draft.updatedAt
+    if (draft.$isDirty) await draft.useTransaction(trx).save()
+    // Strictly later than before, so two changes within a millisecond still differ.
+    const now = DateTime.now()
+    const next = now > previous ? now : previous.plus({ milliseconds: 1 })
+    await trx.from('stock_drafts').where('id', draft.id).update({ updated_at: next.toJSDate() })
+    draft.updatedAt = next
+  }
+
+  /** Serialises picking (or creating) the supplier's current draft. Transaction-scoped. */
+  private async lockCurrentDraft(supplierId: number, trx: TransactionClientContract) {
+    await trx.rawQuery('SELECT pg_advisory_xact_lock(?, ?)', [CURRENT_DRAFT_LOCK, supplierId])
+  }
+
+  /** The supplier's open draft, locked; the caller holds `lockCurrentDraft`. */
+  private async openDraft(
+    supplierId: number,
+    trx: TransactionClientContract
+  ): Promise<StockDraft | null> {
+    return StockDraft.query({ client: trx })
+      .where('supplierId', supplierId)
+      .where('status', 'open')
+      .forUpdate()
+      .first()
+  }
+
+  /** See `findOrCreateOpenDraft`; the caller holds `lockCurrentDraft`. */
+  private async currentDraft(
+    supplierId: number,
+    trx: TransactionClientContract
+  ): Promise<StockDraft> {
+    const open = await this.openDraft(supplierId, trx)
+    if (open) return open
+    const { draft } = await this.appendLines(
+      supplierId,
+      { source: 'web', items: [] },
+      { client: trx }
+    )
+    return draft
+  }
+
   /** The one place lines are rewritten: `update` and `commit` both go through it. */
   private async replaceItems(
     draftId: number,
@@ -475,20 +1036,27 @@ export default class StockDraftService {
   private async insertItems(
     draftId: number,
     items: SanitizedItem[],
-    trx: TransactionClientContract
+    trx: TransactionClientContract,
+    startOrder = 0
   ): Promise<void> {
     if (!items.length) return
     await StockDraftItem.createMany(
-      items.map((item, index) => ({ ...item, stockDraftId: draftId, sortOrder: index })),
+      items.map((item, index) => ({
+        ...item,
+        stockDraftId: draftId,
+        sortOrder: startOrder + index,
+      })),
       { client: trx }
     )
   }
 
   /**
-   * Normalises lines: unknown products and groups become unmatched (null), money is rounded
-   * to cents. A stale id from a form must not end as a foreign-key error.
+   * Normalises lines: money is rounded to cents, a line without a single piece is dropped.
+   * Unknown products and groups become unmatched (null) — a stale id from a form must not
+   * end as a foreign-key error — or, with `strict`, are refused with
+   * `StockDraftUnknownReference` naming the line.
    */
-  private async sanitize(items: StockDraftItemInput[]): Promise<SanitizedItem[]> {
+  private async sanitize(items: StockDraftItemInput[], strict = false): Promise<SanitizedItem[]> {
     const productIds = [
       ...new Set(items.map((i) => i.productId).filter((id): id is number => !!id)),
     ]
@@ -501,17 +1069,36 @@ export default class StockDraftService {
     ])
     const knownProducts = new Set(products.map((p) => p.id))
     const knownGroups = new Set(groups.map((g) => g.id))
-    return items.map((item) => ({
-      productId: item.productId && knownProducts.has(item.productId) ? item.productId : null,
-      productGroupId:
-        item.productGroupId && knownGroups.has(item.productGroupId) ? item.productGroupId : null,
-      label: item.label?.trim().slice(0, 255) || null,
-      amount: Math.max(1, Math.floor(item.amount)),
-      purchasePrice:
-        item.purchasePrice === null || item.purchasePrice === undefined
-          ? null
-          : roundMoney(item.purchasePrice),
-      price: item.price ? Math.round(item.price) : null,
-    }))
+    if (strict) {
+      items.forEach((item, index) => {
+        if (item.productId && !knownProducts.has(item.productId)) {
+          throw new StockDraftUnknownReference('PRODUCT_NOT_FOUND', index, item.productId)
+        }
+        if (item.productGroupId && !knownGroups.has(item.productGroupId)) {
+          throw new StockDraftUnknownReference('GROUP_NOT_FOUND', index, item.productGroupId)
+        }
+      })
+    }
+    return items
+      .filter((item) => Number.isFinite(item.amount) && Math.floor(item.amount) >= 1)
+      .map((item) => {
+        const purchasePrice =
+          item.purchasePrice === null || item.purchasePrice === undefined
+            ? null
+            : roundMoney(item.purchasePrice)
+        return {
+          productId: item.productId && knownProducts.has(item.productId) ? item.productId : null,
+          productGroupId:
+            item.productGroupId && knownGroups.has(item.productGroupId)
+              ? item.productGroupId
+              : null,
+          label: item.label?.trim().slice(0, 255) || null,
+          amount: Math.floor(item.amount),
+          purchasePrice,
+          purchasePriceEstimated: purchasePrice !== null && !!item.purchasePriceEstimated,
+          price: item.price ? Math.round(item.price) : null,
+          source: item.source ?? 'web',
+        }
+      })
   }
 }

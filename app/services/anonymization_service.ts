@@ -3,11 +3,19 @@ import logger from '@adonisjs/core/services/logger'
 import { DateTime } from 'luxon'
 import User from '#models/user'
 import AuditService from '#services/audit_service'
+import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 export type AnonymizationSummary = {
   candidates: number
   anonymized: number
   failed: number
+  /** IBANs kept for unpaid invoices that are now settled and were cleared. */
+  ibansCleared: number
+}
+
+/** Unpaid invoices this user issued — their buyers still need the IBAN to pay. */
+function unpaidIssuedInvoices(client: typeof db | TransactionClientContract, userId: number) {
+  return client.from('invoices').where('supplier_id', userId).where('is_paid', false)
 }
 
 export default class AnonymizationService {
@@ -28,8 +36,10 @@ export default class AnonymizationService {
   async anonymizeUser(userId: number): Promise<boolean> {
     const result = await db.transaction(async (trx) => {
       const user = await User.query({ client: trx }).where('id', userId).forUpdate().first()
-      if (!user) return { anonymized: false, disabledAtIso: null as string | null }
-      if (user.anonymizedAt) return { anonymized: false, disabledAtIso: null }
+      if (!user) {
+        return { anonymized: false, disabledAtIso: null as string | null, ibanKept: false }
+      }
+      if (user.anonymizedAt) return { anonymized: false, disabledAtIso: null, ibanKept: false }
       if (!user.isDisabled) {
         throw new Error('CANNOT_ANONYMIZE_ACTIVE_USER')
       }
@@ -56,23 +66,30 @@ export default class AnonymizationService {
           .delete()
       }
 
+      // A supplier's IBAN stays while buyers still owe them: the QR payment of every unpaid
+      // invoice they issued needs it. The nightly sweep clears it once those are settled.
+      const ibanKept =
+        user.iban !== null && (await unpaidIssuedInvoices(trx, user.id).first()) !== null
+
       // Wipe PII. Historic orders/invoices keep pointing at this user_id
       // and will surface as "Deleted user #<id>" in admin views.
       user.displayName = AnonymizationService.anonymizedDisplayName(user.id)
       user.email = AnonymizationService.anonymizedEmail(user.id)
       user.phone = null
-      user.iban = null
+      if (!ibanKept) {
+        user.iban = null
+        user.ibanVerifiedAt = null
+      }
       user.pendingIban = null
       user.pendingEmail = null
       user.emailVerifiedAt = null
-      user.ibanVerifiedAt = null
       user.cardId = null
       user.keypadId = null
       user.password = null
       user.anonymizedAt = DateTime.utc()
       await user.useTransaction(trx).save()
 
-      return { anonymized: true, disabledAtIso }
+      return { anonymized: true, disabledAtIso, ibanKept }
     })
 
     if (result.anonymized) {
@@ -81,6 +98,7 @@ export default class AnonymizationService {
       // A scheduled job does this, not the user: no actor, the user is the target.
       await AuditService.log(null, 'user.anonymized', 'user', userId, userId, {
         disabledAt: result.disabledAtIso,
+        ...(result.ibanKept && { ibanKeptForUnpaidInvoices: true }),
       })
     }
 
@@ -107,7 +125,30 @@ export default class AnonymizationService {
       }
     }
 
-    return { candidates: candidates.length, anonymized, failed }
+    const ibansCleared = await this.clearSettledIbans()
+    return { candidates: candidates.length, anonymized, failed, ibansCleared }
+  }
+
+  /**
+   * Clears the IBANs anonymization kept for unpaid invoices, once every invoice the user
+   * issued is paid. Returns how many were cleared.
+   */
+  async clearSettledIbans(): Promise<number> {
+    const users = await User.query()
+      .whereNotNull('anonymizedAt')
+      .whereNotNull('iban')
+      .whereNotExists((q) =>
+        q.from('invoices').whereColumn('invoices.supplier_id', 'users.id').where('is_paid', false)
+      )
+    for (const user of users) {
+      user.iban = null
+      user.ibanVerifiedAt = null
+      await user.save()
+      await AuditService.log(null, 'user.anonymized', 'user', user.id, user.id, {
+        ibanCleared: true,
+      })
+    }
+    return users.length
   }
 
   /**

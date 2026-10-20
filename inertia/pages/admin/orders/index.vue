@@ -11,6 +11,7 @@ import { useAppConfirm } from '~/composables/use_app_confirm'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDate } from '~/composables/use_format_date'
 import { useListFilters } from '~/composables/use_list_filters'
+import { hasActiveFilters } from '~/composables/use_filter_params'
 import { useSelectEnterKey } from '~/composables/use_select_enter_key'
 import FilterBar from '~/components/FilterBar.vue'
 import PaginatedDataTable from '~/components/PaginatedDataTable.vue'
@@ -93,6 +94,7 @@ const { onSelectShow } = useSelectEnterKey([
     getValue: (o) => o.id,
     onSelect: (v) => {
       filterBuyerId.value = v
+      applyFilters()
     },
   },
   {
@@ -102,6 +104,7 @@ const { onSelectShow } = useSelectEnterKey([
     getValue: (o) => o.id,
     onSelect: (v) => {
       filterSupplierId.value = v
+      applyFilters()
     },
   },
 ])
@@ -123,6 +126,8 @@ const { applyFilters, navigateClear, onPageChange, navigateSort } = useListFilte
   buildParams: buildFilterParams,
   getCurrentPage: () => props.orders.meta.currentPage,
 })
+
+const filtersActive = computed(() => hasActiveFilters(buildFilterParams()))
 
 function clearFilters() {
   filterChannel.value = ALL
@@ -165,7 +170,7 @@ function storno(orderId: number) {
     </h1>
 
     <!-- Filter bar -->
-    <FilterBar @apply="applyFilters" @clear="clearFilters">
+    <FilterBar :active="filtersActive" @clear="clearFilters">
       <div>
         <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
           t('admin.orders_filter_channel')
@@ -176,6 +181,7 @@ function storno(orderId: number) {
           optionLabel="label"
           optionValue="value"
           class="w-36"
+          @change="applyFilters"
         />
       </div>
       <div>
@@ -188,6 +194,7 @@ function storno(orderId: number) {
           optionLabel="label"
           optionValue="value"
           class="w-36"
+          @change="applyFilters"
         />
       </div>
       <div>
@@ -203,6 +210,7 @@ function storno(orderId: number) {
           filter
           class="w-56"
           @show="onSelectShow"
+          @change="applyFilters"
         />
       </div>
       <div>
@@ -218,6 +226,7 @@ function storno(orderId: number) {
           filter
           class="w-56"
           @show="onSelectShow"
+          @change="applyFilters"
         />
       </div>
     </FilterBar>

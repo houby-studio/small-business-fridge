@@ -1,11 +1,14 @@
 import '#tests/test_context'
 import { test } from '@japa/runner'
+import { DateTime } from 'luxon'
 import db from '@adonisjs/lucid/services/db'
 import env from '#start/env'
 import { UserFactory } from '#database/factories/user_factory'
 import { ProductFactory } from '#database/factories/product_factory'
 import { CategoryFactory } from '#database/factories/category_factory'
 import Delivery from '#models/delivery'
+import Invoice from '#models/invoice'
+import Order from '#models/order'
 import InventoryCount from '#models/inventory_count'
 import StockAdjustment from '#models/stock_adjustment'
 import StockDraft from '#models/stock_draft'
@@ -66,6 +69,36 @@ test.group('Web Supplier - purchase price on stocking', (group) => {
     assert.equal(lot.price, 15)
     const audit = await db.from('audit_logs').where('action', 'delivery.created').first()
     assert.equal(audit.metadata.purchasePrice, 14.9)
+  })
+
+  test('the history links a lot to its draft, for whoever may open it (F3)', async ({
+    client,
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const colleague = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    const draft = await StockDraft.create({
+      supplierId: supplier.id,
+      source: 'web',
+      status: 'open',
+    })
+    await client
+      .post(`/supplier/stock/drafts/${draft.id}/commit`)
+      .loginAs(supplier)
+      .withCsrfToken()
+      .json({ items: [{ productId: product.id, amount: 6, price: 15 }] })
+      .redirects(0)
+
+    const row = async (user: User) => {
+      const page = await client.get('/supplier/deliveries?scope=all').loginAs(user).headers(inertia)
+      return page.body().props.recentDeliveries.data[0]
+    }
+    const own = await row(supplier)
+    const theirs = await row(colleague)
+    assert.equal(own.stockDraftId, draft.id)
+    assert.isNull(theirs.stockDraftId)
   })
 
   test('a purchase price with fractions of a cent is refused', async ({ client, assert }) => {
@@ -130,6 +163,58 @@ test.group('Web Supplier - write-offs and inventory', (group) => {
     assert.equal(lot.amountLeft, 1)
   })
 
+  test('a write-off is reverted through the web, once, by its author only', async ({
+    client,
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const colleague = await UserFactory.apply('supplier').create()
+    const { product, lot } = await stocked(supplier, 5)
+    const [row] = await new InventoryService().writeOff(supplier, {
+      productId: product.id,
+      quantity: 2,
+      reason: 'expired',
+    })
+
+    const history = (user: User) =>
+      client
+        .get('/supplier/deliveries?type=adjustments&scope=all')
+        .loginAs(user)
+        .headers(inertia)
+        .then((r) => r.body().props.adjustments.data[0])
+    assert.deepInclude(await history(supplier), { id: row.id, revertible: true, revertedAt: null })
+    assert.deepInclude(await history(colleague), { id: row.id, revertible: false })
+
+    const refused = await client
+      .put(`/supplier/stock/write-offs/${row.id}/revert`)
+      .loginAs(colleague)
+      .withCsrfToken()
+      .headers(inertia)
+      .header('referer', '/supplier/deliveries?type=adjustments')
+      .redirects(1)
+    assert.equal(refused.body().props.flash.alert.type, 'danger')
+
+    const reverted = await client
+      .put(`/supplier/stock/write-offs/${row.id}/revert`)
+      .loginAs(supplier)
+      .withCsrfToken()
+      .header('referer', '/supplier/deliveries?type=adjustments')
+      .redirects(0)
+    reverted.assertStatus(302)
+    assert.equal(reverted.header('location'), '/supplier/deliveries?type=adjustments')
+    await lot.refresh()
+    assert.equal(lot.amountLeft, 5)
+    const after = await history(supplier)
+    assert.isString(after.revertedAt)
+    assert.isFalse(after.revertible)
+
+    const outOfRange = await client
+      .put('/supplier/stock/write-offs/99999999999/revert')
+      .loginAs(supplier)
+      .withCsrfToken()
+    outOfRange.assertStatus(404)
+  })
+
   test('an inventory is listed, committed and shown', async ({ client, assert }) => {
     const supplier = await UserFactory.apply('supplier').create()
     const { product, lot } = await stocked(supplier, 10, 8)
@@ -162,6 +247,100 @@ test.group('Web Supplier - write-offs and inventory', (group) => {
     assert.equal(detail.body().props.count.items[0].appliedQty, -2)
   })
 
+  test('a purchase while the supplier counts is not written off as shrinkage (BE-01)', async ({
+    client,
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+    const { product, lot } = await stocked(supplier, 5)
+
+    const page = await client.get('/supplier/inventory').loginAs(supplier).headers(inertia)
+    const { products, stockAsOf } = page.body().props
+    assert.equal(products[0].stock, 5)
+    assert.isString(stockAsOf)
+
+    // A colleague buys one; the supplier then finds 4 on the shelf.
+    await new Promise((resolve) => setTimeout(resolve, 5))
+    await Order.create({ buyerId: buyer.id, deliveryId: lot.id, channel: 'web', unitPrice: 20 })
+    await Delivery.query().where('id', lot.id).decrement('amountLeft', 1)
+
+    const committed = await client
+      .post('/supplier/inventory')
+      .loginAs(supplier)
+      .withCsrfToken()
+      .json({
+        scope: 'all',
+        items: [
+          {
+            productId: product.id,
+            expected: 5,
+            counted: 4,
+            asOf: stockAsOf,
+            countedAt: new Date().toISOString(),
+          },
+        ],
+      })
+      .redirects(0)
+    committed.assertStatus(302)
+    await lot.refresh()
+    assert.equal(lot.amountLeft, 4)
+    assert.lengthOf(await StockAdjustment.all(), 0)
+  })
+
+  test('the inventory detail hides a colleague’s purchase prices but not the totals', async ({
+    client,
+    assert,
+  }) => {
+    const me = await UserFactory.apply('supplier').create()
+    const colleague = await UserFactory.apply('supplier').create()
+    const admin = await UserFactory.apply('admin').create()
+    const { product } = await stocked(colleague, 4)
+    const count = await new InventoryService().commitCount(me, {
+      scope: 'all',
+      items: [{ productId: product.id, expected: 4, counted: 3 }],
+    })
+
+    const mine = await client.get(`/supplier/inventory/${count.id}`).loginAs(me).headers(inertia)
+    const detail = mine.body().props.count
+    assert.isNull(detail.adjustments[0].unitCost)
+    assert.equal(detail.lossCost, 17.5)
+    assert.equal(detail.lossValue, 20)
+
+    const asAdmin = await client
+      .get(`/supplier/inventory/${count.id}`)
+      .loginAs(admin)
+      .headers(inertia)
+    assert.equal(asAdmin.body().props.count.adjustments[0].unitCost, 17.5)
+  })
+
+  test('a malformed timestamp or an out-of-range category does not break the sheet', async ({
+    client,
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const { product } = await stocked(supplier, 4)
+
+    const page = await client
+      .get('/supplier/inventory?categoryId=99999999999')
+      .loginAs(supplier)
+      .headers(inertia)
+    page.assertStatus(200)
+    assert.lengthOf(page.body().props.products, 1)
+
+    const refused = await client
+      .post('/supplier/inventory')
+      .loginAs(supplier)
+      .withCsrfToken()
+      .json({
+        scope: 'all',
+        items: [{ productId: product.id, expected: 4, counted: 3, asOf: 'x' }],
+      })
+      .redirects(0)
+    refused.assertStatus(302)
+    assert.lengthOf(await StockAdjustment.all(), 0)
+  })
+
   test('the sheet covers the whole fridge on request; "store" is no longer a scope', async ({
     client,
     assert,
@@ -171,18 +350,19 @@ test.group('Web Supplier - write-offs and inventory', (group) => {
     const { product: mine } = await stocked(me)
     const { product: theirs } = await stocked(colleague)
 
-    const own = await client.get('/supplier/inventory').loginAs(me).headers(inertia)
+    const own = await client
+      .get('/supplier/inventory')
+      .qs({ scope: 'mine' })
+      .loginAs(me)
+      .headers(inertia)
     assert.deepEqual(
       own.body().props.products.map((p: any) => p.productId),
       [mine.id]
     )
     assert.equal(own.body().props.filters.scope, 'mine')
 
-    const whole = await client
-      .get('/supplier/inventory')
-      .qs({ scope: 'all' })
-      .loginAs(me)
-      .headers(inertia)
+    // The whole fridge is the default (PLAN4 P1), as on the stock page.
+    const whole = await client.get('/supplier/inventory').loginAs(me).headers(inertia)
     assert.sameMembers(
       whole.body().props.products.map((p: any) => p.productId),
       [mine.id, theirs.id]
@@ -194,7 +374,7 @@ test.group('Web Supplier - write-offs and inventory', (group) => {
       .qs({ scope: 'store' })
       .loginAs(me)
       .headers(inertia)
-    assert.equal(legacy.body().props.filters.scope, 'mine')
+    assert.equal(legacy.body().props.filters.scope, 'all')
 
     const refused = await client
       .post('/supplier/inventory')
@@ -357,9 +537,25 @@ test.group('Web Supplier - finance', (group) => {
       }))
     )
 
+    // Not paid yet: waiting, but nothing received — no warning.
+    const waiting = await client.get('/supplier/stock').loginAs(supplier).headers(inertia)
+    assert.equal(waiting.body().props.incomeLimit.level, 'ok')
+    assert.equal(waiting.body().props.incomeLimit.pending, 100)
+
+    // The colleague pays: the limit counts the money received.
+    const invoice = await Invoice.create({
+      buyerId: buyer.id,
+      supplierId: supplier.id,
+      totalCost: 100,
+      isPaid: true,
+      isPaymentRequested: false,
+      paidAt: DateTime.now(),
+    })
+    await db.from('orders').where('buyer_id', buyer.id).update({ invoice_id: invoice.id })
     const response = await client.get('/supplier/stock').loginAs(supplier).headers(inertia)
     assert.equal(response.body().props.incomeLimit.level, 'exceeded')
     assert.equal(response.body().props.incomeLimit.amount, 100)
+    assert.equal(response.body().props.incomeLimit.pending, 0)
   })
 })
 

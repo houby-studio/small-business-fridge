@@ -73,6 +73,7 @@
     "@types/qrcode": "^1.5.6",
     "@vitejs/plugin-vue": "^6.0.4",
     "eslint": "^9.26.0",
+    "fast-check": "^4.10.2",
     "hot-hook": "^1.0.0",
     "openai": "^6.47.0",
     "pino-pretty": "^13.0.0",

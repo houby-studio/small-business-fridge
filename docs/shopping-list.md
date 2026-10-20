@@ -11,8 +11,7 @@ tabs or settings.
 
 | Menu entry      | URL                        | What it is for                                                                       |
 | --------------- | -------------------------- | ------------------------------------------------------------------------------------ |
-| Stock           | `/supplier/stock`          | Tabs **Stock** (one table with filters, row actions _Stock_ and _Write off_), **History** (deliveries, or write-offs and inventory differences) and **Inventory count** |
-| Receiving       | `/supplier/stock/drafts`   | Stocking drafts (_příjemky_) — the only way stock enters the fridge; the badge counts open drafts |
+| Stock           | `/supplier/stock`          | Tabs **Stock** (one table with filters, row actions _Stock_, _Change price_ and _Write off_; _Stock_ opens the one open draft, a chip beside it says when one has lines), **History** (deliveries, write-offs and inventory differences, or stocked drafts by number) and **Inventory count**; the menu badge shows an open draft with lines |
 | Shopping list   | `/supplier/shopping-list`  | What to buy, how much and at what price                                              |
 | Products        | `/supplier/products`       | Tabs **Products** and **Groups** (purchase groups)                                   |
 | Earnings        | `/supplier/finance`        | Sales, purchase cost, shrinkage, margin (settings dialog), yearly limit              |
@@ -31,31 +30,57 @@ stocked (`stock_drafts`, `stock_draft_items`). Nothing is on the shelf until the
 **Stock**, which creates one delivery per line in a single transaction. The draft page is the only
 stocking form:
 
-- The supplier's open manual draft is reused: **Stock** on the stock page, the row action on a
-  product, or saving a new product all append a line to it (`POST /supplier/stock/drafts` with an
-  optional `productId`) and open the draft with that line's amount focused. Three clicks on three
-  products build one draft with three lines.
+- One draft, really: a supplier has at most one open draft (a partial unique index on
+  `stock_drafts(supplier_id) WHERE status = 'open'` and an advisory lock keep it so). **Stock**
+  on the stock page, the row action on a product, saving a new product, a finished shopping list
+  and an AI assistant all add lines to it, or start it when there is none
+  (`StockDraftService.appendLines`; the web uses `POST /supplier/stock/drafts` with an optional
+  `productId`). Each line remembers who added it (`stock_draft_items.source`: `web`,
+  `shopping_list`, `assistant`) and shows a badge _ze seznamu_ / _od AI_; hand-made lines carry
+  none. A draft started more than a day ago carries an amber _Rozpracováno {date}_ badge. The
+  web row action does not add a product twice — its line is focused instead; the list and the
+  assistant always append (two receipt lines may carry two prices), and the commit still warns
+  about a double. There is no list of drafts: `/supplier/stock/drafts` leads to the open draft
+  or to the stock page.
+- A purchase price is prefilled only from the supplier's **own** last lot — what a colleague
+  paid is theirs to know. The selling price comes from the product's last lot, whoever stocked it.
 - The page always ends with an empty line. Picking a product fills the last purchase and selling
   prices in as values; Enter moves through amount, purchase price and selling price, and Enter on
   the selling price confirms the line and opens the next one. Ctrl+Enter stocks the draft. One
   item is stocked in three interactions: type the product and press Enter, type the amount and
   press Enter, press **Stock**.
-- An empty selling price is a suggestion the line shows in grey: the product's last selling
-  price, never below the purchase price plus the supplier's margin (rounded up to whole crowns).
-  Enter, Tab or stocking accepts it.
+- An empty selling price is a suggestion the line shows in grey: the purchase price plus the
+  margin of the draft's **owner** (rounded up to whole crowns), never below the product's last
+  selling price — `suggestDraftPrice` in `app/services/shopping/pricing.ts`, used by the commit,
+  its warnings and MCP alike, and mirrored for the page in `inertia/composables/pricing_rules.ts`
+  (a unit test keeps the two equal). Enter, Tab or stocking accepts it.
 - Every change saves itself after a short pause (the footer says _Uloženo_ / _Ukládám…_); leaving
-  the page waits for a pending save, so nothing is lost without a Save button.
+  the page waits for a pending save, so nothing is lost without a Save button. A failed save says
+  _Uložení selhalo_ and leaving then asks first; the browser's Back button sends the last change
+  on its way as the page goes. Each save carries the draft's version (`updated_at`): a save over
+  a newer draft — the assistant fixed a line, another tab — is refused, and the page loads the
+  newer draft and says so instead of overwriting it. MCP sends no version (last write wins).
+- Stocking runs in one transaction under the draft's lock, so a save racing it waits and finds
+  the draft closed — what is stocked is exactly what was checked. Favourite-product e-mails go
+  out only for products that had run out, one e-mail per person for the whole draft.
+- Lines from the shopping list carry an **estimated** purchase price (amber _odhad_); typing the
+  receipt price clears it. Stocking with an estimate left asks once more.
 - _Nový produkt_ on a line without a product saves the draft, opens the product form with the
   line's text and group prefilled, and saving the product returns to that very line.
 - Before stocking, every line is checked for a **duplicate** (the same supplier stocked the same
-  product within 30 minutes) and an **unusual price** (1.5× away from the last delivery). The
+  product within 30 minutes), an **unusual price** (1.5× away from the last delivery) and an
+  **unusual purchase price** (1.5× away from the supplier's own last one — a pack price typed in
+  for a piece). The
   draft page shows them in one dialog with _Stock anyway_; MCP returns them and asks for
   `confirmWarnings`.
 - Empty drafts are not counted anywhere; the menu badge and the chip on the stock page count
-  open drafts with at least one line.
+  open drafts with at least one line. An empty draft untouched for a week is discarded at night.
 
-Drafts come from three places: by hand (above), from the shopping list (**Finish shopping**) and
-from an AI assistant over MCP, typically a receipt photo (below). Each draft shows its source.
+Lines come from three places: by hand (above), from the shopping list (**Finish shopping**) and
+from an AI assistant over MCP, typically a receipt photo (below). Each line shows its source.
+Stocked drafts are listed in **Sklad › Historie › Příjemky** by number (whole fridge or own;
+a colleague's purchase total stays hidden), where each opens read-only and, while nothing of it
+was sold, written off or handed over, can be voided as a whole with one reason.
 
 ### Receipts via an AI assistant
 
@@ -154,6 +179,19 @@ purchases from the lot, a changed purchase price only fixes the books. The margi
 **suggests** selling prices: the purchase price plus the margin, rounded up to whole crowns.
 Changing it never touches the prices of stock already on the shelf.
 
+**Change price** (stock table → tag icon) is for a sale or a price rise of what is still on the
+shelf. The dialog lists the product's lots with pieces left, oldest first — the one that sells
+first is marked — with who stocked them, the pieces left and the selling price. _Set for all of
+mine_ (Enter or _Fill in_) puts one price on all your own lots; any row can then differ. You
+change only your own lots (a colleague's price is shown read-only); an admin may change anyone's,
+and the owner of a lot an admin repriced gets an e-mail. Saving sends only the changed rows
+(`POST /supplier/stock/reprice` with `{ items: [{ deliveryId, price }] }`, whole crowns
+1–100 000) in one transaction. Nothing sold changes — no order, no invoice, no buyer e-mail —
+each lot gets a `reprice` correction record and the audit one `delivery.repriced` entry per lot
+owner, product and new price. The lots come from `GET /supplier/stock/products/:productId/lots`
+(no purchase prices — a colleague's is private). A typo in a lot is fixed on the History tab
+instead (_Correct delivery_), which also reprices uninvoiced purchases.
+
 ## Shrinkage: write-offs and inventories
 
 Pieces that leave the fridge without a sale are recorded as `stock_adjustments`, each with the
@@ -163,12 +201,22 @@ lot's purchase and selling price snapshotted. `deliveries.amount_lost` holds the
 The two tools answer different questions:
 
 - **Write-off** (stock table → minus icon) is for pieces you **know about**: broken, expired,
-  stolen or another reason you can name.
+  stolen or another reason you can name. Under the form the dialog lists the product's lots and
+  previews live which of them the pieces will come off (FIFO across every supplier, the same plan
+  the server follows — `inertia/composables/stock_fifo_rules.ts` mirrors
+  `app/services/stock_fifo.ts`); a colleague's lot that gives pieces says they will get an
+  e-mail. The server decides on its own; if a sale moved the pieces meanwhile, the confirmation
+  says which lots they really came from.
 - **Inventory count** (Stock › Inventory count tab) finds a shortfall you **then explain**. Enter
   what is on the shelf: missing pieces are written off, extra pieces go back onto the newest lot —
-  the counter's own newest lot of that product when they have one. The counter's view of the
-  stock is sent with the count, so whatever sells between counting and saving is not mistaken for
-  shrinkage.
+  the counter's own lot of that product something already left, when they have one. The sheet
+  sends, per product, the stock it showed, when that stock was read (`asOf`) and when the
+  product was counted. The server moves the stock on to the moment of counting — sales,
+  deliveries and write-offs in between happened on the shelf too, and corrections another
+  inventory committed since already fixed the same difference — so sales during the count are
+  not mistaken for shrinkage and two people counting the same product do not write it off twice.
+  The sheet also lists products at zero stock that had a delivery in the last 90 days, keeps what
+  was counted across filters and reloads of the tab, and asks before leaving with counts unsaved.
 
 An inventory's shortfall starts without a reason (`reason = inventory`, shown as "Not yet
 given"). On the inventory's detail page every product with missing pieces has a reason select;
@@ -189,8 +237,18 @@ touched lot or an admin may reclassify. A surplus has nothing to explain: its ro
 
 Losses come off the **oldest lots first** — exactly the pieces first-in-first-out would have
 sold next, so an unpaid snack costs whoever's lot a paid one would have come from. When that is a
-colleague's lot, the audit log says so to them. Every write-off and inventory difference is listed
-on Stock › History under the type _Write-offs and inventories_.
+colleague's lot, the audit log says so to them, and they get an e-mail: one per write-off (who,
+the product, how many pieces off which of their deliveries, the reason), and after an inventory
+one summary of every product whose shortfall or surplus landed on their lots, with a link to the
+inventory. Whoever did it gets none. Every write-off and inventory difference is listed on
+Stock › History under the type _Write-offs and inventories_.
+
+A **write-off entered by mistake** can be taken back for 7 days by whoever entered it (or an
+admin): `PUT /supplier/stock/write-offs/:id/revert`. The pieces return onto the very lot they
+came off (unless that lot was voided since), the row stays in the history marked as reverted
+(`reverted_at`, `reverted_by`) and no longer counts as shrinkage; the audit gets
+`stock.write_off_reverted`. An inventory difference cannot be reverted — the next inventory
+corrects it.
 
 ## Earnings and the yearly limit
 
@@ -199,7 +257,13 @@ cost of what sold, gross profit, net profit, shrinkage (pieces, value at purchas
 price, loss rate, a breakdown by reason and the surpluses that offset it), and the **margin that
 just covers the shrinkage** (`loss rate / (1 − loss rate)`), compared with the margin actually
 achieved. Sales of lots without a purchase price are left out of the profit and counted
-separately.
+separately; where the profit covers only part of the sales the page says from how many pieces.
+Under the figures one line shows where the money is: what the year's deliveries cost, the stock
+at purchase price (plus pieces without one) and what colleagues owe — not invoiced yet and
+unpaid invoices, linking to Invoicing and Payments. When an admin hands a leaving supplier's
+stock over, the heir is taken to have bought it from them outside the app: the pieces leave the
+leaving supplier's purchases and stock and join the heir's (dated like the original lot), while
+the sales and debts made before the handover stay with the leaving supplier.
 
 **Own consumption is not income.** When suppliers buy from their own lots
 (`orders.buyer_id = deliveries.supplier_id`), nobody else paid them anything. Those pieces are
@@ -208,13 +272,18 @@ left out of the sales, the cost of sales, the profit, the per-product breakdown 
 limit. They did leave the shelf, so they count in the loss rate:
 `net lost / (sold to others + own consumption + net lost)`.
 
-**Shrinkage is valued at purchase prices** — what the missing pieces cost the supplier, and what
-net profit subtracts (the selling price stands in where a lot has no purchase price); it never
-goes below zero, surpluses are shown on their own. The value at selling prices — what colleagues
+**Shrinkage is valued at purchase prices** — what the missing pieces cost the supplier (the
+selling price stands in where a lot has no purchase price); it never goes below zero, surpluses
+are shown on their own. Net profit subtracts only the shrinkage of lots with a purchase price,
+the same lots the gross profit is made of; without any purchase price it is not shown at all. The value at selling prices — what colleagues
 did not pay — is shown next to it.
 
-An instance can set a yearly limit a supplier should stay under. Only **sales to other people**
-count towards it. The earnings page shows the progress and the stock page warns from 80 % on.
+An instance can set a yearly limit a supplier should stay under. It counts **money received**:
+invoices other people paid, by the date they were paid (`invoices.paid_at`, in the fridge's
+timezone) — a December purchase paid in January is January's income. Own consumption
+(self-invoices) never counts, a rejected payment drops out again. Next to it the page shows what
+is **pending**: unpaid invoices and purchases not invoiced yet. Sales on the earnings page stay
+by the purchase date. The earnings page shows the progress and the stock page warns from 80 % on.
 Exceeding the limit **only shows a warning**: nothing is blocked and no e-mail is sent.
 
 | Variable                             | Default | Meaning                                  |
@@ -224,8 +293,9 @@ Exceeding the limit **only shows a warning**: nothing is blocked and no e-mail i
 
 In the Czech Republic, occasional income ("příležitostný příjem", § 10 odst. 3 písm. a) zákona o
 daních z příjmů) is tax-exempt up to **50 000 Kč of income per calendar year** (30 000 Kč before
-2024). The limit applies to income — sales — not to profit, and once exceeded the whole amount is
-taxable. This is not legal advice; check your own situation.
+2024). The limit applies to income, not to profit, and once exceeded the whole amount is
+taxable. Counting by the payment date is the app's reading; this is not tax or legal advice —
+check your own situation.
 
 ## MCP tools
 
@@ -240,6 +310,7 @@ the rules for choosing between tools.
 | `update_stock_draft` / `discard_stock_draft`      | Replace all lines of an open draft from chat; throw it away                                                   |
 | `commit_stock_draft`                              | Stock a draft — only after the supplier saw the lines; same duplicate/price warnings as the web               |
 | `write_off_stock`                                 | Known losses (expired, damaged, stolen, other) off the oldest lots                                            |
+| `list_stock_lots` / `reprice_stock`               | The lots of a product with pieces left (FIFO order); a new selling price for all your lots or exact lots      |
 | `record_inventory_count` / `classify_inventory_loss` | A shelf count (`expected` from `get_stock`); a reason for its shortfall                                    |
 | `void_delivery` / `correct_delivery`              | Cancel a lot nothing sold from; fix a lot's pieces, selling or purchase price                                 |
 | `get_shopping_list`                               | The list with the saved settings, or others for one question (scope `mine` / `all`)                          |

@@ -8,6 +8,7 @@ import Select from 'primevue/select'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDateTime } from '~/composables/use_format_date'
 import { useListFilters } from '~/composables/use_list_filters'
+import { hasActiveFilters } from '~/composables/use_filter_params'
 import { useSelectEnterKey } from '~/composables/use_select_enter_key'
 import { getAuditActionLabel, getAuditActionOptions } from '~/composables/use_audit_actions'
 import FilterBar from '~/components/FilterBar.vue'
@@ -69,6 +70,7 @@ const { onSelectShow } = useSelectEnterKey([
     getValue: (o) => o.id,
     onSelect: (v) => {
       filterUserId.value = v
+      applyFilters()
     },
   },
 ])
@@ -108,6 +110,8 @@ const { applyFilters, navigateClear, onPageChange } = useListFilters({
   getCurrentPage: () => props.logs.meta.currentPage,
 })
 
+const filtersActive = computed(() => hasActiveFilters(buildParams()))
+
 function clearFilters() {
   filterAction.value = ALL
   filterEntity.value = ALL
@@ -131,7 +135,7 @@ function onSort(event: any) {
     </h1>
 
     <!-- Filters -->
-    <FilterBar @apply="applyFilters" @clear="clearFilters">
+    <FilterBar :active="filtersActive" @clear="clearFilters">
       <div>
         <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
           t('audit.filter_action')
@@ -142,6 +146,7 @@ function onSort(event: any) {
           optionLabel="label"
           optionValue="value"
           class="w-48"
+          @change="applyFilters"
         />
       </div>
       <div>
@@ -154,6 +159,7 @@ function onSort(event: any) {
           optionLabel="label"
           optionValue="value"
           class="w-36"
+          @change="applyFilters"
         />
       </div>
       <div>
@@ -169,6 +175,7 @@ function onSort(event: any) {
           filter
           class="w-48"
           @show="onSelectShow"
+          @change="applyFilters"
         />
       </div>
     </FilterBar>

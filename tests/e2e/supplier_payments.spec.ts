@@ -33,9 +33,11 @@ async function readRows(page: Page) {
   const result: { total: string; status: string }[] = []
   for (let i = 0; i < count; i++) {
     const cells = rows.nth(i).locator('td')
-    const total = await cells.nth(3).innerText()
-    const status = await cells.nth(4).locator('.p-tag').innerText()
-    result.push({ total: total.trim(), status: status.trim() })
+    // Money is locale-formatted ("7 777 Kč" with a no-break space), so compare digits only.
+    const totalText = await cells.nth(3).innerText()
+    const total = totalText.replace(/\s/g, '')
+    const status = await cells.nth(4).getByTestId('payment-status').innerText()
+    result.push({ total, status: status.trim() })
   }
   return result
 }
@@ -85,7 +87,13 @@ test.describe('Supplier payments list', () => {
 
   test('groups invoices by status and sorts newest first inside a group', async ({ page }) => {
     await page.goto('/supplier/payments')
+    // The page is titled like its menu entry, and the ordering rule sits behind an (i).
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Platby')
     await expect(page.getByTestId('payments-order-hint')).toBeVisible()
+    await expect(page.getByText('Faktury jsou seřazeny podle stavu')).toBeHidden()
+    await page.getByTestId('payments-order-hint').click()
+    await expect(page.getByText(/Faktury jsou seřazeny podle stavu/)).toBeVisible()
+    await page.keyboard.press('Escape')
     await expect(page.locator('.p-datatable tbody tr').first()).toBeVisible()
 
     const rows = await readRows(page)
@@ -103,6 +111,7 @@ test.describe('Supplier payments list', () => {
     // 7-day-old seeded one, even though a 5-day-old unpaid invoice exists.
     expect(rows[0].status).toBe('Čeká na schválení')
     expect(rows[0].total).toContain(String(ORDERING_TOTAL))
+    expect(rows[0].total).toMatch(/Kč$/)
   })
 
   test('rejecting a payment keeps scroll position, filters and pagination', async ({ page }) => {
@@ -110,8 +119,10 @@ test.describe('Supplier payments list', () => {
     await page.setViewportSize({ width: 1280, height: 400 })
     await page.goto('/supplier/payments?sortBy=totalCost&sortOrder=asc&page=1')
 
-    const row = page.locator('.p-datatable tbody tr', { hasText: String(REJECT_TOTAL) })
-    await expect(row.locator('.p-tag').first()).toHaveText('Čeká na schválení')
+    const row = page.locator('.p-datatable tbody tr', { hasText: /7\s778\sKč/ })
+    const status = row.getByTestId('payment-status')
+    await expect(status).toHaveText('Čeká na schválení')
+    await expect(status).toHaveClass(/bg-amber-100/)
     // The fixed boot-loader overlay stays in the DOM for ~1.6 s after load. While it is there,
     // Playwright's hit-target check for the click can retry and re-scroll the row itself,
     // which would corrupt the before/after comparison below.
@@ -127,8 +138,21 @@ test.describe('Supplier payments list', () => {
 
     await rejectButton.click()
 
+    // Rejecting e-mails the buyer, so it asks first — Cancel leaves the request untouched.
+    const dialog = page.locator('.p-confirmdialog')
+    await expect(dialog).toContainText('Kupující dostane e-mail.')
+    await dialog.getByRole('button', { name: 'Zrušit' }).click()
+    await expect(dialog).toBeHidden()
+    await expect(status).toHaveText('Čeká na schválení')
+
+    await rejectButton.click()
+    await dialog.getByRole('button', { name: 'Zamítnout' }).click()
+
     await expect(page.getByText('Platba byla zamítnuta.')).toBeVisible()
-    await expect(row.locator('.p-tag').first()).toHaveText('Nezaplaceno')
+    await expect(status).toHaveText('Nezaplaceno')
+    await expect(status).toHaveClass(/bg-red-100/)
+    // A settled invoice no longer repeats its status as a tag in the actions column.
+    await expect(row.getByRole('button', { name: 'Zamítnout' })).toHaveCount(0)
 
     // Filters and page survive the redirect, and the viewport did not jump back to the top.
     await expect(page).toHaveURL(/\/supplier\/payments\?sortBy=totalCost&sortOrder=asc&page=1$/)

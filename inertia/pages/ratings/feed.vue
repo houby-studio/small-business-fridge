@@ -12,6 +12,7 @@ import Message from 'primevue/message'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDateTime } from '~/composables/use_format_date'
 import { useListFilters } from '~/composables/use_list_filters'
+import { hasActiveFilters } from '~/composables/use_filter_params'
 import {
   useRatingFormValidation,
   type RatingFormState,
@@ -121,6 +122,8 @@ const { applyFilters, navigateClear, onPageChange } = useListFilters({
   buildParams,
   getCurrentPage: () => props.ratings.meta.currentPage,
 })
+
+const filtersActive = computed(() => hasActiveFilters(buildParams()))
 
 function clearFilters() {
   filterProduct.value = ALL
@@ -257,7 +260,7 @@ function confirmDeleteRating() {
       </div>
     </div>
 
-    <FilterBar @apply="applyFilters" @clear="clearFilters">
+    <FilterBar :active="filtersActive" @clear="clearFilters">
       <div>
         <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300">{{
           t('rating.filter_product')
@@ -269,6 +272,7 @@ function confirmDeleteRating() {
           optionValue="id"
           filter
           class="w-64"
+          @change="applyFilters"
         />
       </div>
       <div v-if="showVisibilityFilter">
@@ -281,6 +285,7 @@ function confirmDeleteRating() {
           optionLabel="label"
           optionValue="value"
           class="w-48"
+          @change="applyFilters"
         />
       </div>
       <div v-if="showScopeFilter">
@@ -293,6 +298,7 @@ function confirmDeleteRating() {
           optionLabel="label"
           optionValue="value"
           class="w-56"
+          @change="applyFilters"
         />
       </div>
     </FilterBar>

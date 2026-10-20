@@ -5,6 +5,9 @@ import StockDraft from '#models/stock_draft'
 import Product from '#models/product'
 import ProductGroup from '#models/product_group'
 
+/** Who put the line on the draft: by hand, a finished shopping list, an AI assistant. */
+export type StockDraftLineSource = 'web' | 'shopping_list' | 'assistant'
+
 export default class StockDraftItem extends BaseModel {
   @column({ isPrimary: true })
   declare id: number
@@ -19,6 +22,9 @@ export default class StockDraftItem extends BaseModel {
   @column()
   declare productGroupId: number | null
 
+  @column()
+  declare source: StockDraftLineSource
+
   /** The line as its source named it (receipt text, shopping-list line). */
   @column()
   declare label: string | null
@@ -28,6 +34,10 @@ export default class StockDraftItem extends BaseModel {
 
   @column({ consume: (value: string | null) => (value === null ? null : Number(value)) })
   declare purchasePrice: number | null
+
+  /** The purchase price is an estimate (from the shopping list), not a receipt figure. */
+  @column()
+  declare purchasePriceEstimated: boolean
 
   /** Selling price per piece; null = suggest it from the purchase price and the margin. */
   @column()

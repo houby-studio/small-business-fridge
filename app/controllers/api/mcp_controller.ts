@@ -2,6 +2,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { createMcpServer, type McpLoggingContext } from '#mcp/server'
 import { entraIdJwtVerifier } from '#services/entra_id_jwt_verifier'
+import EmailVerificationService from '#services/email_verification_service'
 import { looksLikeJwt } from '#utils/bearer_token'
 import env from '#start/env'
 import logger from '@adonisjs/core/services/logger'
@@ -100,6 +101,21 @@ export default class McpController {
       return response.status(403).json({
         error: 'forbidden',
         error_description: 'This account cannot access the MCP endpoint.',
+      })
+    }
+
+    // The same gate as the web app: where the instance requires a verified e-mail, an
+    // unverified account can do nothing through an assistant that the web would refuse.
+    if (new EmailVerificationService().shouldBlockAppAccess(user)) {
+      logger.info({
+        type: 'mcp_auth_rejected',
+        reason: 'email_not_verified',
+        userId: user.id,
+        reqId: request.id(),
+      })
+      return response.status(403).json({
+        error: 'forbidden',
+        error_description: 'Verify your e-mail in the web app first (Profile).',
       })
     }
 

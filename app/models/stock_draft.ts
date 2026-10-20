@@ -5,7 +5,7 @@ import User from '#models/user'
 import StockDraftItem from '#models/stock_draft_item'
 
 export type StockDraftSource = 'web' | 'mcp' | 'shopping_list'
-export type StockDraftStatus = 'open' | 'committed' | 'discarded'
+export type StockDraftStatus = 'open' | 'committed' | 'discarded' | 'voided'
 
 /** A bulk stocking prepared ahead (e.g. read from a receipt) and committed after review. */
 export default class StockDraft extends BaseModel {
@@ -32,6 +32,13 @@ export default class StockDraft extends BaseModel {
 
   @column.dateTime()
   declare committedAt: DateTime | null
+
+  /** Set when a stocked draft was voided as a whole (every lot voided with it). */
+  @column.dateTime()
+  declare voidedAt: DateTime | null
+
+  @column()
+  declare voidReason: string | null
 
   @belongsTo(() => User, { foreignKey: 'supplierId' })
   declare supplier: BelongsTo<typeof User>

@@ -66,6 +66,8 @@ export default class ShopService {
       .whereHas('category', (q) => {
         q.where('isDisabled', false)
       })
+      // Archived products are gone from the shop and the kiosk, favourites included.
+      .whereNull('archivedAt')
       .orderBy('displayName', 'asc')
 
     if (excludedAllergenIds.length > 0) {

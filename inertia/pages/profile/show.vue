@@ -3,7 +3,7 @@ import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { Head, router, usePage } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import InputText from 'primevue/inputtext'
-import InputNumber from 'primevue/inputnumber'
+import InputNumber from '~/components/NumberInput.vue'
 import ToggleSwitch from 'primevue/toggleswitch'
 import SelectButton from 'primevue/selectbutton'
 import MultiSelect from 'primevue/multiselect'
@@ -488,6 +488,13 @@ function changePasswordRequest() {
 
 const newTokenName = ref('')
 const newTokenExpiresDays = ref<number | null>(null)
+/** Mirrors the API token validator (expiresInDays 1 … 3650); the field itself has no max. */
+const TOKEN_MAX_DAYS = 3650
+const newTokenExpiresError = computed(() =>
+  newTokenExpiresDays.value !== null && newTokenExpiresDays.value > TOKEN_MAX_DAYS
+    ? t('profile.tokens_expires_max', { max: TOKEN_MAX_DAYS })
+    : ''
+)
 const creatingToken = ref(false)
 
 function createToken() {
@@ -1090,9 +1097,12 @@ onMounted(() => {
                     v-model="newTokenExpiresDays"
                     fluid
                     :min="1"
-                    :max="3650"
+                    :invalid="!!newTokenExpiresError"
                     :placeholder="t('profile.tokens_never_expires')"
                   />
+                  <small v-if="newTokenExpiresError" class="text-red-500 dark:text-red-400">{{
+                    newTokenExpiresError
+                  }}</small>
                 </div>
                 <div class="lg:col-span-3 lg:flex lg:justify-end">
                   <Button
@@ -1100,7 +1110,7 @@ onMounted(() => {
                     fluid
                     icon="pi pi-plus"
                     :loading="creatingToken"
-                    :disabled="!newTokenName.trim()"
+                    :disabled="!newTokenName.trim() || !!newTokenExpiresError"
                     @click="createToken"
                   />
                 </div>

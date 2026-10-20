@@ -3,6 +3,7 @@ import NotificationService from '#services/notification_service'
 import RecommendationService from '#services/recommendation_service'
 import AnonymizationService from '#services/anonymization_service'
 import OffContributionService from '#services/product_images/off_contribution_service'
+import StockDraftService from '#services/shopping/stock_draft_service'
 import env from '#start/env'
 import logger from '@adonisjs/core/services/logger'
 
@@ -106,6 +107,21 @@ scheduler
     }
   })
   .cron(env.get('CRON_ANONYMIZE_DISABLED') ?? '0 3 * * *')
+
+/**
+ * Empty stocking drafts — daily at 04:00. "Stock" opens a draft even when the supplier then
+ * walks away; one that never got a line is discarded after a week. Nothing is lost.
+ */
+scheduler
+  .call(async () => {
+    try {
+      const discarded = await new StockDraftService().discardStaleEmpty()
+      if (discarded > 0) logger.info({ discarded }, 'Empty stocking drafts discarded')
+    } catch (error) {
+      logger.error({ err: error }, 'Failed to discard empty stocking drafts')
+    }
+  })
+  .cron('0 4 * * *')
 
 /**
  * Open Food Facts contributions — every 2 minutes, only when the instance has an OFF

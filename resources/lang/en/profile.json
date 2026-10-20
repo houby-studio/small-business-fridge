@@ -65,5 +65,6 @@
   "linked_accounts_heading": "Connected Providers",
   "email_active": "Active email",
   "field_required": "This field is required.",
-  "field_too_long": "At most {max} characters."
+  "field_too_long": "At most {max} characters.",
+  "tokens_expires_max": "At most {max} days."
 }

@@ -6,9 +6,13 @@ import type User from '#models/user'
 import db from '@adonisjs/lucid/services/db'
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 import AuditService from '#services/audit_service'
+import NotificationService from '#services/notification_service'
+import { runAfterResponse } from '#services/side_effects'
+import ProductService from '#services/product_service'
 import { DomainError } from '#services/domain_error'
 import { normalizeImagePath } from '#helpers/image_url'
-import { roundMoney, suggestSellingPrice } from '#services/shopping/pricing'
+import { roundMoney, suggestDraftPrice } from '#services/shopping/pricing'
+import { DELIVERY_MAX_PRICE } from '#validators/delivery'
 
 /** A repeated delivery of the same product by the same supplier within this window is flagged. */
 export const DUPLICATE_WINDOW_MINUTES = 30
@@ -24,6 +28,20 @@ export const LOW_STOCK_THRESHOLD = 4
 
 export type AddStockErrorCode = 'PRICE_REQUIRED'
 
+export type RepriceErrorCode =
+  | 'NOTHING_IN_STOCK'
+  | 'NO_CHANGE'
+  | 'DELIVERY_NOT_FOUND'
+  | 'DELIVERY_VOIDED'
+  | 'FORBIDDEN'
+  | 'INVALID_PRICE'
+  | 'DUPLICATE_LOT'
+
+export type TransferErrorCode =
+  | 'TRANSFER_SAME_USER'
+  | 'TRANSFER_TARGET_INVALID'
+  | 'NOTHING_TO_TRANSFER'
+
 export type DeliveryCorrectionErrorCode =
   | 'DELIVERY_NOT_FOUND'
   | 'FORBIDDEN'
@@ -32,6 +50,8 @@ export type DeliveryCorrectionErrorCode =
   | 'AMOUNT_INCREASE_NOT_ALLOWED'
   | 'NO_CHANGE'
   | 'DELIVERY_HAS_ORDERS'
+  | 'DELIVERY_HAS_ADJUSTMENTS'
+  | 'DELIVERY_TRANSFERRED'
 
 /** Whose deliveries a listing covers: the whole fridge or only the viewer's own lots. */
 export type StockScope = 'all' | 'mine'
@@ -45,6 +65,12 @@ export interface StockWarnings {
     lastSupplierName: string
     lastCreatedAt: string
   } | null
+  /**
+   * The purchase price is far from the supplier's own last one — typically the price of a
+   * whole pack typed in for a piece. Only the supplier's own lots: a colleague's purchase
+   * price is theirs to know.
+   */
+  unusualPurchasePrice: { lastPurchasePrice: number; lastCreatedAt: string } | null
 }
 
 export interface StockRow {
@@ -55,6 +81,20 @@ export interface StockRow {
   categoryColor: string | null
   totalSupplied: number
   totalRemaining: number
+  /**
+   * Pieces of the viewer's own lots — what "Změnit cenu" would reprice. Equals
+   * `totalRemaining` for an admin (who reprices every lot) and in the `mine` scope.
+   */
+  myRemaining: number
+  /** Pieces of the viewer's own lots only — an admin's too ("z toho moje"). */
+  ownRemaining: number
+  /** Pieces of the product in the whole fridge, whatever the scope ("v lednici celkem"). */
+  totalRemainingAll: number
+  /**
+   * Selling price of the viewer's newest lot with pieces left (any lot for an admin) — what
+   * "Změnit cenu" starts from. Null when the viewer has none of it in stock.
+   */
+  currentPrice: number | null
   totalSold: number
   deliveryCount: number
   totalStockValue: number
@@ -83,8 +123,13 @@ export interface StockOverview {
   data: StockRow[]
   meta: { total: number; perPage: number; currentPage: number; lastPage: number }
   totals: { totalProducts: number; totalRemaining: number; totalStockValue: number }
-  /** Products with LOW_STOCK_THRESHOLD pieces or fewer — regardless of the stockState filter. */
+  /**
+   * Products with 1 to LOW_STOCK_THRESHOLD pieces — exactly what `stockState: 'low'` lists,
+   * whatever filter is applied.
+   */
   lowStockCount: number
+  /** Sold-out products — exactly what `stockState: 'out'` lists. */
+  outStockCount: number
   /** Only computed with `withInsights` (the MCP get_stock tool); the web does not need it. */
   insights?: StockInsights
 }
@@ -96,6 +141,8 @@ export interface StockFilters {
   scope?: StockScope
   stockState?: StockState
   withInsights?: boolean
+  /** The viewer is an admin: every lot counts as theirs in `myRemaining`. */
+  viewerIsAdmin?: boolean
 }
 
 export interface DeliveryCorrectionResult {
@@ -120,6 +167,49 @@ export interface CorrectionInput {
   reason: string
 }
 
+export interface RepricedLot {
+  deliveryId: number
+  productId: number
+  supplierId: number
+  from: number
+  to: number
+  /** Pieces left on the lot — what the new price applies to. */
+  pieces: number
+}
+
+export interface RepriceResult {
+  /** Only the lots whose price really changed. */
+  lots: RepricedLot[]
+  pieces: number
+}
+
+/** A lot with pieces left, as the "Změnit cenu" and "Odepsat" dialogs list it (FIFO order). */
+export interface LotInStock {
+  deliveryId: number
+  createdAt: string
+  supplier: { id: number; name: string }
+  amountLeft: number
+  price: number
+  /** The viewer's own lot. */
+  mine: boolean
+  /** The viewer may change its price: their own lot, or any lot for an admin. */
+  editable: boolean
+}
+
+export interface TransferResult {
+  lots: Array<{ fromDeliveryId: number; toDeliveryId: number; productId: number; pieces: number }>
+  pieces: number
+}
+
+/** What still ties a supplier to the fridge — anything here blocks switching them off. */
+export interface OpenBusiness {
+  /** Their non-voided lots with pieces left. */
+  lotsWithStock: number
+  piecesLeft: number
+  /** Purchases from their lots that are not invoiced yet. */
+  uninvoicedOrders: number
+}
+
 const STOCK_SORT_COLUMNS: Record<string, string> = {
   productName: 'product_name',
   totalRemaining: 'total_remaining',
@@ -133,9 +223,10 @@ export default class DeliveryService {
   /**
    * Add stock for a product — create a new delivery record. `purchasePrice` is what the
    * supplier paid per piece, when they track it. Without a selling price it is derived from
-   * the purchase price and `marginPercent`. Pass `client` to stock inside a larger
-   * transaction (a bulk draft): the audit entry then rolls back with it. `actorId` is who
-   * really stocked when it is not the supplier (an admin committing their draft).
+   * the purchase price, `marginPercent` and the product's last price (`resolveSellingPrice`).
+   * Pass `client` to stock inside a larger transaction (a bulk draft): the audit entry then
+   * rolls back with it. `actorId` is who really stocked when it is not the supplier (an
+   * admin committing their draft).
    */
   async addStock(
     supplierId: number,
@@ -153,69 +244,108 @@ export default class DeliveryService {
       options.purchasePrice === null || options.purchasePrice === undefined
         ? null
         : roundMoney(options.purchasePrice)
-    const unitPrice =
-      price ??
-      (purchasePrice === null
-        ? null
-        : suggestSellingPrice(purchasePrice, options.marginPercent ?? 0))
+    const unitPrice = await this.resolveSellingPrice(
+      productId,
+      price,
+      purchasePrice,
+      options.marginPercent ?? 0,
+      options.client
+    )
     if (unitPrice === null) throw new DomainError<AddStockErrorCode>('PRICE_REQUIRED')
 
-    const delivery = await Delivery.create(
-      {
-        supplierId,
-        productId,
-        amountSupplied: amount,
-        amountLeft: amount,
-        amountLost: 0,
-        price: unitPrice,
-        purchasePrice,
-      },
-      { client: options.client }
-    )
+    // The lot, its audit entry and a lifted archive commit together — inside the caller's
+    // transaction when there is one (a draft commit), otherwise in their own.
+    const stock = async (trx: TransactionClientContract) => {
+      const delivery = await Delivery.create(
+        {
+          supplierId,
+          productId,
+          amountSupplied: amount,
+          amountLeft: amount,
+          amountLost: 0,
+          price: unitPrice,
+          purchasePrice,
+        },
+        { client: trx }
+      )
 
-    const actorId = options.actorId ?? supplierId
-    await AuditService.log(
-      actorId,
-      'delivery.created',
-      'delivery',
-      delivery.id,
-      actorId !== supplierId ? supplierId : null,
-      { productId, amount, price: unitPrice, ...(purchasePrice !== null && { purchasePrice }) },
-      { client: options.client }
-    )
+      const actorId = options.actorId ?? supplierId
+      await AuditService.log(
+        actorId,
+        'delivery.created',
+        'delivery',
+        delivery.id,
+        actorId !== supplierId ? supplierId : null,
+        { productId, amount, price: unitPrice, ...(purchasePrice !== null && { purchasePrice }) },
+        { client: trx }
+      )
 
-    return delivery
+      // Stocking an archived product brings it back to the shop.
+      await ProductService.unarchiveForStock(productId, actorId, trx)
+
+      return delivery
+    }
+
+    return options.client ? stock(options.client) : db.transaction(stock)
+  }
+
+  /**
+   * The selling price a new lot gets — the one rule for the web, drafts and MCP: a price
+   * given by the supplier as is; otherwise the purchase price plus `marginPercent`, but
+   * never below the product's current price (the newest lot of anyone), so restocking does
+   * not quietly cut an established price. Null when there is neither price.
+   */
+  async resolveSellingPrice(
+    productId: number,
+    price: number | null,
+    purchasePrice: number | null,
+    marginPercent: number,
+    client?: TransactionClientContract
+  ): Promise<number | null> {
+    if (price !== null) return price
+    if (purchasePrice === null) return null
+    const last = await Delivery.query({ client })
+      .where('productId', productId)
+      .whereNull('voidedAt')
+      .orderBy('createdAt', 'desc')
+      .orderBy('id', 'desc')
+      .select('price')
+      .first()
+    return suggestDraftPrice(roundMoney(purchasePrice), marginPercent, last?.price ?? null)
   }
 
   /**
    * Cheap sanity checks run before a delivery is created, so an accidental double submit
-   * or a mistyped price is caught while it is still free to fix. Returns null when there
-   * is nothing to confirm.
+   * or a mistyped price is caught while it is still free to fix. `purchasePrice` is checked
+   * against the supplier's own last purchase price. Returns null when there is nothing to
+   * confirm. Pass `client` to read inside the caller's transaction.
    */
   async getStockWarnings(
     supplierId: number,
     productId: number,
-    price: number
+    price: number,
+    options: { purchasePrice?: number | null; client?: TransactionClientContract } = {}
   ): Promise<StockWarnings | null> {
     const since = DateTime.now().minus({ minutes: DUPLICATE_WINDOW_MINUTES })
+    const purchasePrice = options.purchasePrice ?? null
+    const lots = () =>
+      Delivery.query({ client: options.client })
+        .where('productId', productId)
+        .whereNull('voidedAt')
+        .orderBy('createdAt', 'desc')
+        .orderBy('id', 'desc')
 
-    const [recentOwn, lastDelivery] = await Promise.all([
-      Delivery.query()
-        .where('supplierId', supplierId)
-        .where('productId', productId)
-        .whereNull('voidedAt')
-        .where('createdAt', '>=', since.toJSDate())
-        .orderBy('createdAt', 'desc')
-        .orderBy('id', 'desc')
-        .first(),
-      Delivery.query()
-        .where('productId', productId)
-        .whereNull('voidedAt')
-        .preload('supplier')
-        .orderBy('createdAt', 'desc')
-        .orderBy('id', 'desc')
-        .first(),
-    ])
+    // One after another: inside the caller's transaction they share one connection, and pg
+    // refuses a query while the previous one is still running.
+    const recentOwn = await lots()
+      .where('supplierId', supplierId)
+      .where('createdAt', '>=', since.toJSDate())
+      .first()
+    const lastDelivery = await lots().preload('supplier').first()
+    const lastOwnPurchase =
+      purchasePrice === null
+        ? null
+        : await lots().where('supplierId', supplierId).whereNotNull('purchasePrice').first()
 
     const duplicate = recentOwn
       ? {
@@ -229,10 +359,7 @@ export default class DeliveryService {
       : null
 
     const unusualPrice =
-      lastDelivery &&
-      Math.abs(price - lastDelivery.price) > UNUSUAL_PRICE_MIN_DIFF &&
-      (price >= lastDelivery.price * UNUSUAL_PRICE_RATIO ||
-        price * UNUSUAL_PRICE_RATIO <= lastDelivery.price)
+      lastDelivery && DeliveryService.isUnusual(price, lastDelivery.price)
         ? {
             lastPrice: lastDelivery.price,
             lastSupplierId: lastDelivery.supplierId,
@@ -241,7 +368,25 @@ export default class DeliveryService {
           }
         : null
 
-    return duplicate || unusualPrice ? { duplicate, unusualPrice } : null
+    const lastPurchasePrice = lastOwnPurchase?.purchasePrice ?? null
+    const unusualPurchasePrice =
+      purchasePrice !== null &&
+      lastPurchasePrice !== null &&
+      DeliveryService.isUnusual(purchasePrice, lastPurchasePrice)
+        ? { lastPurchasePrice, lastCreatedAt: lastOwnPurchase!.createdAt.toISO() ?? '' }
+        : null
+
+    return duplicate || unusualPrice || unusualPurchasePrice
+      ? { duplicate, unusualPrice, unusualPurchasePrice }
+      : null
+  }
+
+  /** Far from the last value: UNUSUAL_PRICE_RATIO times off and more than MIN_DIFF apart. */
+  private static isUnusual(value: number, last: number): boolean {
+    return (
+      Math.abs(value - last) > UNUSUAL_PRICE_MIN_DIFF &&
+      (value >= last * UNUSUAL_PRICE_RATIO || value * UNUSUAL_PRICE_RATIO <= last)
+    )
   }
 
   /**
@@ -346,6 +491,15 @@ export default class DeliveryService {
       delivery.purchasePrice = newPurchasePrice
       await delivery.save()
 
+      // Shrinkage is valued at the lot's purchase price, so a corrected typo must reach the
+      // write-offs too. Their selling price stays: it is the price at the time of the loss.
+      if (purchasePriceChanged) {
+        await trx
+          .from('stock_adjustments')
+          .where('delivery_id', delivery.id)
+          .update({ unit_cost: newPurchasePrice })
+      }
+
       return { delivery, correction, repricedOrderIds }
     })
 
@@ -373,21 +527,24 @@ export default class DeliveryService {
       }
     )
 
+    this.notifyCorrection(result)
     return result
   }
 
   /**
    * Void a delivery nothing was sold from — typically a duplicate. The row is kept (with
    * both amounts zeroed and `voided_at` set) so the history and audit trail stay intact;
-   * the original numbers live on the correction record.
+   * the original numbers live on the correction record. With `options.client` it runs
+   * inside the caller's transaction and sends no e-mail — the caller calls
+   * `notifyCorrection(result)` after its commit.
    */
   async voidDelivery(
     actor: CorrectionActor,
     deliveryId: number,
     reason: string,
-    options: CorrectionOptions = {}
+    options: CorrectionOptions & { client?: TransactionClientContract } = {}
   ): Promise<DeliveryCorrectionResult> {
-    const result = await db.transaction(async (trx) => {
+    const run = async (trx: TransactionClientContract): Promise<DeliveryCorrectionResult> => {
       const delivery = await this.lockForCorrection(actor, deliveryId, trx)
 
       const orderCount = await trx
@@ -395,8 +552,21 @@ export default class DeliveryService {
         .where('delivery_id', delivery.id)
         .count('* as total')
         .first()
-      if (Number(orderCount?.total ?? 0) > 0 || delivery.amountLeft !== delivery.amountSupplied) {
+      if (Number(orderCount?.total ?? 0) > 0) {
         throw new DomainError<DeliveryCorrectionErrorCode>('DELIVERY_HAS_ORDERS')
+      }
+      // Nothing sold, but pieces were written off or found by an inventory — voiding would
+      // erase them from the stock history.
+      if (delivery.amountLost !== 0 || delivery.amountLeft !== delivery.amountSupplied) {
+        throw new DomainError<DeliveryCorrectionErrorCode>('DELIVERY_HAS_ADJUSTMENTS')
+      }
+      // A handover moved real stock: voiding either side would make pieces vanish without
+      // a write-off. A void is only for a lot entered by mistake.
+      const handedOver =
+        delivery.transferredFromId !== null ||
+        (await trx.from('deliveries').where('transferred_from_id', delivery.id).first())
+      if (handedOver) {
+        throw new DomainError<DeliveryCorrectionErrorCode>('DELIVERY_TRANSFERRED')
       }
 
       const correction = await DeliveryCorrection.create(
@@ -420,27 +590,455 @@ export default class DeliveryService {
       delivery.amountSupplied = 0
       delivery.amountLeft = 0
       delivery.voidedAt = DateTime.now()
-      await delivery.save()
+      await delivery.useTransaction(trx).save()
+
+      await AuditService.log(
+        actor.id,
+        'delivery.voided',
+        'delivery',
+        delivery.id,
+        delivery.supplierId === actor.id ? null : delivery.supplierId,
+        {
+          productId: delivery.productId,
+          reason,
+          amountSupplied: correction.oldAmountSupplied,
+          price: correction.oldPrice,
+        },
+        { client: trx }
+      )
 
       return { delivery, correction, repricedOrderIds: [] }
+    }
+
+    // Inside the caller's transaction (voiding a whole draft) the caller sends the e-mails
+    // once everything committed — `notifyCorrection(result)`.
+    if (options.client) return run(options.client)
+
+    const result = await db.transaction(run)
+    this.notifyCorrection(result)
+    return result
+  }
+
+  /**
+   * The e-mails a correction or a void sends, whatever channel made it (web, MCP): the
+   * buyers whose uninvoiced purchases were repriced, and the supplier when someone else —
+   * an admin, or an admin impersonating them — changed their lot. Sent after the response
+   * (`runAfterResponse`): a mail failure never undoes the correction, and tests wait for them
+   * with `settleSideEffects()`. `correctDelivery`/`voidDelivery` call it.
+   */
+  notifyCorrection(result: DeliveryCorrectionResult): void {
+    const { delivery, correction, repricedOrderIds } = result
+    const notifications = new NotificationService()
+    if (correction.repricedOrderCount > 0) {
+      runAfterResponse(
+        () => notifications.sendPriceCorrectionNotifications(correction.id, repricedOrderIds),
+        `price correction e-mails for correction #${correction.id}`
+      )
+    }
+    if (correction.actorId !== delivery.supplierId || correction.impersonatorId) {
+      runAfterResponse(
+        () => notifications.sendDeliveryCorrectionToSupplier(correction.id),
+        `supplier notice for correction #${correction.id}`
+      )
+    }
+  }
+
+  /**
+   * The lots of a product with pieces left, in the order the fridge sells and writes them
+   * off (`created_at`, then `id`). No purchase prices: a colleague's is theirs to know.
+   */
+  async listLotsInStock(
+    viewer: Pick<User, 'id' | 'role'>,
+    productId: number
+  ): Promise<LotInStock[]> {
+    const lots = await Delivery.query()
+      .where('productId', productId)
+      .whereNull('voidedAt')
+      .where('amountLeft', '>', 0)
+      .preload('supplier')
+      .orderBy('createdAt', 'asc')
+      .orderBy('id', 'asc')
+    return lots.map((lot) => ({
+      deliveryId: lot.id,
+      createdAt: lot.createdAt.toISO() ?? '',
+      supplier: { id: lot.supplierId, name: lot.supplier?.displayName ?? '—' },
+      amountLeft: lot.amountLeft,
+      price: lot.price,
+      mine: lot.supplierId === viewer.id,
+      editable: lot.supplierId === viewer.id || viewer.role === 'admin',
+    }))
+  }
+
+  /**
+   * A new selling price for chosen lots that still have pieces — a sale or a price rise,
+   * lot by lot. Never touches a purchase: what was sold keeps its price and no buyer is
+   * e-mailed. A supplier changes only their own lots, an admin anyone's; the owner of a lot
+   * an admin repriced gets an e-mail. One transaction for all lots, locked in FIFO order
+   * (as purchases lock them). Each changed lot keeps a `reprice` record; the audit has one
+   * entry per owner, product and new price.
+   */
+  async repriceLots(
+    actor: CorrectionActor,
+    items: Array<{ deliveryId: number; price: number }>,
+    options: CorrectionOptions = {}
+  ): Promise<RepriceResult> {
+    if (items.length === 0) throw new DomainError<RepriceErrorCode>('NO_CHANGE')
+    const wanted = new Map<number, number>()
+    for (const item of items) {
+      if (wanted.has(item.deliveryId)) throw new DomainError<RepriceErrorCode>('DUPLICATE_LOT')
+      if (!Number.isInteger(item.price) || item.price < 1 || item.price > DELIVERY_MAX_PRICE) {
+        throw new DomainError<RepriceErrorCode>('INVALID_PRICE')
+      }
+      wanted.set(item.deliveryId, item.price)
+    }
+
+    const result = await db.transaction(async (trx) => {
+      const ids = [...wanted.keys()]
+      const products = await trx.from('deliveries').whereIn('id', ids).select('id', 'product_id')
+      if (products.length !== ids.length) {
+        throw new DomainError<RepriceErrorCode>('DELIVERY_NOT_FOUND')
+      }
+      // Every lot of these products, product by product and oldest first — the order a
+      // purchase (and a basket) locks them, so the two can never deadlock.
+      const locked = await Delivery.query({ client: trx })
+        .whereIn('productId', [...new Set(products.map((row) => Number(row.product_id)))])
+        .orderBy('productId', 'asc')
+        .orderBy('createdAt', 'asc')
+        .orderBy('id', 'asc')
+        .forUpdate()
+      const chosen = locked.filter((lot) => wanted.has(lot.id))
+      for (const lot of chosen) {
+        if (lot.voidedAt) throw new DomainError<RepriceErrorCode>('DELIVERY_VOIDED')
+        if (lot.amountLeft <= 0) throw new DomainError<RepriceErrorCode>('NOTHING_IN_STOCK')
+        if (actor.role !== 'admin' && lot.supplierId !== actor.id) {
+          throw new DomainError<RepriceErrorCode>('FORBIDDEN')
+        }
+      }
+
+      const changed = chosen.filter((lot) => lot.price !== wanted.get(lot.id))
+      if (changed.length === 0) throw new DomainError<RepriceErrorCode>('NO_CHANGE')
+
+      const repriced: RepricedLot[] = []
+      const audit = new Map<
+        string,
+        {
+          supplierId: number
+          productId: number
+          to: number
+          from: Set<number>
+          lots: number
+          pieces: number
+        }
+      >()
+      for (const lot of changed) {
+        const to = wanted.get(lot.id)!
+        await DeliveryCorrection.create(
+          {
+            deliveryId: lot.id,
+            actorId: actor.id,
+            impersonatorId: options.impersonatorId ?? null,
+            kind: 'reprice',
+            reason: '',
+            oldAmountSupplied: lot.amountSupplied,
+            newAmountSupplied: lot.amountSupplied,
+            oldPrice: lot.price,
+            newPrice: to,
+            oldPurchasePrice: lot.purchasePrice,
+            newPurchasePrice: lot.purchasePrice,
+            repricedOrderCount: 0,
+          },
+          { client: trx }
+        )
+        repriced.push({
+          deliveryId: lot.id,
+          productId: lot.productId,
+          supplierId: lot.supplierId,
+          from: lot.price,
+          to,
+          pieces: lot.amountLeft,
+        })
+        const key = `${lot.supplierId}:${lot.productId}:${to}`
+        const entry = audit.get(key) ?? {
+          supplierId: lot.supplierId,
+          productId: lot.productId,
+          to,
+          from: new Set<number>(),
+          lots: 0,
+          pieces: 0,
+        }
+        entry.from.add(lot.price)
+        entry.lots += 1
+        entry.pieces += lot.amountLeft
+        audit.set(key, entry)
+
+        lot.price = to
+        await lot.useTransaction(trx).save()
+      }
+
+      for (const entry of audit.values()) {
+        await AuditService.log(
+          actor.id,
+          'delivery.repriced',
+          'product',
+          entry.productId,
+          entry.supplierId === actor.id ? null : entry.supplierId,
+          {
+            productId: entry.productId,
+            // Lots of one product may have had different prices.
+            from: [...entry.from].sort((a, b) => a - b),
+            to: entry.to,
+            lots: entry.lots,
+            pieces: entry.pieces,
+          },
+          { client: trx }
+        )
+      }
+
+      return { lots: repriced, pieces: repriced.reduce((sum, lot) => sum + lot.pieces, 0) }
     })
 
-    const { delivery, correction } = result
-    await AuditService.log(
-      actor.id,
-      'delivery.voided',
-      'delivery',
-      delivery.id,
-      delivery.supplierId === actor.id ? null : delivery.supplierId,
-      {
-        productId: delivery.productId,
-        reason,
-        amountSupplied: correction.oldAmountSupplied,
-        price: correction.oldPrice,
-      }
+    // An admin changed a colleague's lots — the owner hears about it, once.
+    const foreignOwners = new Set(
+      result.lots.filter((lot) => lot.supplierId !== actor.id).map((lot) => lot.supplierId)
     )
+    for (const ownerId of foreignOwners) {
+      const lots = result.lots.filter((lot) => lot.supplierId === ownerId)
+      runAfterResponse(
+        () =>
+          new NotificationService().sendRepriceToSupplier({
+            supplierId: ownerId,
+            actorId: options.impersonatorId ?? actor.id,
+            lots,
+          }),
+        `reprice notice for supplier #${ownerId}`
+      )
+    }
 
     return result
+  }
+
+  /**
+   * The shortcut "all my pieces of this product at one price" (MCP default): the actor's
+   * own lots with pieces left — an admin's own too, never a colleague's — through
+   * `repriceLots`.
+   */
+  async repriceRemaining(
+    actor: CorrectionActor,
+    productId: number,
+    newPrice: number,
+    options: CorrectionOptions = {}
+  ): Promise<RepriceResult> {
+    const own = await Delivery.query()
+      .where('productId', productId)
+      .where('supplierId', actor.id)
+      .whereNull('voidedAt')
+      .where('amountLeft', '>', 0)
+      .select('id')
+    if (own.length === 0) throw new DomainError<RepriceErrorCode>('NOTHING_IN_STOCK')
+    return this.repriceLots(
+      actor,
+      own.map((lot) => ({ deliveryId: lot.id, price: newPrice })),
+      options
+    )
+  }
+
+  /**
+   * Hand the stock of a leaving supplier over to a colleague (an admin action). Every
+   * non-voided lot of `fromId` with pieces left is split: the original lot keeps what was
+   * sold and written off — its sales, invoices and shrinkage stay with the original
+   * supplier — and a new lot of `toId` gets the remaining pieces at the same selling and
+   * purchase price. The new lot keeps the original `created_at`, so the FIFO order of the
+   * fridge does not change, and points back at the original (`transferred_from_id`); both
+   * get a `transfer` correction record. Pieces an inventory found (a negative
+   * `amount_lost`) go with the stock they are part of.
+   */
+  async transferStock(
+    fromId: number,
+    toId: number,
+    actor: Pick<User, 'id'>,
+    options: CorrectionOptions = {}
+  ): Promise<TransferResult> {
+    if (fromId === toId) throw new DomainError<TransferErrorCode>('TRANSFER_SAME_USER')
+
+    return db.transaction(async (trx) => {
+      const target = await trx
+        .from('users')
+        .where('id', toId)
+        .select('role', 'is_disabled')
+        .forUpdate()
+        .first()
+      if (!target || target.is_disabled || !['supplier', 'admin'].includes(target.role)) {
+        throw new DomainError<TransferErrorCode>('TRANSFER_TARGET_INVALID')
+      }
+
+      // Product by product, oldest first — the order a purchase locks the lots of a product.
+      const lots = await Delivery.query({ client: trx })
+        .where('supplierId', fromId)
+        .whereNull('voidedAt')
+        .where('amountLeft', '>', 0)
+        .orderBy('productId', 'asc')
+        .orderBy('createdAt', 'asc')
+        .orderBy('id', 'asc')
+        .forUpdate()
+      if (lots.length === 0) throw new DomainError<TransferErrorCode>('NOTHING_TO_TRANSFER')
+
+      const moved: TransferResult['lots'] = []
+      for (const lot of lots) {
+        const pieces = lot.amountLeft
+        const sold = lot.amountSupplied - lot.amountLeft - lot.amountLost
+        const handedOver = await Delivery.create(
+          {
+            supplierId: toId,
+            productId: lot.productId,
+            amountSupplied: pieces,
+            amountLeft: pieces,
+            amountLost: 0,
+            price: lot.price,
+            purchasePrice: lot.purchasePrice,
+            createdAt: lot.createdAt,
+            transferredFromId: lot.id,
+          },
+          { client: trx }
+        )
+        const before = lot.amountSupplied
+        // What stays: sold + written off. Found pieces left with the stock.
+        lot.amountLost = Math.max(0, lot.amountLost)
+        lot.amountSupplied = sold + lot.amountLost
+        lot.amountLeft = 0
+        await lot.useTransaction(trx).save()
+
+        // Both lots remember when it happened (the new one keeps the old date for FIFO).
+        for (const [deliveryId, from, to] of [
+          [lot.id, before, lot.amountSupplied],
+          [handedOver.id, 0, pieces],
+        ]) {
+          await DeliveryCorrection.create(
+            {
+              deliveryId,
+              actorId: actor.id,
+              impersonatorId: options.impersonatorId ?? null,
+              kind: 'transfer',
+              reason: '',
+              oldAmountSupplied: from,
+              newAmountSupplied: to,
+              oldPrice: lot.price,
+              newPrice: lot.price,
+              oldPurchasePrice: lot.purchasePrice,
+              newPurchasePrice: lot.purchasePrice,
+              repricedOrderCount: 0,
+            },
+            { client: trx }
+          )
+        }
+        moved.push({
+          fromDeliveryId: lot.id,
+          toDeliveryId: handedOver.id,
+          productId: lot.productId,
+          pieces,
+        })
+      }
+
+      const pieces = moved.reduce((sum, lot) => sum + lot.pieces, 0)
+      const metadata = {
+        fromUserId: fromId,
+        toUserId: toId,
+        pieces,
+        lots: moved,
+        ...(options.impersonatorId && { impersonatorId: options.impersonatorId }),
+      }
+      // One entry for each side, so both see it in their own audit log.
+      for (const affected of [fromId, toId]) {
+        await AuditService.log(
+          actor.id,
+          'delivery.transferred',
+          'user',
+          fromId,
+          affected === actor.id ? null : affected,
+          metadata,
+          { client: trx }
+        )
+      }
+
+      return { lots: moved, pieces }
+    })
+  }
+
+  /**
+   * Put `quantity` pieces back on stock that were sold from or written off `lotId` — a
+   * storno or a reverted write-off. The caller has already taken them off the lot's sold or
+   * lost side (deleted the order, lowered `amount_lost`). Normally they simply go back to
+   * the lot. When the lot's stock was handed over to a colleague (`transferStock`), they go
+   * to the lot that took it over — followed through every later handover — because the
+   * leaving supplier no longer sells anything: the original lot gives the pieces up
+   * (`amount_supplied -= quantity`) and the heir's lot receives them. Every lot on the way
+   * is locked, original first (the order a purchase locks them). Returns the lot that got
+   * the pieces.
+   */
+  async returnPieces(
+    lotId: number,
+    quantity: number,
+    trx: TransactionClientContract
+  ): Promise<Delivery> {
+    const original = await Delivery.query({ client: trx })
+      .where('id', lotId)
+      .forUpdate()
+      .firstOrFail()
+    const target = await this.returnTargetLot(original.id, trx)
+    if (target.id === original.id) {
+      original.amountLeft += quantity
+      await original.useTransaction(trx).save()
+      return original
+    }
+    original.amountSupplied -= quantity
+    await original.useTransaction(trx).save()
+    target.amountSupplied += quantity
+    target.amountLeft += quantity
+    await target.useTransaction(trx).save()
+    return target
+  }
+
+  /**
+   * The lot that holds the stock of `lotId` now: the lot itself, or — after a handover —
+   * the heir's lot split off it, followed through later handovers. Each lot is locked.
+   */
+  async returnTargetLot(lotId: number, trx: TransactionClientContract): Promise<Delivery> {
+    let current = await Delivery.query({ client: trx }).where('id', lotId).forUpdate().firstOrFail()
+    for (;;) {
+      const next = await Delivery.query({ client: trx })
+        .where('transferredFromId', current.id)
+        .whereNull('voidedAt')
+        .orderBy('id', 'desc')
+        .forUpdate()
+        .first()
+      if (!next) return current
+      current = next
+    }
+  }
+
+  /** What would block switching `userId` off as a supplier (see `OpenBusiness`). */
+  async openBusinessOf(userId: number): Promise<OpenBusiness> {
+    const stock = await db
+      .from('deliveries')
+      .where('supplier_id', userId)
+      .whereNull('voided_at')
+      .where('amount_left', '>', 0)
+      .select(
+        db.raw('COUNT(*)::int AS lots'),
+        db.raw('COALESCE(SUM(amount_left), 0)::int AS pieces')
+      )
+      .first()
+    const orders = await db
+      .from('orders')
+      .join('deliveries', 'deliveries.id', 'orders.delivery_id')
+      .where('deliveries.supplier_id', userId)
+      .whereNull('orders.invoice_id')
+      .count('* as total')
+      .first()
+    return {
+      lotsWithStock: Number(stock?.lots ?? 0),
+      piecesLeft: Number(stock?.pieces ?? 0),
+      uninvoicedOrders: Number(orders?.total ?? 0),
+    }
   }
 
   private async lockForCorrection(
@@ -490,6 +1088,7 @@ export default class DeliveryService {
       categoryId: filters.categoryId ?? null,
       periodStart,
       lowThreshold: LOW_STOCK_THRESHOLD,
+      allMine: filters.viewerIsAdmin === true,
     }
     const mine = scope === 'mine'
     const ownOnly = (column: string) => (mine ? `AND ${column} = :supplierId` : '')
@@ -509,6 +1108,11 @@ export default class DeliveryService {
           FROM deliveries
          WHERE voided_at IS NULL AND created_at >= :periodStart ${ownOnly('supplier_id')}
          GROUP BY product_id
+      ), fridge AS (
+        SELECT product_id, SUM(amount_left)::int AS remaining_all
+          FROM deliveries
+         WHERE voided_at IS NULL
+         GROUP BY product_id
       ), grouped AS (
         SELECT p.id AS product_id,
                p.display_name AS product_name,
@@ -517,6 +1121,15 @@ export default class DeliveryService {
                c.color AS category_color,
                SUM(d.amount_supplied)::int AS total_supplied,
                SUM(d.amount_left)::int AS total_remaining,
+               COALESCE(SUM(d.amount_left) FILTER (
+                 WHERE :allMine OR d.supplier_id = :supplierId
+               ), 0)::int AS my_remaining,
+               COALESCE(SUM(d.amount_left) FILTER (WHERE d.supplier_id = :supplierId), 0)::int
+                 AS own_remaining,
+               COALESCE(f.remaining_all, 0)::int AS total_remaining_all,
+               (ARRAY_AGG(d.price ORDER BY d.created_at DESC, d.id DESC) FILTER (
+                 WHERE d.amount_left > 0 AND (:allMine OR d.supplier_id = :supplierId)
+               ))[1]::int AS current_price,
                SUM(d.amount_supplied - d.amount_left - d.amount_lost)::int AS total_sold,
                COUNT(d.id)::int AS delivery_count,
                SUM(d.price * d.amount_left)::numeric AS total_stock_value,
@@ -527,9 +1140,10 @@ export default class DeliveryService {
           LEFT JOIN categories c ON c.id = p.category_id
           LEFT JOIN sold s ON s.product_id = p.id
           LEFT JOIN delivered dl ON dl.product_id = p.id
+          LEFT JOIN fridge f ON f.product_id = p.id
          WHERE d.voided_at IS NULL ${ownOnly('d.supplier_id')} ${byCategory}
          GROUP BY p.id, p.display_name, p.image_path, c.name, c.color,
-                  s.sold_in_period, dl.delivered_in_period
+                  s.sold_in_period, dl.delivered_in_period, f.remaining_all
       )`
     const stateWhere =
       stockState === 'out'
@@ -578,7 +1192,8 @@ export default class DeliveryService {
         totalRemaining: Number(sums.total_remaining ?? 0),
         totalStockValue: Number(sums.total_stock_value ?? 0),
       },
-      lowStockCount: lowCount + outCount,
+      lowStockCount: lowCount,
+      outStockCount: outCount,
     }
 
     if (filters.withInsights) {
@@ -601,6 +1216,10 @@ export default class DeliveryService {
       categoryColor: r.category_color ?? null,
       totalSupplied: Number(r.total_supplied),
       totalRemaining: Number(r.total_remaining),
+      myRemaining: Number(r.my_remaining),
+      ownRemaining: Number(r.own_remaining),
+      totalRemainingAll: Number(r.total_remaining_all),
+      currentPrice: r.current_price === null ? null : Number(r.current_price),
       totalSold: Number(r.total_sold),
       deliveryCount: Number(r.delivery_count),
       totalStockValue: Number(r.total_stock_value),
@@ -678,6 +1297,13 @@ export default class DeliveryService {
       .preload('product', (q) => q.preload('category'))
       .preload('supplier')
       .preload('corrections', (q) => q.orderBy('createdAt', 'desc').orderBy('id', 'desc'))
+      .preload('transferredFrom', (q) => q.preload('supplier'))
+      .preload('transferredTo', (q) =>
+        q
+          .preload('supplier')
+          .preload('corrections', (c) => c.where('kind', 'transfer'))
+          .orderBy('id', 'asc')
+      )
       .orderBy(safeSort, sortDir)
       .orderBy('id', sortDir)
 
@@ -736,21 +1362,37 @@ export default class DeliveryService {
 
   /**
    * Selling and purchase price of every product's newest lot (or only of `productIds`) —
-   * the stocking form shows them as a reminder and suggests them for the next lot.
+   * the stocking form shows them as a reminder and suggests them for the next lot. The
+   * selling price is public, so it comes from anyone's lot. A purchase price is a
+   * supplier's own cost: with `purchasePriceOf` it comes only from that supplier's newest
+   * lot that has one (null when there is none); without it, from the newest lot of anyone.
    */
   async getLastPrices(
-    productIds?: number[]
+    productIds?: number[],
+    options: { purchasePriceOf?: number } = {}
   ): Promise<Map<number, { price: number; purchasePrice: number | null }>> {
     if (productIds && productIds.length === 0) return new Map()
+    const own = options.purchasePriceOf !== undefined
     const result = await db.rawQuery<{
       rows: Array<{ product_id: number; price: number; purchase_price: string | null }>
     }>(
-      `SELECT DISTINCT ON (product_id) product_id, price, purchase_price
-         FROM deliveries
-        WHERE voided_at IS NULL
-          ${productIds ? 'AND product_id = ANY(:productIds)' : ''}
-        ORDER BY product_id, created_at DESC, id DESC`,
-      productIds ? { productIds } : {}
+      `SELECT DISTINCT ON (d.product_id) d.product_id, d.price,
+              ${own ? 'mine.purchase_price' : 'd.purchase_price'} AS purchase_price
+         FROM deliveries d
+         ${
+           own
+             ? `LEFT JOIN LATERAL (
+                  SELECT o.purchase_price FROM deliveries o
+                   WHERE o.product_id = d.product_id AND o.supplier_id = :supplierId
+                     AND o.voided_at IS NULL AND o.purchase_price IS NOT NULL
+                   ORDER BY o.created_at DESC, o.id DESC LIMIT 1
+                ) mine ON TRUE`
+             : ''
+         }
+        WHERE d.voided_at IS NULL
+          ${productIds ? 'AND d.product_id = ANY(:productIds)' : ''}
+        ORDER BY d.product_id, d.created_at DESC, d.id DESC`,
+      { ...(productIds && { productIds }), ...(own && { supplierId: options.purchasePriceOf }) }
     )
     return new Map(
       result.rows.map((row) => [
@@ -761,5 +1403,13 @@ export default class DeliveryService {
         },
       ])
     )
+  }
+
+  /**
+   * Whether `viewer` may see the purchase price of a lot: their own lots, or every lot for
+   * an admin. A colleague's purchase price is their private cost.
+   */
+  static canSeePurchasePrice(viewer: Pick<User, 'id' | 'role'>, lotSupplierId: number): boolean {
+    return viewer.role === 'admin' || viewer.id === lotSupplierId
   }
 }

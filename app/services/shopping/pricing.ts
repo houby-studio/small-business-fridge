@@ -1,6 +1,7 @@
 /**
  * Price arithmetic shared by stocking, the shopping list and the finance overview.
- * Mirrored for live form hints in inertia/composables/use_pricing.ts — change both.
+ * Mirrored for live form hints in inertia/composables/pricing_rules.ts — change both; the
+ * parity test in tests/unit/services/shopping/pricing.spec.ts compares them.
  */
 
 export const MAX_MARGIN_PERCENT = 100
@@ -15,6 +16,26 @@ export function suggestSellingPrice(purchasePrice: number, marginPercent: number
   // Strip float noise first: 14.9 * 1 must stay 15, not become 16.
   const cents = Math.round(raw * 100) / 100
   return Math.max(1, Math.ceil(cents - 1e-9))
+}
+
+/**
+ * The selling price a stocking line gets when the supplier types none — one rule for the
+ * web form, the draft commit, its warnings and the MCP tools: the purchase price plus the
+ * owner's margin, but never below what the product sold for last time (an established
+ * price is not lowered by accident). Null when there is neither to go on.
+ */
+export function suggestDraftPrice(
+  purchasePrice: number | null | undefined,
+  marginPercent: number,
+  lastPrice: number | null | undefined
+): number | null {
+  const fromMargin =
+    purchasePrice === null || purchasePrice === undefined
+      ? null
+      : suggestSellingPrice(purchasePrice, marginPercent)
+  const last = lastPrice === null || lastPrice === undefined || lastPrice <= 0 ? null : lastPrice
+  if (fromMargin !== null && last !== null) return Math.max(fromMargin, last)
+  return fromMargin ?? last
 }
 
 /**

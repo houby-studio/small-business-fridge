@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ProductImage from '~/components/ProductImage.vue'
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { Head, router, usePage } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
@@ -322,14 +323,13 @@ function categoryButtonStyle(isSelected: boolean, color?: string): Record<string
               class="sbf-img-zoom flex h-48 items-center justify-center bg-gray-100 p-2 dark:bg-zinc-800"
               :style="{ borderBottom: `4px solid ${product.category.color}` }"
             >
-              <img
-                v-if="product.imagePath"
+              <ProductImage
                 :src="product.imagePath"
                 :alt="product.displayName"
-                class="h-full w-full object-contain"
-                loading="lazy"
+                :color="product.category.color"
+                iconClass="text-4xl"
+                lazy
               />
-              <span v-else class="pi pi-image text-4xl text-gray-300" />
             </div>
             <!-- Badge centered on the image/body border line (bottom-px = border center) -->
             <div class="absolute bottom-0.5 left-4 z-10 translate-y-1/2">

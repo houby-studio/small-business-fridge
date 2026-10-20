@@ -46,7 +46,12 @@ const FridgoraPreset = definePreset(Aura, {
       950: '#4f0611',
     },
     colorScheme: {
+      // A focused field gets a neutral border: the primary colour is red, and a red border
+      // reads as "this field is wrong" before anything is typed. Invalid stays red.
       light: {
+        formField: {
+          focusBorderColor: '{zinc.500}',
+        },
         surface: {
           0: '#ffffff',
           50: '{slate.50}',
@@ -63,6 +68,9 @@ const FridgoraPreset = definePreset(Aura, {
         },
       },
       dark: {
+        formField: {
+          focusBorderColor: '{zinc.400}',
+        },
         surface: {
           0: '#ffffff',
           50: '#fafafa',

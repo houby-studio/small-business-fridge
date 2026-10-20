@@ -72,10 +72,12 @@ export const PRODUCT_BARCODE_MAX = 100
 export const createProductValidator = vine.compile(
   vine.object({
     displayName: vine.string().trim().minLength(1).maxLength(PRODUCT_NAME_MAX),
-    description: vine.string().trim().maxLength(PRODUCT_DESCRIPTION_MAX),
+    // Optional: a product photographed at the till is stocked without one. The bodyparser
+    // turns an empty FormData value into null, hence nullable.
+    description: vine.string().trim().maxLength(PRODUCT_DESCRIPTION_MAX).nullable().optional(),
     categoryId: vine.number().positive(),
     barcode: vine.string().trim().maxLength(PRODUCT_BARCODE_MAX).optional(),
-    image: vine.file({ size: '5mb', extnames: ['jpg', 'jpeg', 'png', 'webp'] }),
+    image: vine.file({ size: '5mb', extnames: ['jpg', 'jpeg', 'png', 'webp'] }).optional(),
     allergenIds: parseAllergenIds(),
     productGroupId: parseProductGroupId(),
     ...offContributionFields,
@@ -85,7 +87,9 @@ export const createProductValidator = vine.compile(
 export const updateProductValidator = vine.compile(
   vine.object({
     displayName: vine.string().trim().minLength(1).maxLength(PRODUCT_NAME_MAX),
-    description: vine.string().trim().maxLength(PRODUCT_DESCRIPTION_MAX),
+    // Optional: a product photographed at the till is stocked without one. The bodyparser
+    // turns an empty FormData value into null, hence nullable.
+    description: vine.string().trim().maxLength(PRODUCT_DESCRIPTION_MAX).nullable().optional(),
     categoryId: vine.number().positive(),
     barcode: vine.string().trim().maxLength(PRODUCT_BARCODE_MAX).optional(),
     image: vine.file({ size: '5mb', extnames: ['jpg', 'jpeg', 'png', 'webp'] }).optional(),

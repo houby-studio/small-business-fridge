@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ProductImage from '~/components/ProductImage.vue'
 import { computed } from 'vue'
 import { Head, router, Link } from '@inertiajs/vue3'
 import KioskLayout from '~/layouts/KioskLayout.vue'
@@ -156,17 +157,13 @@ function purchase(product: ProductItem) {
           >
             <template #content>
               <div class="text-center">
-                <img
-                  v-if="product.imagePath"
-                  :src="product.imagePath"
-                  :alt="product.displayName"
-                  class="mx-auto mb-2 h-24 w-24 rounded-lg object-contain"
-                />
-                <div
-                  v-else
-                  class="mx-auto mb-2 flex h-24 w-24 items-center justify-center rounded-lg bg-gray-700"
-                >
-                  <i class="pi pi-box text-3xl text-gray-500" />
+                <div class="mx-auto mb-2 h-24 w-24 rounded-lg">
+                  <ProductImage
+                    :src="product.imagePath"
+                    :alt="product.displayName"
+                    :color="product.category.color"
+                    iconClass="text-2xl"
+                  />
                 </div>
                 <h3 class="text-sm font-semibold">{{ product.displayName }}</h3>
                 <div class="mt-1 text-lg font-bold text-green-400">

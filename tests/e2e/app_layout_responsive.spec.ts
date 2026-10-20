@@ -5,6 +5,16 @@ async function noHorizontalOverflow(page: import('@playwright/test').Page) {
   return page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)
 }
 
+/** 'none' when every compact menu label is hidden, 'visible' when all show, else 'mixed'. */
+async function compactLabelsDisplay(page: import('@playwright/test').Page) {
+  return page.locator('.sbf-nav-compact-target .sbf-nav-item-label').evaluateAll((nodes) => {
+    const hidden = nodes.map((node) => getComputedStyle(node).display === 'none')
+    if (hidden.length === 0) return 'missing'
+    if (hidden.every(Boolean)) return 'none'
+    return hidden.some(Boolean) ? 'mixed' : 'visible'
+  })
+}
+
 test.describe('App layout responsiveness', () => {
   test('app bar adapts across breakpoints without overlap or clipping', async ({ page }) => {
     await page.setViewportSize({ width: 1366, height: 900 })
@@ -25,6 +35,10 @@ test.describe('App layout responsiveness', () => {
     await expect(page.locator('.sbf-brand-link')).toBeVisible()
     await expect(page.locator('.sbf-nav-profile-name')).toBeVisible()
     expect(await noHorizontalOverflow(page)).toBeTruthy()
+    // An admin's bar (Dodavatel + Admin menus) is crowded on a 1366 px laptop: the secondary
+    // entries collapse to icons so the sign-out button stays on screen.
+    expect(await compactLabelsDisplay(page)).toBe('none')
+    await expect(page.locator('button[aria-label="Odhlásit se"]')).toBeInViewport({ ratio: 1 })
 
     await page.setViewportSize({ width: 1024, height: 768 })
     await expect(page.locator('.sbf-nav-profile-name')).toHaveCount(1)
@@ -43,15 +57,10 @@ test.describe('App layout responsiveness', () => {
     expect(compactLabelsHidden).toBeTruthy()
     expect(await noHorizontalOverflow(page)).toBeTruthy()
 
-    await page.setViewportSize({ width: 1280, height: 800 })
+    await page.setViewportSize({ width: 1440, height: 900 })
     await expect(page.locator('.sbf-nav-profile-name')).toBeVisible()
-    const compactLabelsVisible = await page
-      .locator('.sbf-nav-compact-target .sbf-nav-item-label')
-      .evaluateAll(
-        (nodes) =>
-          nodes.length > 0 && nodes.every((node) => getComputedStyle(node).display !== 'none')
-      )
-    expect(compactLabelsVisible).toBeTruthy()
+    expect(await compactLabelsDisplay(page)).toBe('visible')
+    await expect(page.locator('button[aria-label="Odhlásit se"]')).toBeInViewport({ ratio: 1 })
     expect(await noHorizontalOverflow(page)).toBeTruthy()
 
     await page.setViewportSize({ width: 390, height: 844 })
@@ -60,6 +69,14 @@ test.describe('App layout responsiveness', () => {
     await expect(page.locator('button[aria-label="Odhlásit se"]')).toBeVisible()
     await page.locator('.p-menubar-button').click()
     await expect(page.locator('a[href="/orders"]').first()).toBeVisible()
+    expect(await noHorizontalOverflow(page)).toBeTruthy()
+  })
+
+  test('a supplier keeps the full labels on a 1366 px laptop', async ({ page }) => {
+    await page.setViewportSize({ width: 1366, height: 900 })
+    await loginAs(page, 'supplier')
+    await page.waitForLoadState('load')
+    expect(await compactLabelsDisplay(page)).toBe('visible')
     expect(await noHorizontalOverflow(page)).toBeTruthy()
   })
 })

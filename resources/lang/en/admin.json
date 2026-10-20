@@ -97,5 +97,12 @@
   "registration_allowed_domains": "Allowed domains",
   "music_name_too_long": "The track name can be at most 255 characters.",
   "music_file_bad_format": "Supported formats are mp3, ogg, wav and m4a.",
-  "music_file_too_large": "The file is larger than 20 MB."
+  "music_file_too_large": "The file is larger than 20 MB.",
+  "users_transfer_stock": "Hand over stock",
+  "users_transfer_stock_target": "To *",
+  "users_transfer_stock_summary": "{pieces} pcs from {lots} lots will be handed over. Sales and write-offs stay with the original supplier.",
+  "users_open_business": "{pieces} pcs in stock, {orders} uninvoiced purchases — the supplier cannot be disabled yet.",
+  "invoices_approve_payment": "Confirm payment",
+  "invoices_reject_payment": "Reject payment",
+  "invoices_settle_hint": "The issuer is no longer an active supplier — an admin confirms the payment."
 }

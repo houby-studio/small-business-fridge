@@ -43,6 +43,35 @@ test.group('ProductService — catalogue search', (group) => {
     assert.lengthOf(await names(''), 4)
   })
 
+  test('a whole number finds the kiosk code exactly, combined with other words', async ({
+    assert,
+  }) => {
+    const category = await CategoryFactory.create()
+    await ProductFactory.merge({
+      categoryId: category.id,
+      displayName: 'Kofola',
+      keypadId: 12,
+      barcode: null,
+    }).create()
+    await ProductFactory.merge({
+      categoryId: category.id,
+      displayName: 'Mattoni',
+      keypadId: 112,
+      barcode: null,
+    }).create()
+    await ProductFactory.merge({
+      categoryId: category.id,
+      displayName: 'Rajec',
+      keypadId: 7,
+      barcode: '8594000120001',
+    }).create()
+
+    assert.deepEqual(await names('12'), ['Kofola', 'Rajec'])
+    assert.deepEqual(await names('112'), ['Mattoni'])
+    assert.deepEqual(await names('kofola 12'), ['Kofola'])
+    assert.deepEqual(await names('mattoni 12'), [])
+  })
+
   test('search tokens are split on whitespace and escaped', ({ assert }) => {
     assert.deepEqual(ProductService.searchTokens(' cola  zero\t0,5 '), ['cola', 'zero', '0,5'])
     assert.deepEqual(ProductService.searchTokens('50%_a\\b'), ['50\\%\\_a\\\\b'])

@@ -11,7 +11,10 @@ export interface IncomeLimitStatus {
   enabled: boolean
   limit: number
   warnPercent: number
+  /** Received in the year, by payment date. */
   amount: number
+  /** Still to come in (unpaid + not invoiced); null for a past year. */
+  pending: number | null
   percent: number
   level: 'ok' | 'warn' | 'exceeded'
 }
@@ -58,6 +61,9 @@ const text = computed(() =>
     <div class="flex flex-col gap-2">
       <span class="inline-flex items-center gap-1">
         {{ text }}
+        <span v-if="status.pending" data-testid="income-limit-pending">{{
+          t('finance.limit_pending', { amount: money(status.pending) })
+        }}</span>
         <InfoHint :text="t('finance.limit_note')" test-id="income-limit-note" />
       </span>
       <ProgressBar

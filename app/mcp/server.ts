@@ -1,5 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js'
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import type User from '#models/user'
 import { registerCustomerTools } from '#mcp/tools/customer_tools'
 import { registerSupplierTools } from '#mcp/tools/supplier_tools'
@@ -13,9 +14,16 @@ export interface McpLoggingContext {
   msCorrelationId: string | null
 }
 
+/** Longest error message kept in mcp_tool_calls — enough for the code and its hint. */
+const ERROR_MESSAGE_MAX = 500
+
 /**
  * Monkey-patches server.tool() so every tool call is logged to mcp_tool_calls.
  * Must be called BEFORE registering tools. Fire-and-forget — never blocks the response.
+ *
+ * Tools report domain errors as a result with `isError` rather than by throwing, so success
+ * is read from the result. The patch covers `server.tool()` only (deprecated in SDK 1.29):
+ * it must patch `registerTool()` too once tools move to it, or logging silently stops.
  */
 function addToolLogging(server: McpServer, ctx: McpLoggingContext): void {
   const original = server.tool.bind(server) as (...args: unknown[]) => RegisteredTool
@@ -26,12 +34,15 @@ function addToolLogging(server: McpServer, ctx: McpLoggingContext): void {
       const start = Date.now()
       const toolArguments = (handlerArgs[0] ?? null) as Record<string, unknown> | null
       try {
-        const result = await originalHandler(...handlerArgs)
+        const result = (await originalHandler(...handlerArgs)) as CallToolResult
+        const failed = result?.isError === true
+        const first = failed ? result.content?.[0] : undefined
         McpToolCall.create({
           userId: ctx.userId,
           toolName,
           toolArguments,
-          success: true,
+          success: !failed,
+          errorMessage: first?.type === 'text' ? first.text.slice(0, ERROR_MESSAGE_MAX) : null,
           durationMs: Date.now() - start,
           userAgent: ctx.userAgent,
           msCorrelationId: ctx.msCorrelationId,

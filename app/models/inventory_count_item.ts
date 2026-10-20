@@ -13,9 +13,16 @@ export default class InventoryCountItem extends BaseModel {
   @column()
   declare productId: number
 
-  /** System stock the counter saw when counting. */
+  /** System stock at the moment the product was counted — what the count is compared with. */
   @column()
   declare expectedQty: number
+
+  /**
+   * The stock the inventory sheet showed, when it differs from `expectedQty`: sales,
+   * deliveries and other counts between loading the sheet and counting moved it.
+   */
+  @column()
+  declare sheetQty: number | null
 
   @column()
   declare countedQty: number

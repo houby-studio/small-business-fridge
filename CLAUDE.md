@@ -326,6 +326,10 @@ When adding user-facing text:
 3. One file per namespace, the same set in both locales: `messages, common, auth, shop, orders,
 invoices, supplier, admin, kiosk, emails, profile, audit, rating, shopping, inventory, finance`
 4. Email templates use Edge i18n helpers
+5. Czech UI addresses the user formally (_vykání_): „Zadejte…“, „Vyberte…“, „nemáte“ — never
+   „Zadej…“ / „máš“. E-mails keep their informal „Ahoj {name}“ voice.
+6. Vocabulary: one stocked lot is a **dodávka** (never „naskladnění“ as a noun for it), the
+   stocking draft is a **příjemka**, prices are **nákupní cena** / **prodejní cena**.
 
 ---
 
@@ -371,20 +375,37 @@ These rules apply to ALL new Vue pages and components. Never deviate from these 
 
 ### PrimeVue Components — Never Use Raw HTML Equivalents
 
-| Need                     | Use           | Never                     |
-| ------------------------ | ------------- | ------------------------- |
-| Text input               | `InputText`   | `<input type="text">`     |
-| Date filter / date field | `DatePicker`  | `<input type="date">`     |
-| Password                 | `Password`    | `<input type="password">` |
-| Dropdown select          | `Select`      | `<select>`                |
-| Multi-select             | `MultiSelect` | —                         |
-| Checkbox                 | `Checkbox`    | `<input type="checkbox">` |
-| Textarea                 | `Textarea`    | `<textarea>`              |
-| Number input             | `InputNumber` | `<input type="number">`   |
-| Button                   | `Button`      | `<button>`                |
+| Need                     | Use                                      | Never                     |
+| ------------------------ | ---------------------------------------- | ------------------------- |
+| Text input               | `InputText`                              | `<input type="text">`     |
+| Date filter / date field | `DatePicker`                             | `<input type="date">`     |
+| Password                 | `Password`                               | `<input type="password">` |
+| Dropdown select          | `Select`                                 | `<select>`                |
+| Multi-select             | `MultiSelect`                            | —                         |
+| Checkbox                 | `Checkbox`                               | `<input type="checkbox">` |
+| Textarea                 | `Textarea`                               | `<textarea>`              |
+| Number input             | `InputNumber` (via `NumberInput`, below) | `<input type="number">`   |
+| Button                   | `Button`                                 | `<button>`                |
 
 (Exception: the bespoke touch UI in `inertia/pages/kiosk/*` may use raw elements where the
 kiosk interaction model requires it.)
+
+### Number fields — `NumberInput`, never `:max`
+
+Import the number field as `import InputNumber from '~/components/NumberInput.vue'`, never
+straight from `primevue/inputnumber`. The wrapper fixes two PrimeVue behaviours:
+
+- **No `:max`.** InputNumber refuses a keystroke past `max` and moves the focus away (in a
+  dialog onto its close button — the next Enter closes it unsaved) or silently snaps the value
+  to `max`. Check the upper bound in the page's computed error (shown under the field,
+  disabling Submit) and in the VineJS validator; the wrapper swallows a `max` passed to it.
+  `:min="0"`/`:min="1"` is fine (it blocks the minus key).
+- **The model follows every keystroke**, not only blur — otherwise an error and a disabled
+  Submit stay after the number is corrected, and Enter submits the old value. A handler on
+  `@update:modelValue` therefore runs per keystroke: debounce anything that hits the server.
+  The one exception is an autosaved inline grid (the stocking draft's lines): there
+  `:live="false"` keeps the blur/Enter update, because saving mid-typing re-renders the grid
+  and moves the focus.
 
 ### Buttons — Severity Mapping
 
@@ -512,16 +533,25 @@ Every table-based page MUST have all of the following:
 
 4. Always use `stripedRows class="rounded-lg border"` on `<DataTable>`.
 
-### Filter Inputs — FilterBar + "All" Option
+### Filter Inputs — FilterBar, applied on change + "All" Option
 
-Always use the `FilterBar` component for any page with filters — never a custom `div` layout:
+Always use the `FilterBar` component for any page with filters — never a custom `div` layout.
+There is **no "Apply" button**: a filter applies the moment it changes — `Select`/`MultiSelect`
+on `@change`. A text field searches as the user types through `useFilterSearch`
+(`~/composables/use_filter_search`): 400 ms after the last keystroke, at once on Enter and on
+blur, never twice for the same text, a newer search cancelling the older one in flight; a
+Select handler calls its `cancel()` first so a pending search is not sent twice. When a filterable `Select` uses
+`useSelectEnterKey`, call `applyFilters()` in its `onSelect` too. "Clear" shows only while a
+filter differs from its default — pass `:active`, usually
+`hasActiveFilters(buildFilterParams())` (`~/composables/use_filter_params`), which relies on
+`buildFilterParams` sending `undefined` for every default value:
 
 <!-- prettier-ignore -->
 ```html
-<FilterBar @apply="applyFilters" @clear="clearFilters">
+<FilterBar :active="filtersActive" @clear="clearFilters">
   <div>
     <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300">{{ t('filter.status') }}</label>
-    <Select v-model="filterStatus" :options="statusOptions" optionLabel="label" optionValue="value" class="w-48" />
+    <Select v-model="filterStatus" :options="statusOptions" optionLabel="label" optionValue="value" class="w-48" @change="applyFilters" />
   </div>
 </FilterBar>
 ```

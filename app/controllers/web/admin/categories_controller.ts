@@ -111,6 +111,13 @@ export default class CategoriesController {
         })
         return response.redirect('/admin/categories')
       }
+      if (err instanceof Error && err.message === 'CATEGORY_HAS_GROUPS') {
+        session.flash('alert', {
+          type: 'warn',
+          message: i18n.t('messages.category_has_groups_delete'),
+        })
+        return response.redirect('/admin/categories')
+      }
       throw err
     }
 

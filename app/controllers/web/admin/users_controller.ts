@@ -2,17 +2,25 @@ import type { HttpContext } from '@adonisjs/core/http'
 import { resolvePage } from '#helpers/pagination'
 import { listRedirectUrl } from '#helpers/list_redirect'
 import { DateTime } from 'luxon'
-import AdminService from '#services/admin_service'
+import AdminService, { SupplierHasOpenBusiness } from '#services/admin_service'
 import InvoiceService from '#services/invoice_service'
 import User from '#models/user'
 import UserInvitation from '#models/user_invitation'
-import { updateUserValidator } from '#validators/user'
+import { transferStockValidator, updateUserValidator } from '#validators/user'
+import DeliveryService, { type TransferErrorCode } from '#services/delivery_service'
+import { isDomainError } from '#services/domain_error'
 import AuditService from '#services/audit_service'
 import NotificationService from '#services/notification_service'
 import logger from '@adonisjs/core/services/logger'
 import RegistrationPolicyService from '#services/registration_policy_service'
 import PasswordResetService from '#services/password_reset_service'
 import InvitationService from '#services/invitation_service'
+
+const TRANSFER_ERRORS: Record<string, string> = {
+  TRANSFER_SAME_USER: 'messages.stock_transfer_same_user',
+  TRANSFER_TARGET_INVALID: 'messages.stock_transfer_target_invalid',
+  NOTHING_TO_TRANSFER: 'messages.stock_transfer_nothing',
+}
 
 export default class UsersController {
   async index({ inertia, request }: HttpContext) {
@@ -37,9 +45,19 @@ export default class UsersController {
     const userIds = users.map((u) => u.id)
 
     const invoiceService = new InvoiceService()
-    const [uninvoicedIds, unpaidIds] = await Promise.all([
+    const deliveryService = new DeliveryService()
+    const [uninvoicedIds, unpaidIds, business, suppliers] = await Promise.all([
       invoiceService.getUninvoicedBuyerIds(userIds),
       invoiceService.getUnpaidBuyerIds(userIds),
+      // What blocks switching a supplier off: their stock and their uninvoiced sales.
+      Promise.all(users.map((u) => deliveryService.openBusinessOf(u.id))),
+      // Who can take over a leaving supplier's stock.
+      User.query()
+        .whereIn('role', ['supplier', 'admin'])
+        .where('isDisabled', false)
+        .where('isKiosk', false)
+        .select('id', 'displayName')
+        .orderBy('displayName', 'asc'),
     ])
 
     const userOptions = await User.query().select('id', 'displayName').orderBy('displayName', 'asc')
@@ -62,6 +80,7 @@ export default class UsersController {
           createdAt: u.createdAt.toISO(),
           hasUninvoicedOrders: uninvoicedIds.has(u.id),
           hasUnpaidInvoices: unpaidIds.has(u.id),
+          openBusiness: business[users.indexOf(u)],
         })),
         meta: paginator.getMeta(),
       },
@@ -73,6 +92,7 @@ export default class UsersController {
         sortOrder: sortOrder || '',
       },
       userOptions: userOptions.map((u) => ({ id: u.id, displayName: u.displayName })),
+      supplierOptions: suppliers.map((u) => ({ id: u.id, displayName: u.displayName })),
       invitations: {
         data: invites.all().map((invite) => ({
           id: invite.id,
@@ -108,6 +128,17 @@ export default class UsersController {
     try {
       user = await service.updateUser(params.id, data, auth.user!.id)
     } catch (err) {
+      if (err instanceof SupplierHasOpenBusiness) {
+        session.flash('alert', {
+          type: 'danger',
+          message: i18n.t('messages.supplier_has_open_business', {
+            pieces: err.business.piecesLeft,
+            lots: err.business.lotsWithStock,
+            orders: err.business.uninvoicedOrders,
+          }),
+        })
+        return response.redirect(listRedirectUrl(request, '/admin/users'))
+      }
       if (err instanceof Error && err.message === 'LAST_ACTIVE_ADMIN_REQUIRED') {
         session.flash('alert', {
           type: 'danger',
@@ -163,19 +194,36 @@ export default class UsersController {
           name: user.displayName,
         }),
       })
-
-      const notificationService = new NotificationService()
-      for (const invoice of invoices) {
-        notificationService.sendInvoiceNotice(invoice).catch((err) => {
-          logger.error({ err }, `Failed to send invoice notice for invoice #${invoice.id}`)
-        })
-        // Issued in the supplier's name by an admin — tell the supplier.
-        notificationService.sendInvoiceGeneratedToSupplier(invoice, auth.user!).catch((err) => {
-          logger.error({ err }, `Failed to notify supplier about invoice #${invoice.id}`)
-        })
-      }
     }
 
+    return response.redirect(listRedirectUrl(request, '/admin/users'))
+  }
+
+  /**
+   * Hands a leaving supplier's stock over to a colleague — the step that lets the supplier be
+   * disabled afterwards. Their sales and shrinkage stay theirs.
+   */
+  async transferStock({ params, request, response, session, i18n, auth }: HttpContext) {
+    const { toUserId } = await request.validateUsing(transferStockValidator)
+    const from = await User.findOrFail(Number(params.id))
+    try {
+      const result = await new DeliveryService().transferStock(from.id, toUserId, auth.user!)
+      const target = await User.findOrFail(toUserId)
+      session.flash('alert', {
+        type: 'success',
+        message: i18n.t('messages.stock_transferred', {
+          pieces: result.pieces,
+          from: from.displayName,
+          to: target.displayName,
+        }),
+      })
+    } catch (err) {
+      if (!isDomainError<TransferErrorCode>(err)) throw err
+      session.flash('alert', {
+        type: 'danger',
+        message: i18n.t(TRANSFER_ERRORS[err.code] ?? 'messages.action_failed'),
+      })
+    }
     return response.redirect(listRedirectUrl(request, '/admin/users'))
   }
 

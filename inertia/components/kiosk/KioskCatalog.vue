@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ProductImage from '~/components/ProductImage.vue'
 import { computed, ref } from 'vue'
 import { useI18n } from '~/composables/use_i18n'
 
@@ -150,14 +151,13 @@ function glowStyle(product: ProductItem): Record<string, string> {
 
           <!-- Product image in middle -->
           <div class="flex flex-1 items-center justify-center px-3 py-4">
-            <img
-              v-if="product.imagePath"
-              :src="product.imagePath"
-              :alt="product.displayName"
-              class="h-32 w-full object-contain"
-            />
-            <div v-else class="flex h-32 w-full items-center justify-center rounded-xl bg-gray-700">
-              <i class="pi pi-box text-4xl text-gray-500" />
+            <div class="h-32 w-full">
+              <ProductImage
+                :src="product.imagePath"
+                :alt="product.displayName"
+                :color="product.category.color"
+                iconClass="text-4xl"
+              />
             </div>
           </div>
 

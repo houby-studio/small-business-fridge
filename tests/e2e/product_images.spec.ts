@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import sharp from 'sharp'
 import { loginAs } from './helpers/auth'
+import { loginAsFreshSupplier } from './helpers/isolated_supplier'
 import { discardDraft, stockPreselected } from './helpers/products'
 
 /** A red "product" on a white backdrop, the typical e-shop picture. */
@@ -38,15 +39,14 @@ test.describe('Product image tile', () => {
     await loginAs(page, 'supplier')
     await page.goto('/supplier/products/new')
     await expect(page.getByTestId('product-form-missing')).toHaveText(
-      'Doplňte: Název produktu, Popis, Kategorie, Obrázek'
+      'Doplňte: Název produktu, Kategorie'
     )
-    await expect(page.getByText('Popis produktu je povinný.')).toHaveCount(0)
     await expect(page.locator('#product-barcode')).toBeFocused()
   })
 
   test('an upload is processed, previewed and saved as WebP', async ({ page }) => {
     const name = `E2E Obrázek ${Date.now()}`
-    await loginAs(page, 'supplier')
+    await loginAsFreshSupplier(page, 'product-images')
     await page.goto('/supplier/products/new')
     await fillRequiredFields(page, name)
 
@@ -132,7 +132,7 @@ test.describe('Product image tile', () => {
 
   test('the edit form improves the saved image and can restore it', async ({ page }) => {
     const name = `E2E Vylepšit ${Date.now()}`
-    await loginAs(page, 'supplier')
+    await loginAsFreshSupplier(page, 'product-images')
     await page.goto('/supplier/products/new')
     await fillRequiredFields(page, name)
     await page.locator('input[type="file"]').setInputFiles({
@@ -257,7 +257,7 @@ test.describe('Barcode lookup', () => {
 test.describe('Kiosk product images', () => {
   test('the kiosk shows the whole product instead of cropping it square', async ({ page }) => {
     const name = `E2E Kiosk obrázek ${Date.now()}`
-    await loginAs(page, 'supplier')
+    await loginAsFreshSupplier(page, 'product-images')
     await page.goto('/supplier/products/new')
     await fillRequiredFields(page, name)
     await page.locator('input[type="file"]').setInputFiles({
@@ -291,7 +291,7 @@ test.describe('Contributing to Open Food Facts', () => {
   test('is offered for a public EAN and says what goes, own photo included', async ({ page }) => {
     const name = `E2E OFF ${Date.now()}`
     const ean = randomEan()
-    await loginAs(page, 'supplier')
+    await loginAsFreshSupplier(page, 'product-images')
     await page.goto('/supplier/products/new')
     const contribution = page.getByTestId('product-off-contribution')
 

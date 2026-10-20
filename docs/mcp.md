@@ -61,7 +61,7 @@ The app also runs its own minimal OAuth 2.1 authorization server:
 }
 ```
 
-> Kiosk accounts and disabled accounts are rejected at `/mcp` with `403`.
+> Kiosk accounts and disabled accounts are rejected at `/mcp` with `403`. So is an account with an unverified e-mail while the instance requires verification (`AUTH_EMAIL_VERIFICATION_REQUIRED`) — the same gate the web app has; the user verifies the e-mail on the web (Profile) and the assistant works again.
 
 ## Transport
 
@@ -89,11 +89,13 @@ MCP clients do not load prompts by themselves; the user picks it:
 Several tools answer similar-sounding questions. The descriptions encode these rules; this is the human-readable copy.
 
 1. **`add_stock` vs `create_stock_draft`.** `add_stock` only when the user themselves states the product, the pieces and a price and wants it now ("naskladni 24 kofol po 18"). Anything the assistant _inferred_ — a receipt, a photo, "I bought…", more than one product, an uncertain match or a missing price — goes into `create_stock_draft` for the supplier to review. `add_stock` stocks immediately; a draft stocks nothing.
-2. **Never `create_product` from receipt text.** Search the catalog first (`list_catalog_products`, by barcode, then by one distinctive word); create a product only when nothing matched **and** the user confirmed it is new. Otherwise leave the draft line without a `productId` — the supplier picks it on the web.
-3. **Four "what is there" tools.** `get_stock` = what is in the fridge, running out or selling (per product, with insights). `recent_deliveries` = individual lots (which lot, when, how much is left — the `deliveryId` for `void_delivery` / `correct_delivery`). `list_products` = what a buyer can buy right now and for how much. `list_catalog_products` = does the product exist, what is its id.
-4. **`get_shopping_list` vs `get_recommendations`.** A supplier asking what to buy _for the fridge_ wants `get_shopping_list`. `get_recommendations` is what the user tends to buy _for themselves_ — a snack, not a shopping trip.
-5. **Preview before invoicing.** `generate_invoices` e-mails people and cannot be undone: call `uninvoiced_summary` first and confirm the buyers and the total with the user. Admins invoicing one buyer across _all_ suppliers use `generate_invoices_for_user`; `generate_invoices(buyerId)` covers only your own sales.
-6. **Known loss vs unexplained difference.** "I threw away 3 expired bars" is `write_off_stock` (pieces and reason known). "I counted the shelf: 5 Kofola, 2 Pepsi" is `record_inventory_count` — take `expected` from `get_stock` **before** the user dictates; the shortfall gets a reason later with `classify_inventory_loss`. A duplicate `add_stock` is undone with `void_delivery` while nothing sold from the lot; afterwards `correct_delivery` lowers the pieces.
+2. **One open draft per supplier.** The web's "Naskladnit", a finished shopping list (`complete_shopping_list`) and `create_stock_draft` all add lines to the supplier's single open draft (it is created when there is none). Every line carries its `source` (`web`, `shopping_list`, `assistant`). To add a receipt, call `create_stock_draft` again — never rewrite the draft with `update_stock_draft(items)`, which would drop the others' lines.
+3. **Never `create_product` from receipt text.** Search the catalog first (`list_catalog_products`, by barcode, then by one distinctive word); create a product only when nothing matched **and** the user confirmed it is new. Otherwise leave the draft line without a `productId` — the supplier picks it on the web.
+4. **Four "what is there" tools.** `get_stock` = what is in the fridge, running out or selling (per product, with insights). `recent_deliveries` = individual lots (which lot, when, how much is left — the `deliveryId` for `void_delivery` / `correct_delivery`). `list_products` = what a buyer can buy right now and for how much. `list_catalog_products` = does the product exist, what is its id.
+5. **`get_shopping_list` vs `get_recommendations`.** A supplier asking what to buy _for the fridge_ wants `get_shopping_list`. `get_recommendations` is what the user tends to buy _for themselves_ — a snack, not a shopping trip.
+6. **Preview before invoicing.** `generate_invoices` e-mails people and cannot be undone: call `uninvoiced_summary` first, confirm the buyers and the total with the user and pass that total as `expectedTotal` — if someone bought something in between, nothing is issued (`TOTAL_CHANGED`). Admins invoicing one buyer across _all_ suppliers use `generate_invoices_for_user`; `generate_invoices(buyerId)` covers only your own sales.
+7. **Known loss vs unexplained difference.** "I threw away 3 expired bars" is `write_off_stock` (pieces and reason known). "I counted the shelf: 5 Kofola, 2 Pepsi" is `record_inventory_count` with the counted pieces only — the server compares them with the current stock of **every** supplier's lots (the shelf holds them all), so `get_stock(scope: "mine")` never feeds a count. The shortfall gets a reason later with `classify_inventory_loss`; `list_stock_adjustments` finds the `countId` of an older count. Write-offs and counts take the oldest lots first, whoever stocked them. A duplicate `add_stock` is undone with `void_delivery` while nothing sold from the lot; afterwards `correct_delivery` (pass only what changes) lowers the pieces.
+8. **E-mails.** Every channel sends the same e-mails, because the services send them: issued invoices (with the QR payment), payment reported / withdrawn, payment confirmed / rejected, storno, repriced purchases and lots changed by someone else. A self-invoice (the supplier's own purchases) is issued as paid and e-mails nobody.
 
 ### Units and vocabulary
 
@@ -117,8 +119,8 @@ Tools are granted based on the account role. Admins implicitly get supplier tool
 | `get_my_orders`          | read        | Your own purchases with invoiced status                                     |
 | `get_my_invoices`        | read        | Invoices you received as a buyer (unpaid / awaiting / paid)                 |
 | `get_payment_qr`         | read        | Czech SPD QR payment string + bank details for an invoice you received      |
-| `request_payment`        | idempotent  | Report an invoice you received as paid (supplier then confirms)             |
-| `cancel_payment_request` | idempotent  | Withdraw a reported payment                                                 |
+| `request_payment`        | idempotent  | Report an invoice you received as paid; e-mails the supplier                |
+| `cancel_payment_request` | idempotent  | Withdraw a reported payment; e-mails the supplier                           |
 | `get_recommendations`    | read        | What this user tends to buy for themselves (not for restocking the fridge)  |
 
 ### Supplier (and admin)
@@ -127,19 +129,20 @@ Tools are granted based on the account role. Admins implicitly get supplier tool
 
 | Tool                    | Kind       | Description                                                                 |
 | ----------------------- | ---------- | --------------------------------------------------------------------------- |
-| `list_catalog_products` | read       | Find a productId by name or barcode, incl. out-of-stock; shows `groupId`    |
-| `create_product`        | idempotent | New catalog product (idempotent by name, image added later on the web)      |
-| `update_product`        | idempotent | Change name, description, category, barcode, allergens, group; returns `changes` |
+| `list_catalog_products` | read       | Find a productId by name or barcode, incl. out-of-stock; shows `groupId`; archived only with `includeArchived` |
+| `create_product`        | idempotent | New catalog product (idempotent by name or barcode, image added later on the web); allergens by name |
+| `update_product`        | idempotent | Change name, description, category, barcode, allergens (names), group; returns `changes` |
 
 **Stock in**
 
 | Tool                   | Kind        | Description                                                                 |
 | ---------------------- | ----------- | --------------------------------------------------------------------------- |
 | `add_stock`            | destructive | Stock ONE product now — the user stated product, pieces and price; warns about a duplicate lot or an unusual price until `confirmWarnings: true` |
-| `create_stock_draft`   | additive    | Bulk stocking to review on the web — receipts, photos, several products     |
-| `list_stock_drafts`    | read        | Your open drafts                                                            |
+| `create_stock_draft`   | additive    | Bulk stocking to review on the web — receipts, photos, several products; adds the lines to the supplier's one open draft (`added`, `created`) |
+| `list_stock_drafts`    | read        | Your open draft (at most one), or with `status: "committed"` those stocked in the last 30 days (`canVoid`) |
+| `void_stock_draft`     | destructive | Take back a whole stocked draft while nothing of it sold or was written off |
 | `get_stock_draft`      | read        | Lines of one draft and what blocks stocking it (`problems`); a group line lists `groupProducts` to pick from |
-| `update_stock_draft`   | idempotent  | Replace ALL lines of an open draft (read-modify-write)                      |
+| `update_stock_draft`   | idempotent  | Fix single lines by index (`lines`), or replace all of them (`items`)       |
 | `discard_stock_draft`  | destructive | Throw an open draft away; nothing in the stock changes                      |
 | `commit_stock_draft`   | destructive | Stock every line of a draft — only after the user saw the lines and said so; same warnings as `add_stock` |
 
@@ -148,17 +151,21 @@ Tools are granted based on the account role. Admins implicitly get supplier tool
 | Tool                | Kind | Description                                                                         |
 | ------------------- | ---- | ----------------------------------------------------------------------------------- |
 | `get_stock`         | read | Stock per product, whole fridge or mine; `stockState` low/out; low-stock list, top movers |
-| `recent_deliveries` | read | Individual lots, newest first, with `purchasePrice`, `amountLost`, corrections; voided lots only with `includeVoided` |
+| `recent_deliveries` | read | Individual lots, newest first, with `purchasePrice` (yours only — a colleague's is private, admins see all), `amountLost`, corrections; voided lots only with `includeVoided` |
+| `list_stock_adjustments` | read | Past write-offs and count differences with reason, `countId`, `revertedAt`, `revertible` |
+| `list_stock_lots`   | read | Lots of one product with pieces left, in FIFO order (they sell and are written off oldest first): supplier, pieces, selling price, `mine`, `editable`; no purchase prices |
 
 **Stock out: losses, counts, fixing lots**
 
 | Tool                      | Kind        | Description                                                                 |
 | ------------------------- | ----------- | --------------------------------------------------------------------------- |
-| `write_off_stock`         | destructive | Known losses (expired, damaged, stolen, other) — off the oldest lots first  |
-| `record_inventory_count`  | destructive | A shelf count; `expected` = `get_stock` totalRemaining before counting      |
+| `write_off_stock`         | destructive | Known losses (expired, damaged, stolen, other) — off the oldest lots first, anyone's |
+| `record_inventory_count`  | destructive | A shelf count — counted pieces only; the server compares with the current stock of all lots |
 | `classify_inventory_loss` | idempotent  | Give a count's shortfall of one product a reason                            |
-| `void_delivery`           | destructive | Cancel a lot nothing sold from (a duplicate `add_stock`)                    |
-| `correct_delivery`        | destructive | Lower a lot's pieces, change its selling or purchase price; reprices uninvoiced purchases |
+| `void_delivery`           | destructive | Cancel your lot nothing sold from (a duplicate `add_stock`)                 |
+| `reprice_stock`           | destructive | Sale or price rise of the pieces still in stock: `price` = all **your** lots of the product (admins too), `lots: [{deliveryId, price}]` = exact lots (admins: anyone's, the owner is e-mailed); sold pieces never change. Returns the change per lot |
+| `revert_write_off`        | destructive | Take back a manual write-off within 7 days (author or admin)                |
+| `correct_delivery`        | destructive | Lower your lot's pieces, change its selling or purchase price (only what changes); reprices uninvoiced purchases |
 
 **Planning**
 
@@ -167,6 +174,7 @@ Tools are granted based on the account role. Admins implicitly get supplier tool
 | `get_shopping_list`         | read       | What to buy for the FRIDGE, how much, for how much ([details](shopping-list.md)) |
 | `update_shopping_list_line` | idempotent | Change a saved line: pieces, expected price, tick, hide, note               |
 | `add_shopping_list_line`    | additive   | Put a product or free text on the list                                      |
+| `complete_shopping_list`    | additive   | Back from shopping: ticked lines (or all) are added to the open stocking draft, the list closes |
 | `list_product_groups`       | read       | Purchase groups — interchangeable products planned as one line              |
 | `create_product_group`      | idempotent | New group, or add the given products to the existing group of that name     |
 
@@ -174,12 +182,12 @@ Tools are granted based on the account role. Admins implicitly get supplier tool
 
 | Tool                   | Kind        | Description                                                                 |
 | ---------------------- | ----------- | --------------------------------------------------------------------------- |
-| `uninvoiced_summary`   | read        | Who owes how much, grouped by buyer — the preview before invoicing          |
-| `generate_invoices`    | destructive | Issue invoices (all buyers or one); e-mails the buyers                      |
+| `uninvoiced_summary`   | read        | Who owes how much, grouped by buyer — the preview before invoicing; own purchases flagged `isSelf` |
+| `generate_invoices`    | destructive | Issue invoices (all buyers or one); `expectedTotal` guards the preview; e-mails the buyers |
 | `list_issued_invoices` | read        | Invoices you issued, filterable by status                                   |
-| `approve_payment`      | destructive | Confirm a received payment                                                  |
-| `reject_payment`       | destructive | Reject a reported payment                                                   |
-| `get_finance_summary`  | read        | Sales to others, own consumption, profit, shrinkage by reason, yearly limit |
+| `approve_payment`      | destructive | Confirm a received payment (idempotent: `ALREADY_PAID`); e-mails the buyer; admins also for a supplier who left |
+| `reject_payment`       | destructive | Reject a reported payment (only "awaiting"); e-mails the buyer              |
+| `get_finance_summary`  | read        | Sales to others, own consumption, profit, shrinkage by reason, `money`, yearly limit by payment date (`amount` received, `pending` owed); `byProduct` adds the breakdown |
 
 ### Admin Only
 
@@ -187,10 +195,10 @@ Tools are granted based on the account role. Admins implicitly get supplier tool
 | ---------------------------- | ----------- | ----------------------------------------------------------------------- |
 | `dashboard_stats`            | read        | Global overview stats                                                   |
 | `list_users`                 | read        | Browse users with role/status filters                                   |
-| `update_user`                | idempotent  | Change role, enable/disable, keypad ID                                  |
+| `update_user`                | idempotent  | Change role, enable/disable, keypad ID; a supplier with stock or uninvoiced sales cannot be switched off (`SUPPLIER_HAS_OPEN_BUSINESS`) |
 | `list_all_orders`            | read        | All orders with filters                                                 |
 | `list_all_invoices`          | read        | All invoices with filters                                               |
-| `storno_order`               | destructive | Cancel an uninvoiced order (restores stock)                             |
+| `storno_order`               | destructive | Cancel an uninvoiced order (restores stock); e-mails buyer and supplier |
 | `generate_invoices_for_user` | destructive | Invoice all debts of one buyer across suppliers; e-mails the buyer      |
 | `create_category`            | idempotent  | Create a product category                                               |
 | `get_audit_logs`             | read        | Query the system audit log                                              |
@@ -223,7 +231,7 @@ User: Vyfakturuj všechny nezaplacené nákupy
 Claude: [calls uninvoiced_summary] → 4 buyers owe 1 240 CZK total
         → "Vyfakturuju Petrovi 420 Kč, Janě 380 Kč, … celkem 1 240 Kč. Mám?"
 User: Ano
-Claude: [calls generate_invoices]
+Claude: [calls generate_invoices with expectedTotal=1240]
         → "Vygenerovány 4 faktury. Kupující dostali e-mail s QR platbou."
 ```
 
@@ -257,7 +265,7 @@ Nothing is stocked until the supplier reviews the draft — on the web, or in ch
 ```
 User: V příjemce 12 je ta třetí položka Monster Mango, produkt 44. Oprav to.
 Claude: [calls get_stock_draft with draftId=12] → 5 lines, line index 2 has no productId
-        [calls update_stock_draft with draftId=12 and all 5 lines, line 2 now productId=44]
+        [calls update_stock_draft with draftId=12, lines=[{index: 2, productId: 44}]]
         → "Opraveno. Všechny řádky jsou kompletní — můžeš naskladnit na webu,
            nebo řekni a naskladním to odsud."
 User: Naskladni.
@@ -287,11 +295,11 @@ Claude: [calls list_users to find the user ID]
 
 ## Tool-call Logging
 
-Every tool call is recorded in the `mcp_tool_calls` table (user, tool, arguments, success, duration) for auditing and debugging.
+Every tool call is recorded in the `mcp_tool_calls` table (user, tool, arguments, success, duration) for auditing and debugging. A call that returned a tool error (`isError`) counts as `success = false` and keeps the first 500 characters of the message — with its error code — in `error_message`, so the table shows where agents get stuck.
 
 ## Error Handling
 
-All tools return structured responses. When an operation fails, the tool returns `isError: true` with a message of the form `<what failed> (error code: CODE). <what to do next>`. Raw database errors never reach the agent — they are logged and reported as `INTERNAL`.
+All tools return structured responses. A successful result may carry `hint` — what it means and what to do next, for the assistant; `note` is always data (the note of a draft, a list line or a write-off). When an operation fails, the tool returns `isError: true` with a message of the form `<what failed> (error code: CODE). <what to do next>`. Raw database errors never reach the agent — they are logged and reported as `INTERNAL`.
 
 | Code                                                                 | Meaning                                                                                      |
 | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
@@ -302,12 +310,18 @@ All tools return structured responses. When an operation fails, the tool returns
 | `VALIDATION`                                                         | the arguments contradict the description (e.g. a draft line with neither product nor label)  |
 | `PRICE_REQUIRED`                                                     | `add_stock` needs a selling price, a purchase price, or both                                 |
 | `NEEDS_CONFIRMATION`                                                 | a draft commit has warnings; shown as `stocked: false` + `warnings`, repeat with `confirmWarnings` |
+| `DRAFT_HAS_SALES`, `DRAFT_VOIDED`, `DRAFT_NOT_COMMITTED`, `DRAFT_TRANSFERRED` | `void_stock_draft`: something sold or was written off; already voided; not stocked yet; its stock was handed over |
 | `DRAFT_CLOSED`, `DRAFT_EMPTY`, `DRAFT_INCOMPLETE`                    | the draft was already stocked/discarded, has no lines, or a line lacks a product or a price |
-| `DELIVERY_VOIDED`, `DELIVERY_HAS_ORDERS`                             | the lot is already voided; something sold from it (use `correct_delivery`)                   |
+| `DELIVERY_VOIDED`, `DELIVERY_HAS_ORDERS`, `DELIVERY_HAS_ADJUSTMENTS`, `DELIVERY_TRANSFERRED` | the lot is already voided; something sold from it or was written off / counted, or it was handed over between suppliers (use `correct_delivery` or a write-off) |
 | `AMOUNT_BELOW_SOLD`, `AMOUNT_INCREASE_NOT_ALLOWED`, `NO_CHANGE`      | correction limits: not below what sold; extra pieces are a new lot; nothing differs          |
+| `NOTHING_IN_STOCK`, `ADJUSTMENT_NOT_FOUND`, `NOT_A_WRITE_OFF`, `ALREADY_REVERTED`, `REVERT_TOO_LATE` | `reprice_stock` has nothing of yours to reprice (or a lot in `lots` is sold out); `INVALID_PRICE`, `DUPLICATE_LOT` are bad `lots`; `revert_write_off` limits (manual write-offs, 7 days, author or admin) |
 | `NOT_ENOUGH_STOCK`, `NOTHING_COUNTED`, `NOTHING_TO_CLASSIFY`         | inventory: fewer pieces in stock than written off; no items; no shortfall to explain         |
 | `GROUP_NAME_TAKEN`, `LIST_EMPTY`                                     | a purchase group of that name exists; the shopping list has nothing to buy                   |
 | `ALREADY_PAID`, `ORDER_ALREADY_INVOICED`                             | invoice already paid; storno is not possible after invoicing                                 |
+| `PAYMENT_ALREADY_CONFIRMED`, `NOTHING_TO_REJECT`                     | `reject_payment` on a paid invoice (undo only on the web) or one with no reported payment    |
+| `ISSUER_ACTIVE`, `SUPPLIER_HAS_OPEN_BUSINESS`                        | an admin settles payments only for a supplier who left; a supplier with stock or uninvoiced sales cannot be switched off |
+| `TOTAL_CHANGED`                                                      | purchases changed since `uninvoiced_summary`; nothing was issued — preview and confirm again |
+| `BARCODE_TAKEN`, `ALLERGEN_NOT_FOUND`                                | another product has the barcode; an allergen name is unknown (the message lists valid ones)  |
 | `LAST_ACTIVE_ADMIN_REQUIRED`, `USER_HAS_UNINVOICED_ORDERS`, `KEYPAD_ID_TAKEN`, `KEYPAD_ID_RESERVED` | user-management constraints                                         |
 | `INTERNAL`                                                           | unexpected server error — retry once, then contact the admin                                 |
 
@@ -326,6 +340,8 @@ node ace mcp:eval --model=gpt-4o --scenarios=add-stock,receipt-to-draft
 - The tool definitions come from the **live MCP server** (an in-memory transport and `tools/list`), per role — a scenario for a supplier is judged with exactly the tools a supplier sees, so a description change is measured as soon as it is made and nothing can drift. A functional test checks that every scenario names tools its role really gets.
 - Run both modes: the first number is the quality of the descriptions (what every client gets), the second the quality of the whole package.
 - Environment variables: `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_DEPLOYMENT` (or `--model`), `AZURE_OPENAI_API_VERSION` (default `2024-12-01-preview`). They are listed, commented out, in `.env.example`; the running app never reads them. Without them the command explains what is missing and exits with code 1.
+- A scenario judges the **first** call. `allowNoTool` scenarios are sent with `tool_choice: "auto"`: answering in words (asking the user) passes, the forbidden action fails — e.g. `commit-without-review` must not commit a draft the user has not seen. `history` adds earlier turns, including tool results, so `warnings-need-consent` checks that an assistant does not repeat `add_stock` with `confirmWarnings: true` after a vague "ok".
+- A unit test (`tests/unit/mcp/eval_coverage.spec.ts`) requires every tool an admin sees to be the expected tool of at least one scenario.
 - Results land in `mcp_eval_runs` / `mcp_eval_results` (one row per scenario with the tool and arguments the model chose), labelled with the model and whether the prompt was on.
 
 **Adding a scenario from real feedback.** When an assistant misbehaves on a real message: copy the message verbatim, decide which tool should have been called (and which alternatives are acceptable as a first step), add it to `eval_scenarios.ts` with `role` and `source: 'user_feedback'`, and re-run. If it passes, it is a regression guard. If it fails without the prompt, fix the tool descriptions; if it fails with the prompt too, fix `prompts.ts` as well.

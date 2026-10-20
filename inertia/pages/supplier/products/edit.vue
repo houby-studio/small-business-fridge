@@ -116,9 +116,7 @@ const validation = useProductFormValidation(
     description: form.description,
     categoryId: form.categoryId,
     barcode: form.barcode,
-    hasImage: true,
-  })),
-  { requireImage: false }
+  }))
 )
 const clientErrors = computed(() => ({
   displayName: validation.displayNameMissing.value
@@ -126,11 +124,9 @@ const clientErrors = computed(() => ({
     : validation.displayNameTooLong.value
       ? t('supplier.products_validation_name_max')
       : '',
-  description: validation.descriptionMissing.value
-    ? t('supplier.products_validation_description_required')
-    : validation.descriptionTooLong.value
-      ? t('supplier.products_validation_description_max')
-      : '',
+  description: validation.descriptionTooLong.value
+    ? t('supplier.products_validation_description_max')
+    : '',
   categoryId: validation.categoryMissing.value
     ? t('supplier.products_validation_category_required')
     : '',
@@ -218,18 +214,18 @@ useInitialFocus(() => document.getElementById('edit-product-name'))
   <AppLayout>
     <Head :title="`${t('supplier.products_edit_title')}: ${product.displayName}`" />
 
-    <div class="mb-6 flex items-center justify-between">
+    <div class="mb-6 flex items-center gap-2">
+      <Button
+        icon="pi pi-arrow-left"
+        severity="secondary"
+        text
+        :aria-label="t('common.back')"
+        data-testid="product-back"
+        @click="goBack"
+      />
       <h1 class="text-2xl font-bold text-gray-900 dark:text-zinc-100">
         {{ t('supplier.products_edit_heading') }}
       </h1>
-      <Button
-        :label="t('common.back')"
-        icon="pi pi-arrow-left"
-        size="small"
-        severity="secondary"
-        text
-        @click="goBack"
-      />
     </div>
 
     <form class="grid items-start gap-6 lg:grid-cols-3" @submit.prevent="submit">
@@ -306,7 +302,7 @@ useInitialFocus(() => document.getElementById('edit-product-name'))
                 <label
                   for="edit-product-description"
                   class="block text-sm text-gray-700 dark:text-zinc-300"
-                  >{{ t('supplier.products_description_label') }} *</label
+                  >{{ t('supplier.products_description_label') }}</label
                 >
                 <Button
                   v-if="aiSuggestions"

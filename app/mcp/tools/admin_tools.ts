@@ -1,11 +1,12 @@
 import { z } from 'zod'
 import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type User from '#models/user'
-import AdminService from '#services/admin_service'
+import AdminService, { SupplierHasOpenBusiness } from '#services/admin_service'
 import InvoiceService from '#services/invoice_service'
 import AuditService from '#services/audit_service'
 import {
   ok,
+  failWithCode,
   mapDomainError,
   pageMeta,
   readOnly,
@@ -80,8 +81,9 @@ export function registerAdminTools(server: McpServer, user: User) {
     'update_user',
     'Change a user account: role, enabled/disabled, keypad ID. Only the fields you pass ' +
       'change. A user with uninvoiced orders or unpaid invoices cannot be disabled ' +
-      '(generate_invoices_for_user first), and the last active admin cannot be demoted or ' +
-      'disabled.',
+      '(generate_invoices_for_user first). A supplier with stock on the shelf or uninvoiced ' +
+      'sales cannot be disabled or made a customer (SUPPLIER_HAS_OPEN_BUSINESS) — their unpaid ' +
+      'invoices do not block. The last active admin cannot be demoted or disabled.',
     {
       userId: z.number().int().positive().describe('User to update (list_users)'),
       role: z.enum(['customer', 'supplier', 'admin']).optional().describe('New role'),
@@ -105,6 +107,14 @@ export function registerAdminTools(server: McpServer, user: User) {
           keypadId: updated.keypadId,
         })
       } catch (err) {
+        if (err instanceof SupplierHasOpenBusiness) {
+          const { piecesLeft, lotsWithStock, uninvoicedOrders } = err.business
+          return failWithCode(
+            err.code,
+            `Updating user failed: ${piecesLeft} pieces in ${lotsWithStock} lots, ` +
+              `${uninvoicedOrders} uninvoiced purchases`
+          )
+        }
         return mapDomainError(err, 'Updating user failed')
       }
     }
@@ -192,8 +202,8 @@ export function registerAdminTools(server: McpServer, user: User) {
   // ── storno_order ────────────────────────────────────────────────────────────
   server.tool(
     'storno_order',
-    "Cancel (storno) a purchase — the piece returns to its lot's stock and the order is " +
-      'deleted. Only while the order is not invoiced yet; find orderId with list_all_orders. ' +
+    "Cancel (storno) a purchase — the piece returns to its lot's stock, the order is " +
+      'deleted and the buyer and the supplier are e-mailed. Only while the order is not invoiced yet; find orderId with list_all_orders. ' +
       'For a wrongly stocked lot use void_delivery instead.',
     {
       orderId: z.number().int().positive().describe('Order to cancel (list_all_orders)'),
@@ -203,7 +213,11 @@ export function registerAdminTools(server: McpServer, user: User) {
       try {
         await new AdminService().stornoOrder(orderId, user.id)
 
-        return ok({ orderId, status: 'cancelled', note: 'Stock restored.' })
+        return ok({
+          orderId,
+          status: 'cancelled',
+          hint: 'Stock restored. The buyer and the supplier of the lot were e-mailed.',
+        })
       } catch (err) {
         return mapDomainError(err, 'Storno failed')
       }
@@ -229,7 +243,7 @@ export function registerAdminTools(server: McpServer, user: User) {
             supplierId: inv.supplierId,
             totalCost: inv.totalCost,
           })),
-          note:
+          hint:
             invoices.length === 0
               ? 'No uninvoiced orders for this buyer.'
               : `${invoices.length} invoice(s) issued; the buyer was e-mailed.`,

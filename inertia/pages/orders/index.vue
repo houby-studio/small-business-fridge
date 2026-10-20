@@ -9,6 +9,7 @@ import Select from 'primevue/select'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDate } from '~/composables/use_format_date'
 import { useListFilters } from '~/composables/use_list_filters'
+import { hasActiveFilters } from '~/composables/use_filter_params'
 import FilterBar from '~/components/FilterBar.vue'
 import PaginatedDataTable from '~/components/PaginatedDataTable.vue'
 import OrderPrice from '~/components/OrderPrice.vue'
@@ -88,6 +89,8 @@ const { applyFilters, navigateClear, onPageChange, navigateSort } = useListFilte
   buildParams: buildFilterParams,
   getCurrentPage: () => props.orders.meta.currentPage,
 })
+
+const filtersActive = computed(() => hasActiveFilters(buildFilterParams()))
 
 function clearFilters() {
   filterChannel.value = ALL
@@ -202,7 +205,7 @@ function channelLabel(channel: string) {
     </div>
 
     <!-- Filter bar -->
-    <FilterBar @apply="applyFilters" @clear="clearFilters">
+    <FilterBar :active="filtersActive" @clear="clearFilters">
       <div>
         <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
           t('orders.filter_channel')
@@ -213,6 +216,7 @@ function channelLabel(channel: string) {
           optionLabel="label"
           optionValue="value"
           class="w-36"
+          @change="applyFilters"
         />
       </div>
       <div>
@@ -225,6 +229,7 @@ function channelLabel(channel: string) {
           optionLabel="label"
           optionValue="value"
           class="w-36"
+          @change="applyFilters"
         />
       </div>
     </FilterBar>

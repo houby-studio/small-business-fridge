@@ -97,5 +97,12 @@
   "registration_allowed_domains": "Povolené domény",
   "music_name_too_long": "Název skladby může mít maximálně 255 znaků.",
   "music_file_bad_format": "Podporované formáty jsou mp3, ogg, wav a m4a.",
-  "music_file_too_large": "Soubor je větší než 20 MB."
+  "music_file_too_large": "Soubor je větší než 20 MB.",
+  "users_transfer_stock": "Předat zásoby",
+  "users_transfer_stock_target": "Komu *",
+  "users_transfer_stock_summary": "Předá se {pieces} ks z {lots} dodávek. Prodeje a odpisy zůstanou původnímu dodavateli.",
+  "users_open_business": "Na skladě {pieces} ks, nevyfakturováno {orders} nákupů — dodavatele zatím nelze vypnout.",
+  "invoices_approve_payment": "Potvrdit platbu",
+  "invoices_reject_payment": "Zamítnout platbu",
+  "invoices_settle_hint": "Vystavitel už není aktivní dodavatel — platbu potvrzuje administrátor."
 }

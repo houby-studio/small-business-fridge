@@ -23,6 +23,10 @@ export default class Invoice extends BaseModel {
   @column()
   declare isPaymentRequested: boolean
 
+  /** When the payment arrived (approved, or issued for a self-invoice); null while unpaid. */
+  @column.dateTime()
+  declare paidAt: DateTime | null
+
   @column()
   declare autoReminderCount: number
 

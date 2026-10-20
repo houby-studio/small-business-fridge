@@ -2,9 +2,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import { resolvePage } from '#helpers/pagination'
 import { listRedirectUrl } from '#helpers/list_redirect'
 import InvoiceService from '#services/invoice_service'
-import NotificationService from '#services/notification_service'
 import { paymentActionValidator } from '#validators/invoice'
-import logger from '@adonisjs/core/services/logger'
 import User from '#models/user'
 import Invoice from '#models/invoice'
 
@@ -66,22 +64,14 @@ export default class PaymentsController {
     const invoiceService = new InvoiceService()
 
     try {
-      let invoice
+      // The service e-mails the buyer.
       if (action === 'approve') {
-        invoice = await invoiceService.approvePayment(Number(params.id), auth.user!.id)
+        await invoiceService.approvePayment(Number(params.id), auth.user!.id)
         session.flash('alert', { type: 'success', message: i18n.t('messages.payment_approved') })
       } else {
-        invoice = await invoiceService.rejectPayment(Number(params.id), auth.user!.id)
+        await invoiceService.rejectPayment(Number(params.id), auth.user!.id)
         session.flash('alert', { type: 'success', message: i18n.t('messages.payment_rejected') })
       }
-
-      // Send payment status notification (fire-and-forget)
-      const notificationService = new NotificationService()
-      notificationService
-        .sendPaymentStatusChange(invoice, action === 'approve' ? 'approved' : 'rejected')
-        .catch((err) => {
-          logger.error({ err }, `Failed to send payment status email for invoice #${params.id}`)
-        })
     } catch (error) {
       if (error instanceof Error && error.message === 'FORBIDDEN') {
         session.flash('alert', { type: 'danger', message: i18n.t('messages.invoice_forbidden') })

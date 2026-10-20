@@ -39,7 +39,10 @@ export default class RecommendationService {
       ),
       max_buys AS (SELECT GREATEST(MAX(total_buys), 1) AS val FROM user_history),
       in_stock AS (
-        SELECT DISTINCT product_id FROM deliveries WHERE amount_left > 0
+        SELECT DISTINCT d.product_id
+        FROM deliveries d
+        JOIN products p ON p.id = d.product_id AND p.archived_at IS NULL
+        WHERE d.amount_left > 0
       ),
       user_ratings AS (
         SELECT product_id, stars FROM product_ratings WHERE user_id = ?
@@ -143,6 +146,13 @@ export default class RecommendationService {
           .select(db.raw('1'))
           .whereColumn('deliveries.product_id', 'recommendations.product_id')
           .where('deliveries.amount_left', '>', 0)
+      })
+      // An archived product is never recommended (precomputed rows may predate the archive).
+      .whereNotExists((q) => {
+        q.from('products')
+          .select(db.raw('1'))
+          .whereColumn('products.id', 'recommendations.product_id')
+          .whereNotNull('products.archived_at')
       })
       .if(excludedAllergenIds.length > 0, (q) => {
         q.whereNotExists((sub) => {

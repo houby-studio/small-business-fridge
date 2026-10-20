@@ -13,6 +13,7 @@ import Allergen from '#models/allergen'
 import StockDraft from '#models/stock_draft'
 import StockDraftItem from '#models/stock_draft_item'
 import StockDraftService from '#services/shopping/stock_draft_service'
+import DeliveryService from '#services/delivery_service'
 import db from '@adonisjs/lucid/services/db'
 
 const cleanAll = async () => {
@@ -112,7 +113,7 @@ test.group('Web Supplier - stock index', (group) => {
     assert.equal(reversed.body().props.stock.data[0].productName, 'Zebra')
   })
 
-  test('stockState narrows the table while lowStockCount counts the whole scope', async ({
+  test('stockState narrows the table while the option counts cover the whole scope', async ({
     client,
     assert,
   }) => {
@@ -140,7 +141,9 @@ test.group('Web Supplier - stock index', (group) => {
 
     const all = await client.get('/supplier/stock').loginAs(supplier).headers(inertia)
     assert.equal(all.body().props.stock.meta.total, 3)
-    assert.equal(all.body().props.stock.lowStockCount, 2)
+    // Each option counts exactly the rows it would list (BE-09).
+    assert.equal(all.body().props.stock.lowStockCount, 1)
+    assert.equal(all.body().props.stock.outStockCount, 1)
     assert.equal(all.body().props.filters.stockState, 'all')
 
     const low = await client
@@ -151,7 +154,7 @@ test.group('Web Supplier - stock index', (group) => {
       low.body().props.stock.data.map((row: any) => row.productId),
       [ids.Low]
     )
-    assert.equal(low.body().props.stock.lowStockCount, 2)
+    assert.equal(low.body().props.stock.lowStockCount, low.body().props.stock.meta.total)
     assert.equal(low.body().props.stock.totals.totalProducts, 3)
     assert.equal(low.body().props.filters.stockState, 'low')
 
@@ -203,14 +206,17 @@ test.group('Web Supplier - stock index', (group) => {
     const supplier = await UserFactory.apply('supplier').create()
     const category = await CategoryFactory.create()
     const product = await ProductFactory.merge({ categoryId: category.id }).create()
-    await StockDraft.create({ supplierId: supplier.id, source: 'web', status: 'open' })
-    const filled = await StockDraft.create({
+    // An empty open draft does not count…
+    const draft = await StockDraft.create({
       supplierId: supplier.id,
-      source: 'mcp',
+      source: 'web',
       status: 'open',
     })
+    const empty = await client.get('/supplier/products').loginAs(supplier).headers(inertia)
+    assert.equal(empty.body().props.openDraftCount, 0)
+    // …the same draft with a line does.
     await StockDraftItem.create({
-      stockDraftId: filled.id,
+      stockDraftId: draft.id,
       productId: product.id,
       amount: 2,
       price: 10,
@@ -1060,6 +1066,352 @@ test.group('Web Supplier - stocking through a draft', (group) => {
     assert.lengthOf(await db.from('deliveries').where('product_id', product.id), 0)
     const draft = await StockDraft.findOrFail(draftId)
     assert.equal(draft.status, 'open')
+  })
+
+  test('the review page prices with the owner margin and only their own purchase prices', async ({
+    client,
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').merge({ marginPercent: 10 }).create()
+    const colleague = await UserFactory.apply('supplier').create()
+    const admin = await UserFactory.apply('admin').merge({ marginPercent: 50 }).create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    await DeliveryFactory.merge({
+      supplierId: colleague.id,
+      productId: product.id,
+      price: 25,
+      purchasePrice: 19.9,
+    }).create()
+    const draftId = await openDraft(client, supplier)
+
+    for (const viewer of [supplier, admin]) {
+      const response = await client
+        .get(`/supplier/stock/drafts/${draftId}`)
+        .loginAs(viewer)
+        .headers(inertia)
+      response.assertStatus(200)
+      const props = response.body().props
+      // The draft's owner, not whoever looks at it: an admin sees what the commit will use.
+      assert.equal(props.marginPercent, 10)
+      const option = props.products.find((p: { id: number }) => p.id === product.id)
+      assert.equal(option.lastPrice, 25)
+      // What the colleague paid stays theirs.
+      assert.isNull(option.lastPurchasePrice)
+      assert.isNumber(props.draft.version)
+    }
+  })
+
+  test('an autosave over a newer version is refused and the newer lines survive', async ({
+    client,
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    const draftId = await openDraft(client, supplier)
+    const page = await client
+      .get(`/supplier/stock/drafts/${draftId}`)
+      .loginAs(supplier)
+      .headers(inertia)
+    const version = page.body().props.draft.version
+
+    // An assistant fixes the draft over MCP while the page is open.
+    await new StockDraftService().update(supplier, draftId, {
+      items: [{ productId: product.id, amount: 24, price: 15 }],
+    })
+
+    const response = await client
+      .put(`/supplier/stock/drafts/${draftId}`)
+      .loginAs(supplier)
+      .withCsrfToken()
+      .json({ version, items: [{ productId: product.id, amount: 1, price: 15 }] })
+      .redirects(0)
+    response.assertStatus(302)
+    response.assertFlashMessage('draftSaveError', 'DRAFT_STALE')
+    const items = await StockDraftItem.query().where('stockDraftId', draftId)
+    assert.deepEqual(
+      items.map((i) => i.amount),
+      [24]
+    )
+
+    // The same with the version it now has goes through.
+    const reloaded = await client
+      .get(`/supplier/stock/drafts/${draftId}`)
+      .loginAs(supplier)
+      .headers(inertia)
+    const fresh = reloaded.body().props.draft.version
+    const saved = await client
+      .put(`/supplier/stock/drafts/${draftId}`)
+      .loginAs(supplier)
+      .withCsrfToken()
+      .json({ version: fresh, items: [{ productId: product.id, amount: 6, price: 15 }] })
+      .redirects(0)
+    saved.assertStatus(302)
+    assert.isUndefined(saved.flashMessages()?.draftSaveError)
+    const after = await StockDraftItem.query().where('stockDraftId', draftId)
+    assert.deepEqual(
+      after.map((i) => i.amount),
+      [6]
+    )
+  })
+
+  test('the autosave talks JSON: version on success, 409 with the code when refused', async ({
+    client,
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    const draftId = await openDraft(client, supplier)
+    const autosave = { 'X-Draft-Autosave': '1', 'Accept': 'application/json' }
+    const page = await client
+      .get(`/supplier/stock/drafts/${draftId}`)
+      .loginAs(supplier)
+      .headers(inertia)
+    const loaded = page.body().props.draft.version
+
+    const saved = await client
+      .put(`/supplier/stock/drafts/${draftId}`)
+      .loginAs(supplier)
+      .withCsrfToken()
+      .headers(autosave)
+      .json({ version: loaded, items: [{ productId: product.id, amount: 2, price: 15 }] })
+    saved.assertStatus(200)
+    assert.equal(saved.body().lines, 1)
+    assert.isAbove(saved.body().version, loaded)
+
+    // The old version again: refused as stale, and nothing overwritten.
+    const stale = await client
+      .put(`/supplier/stock/drafts/${draftId}`)
+      .loginAs(supplier)
+      .withCsrfToken()
+      .headers(autosave)
+      .json({ version: loaded, items: [{ productId: product.id, amount: 9, price: 15 }] })
+    stale.assertStatus(409)
+    assert.deepEqual(stale.body(), { error: 'DRAFT_STALE' })
+    const items = await StockDraftItem.query().where('stockDraftId', draftId)
+    assert.deepEqual(
+      items.map((i) => i.amount),
+      [2]
+    )
+
+    // An invalid line is a 422 with the errors, never a redirect.
+    const invalid = await client
+      .put(`/supplier/stock/drafts/${draftId}`)
+      .loginAs(supplier)
+      .withCsrfToken()
+      .headers(autosave)
+      .json({ items: [{ productId: product.id, amount: 0 }] })
+    invalid.assertStatus(422)
+  })
+
+  test('saving a draft that was stocked elsewhere is reported as a failed save', async ({
+    client,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    const draftId = await openDraft(client, supplier)
+    await new StockDraftService().commit(supplier, draftId, {
+      items: [{ productId: product.id, amount: 2, price: 15 }],
+      confirmWarnings: true,
+    })
+
+    const response = await client
+      .put(`/supplier/stock/drafts/${draftId}`)
+      .loginAs(supplier)
+      .withCsrfToken()
+      .json({ items: [{ productId: product.id, amount: 3, price: 15 }] })
+      .redirects(0)
+    response.assertStatus(302)
+    response.assertFlashMessage('draftSaveError', 'DRAFT_CLOSED')
+  })
+
+  test('"Stock" on a product already in the draft focuses its line instead of adding one', async ({
+    client,
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+
+    const locations: string[] = []
+    for (let i = 0; i < 2; i++) {
+      const response = await client
+        .post('/supplier/stock/drafts')
+        .loginAs(supplier)
+        .withCsrfToken()
+        .json({ productId: product.id })
+        .redirects(0)
+      response.assertStatus(302)
+      locations.push(response.header('location')!)
+    }
+    assert.equal(locations[0], locations[1])
+    assert.match(locations[0], /\?focus=\d+$/)
+    assert.lengthOf(await StockDraftItem.all(), 1)
+  })
+
+  test('an archived product is not offered in a draft, unless a line already has it', async ({
+    client,
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const active = await ProductFactory.merge({ categoryId: category.id }).create()
+    const archived = await ProductFactory.merge({ categoryId: category.id }).create()
+    const onLine = await ProductFactory.merge({ categoryId: category.id }).create()
+    const draft = await new StockDraftService().create(supplier.id, {
+      source: 'mcp',
+      items: [{ productId: onLine.id, amount: 1, price: 10 }],
+    })
+    await db
+      .from('products')
+      .whereIn('id', [archived.id, onLine.id])
+      .update({ archived_at: new Date() })
+
+    const response = await client
+      .get(`/supplier/stock/drafts/${draft.id}`)
+      .loginAs(supplier)
+      .headers(inertia)
+    const offered = response.body().props.products.map((p: { id: number }) => p.id)
+    assert.include(offered, active.id)
+    assert.notInclude(offered, archived.id)
+    assert.include(offered, onLine.id)
+  })
+
+  test('a stocked draft is shown read-only and voided as a whole', async ({ client, assert }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const colleague = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    const service = new StockDraftService()
+    const draft = await service.create(supplier.id, {
+      source: 'web',
+      items: [{ productId: product.id, amount: 5, price: 15, purchasePrice: 9 }],
+    })
+    await service.commit(supplier, draft.id, { confirmWarnings: true })
+
+    // The old list page is gone: with nothing open it leads to the stock page.
+    const gone = await client.get('/supplier/stock/drafts').loginAs(supplier).redirects(0)
+    gone.assertStatus(302)
+    assert.equal(gone.header('location'), '/supplier/stock')
+
+    const detail = await client
+      .get(`/supplier/stock/drafts/${draft.id}`)
+      .loginAs(supplier)
+      .headers(inertia)
+    assert.include(detail.body().props.draft, { status: 'committed', canVoid: true })
+
+    // A colleague cannot void it; a reason is required.
+    const foreign = await client
+      .post(`/supplier/stock/drafts/${draft.id}/void`)
+      .loginAs(colleague)
+      .withCsrfToken()
+      .json({ reason: 'Účtenka dvakrát' })
+      .redirects(0)
+    foreign.assertStatus(302)
+    foreign.assertFlashMessage('draftSaveError', 'DRAFT_NOT_FOUND')
+    const noReason = await client
+      .post(`/supplier/stock/drafts/${draft.id}/void`)
+      .loginAs(supplier)
+      .withCsrfToken()
+      .json({ reason: ' ' })
+      .redirects(0)
+    noReason.assertStatus(302)
+    const unchanged = await StockDraft.findOrFail(draft.id)
+    assert.equal(unchanged.status, 'committed')
+
+    const voided = await client
+      .post(`/supplier/stock/drafts/${draft.id}/void`)
+      .loginAs(supplier)
+      .withCsrfToken()
+      .json({ reason: 'Účtenka dvakrát' })
+      .redirects(0)
+    voided.assertStatus(302)
+    voided.assertFlashMessage('alert', {
+      type: 'success',
+      message: 'Příjemka stornována (1 dodávka).',
+    })
+    const after = await StockDraft.findOrFail(draft.id)
+    assert.equal(after.status, 'voided')
+    const lot = await db.from('deliveries').where('product_id', product.id).firstOrFail()
+    assert.isNotNull(lot.voided_at)
+  })
+
+  test('voiding a handed-over draft is refused with a message, not a server error', async ({
+    client,
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const successor = await UserFactory.apply('supplier').create()
+    const admin = await UserFactory.apply('admin').create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    const service = new StockDraftService()
+    const draft = await service.create(supplier.id, {
+      source: 'web',
+      items: [{ productId: product.id, amount: 5, price: 15 }],
+    })
+    await service.commit(supplier, draft.id, { confirmWarnings: true })
+    await new DeliveryService().transferStock(supplier.id, successor.id, admin)
+
+    const response = await client
+      .post(`/supplier/stock/drafts/${draft.id}/void`)
+      .loginAs(supplier)
+      .withCsrfToken()
+      .json({ reason: 'Účtenka dvakrát' })
+      .redirects(0)
+    response.assertStatus(302)
+    response.assertFlashMessage('draftSaveError', 'DRAFT_TRANSFERRED')
+    const unchanged = await StockDraft.findOrFail(draft.id)
+    assert.equal(unchanged.status, 'committed')
+  })
+
+  test("the history lists stocked drafts by number, a colleague's without their cost", async ({
+    client,
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const colleague = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    const product = await ProductFactory.merge({ categoryId: category.id }).create()
+    const service = new StockDraftService()
+    const mine = await service.create(supplier.id, {
+      source: 'web',
+      items: [{ productId: product.id, amount: 5, price: 15, purchasePrice: 9 }],
+    })
+    await service.commit(supplier, mine.id, { confirmWarnings: true })
+    const theirs = await service.create(colleague.id, {
+      source: 'mcp',
+      items: [{ productId: product.id, amount: 2, price: 15, purchasePrice: 8 }],
+    })
+    await service.commit(colleague, theirs.id, { confirmWarnings: true })
+
+    const all = await client
+      .get('/supplier/deliveries?type=drafts')
+      .loginAs(supplier)
+      .headers(inertia)
+    all.assertStatus(200)
+    const { drafts, filters } = all.body().props
+    assert.equal(filters.type, 'drafts')
+    assert.deepEqual(
+      drafts.data.map((d: { id: number }) => d.id),
+      [theirs.id, mine.id]
+    )
+    assert.include(drafts.data[0], { supplierName: colleague.displayName, purchaseTotal: null })
+    assert.include(drafts.data[1], { pieces: 5, purchaseTotal: 45, status: 'committed' })
+
+    const own = await client
+      .get('/supplier/deliveries?type=drafts&scope=mine&sortBy=pieces&sortOrder=asc')
+      .loginAs(supplier)
+      .headers(inertia)
+    assert.deepEqual(
+      own.body().props.drafts.data.map((d: { id: number }) => d.id),
+      [mine.id]
+    )
+    // The other tables are not loaded for the drafts view.
+    assert.lengthOf(own.body().props.recentDeliveries.data, 0)
   })
 
   test('a customer cannot start a draft, and the old quick-form route is gone', async ({

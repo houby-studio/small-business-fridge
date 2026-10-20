@@ -8,6 +8,7 @@ import Select from 'primevue/select'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDateTime } from '~/composables/use_format_date'
 import { useListFilters } from '~/composables/use_list_filters'
+import { hasActiveFilters } from '~/composables/use_filter_params'
 import { getAuditActionLabel, getAuditActionOptions } from '~/composables/use_audit_actions'
 import FilterBar from '~/components/FilterBar.vue'
 import PaginatedDataTable from '~/components/PaginatedDataTable.vue'
@@ -84,6 +85,8 @@ const { applyFilters, navigateClear, onPageChange } = useListFilters({
   getCurrentPage: () => props.logs.meta.currentPage,
 })
 
+const filtersActive = computed(() => hasActiveFilters(buildParams()))
+
 function clearFilters() {
   filterAction.value = ALL
   filterSortOrder.value = 'desc'
@@ -105,7 +108,7 @@ function onSort(event: any) {
     </h1>
 
     <!-- Filters -->
-    <FilterBar @apply="applyFilters" @clear="clearFilters">
+    <FilterBar :active="filtersActive" @clear="clearFilters">
       <div>
         <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
           t('audit.filter_action')
@@ -116,6 +119,7 @@ function onSort(event: any) {
           optionLabel="label"
           optionValue="value"
           class="w-48"
+          @change="applyFilters"
         />
       </div>
     </FilterBar>

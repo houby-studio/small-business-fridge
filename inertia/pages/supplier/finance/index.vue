@@ -6,7 +6,7 @@ import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Column from 'primevue/column'
 import Dialog from 'primevue/dialog'
-import InputNumber from 'primevue/inputnumber'
+import InputNumber from '~/components/NumberInput.vue'
 import Select from 'primevue/select'
 import FilterBar from '~/components/FilterBar.vue'
 import InfoHint from '~/components/InfoHint.vue'
@@ -39,10 +39,17 @@ interface Summary {
     lossRate: number
     byReason: Array<{ reason: LossReason; lostUnits: number; lossCost: number; lossValue: number }>
   }
-  netProfit: number
+  netProfit: number | null
   breakEvenMarginPercent: number
   marginPercent: number
   incomeLimit: IncomeLimitStatus
+  money: {
+    purchased: number
+    stockAtCost: number
+    stockUnitsWithoutCost: number
+    uninvoiced: number
+    unpaid: number
+  }
 }
 
 interface ProductRow {
@@ -51,6 +58,7 @@ interface ProductRow {
   unitsSold: number
   revenue: number
   unitsWithCost: number
+  revenueWithCost: number
   costOfSales: number
   grossProfit: number | null
   lostUnits: number
@@ -72,6 +80,8 @@ const { t } = useI18n()
 const { money, percent } = useMoney()
 
 const filterYear = ref(Number(props.filters.year))
+// Stock and debts are today's state — shown with the current year only.
+const isCurrentYear = computed(() => props.summary.year === props.years[0])
 const filterSortBy = ref(props.filters.sortBy || 'revenue')
 const filterSortOrder = ref(props.filters.sortOrder || 'desc')
 const sortOrderNum = computed(() => (filterSortOrder.value === 'asc' ? 1 : -1))
@@ -94,6 +104,9 @@ function applyFilters() {
     only: ['summary', 'products', 'filters'],
   })
 }
+
+/** "Clear" only once another year than the newest is picked. */
+const filtersActive = computed(() => filterYear.value !== props.years[0])
 
 function clearFilters() {
   filterYear.value = props.years[0]
@@ -118,8 +131,18 @@ function onSort(event: { sortField: string; sortOrder: number }) {
   })
 }
 
-const profitClass = (value: number) =>
-  value < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-700 dark:text-green-300'
+// Zero and unknown are neutral — colour only says "you made" or "you lost" money.
+const NEUTRAL = 'text-gray-900 dark:text-zinc-100'
+const profitClass = (value: number | null) =>
+  value === null || value === 0
+    ? NEUTRAL
+    : value < 0
+      ? 'text-red-600 dark:text-red-400'
+      : 'text-green-700 dark:text-green-300'
+const shrinkageClass = (value: number) => (value > 0 ? 'text-red-600 dark:text-red-400' : NEUTRAL)
+const netLostUnits = computed(() =>
+  Math.max(0, props.summary.shrinkage.lostUnits - props.summary.shrinkage.surplusUnits)
+)
 
 // ─── Margin (a setting, so it lives in a dialog behind the cog) ────────────────
 const marginVisible = ref(false)
@@ -134,6 +157,12 @@ const marginError = computed(() =>
 function openMargin() {
   marginValue.value = props.summary.marginPercent
   marginVisible.value = true
+}
+
+function focusMarginInput() {
+  const input = document.getElementById('finance-margin-input') as HTMLInputElement | null
+  input?.focus()
+  input?.select()
 }
 
 function useBreakEven() {
@@ -157,6 +186,12 @@ function saveMargin() {
     }
   )
 }
+
+// Raising the margin helps only when the set one is below break-even; when it is not, the
+// old prices still on the shelf are what drags the achieved margin down.
+const offerBreakEven = computed(
+  () => props.summary.breakEvenMarginPercent > props.summary.marginPercent
+)
 
 // The margin the supplier really made is what has to cover the shrinkage — not the one
 // configured for new prices.
@@ -191,7 +226,7 @@ const hasShrinkageBreakdown = computed(
       />
     </div>
 
-    <FilterBar @apply="applyFilters" @clear="clearFilters">
+    <FilterBar :active="filtersActive" @clear="clearFilters">
       <div>
         <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300">{{
           t('finance.year')
@@ -203,6 +238,7 @@ const hasShrinkageBreakdown = computed(
           optionValue="value"
           class="w-48"
           data-testid="finance-year"
+          @change="applyFilters"
         />
       </div>
     </FilterBar>
@@ -248,11 +284,10 @@ const hasShrinkageBreakdown = computed(
           </div>
           <div
             v-if="summary.unitsWithoutCost > 0"
-            class="mt-1 inline-flex items-center gap-1 text-xs text-amber-700 dark:text-amber-300"
+            class="mt-1 text-xs text-amber-700 dark:text-amber-300"
             data-testid="finance-units-without-cost"
           >
             {{ t('finance.units_without_cost', { count: summary.unitsWithoutCost }) }}
-            <InfoHint :text="t('finance.units_without_cost_hint')" />
           </div>
         </template>
       </Card>
@@ -271,6 +306,13 @@ const hasShrinkageBreakdown = computed(
               {{ t('finance.achieved_margin', { margin: percent(summary.achievedMarginPercent) }) }}
             </template>
           </div>
+          <div
+            v-if="summary.unitsWithoutCost > 0"
+            class="mt-1 text-xs text-gray-500 dark:text-zinc-400"
+            data-testid="finance-gross-profit-basis"
+          >
+            {{ t('finance.gross_profit_basis', { amount: money(summary.revenueWithCost) }) }}
+          </div>
         </template>
       </Card>
       <Card>
@@ -280,18 +322,26 @@ const hasShrinkageBreakdown = computed(
             :class="profitClass(summary.netProfit)"
             data-testid="finance-net-profit"
           >
-            {{ money(summary.netProfit) }}
+            {{ summary.netProfit === null ? '—' : money(summary.netProfit) }}
           </div>
           <div class="inline-flex items-center gap-1 text-sm text-gray-500 dark:text-zinc-400">
             {{ t('finance.net_profit_title') }}
-            <InfoHint :text="t('finance.net_profit_hint')" test-id="finance-net-profit-hint" />
+            <InfoHint
+              :text="
+                summary.netProfit === null
+                  ? t('finance.net_profit_unknown')
+                  : t('finance.net_profit_hint')
+              "
+              test-id="finance-net-profit-hint"
+            />
           </div>
         </template>
       </Card>
       <Card>
         <template #content>
           <div
-            class="text-2xl font-bold text-red-600 dark:text-red-400"
+            class="text-2xl font-bold"
+            :class="shrinkageClass(summary.shrinkage.lossCost)"
             data-testid="finance-shrinkage"
           >
             {{ money(summary.shrinkage.lossCost) }}
@@ -299,7 +349,7 @@ const hasShrinkageBreakdown = computed(
           <div class="text-sm text-gray-500 dark:text-zinc-400">
             {{
               t('finance.shrinkage', {
-                count: summary.shrinkage.lostUnits - summary.shrinkage.surplusUnits,
+                count: netLostUnits,
                 rate: percent(summary.shrinkage.lossRate * 100),
               })
             }}
@@ -313,6 +363,38 @@ const hasShrinkageBreakdown = computed(
         </template>
       </Card>
     </div>
+
+    <!-- Where the money is: a quiet line, the current state next to the year's purchases. -->
+    <p
+      class="-mt-3 mb-6 flex flex-wrap gap-x-3 gap-y-1 text-sm text-gray-600 dark:text-zinc-400"
+      data-testid="finance-money"
+    >
+      <span>{{ t('finance.money_purchased', { amount: money(summary.money.purchased) }) }}</span>
+      <template v-if="isCurrentYear">
+        <span aria-hidden="true">·</span>
+        <span data-testid="finance-money-stock"
+          >{{ t('finance.money_stock', { amount: money(summary.money.stockAtCost) }) }}
+          <template v-if="summary.money.stockUnitsWithoutCost > 0">{{
+            t('finance.money_stock_without_cost', { count: summary.money.stockUnitsWithoutCost })
+          }}</template></span
+        >
+        <span aria-hidden="true">·</span>
+        <span data-testid="finance-money-owed"
+          >{{
+            t('finance.money_owed', {
+              amount: money(summary.money.uninvoiced + summary.money.unpaid),
+            })
+          }}
+          <Link href="/supplier/invoice" class="underline" data-testid="finance-money-uninvoiced">{{
+            t('finance.money_uninvoiced', { amount: money(summary.money.uninvoiced) })
+          }}</Link
+          >,
+          <Link href="/supplier/payments" class="underline" data-testid="finance-money-unpaid">{{
+            t('finance.money_unpaid', { amount: money(summary.money.unpaid) })
+          }}</Link></span
+        >
+      </template>
+    </p>
 
     <h2 class="mb-3 text-lg font-semibold text-gray-800 dark:text-zinc-200">
       {{ t('finance.products_heading') }}
@@ -336,10 +418,20 @@ const hasShrinkageBreakdown = computed(
       <Column :header="t('finance.col_revenue')" field="revenue" sortable>
         <template #body="{ data }">{{ money(data.revenue) }}</template>
       </Column>
+      <!-- Cost and profit cover only the pieces with a purchase price — said where it is partial. -->
       <Column :header="t('finance.col_cost')">
-        <template #body="{ data }">{{
-          data.unitsWithCost ? money(data.costOfSales) : '—'
-        }}</template>
+        <template #body="{ data }">
+          <template v-if="data.unitsWithCost">
+            {{ money(data.costOfSales) }}
+            <div
+              v-if="data.unitsWithCost < data.unitsSold"
+              class="text-xs text-gray-500 dark:text-zinc-400"
+            >
+              {{ t('finance.col_of_units', { count: data.unitsWithCost }) }}
+            </div>
+          </template>
+          <template v-else>—</template>
+        </template>
       </Column>
       <Column :header="t('finance.col_profit')" field="grossProfit" sortable>
         <template #body="{ data }">
@@ -349,16 +441,29 @@ const hasShrinkageBreakdown = computed(
                 ? 'text-red-600 dark:text-red-400'
                 : ''
             "
-            >{{ money(data.grossProfit) }}</span
+            >{{ data.grossProfit === null ? '—' : money(data.grossProfit) }}</span
           >
+          <div
+            v-if="data.grossProfit !== null && data.unitsWithCost < data.unitsSold"
+            class="text-xs text-gray-500 dark:text-zinc-400"
+            :data-testid="`finance-profit-basis-${data.productId}`"
+          >
+            {{ t('finance.col_of_units', { count: data.unitsWithCost }) }}
+          </div>
         </template>
       </Column>
       <Column :header="t('finance.col_lost')" field="lostUnits" sortable>
         <template #body="{ data }">
-          <span v-if="data.lostUnits"
+          <span v-if="data.lostUnits > 0"
             >{{ data.lostUnits }} {{ t('common.pieces') }} ({{
               percent(data.lossRate * 100)
             }})</span
+          >
+          <span
+            v-else-if="data.lostUnits < 0"
+            class="text-green-700 dark:text-green-300"
+            :data-testid="`finance-surplus-${data.productId}`"
+            >{{ t('finance.col_surplus', { count: -data.lostUnits }) }}</span
           >
           <span v-else>—</span>
         </template>
@@ -394,7 +499,19 @@ const hasShrinkageBreakdown = computed(
         class="rounded-lg border border-gray-200 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
         :data-testid="`finance-reason-${row.reason}`"
       >
-        <div class="text-sm text-gray-700 dark:text-zinc-300">{{ reasonLabel(row.reason) }}</div>
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-sm text-gray-700 dark:text-zinc-300">{{
+            reasonLabel(row.reason)
+          }}</span>
+          <Link
+            v-if="row.reason === 'inventory'"
+            href="/supplier/deliveries?type=adjustments&scope=mine&reason=inventory"
+            class="text-xs text-gray-600 hover:underline dark:text-zinc-400"
+            data-testid="finance-reason-inventory-link"
+            >{{ t('finance.reason_unclassified_link') }}
+            <span class="pi pi-arrow-right text-xs" aria-hidden="true"
+          /></Link>
+        </div>
         <div class="text-lg font-semibold text-red-600 dark:text-red-400">
           {{ money(row.lossCost) }}
         </div>
@@ -436,8 +553,9 @@ const hasShrinkageBreakdown = computed(
       modal
       :draggable="false"
       data-testid="finance-margin-dialog"
+      @show="focusMarginInput"
     >
-      <div class="space-y-3">
+      <form id="finance-margin-form" class="space-y-3" @submit.prevent="saveMargin">
         <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
           <dt class="text-gray-500 dark:text-zinc-400">{{ t('finance.margin_current') }}</dt>
           <dd
@@ -475,7 +593,6 @@ const hasShrinkageBreakdown = computed(
             v-model="marginValue"
             inputId="finance-margin-input"
             :min="0"
-            :max="MAX_MARGIN_PERCENT"
             :minFractionDigits="0"
             :maxFractionDigits="2"
             suffix=" %"
@@ -488,20 +605,27 @@ const hasShrinkageBreakdown = computed(
           {{ t('finance.margin_help') }}
         </p>
         <Button
-          v-if="summary.breakEvenMarginPercent > 0"
+          v-if="offerBreakEven"
           :label="
             t('finance.margin_use_break_even', {
               margin: percent(summary.breakEvenMarginPercent, 2),
               rate: percent(summary.shrinkage.lossRate * 100),
             })
           "
-          icon="pi pi-arrow-circle-down"
+          icon="pi pi-arrow-circle-up"
           severity="secondary"
           size="small"
           data-testid="finance-break-even"
           @click="useBreakEven"
         />
-      </div>
+        <p
+          v-else-if="marginBelowBreakEven"
+          class="text-sm text-gray-600 dark:text-zinc-300"
+          data-testid="finance-margin-old-prices"
+        >
+          {{ t('finance.margin_old_prices') }}
+        </p>
+      </form>
       <template #footer>
         <Button
           :label="t('common.cancel')"
@@ -510,11 +634,12 @@ const hasShrinkageBreakdown = computed(
           @click="marginVisible = false"
         />
         <Button
+          type="submit"
+          form="finance-margin-form"
           :label="t('common.save')"
           :disabled="!!marginError || marginSubmitting"
           :loading="marginSubmitting"
           data-testid="finance-margin-save"
-          @click="saveMargin"
         />
       </template>
     </Dialog>

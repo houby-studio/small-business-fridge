@@ -7,7 +7,12 @@ import OffContribution from '#models/off_contribution'
 import OffContributionService from '#services/product_images/off_contribution_service'
 import type { BackgroundMode } from '#services/product_images/product_image_service'
 import { resolvePage } from '#helpers/pagination'
-import ProductService from '#services/product_service'
+import { positiveInt } from '#helpers/query_params'
+import { listRedirectUrl } from '#helpers/list_redirect'
+import ProductService, {
+  PRODUCT_STATUS_FILTERS,
+  type ArchiveError,
+} from '#services/product_service'
 import StockDraftService from '#services/shopping/stock_draft_service'
 import { createProductValidator, updateProductValidator } from '#validators/product'
 import AuditService from '#services/audit_service'
@@ -22,12 +27,23 @@ export default class ProductsController {
     const service = new ProductService()
     const page = resolvePage(request.input('page', 1))
     const search = request.input('search')
-    const categoryId = request.input('categoryId')
+    const categoryId = positiveInt(request.input('categoryId'))
+    const { sortBy, sortOrder } = ProductService.productSort({
+      sortBy: request.input('sortBy'),
+      sortOrder: request.input('sortOrder'),
+    })
+    const status =
+      PRODUCT_STATUS_FILTERS.find((value) => value === request.input('status')) ?? 'active'
+    const missingPhoto = request.input('photo') === 'missing'
 
     const [paginator, categories] = await Promise.all([
       service.getProductsPaginated(page, 20, {
         search: search || undefined,
-        categoryId: categoryId ? Number(categoryId) : undefined,
+        categoryId,
+        sortBy,
+        sortOrder,
+        status,
+        missingPhoto,
       }),
       service.getCategories(),
     ])
@@ -47,12 +63,58 @@ export default class ProductsController {
           productGroup: p.productGroup
             ? { id: p.productGroup.id, name: p.productGroup.name }
             : null,
+          archived: p.archivedAt !== null,
         })),
         meta: paginator.getMeta(),
       },
       categories: categories.map((c) => ({ id: c.id, name: c.name, color: c.color })),
-      filters: { search: search || '', categoryId: categoryId || '' },
+      filters: {
+        search: search || '',
+        categoryId: categoryId ? String(categoryId) : '',
+        sortBy,
+        sortOrder,
+        status,
+        photo: missingPhoto ? 'missing' : '',
+      },
     })
+  }
+
+  /** Archive a product nobody stocks any more (see ProductService.archive for the rules). */
+  async archive({ params, auth, request, response, session, i18n }: HttpContext) {
+    try {
+      const product = await new ProductService().archive(auth.user!.id, Number(params.id))
+      session.flash('alert', {
+        type: 'success',
+        message: i18n.t('messages.product_archived', { name: product.displayName }),
+      })
+    } catch (error) {
+      if (!isDomainError<ArchiveError>(error)) throw error
+      if (error.code === 'PRODUCT_NOT_FOUND') return response.notFound()
+      session.flash('alert', {
+        type: 'danger',
+        message: i18n.t(
+          error.code === 'PRODUCT_HAS_STOCK'
+            ? 'messages.product_archive_has_stock'
+            : 'messages.product_archive_in_draft'
+        ),
+      })
+    }
+    // Back to the list with its filters and page.
+    return response.redirect(listRedirectUrl(request, '/supplier/products'))
+  }
+
+  async unarchive({ params, auth, request, response, session, i18n }: HttpContext) {
+    try {
+      const product = await new ProductService().unarchive(auth.user!.id, Number(params.id))
+      session.flash('alert', {
+        type: 'success',
+        message: i18n.t('messages.product_unarchived', { name: product.displayName }),
+      })
+    } catch (error) {
+      if (isDomainError<ArchiveError>(error, 'PRODUCT_NOT_FOUND')) return response.notFound()
+      throw error
+    }
+    return response.redirect(listRedirectUrl(request, '/supplier/products'))
   }
 
   async create({ inertia, request }: HttpContext) {
@@ -64,17 +126,17 @@ export default class ProductsController {
     ])
 
     // Coming from a stocking draft line: remember where to return and prefill the line's text.
-    const draftId = Number(request.input('draftId'))
+    // positiveInt: an id beyond the int4 range would otherwise reach PostgreSQL and 500.
+    const draftId = positiveInt(request.input('draftId'))
     const lineIndex = Number(request.input('lineIndex'))
-    const fromDraft =
-      Number.isInteger(draftId) && draftId > 0
-        ? {
-            id: draftId,
-            lineIndex: Number.isInteger(lineIndex) && lineIndex >= 0 ? lineIndex : null,
-            name: String(request.input('name') ?? '').slice(0, 255),
-            groupId: Number(request.input('groupId')) > 0 ? Number(request.input('groupId')) : null,
-          }
-        : null
+    const fromDraft = draftId
+      ? {
+          id: draftId,
+          lineIndex: Number.isInteger(lineIndex) && lineIndex >= 0 ? lineIndex : null,
+          name: String(request.input('name') ?? '').slice(0, 255),
+          groupId: positiveInt(request.input('groupId')) ?? null,
+        }
+      : null
 
     return inertia.render('supplier/products/create', {
       fromDraft,
@@ -104,7 +166,7 @@ export default class ProductsController {
     } catch (err) {
       if (isUniqueViolation(err, 'barcode')) {
         session.flash('alert', { type: 'danger', message: i18n.t('messages.barcode_taken') })
-        return response.redirect().back()
+        return response.redirect('back', true)
       }
       throw err
     }
@@ -122,8 +184,8 @@ export default class ProductsController {
     // Straight on to stocking it: back to the draft line the supplier came from, or onto
     // their manual draft.
     const drafts = new StockDraftService()
-    const draftId = Number(request.input('draftId'))
-    if (Number.isInteger(draftId) && draftId > 0) {
+    const draftId = positiveInt(request.input('draftId'))
+    if (draftId) {
       const lineIndex = Number(request.input('lineIndex'))
       try {
         const { draft, item } = await drafts.setLineProduct(
@@ -201,7 +263,7 @@ export default class ProductsController {
     } catch (err) {
       if (isUniqueViolation(err, 'barcode')) {
         session.flash('alert', { type: 'danger', message: i18n.t('messages.barcode_taken') })
-        return response.redirect().back()
+        return response.redirect('back', true)
       }
       throw err
     }

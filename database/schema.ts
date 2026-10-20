@@ -86,7 +86,7 @@ export class CategorySchema extends BaseModel {
 }
 
 export class DeliverySchema extends BaseModel {
-  static $columns = ['amountLeft', 'amountLost', 'amountSupplied', 'createdAt', 'id', 'price', 'productId', 'purchasePrice', 'supplierId', 'updatedAt', 'voidedAt'] as const
+  static $columns = ['amountLeft', 'amountLost', 'amountSupplied', 'createdAt', 'id', 'price', 'productId', 'purchasePrice', 'supplierId', 'transferredFromId', 'updatedAt', 'voidedAt'] as const
   $columns = DeliverySchema.$columns
   @column()
   declare amountLeft: number
@@ -106,6 +106,8 @@ export class DeliverySchema extends BaseModel {
   declare purchasePrice: string | null
   @column()
   declare supplierId: number
+  @column()
+  declare transferredFromId: number | null
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
   @column.dateTime()
@@ -188,7 +190,7 @@ export class IbanChangeTokenSchema extends BaseModel {
 }
 
 export class InventoryCountItemSchema extends BaseModel {
-  static $columns = ['appliedQty', 'countedQty', 'expectedQty', 'id', 'inventoryCountId', 'productId'] as const
+  static $columns = ['appliedQty', 'countedQty', 'expectedQty', 'id', 'inventoryCountId', 'productId', 'sheetQty'] as const
   $columns = InventoryCountItemSchema.$columns
   @column()
   declare appliedQty: number
@@ -202,6 +204,8 @@ export class InventoryCountItemSchema extends BaseModel {
   declare inventoryCountId: number
   @column()
   declare productId: number
+  @column()
+  declare sheetQty: number | null
 }
 
 export class InventoryCountSchema extends BaseModel {
@@ -222,7 +226,7 @@ export class InventoryCountSchema extends BaseModel {
 }
 
 export class InvoiceSchema extends BaseModel {
-  static $columns = ['autoReminderCount', 'buyerId', 'createdAt', 'id', 'isPaid', 'isPaymentRequested', 'manualReminderCount', 'supplierId', 'totalCost', 'updatedAt'] as const
+  static $columns = ['autoReminderCount', 'buyerId', 'createdAt', 'id', 'isPaid', 'isPaymentRequested', 'manualReminderCount', 'paidAt', 'supplierId', 'totalCost', 'updatedAt'] as const
   $columns = InvoiceSchema.$columns
   @column()
   declare autoReminderCount: number | null
@@ -238,6 +242,8 @@ export class InvoiceSchema extends BaseModel {
   declare isPaymentRequested: boolean | null
   @column()
   declare manualReminderCount: number | null
+  @column.dateTime()
+  declare paidAt: DateTime | null
   @column()
   declare supplierId: number
   @column()
@@ -558,8 +564,10 @@ export class ProductRatingSchema extends BaseModel {
 }
 
 export class ProductSchema extends BaseModel {
-  static $columns = ['barcode', 'categoryId', 'createdAt', 'description', 'displayName', 'id', 'imagePath', 'keypadId', 'productGroupId', 'updatedAt'] as const
+  static $columns = ['archivedAt', 'barcode', 'categoryId', 'createdAt', 'description', 'displayName', 'id', 'imagePath', 'keypadId', 'productGroupId', 'updatedAt'] as const
   $columns = ProductSchema.$columns
+  @column.dateTime()
+  declare archivedAt: DateTime | null
   @column()
   declare barcode: string | null
   @column()
@@ -694,7 +702,7 @@ export class ShoppingListSchema extends BaseModel {
 }
 
 export class StockAdjustmentSchema extends BaseModel {
-  static $columns = ['actorId', 'createdAt', 'deliveryId', 'id', 'impersonatorId', 'inventoryCountId', 'kind', 'note', 'productId', 'quantity', 'reason', 'supplierId', 'unitCost', 'unitPrice'] as const
+  static $columns = ['actorId', 'createdAt', 'deliveryId', 'id', 'impersonatorId', 'inventoryCountId', 'kind', 'note', 'productId', 'quantity', 'reason', 'revertedAt', 'revertedBy', 'supplierId', 'unitCost', 'unitPrice'] as const
   $columns = StockAdjustmentSchema.$columns
   @column()
   declare actorId: number
@@ -718,6 +726,10 @@ export class StockAdjustmentSchema extends BaseModel {
   declare quantity: number
   @column()
   declare reason: string
+  @column.dateTime()
+  declare revertedAt: DateTime | null
+  @column()
+  declare revertedBy: number | null
   @column()
   declare supplierId: number
   @column()
@@ -727,7 +739,7 @@ export class StockAdjustmentSchema extends BaseModel {
 }
 
 export class StockDraftItemSchema extends BaseModel {
-  static $columns = ['amount', 'createdAt', 'deliveryId', 'id', 'label', 'price', 'productGroupId', 'productId', 'purchasePrice', 'sortOrder', 'stockDraftId', 'updatedAt'] as const
+  static $columns = ['amount', 'createdAt', 'deliveryId', 'id', 'label', 'price', 'productGroupId', 'productId', 'purchasePrice', 'purchasePriceEstimated', 'sortOrder', 'source', 'stockDraftId', 'updatedAt'] as const
   $columns = StockDraftItemSchema.$columns
   @column()
   declare amount: number
@@ -748,7 +760,11 @@ export class StockDraftItemSchema extends BaseModel {
   @column()
   declare purchasePrice: string | null
   @column()
+  declare purchasePriceEstimated: boolean
+  @column()
   declare sortOrder: number
+  @column()
+  declare source: string
   @column()
   declare stockDraftId: number
   @column.dateTime({ autoCreate: true, autoUpdate: true })
@@ -756,7 +772,7 @@ export class StockDraftItemSchema extends BaseModel {
 }
 
 export class StockDraftSchema extends BaseModel {
-  static $columns = ['committedAt', 'createdAt', 'id', 'note', 'source', 'status', 'supplierId', 'updatedAt'] as const
+  static $columns = ['committedAt', 'createdAt', 'id', 'note', 'source', 'status', 'supplierId', 'updatedAt', 'voidReason', 'voidedAt'] as const
   $columns = StockDraftSchema.$columns
   @column.dateTime()
   declare committedAt: DateTime | null
@@ -774,6 +790,10 @@ export class StockDraftSchema extends BaseModel {
   declare supplierId: number
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
+  @column()
+  declare voidReason: string | null
+  @column.dateTime()
+  declare voidedAt: DateTime | null
 }
 
 export class UserAuthIdentitySchema extends BaseModel {

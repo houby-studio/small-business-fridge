@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Head, router } from '@inertiajs/vue3'
+import { Head, router, usePage } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
@@ -10,6 +10,8 @@ import Message from 'primevue/message'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useAppConfirm } from '~/composables/use_app_confirm'
 import { useI18n } from '~/composables/use_i18n'
+import { useMoney } from '~/composables/use_pricing'
+import type { SharedProps } from '~/types'
 
 interface UninvoicedGroup {
   buyerId: number
@@ -21,9 +23,20 @@ interface UninvoicedGroup {
 const props = defineProps<{ uninvoiced: UninvoicedGroup[] }>()
 const confirm = useAppConfirm()
 const { t } = useI18n()
+const { amount, money } = useMoney()
+const page = usePage<SharedProps>()
 
-const totalOrders = computed(() => props.uninvoiced.reduce((s, g) => s + g.orderCount, 0))
-const totalCost = computed(() => props.uninvoiced.reduce((s, g) => s + g.totalCost, 0))
+/** The supplier's own purchases from their own stock — labelled so they are not mistaken for a colleague. */
+const isOwn = (group: UninvoicedGroup) => group.buyerId === page.props.user?.id
+
+/**
+ * The KPIs count what colleagues owe — the supplier's own consumption is shown apart, the
+ * same way Hospodaření ("Dluží mi") and MCP (totalUninvoiced) leave it out.
+ */
+const others = computed(() => props.uninvoiced.filter((g) => !isOwn(g)))
+const own = computed(() => props.uninvoiced.find(isOwn) ?? null)
+const totalOrders = computed(() => others.value.reduce((s, g) => s + g.orderCount, 0))
+const totalCost = computed(() => others.value.reduce((s, g) => s + g.totalCost, 0))
 
 function generateInvoices() {
   confirm.require({
@@ -48,7 +61,7 @@ function generateInvoiceForBuyer(
     message: t('supplier.invoice_confirm_buyer', {
       name: buyerName,
       count: orderCount,
-      amount: totalCost,
+      amount: amount(totalCost),
     }),
     header: t('common.confirm'),
     icon: 'pi pi-receipt',
@@ -68,7 +81,7 @@ function generateInvoiceForBuyer(
 
     <div class="mb-6 flex items-center justify-between">
       <h1 class="text-2xl font-bold text-gray-900 dark:text-zinc-100">
-        {{ t('supplier.invoice_heading') }}
+        {{ t('supplier.invoice_title') }}
       </h1>
       <Button
         v-if="uninvoiced.length > 0"
@@ -85,66 +98,70 @@ function generateInvoiceForBuyer(
     <template v-else>
       <!-- Summary -->
       <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card class="sbf-stat sbf-stat-blue">
+        <Card>
           <template #content>
-            <div class="flex items-center gap-4">
-              <div
-                class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-950/40"
-              >
-                <span class="pi pi-users text-xl text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <div class="text-3xl font-bold text-gray-900 dark:text-zinc-100">
-                  {{ uninvoiced.length }}
-                </div>
-                <div class="text-sm text-gray-500 dark:text-zinc-400">
-                  {{ t('supplier.invoice_customers') }}
-                </div>
-              </div>
+            <div
+              class="text-2xl font-bold text-gray-900 dark:text-zinc-100"
+              data-testid="invoice-kpi-customers"
+            >
+              {{ others.length }}
+            </div>
+            <div class="text-sm text-gray-500 dark:text-zinc-400">
+              {{ t('supplier.invoice_customers') }}
             </div>
           </template>
         </Card>
-        <Card class="sbf-stat sbf-stat-green">
+        <Card>
           <template #content>
-            <div class="flex items-center gap-4">
-              <div
-                class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-green-100 dark:bg-green-950/40"
-              >
-                <span class="pi pi-list text-xl text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <div class="text-3xl font-bold text-gray-900 dark:text-zinc-100">
-                  {{ totalOrders }}
-                </div>
-                <div class="text-sm text-gray-500 dark:text-zinc-400">
-                  {{ t('supplier.invoice_orders') }}
-                </div>
-              </div>
+            <div
+              class="text-2xl font-bold text-gray-900 dark:text-zinc-100"
+              data-testid="invoice-kpi-orders"
+            >
+              {{ totalOrders }}
+            </div>
+            <div class="text-sm text-gray-500 dark:text-zinc-400">
+              {{ t('supplier.invoice_orders') }}
             </div>
           </template>
         </Card>
-        <Card class="sbf-stat sbf-stat-purple">
+        <Card>
           <template #content>
-            <div class="flex items-center gap-4">
-              <div
-                class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-purple-100 dark:bg-purple-950/40"
-              >
-                <span class="pi pi-chart-bar text-xl text-purple-600 dark:text-purple-400" />
-              </div>
-              <div>
-                <div class="text-2xl font-bold text-gray-900 dark:text-zinc-100">
-                  {{ t('common.price_with_currency', { price: totalCost }) }}
-                </div>
-                <div class="text-sm text-gray-500 dark:text-zinc-400">{{ t('common.total') }}</div>
-              </div>
+            <div
+              class="text-2xl font-bold text-gray-900 dark:text-zinc-100"
+              data-testid="invoice-kpi-total"
+            >
+              {{ money(totalCost) }}
+            </div>
+            <div class="text-sm text-gray-500 dark:text-zinc-400">{{ t('common.total') }}</div>
+            <div
+              v-if="own"
+              class="mt-1 text-xs text-gray-500 dark:text-zinc-400"
+              data-testid="invoice-kpi-own"
+            >
+              {{ t('supplier.invoice_own_total', { amount: money(own.totalCost) }) }}
             </div>
           </template>
         </Card>
       </div>
 
       <!-- Per-customer breakdown -->
-      <DataTable :value="uninvoiced" stripedRows class="rounded-lg border">
-        <Column :header="t('common.customer')" field="buyerName" />
+      <DataTable
+        :value="uninvoiced"
+        stripedRows
+        class="rounded-lg border"
+        data-testid="invoice-table"
+      >
+        <Column :header="t('common.customer')">
+          <template #body="{ data }">
+            <span>{{ data.buyerName }}</span>
+            <span
+              v-if="isOwn(data)"
+              class="ml-2 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800 dark:bg-zinc-700 dark:text-zinc-200"
+              data-testid="invoice-own-consumption"
+              >{{ t('supplier.invoice_own_consumption') }}</span
+            >
+          </template>
+        </Column>
         <Column
           :header="t('supplier.invoice_orders')"
           field="orderCount"
@@ -153,9 +170,7 @@ function generateInvoiceForBuyer(
         />
         <Column :header="t('common.total')" headerClass="sbf-col-price" bodyClass="sbf-col-price">
           <template #body="{ data }">
-            <span class="font-semibold">{{
-              t('common.price_with_currency', { price: data.totalCost })
-            }}</span>
+            <span class="font-semibold">{{ money(data.totalCost) }}</span>
           </template>
         </Column>
         <Column
@@ -168,7 +183,8 @@ function generateInvoiceForBuyer(
               :label="t('supplier.invoice_generate_for_buyer')"
               size="small"
               severity="secondary"
-              class="px-3 whitespace-nowrap"
+              text
+              class="whitespace-nowrap"
               @click="
                 generateInvoiceForBuyer(
                   data.buyerId,

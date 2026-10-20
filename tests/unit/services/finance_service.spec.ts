@@ -7,6 +7,7 @@ import { UserFactory } from '#database/factories/user_factory'
 import { ProductFactory } from '#database/factories/product_factory'
 import { CategoryFactory } from '#database/factories/category_factory'
 import Delivery from '#models/delivery'
+import Invoice from '#models/invoice'
 import FinanceService from '#services/finance_service'
 import InventoryService from '#services/inventory_service'
 import { FRIDGE_TIMEZONE } from '#config/fridge'
@@ -184,11 +185,11 @@ test.group('FinanceService', (group) => {
     assert.equal(summary.shrinkage.lossCost, 30)
     assert.equal(summary.netProfit, -10)
     // 230 Kč went through the till, but only the 80 Kč colleagues paid counts.
-    assert.deepInclude(summary.incomeLimit, { enabled: true, amount: 80, percent: 80 })
-    assert.notEqual(summary.incomeLimit.level, 'exceeded')
+    // Nothing is invoiced yet: no money received, the 80 Kč colleagues owe are pending.
+    assert.deepInclude(summary.incomeLimit, { enabled: true, amount: 0, pending: 80 })
     assert.notProperty(summary.incomeLimit, 'basis')
     const banner = await service.currentLimitStatus(supplier.id, 0)
-    assert.equal(banner?.amount, 80)
+    assert.equal(banner?.pending, 80)
 
     const breakdown = await service.getProductBreakdown(supplier.id, now.year, 1, 20, {})
     assert.equal(breakdown.meta.total, 1)
@@ -302,6 +303,210 @@ test.group('FinanceService', (group) => {
     assert.equal(row.lossCost, 0)
   })
 
+  test('net profit leaves out shrinkage it has no profit for (BE-07)', async ({ assert }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+    const category = await CategoryFactory.create()
+    const bar = await ProductFactory.merge({ categoryId: category.id }).create()
+    const cola = await ProductFactory.merge({ categoryId: category.id }).create()
+    const now = DateTime.now().setZone(FRIDGE_TIMEZONE)
+    const barLot = await Delivery.create({
+      supplierId: supplier.id,
+      productId: bar.id,
+      amountSupplied: 12,
+      amountLeft: 2,
+      amountLost: 0,
+      price: 20,
+      purchasePrice: null,
+    })
+    await sell(barLot.id, buyer.id, 10, 20, now)
+    await new InventoryService().writeOff(supplier, {
+      productId: bar.id,
+      quantity: 1,
+      reason: 'stolen',
+    })
+
+    // No purchase price anywhere: the profit is unknown, not "−20 Kč".
+    const unknown = await service.getSummary(supplier.id, now.year, 0)
+    assert.isNull(unknown.netProfit)
+    assert.equal(unknown.shrinkage.lossCost, 20)
+
+    // With one lot priced, only its shrinkage comes off its profit.
+    const colaLot = await Delivery.create({
+      supplierId: supplier.id,
+      productId: cola.id,
+      amountSupplied: 10,
+      amountLeft: 6,
+      amountLost: 0,
+      price: 16,
+      purchasePrice: 12,
+    })
+    await sell(colaLot.id, buyer.id, 3, 16, now)
+    await new InventoryService().writeOff(supplier, {
+      productId: cola.id,
+      quantity: 1,
+      reason: 'damaged',
+    })
+    const mixed = await service.getSummary(supplier.id, now.year, 0)
+    assert.equal(mixed.grossProfit, 12)
+    assert.equal(mixed.netProfit, 0)
+    // The shrinkage KPI still values every lost piece.
+    assert.equal(mixed.shrinkage.lossCost, 32)
+
+    const breakdown = await service.getProductBreakdown(supplier.id, now.year, 1, 20, {
+      sortBy: 'productName',
+      sortOrder: 'asc',
+    })
+    const colaRow = breakdown.data.find((row) => row.productId === cola.id)!
+    assert.equal(colaRow.revenueWithCost, 48)
+    const barRow = breakdown.data.find((row) => row.productId === bar.id)!
+    assert.equal(barRow.revenueWithCost, 0)
+    assert.equal(barRow.unitsWithCost, 0)
+  })
+
+  test('the limit counts money received by the payment date; the rest is pending (F4)', async ({
+    assert,
+  }) => {
+    env.set('SUPPLIER_INCOME_LIMIT', 1000)
+    const supplier = await UserFactory.apply('supplier').create()
+    const colleague = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+    const category = await CategoryFactory.create()
+    const cola = await ProductFactory.merge({ categoryId: category.id }).create()
+    const now = DateTime.now().setZone(FRIDGE_TIMEZONE)
+    const lot = await Delivery.create({
+      supplierId: supplier.id,
+      productId: cola.id,
+      amountSupplied: 40,
+      amountLeft: 20,
+      amountLost: 0,
+      price: 20,
+      purchasePrice: null,
+    })
+    // Bought in December last year, paid in January this year — this year's income.
+    const lastDecember = now.minus({ years: 1 }).set({ month: 12, day: 20 })
+    await sell(lot.id, buyer.id, 5, 20, lastDecember)
+    const paidInJanuary = await Invoice.create({
+      buyerId: buyer.id,
+      supplierId: supplier.id,
+      totalCost: 100,
+      isPaid: true,
+      isPaymentRequested: false,
+      paidAt: now.set({ month: 1, day: 5 }),
+    })
+    await db.from('orders').whereNull('invoice_id').update({ invoice_id: paidInJanuary.id })
+    // Own consumption: a self-invoice is paid at once but is no income.
+    await Invoice.create({
+      buyerId: supplier.id,
+      supplierId: supplier.id,
+      totalCost: 60,
+      isPaid: true,
+      isPaymentRequested: false,
+      paidAt: now,
+    })
+    // Waiting: an unpaid invoice and purchases not invoiced yet.
+    await Invoice.create({
+      buyerId: buyer.id,
+      supplierId: supplier.id,
+      totalCost: 40,
+      isPaid: false,
+      isPaymentRequested: true,
+      paidAt: null,
+    })
+    await sell(lot.id, buyer.id, 3, 20, now)
+    await sell(lot.id, supplier.id, 2, 20, now)
+    // A colleague's paid invoice is theirs.
+    await Invoice.create({
+      buyerId: buyer.id,
+      supplierId: colleague.id,
+      totalCost: 500,
+      isPaid: true,
+      isPaymentRequested: false,
+      paidAt: now,
+    })
+
+    assert.equal(await service.receivedIn(supplier.id, now.year), 100)
+    assert.equal(await service.receivedIn(supplier.id, now.year - 1), 0)
+    const banner = await service.currentLimitStatus(supplier.id)
+    assert.deepInclude(banner!, { amount: 100, pending: 100, percent: 10, level: 'ok' })
+    const summary = await service.getSummary(supplier.id, now.year, 0)
+    assert.deepInclude(summary.incomeLimit, { amount: 100, pending: 100 })
+    // Sales stay by the purchase date — the 5 December pieces are last year's.
+    assert.equal(summary.revenue, 60)
+    const lastYear = await service.getSummary(supplier.id, now.year - 1, 0)
+    assert.deepInclude(lastYear.incomeLimit, { amount: 0, pending: null })
+
+    // A rejected payment takes the money back out.
+    paidInJanuary.merge({ isPaid: false, paidAt: null })
+    await paidInJanuary.save()
+    assert.equal(await service.receivedIn(supplier.id, now.year), 0)
+  })
+
+  test('the money row: purchased this year, stock at cost, owed (F5)', async ({ assert }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+    const category = await CategoryFactory.create()
+    const cola = await ProductFactory.merge({ categoryId: category.id }).create()
+    const now = DateTime.now().setZone(FRIDGE_TIMEZONE)
+    const priced = await Delivery.create({
+      supplierId: supplier.id,
+      productId: cola.id,
+      amountSupplied: 10,
+      amountLeft: 4,
+      amountLost: 0,
+      price: 20,
+      purchasePrice: 12.5,
+    })
+    await Delivery.create({
+      supplierId: supplier.id,
+      productId: cola.id,
+      amountSupplied: 6,
+      amountLeft: 6,
+      amountLost: 0,
+      price: 20,
+      purchasePrice: null,
+    })
+    // Voided and last year's lots are not this year's purchases.
+    await Delivery.create({
+      supplierId: supplier.id,
+      productId: cola.id,
+      amountSupplied: 5,
+      amountLeft: 5,
+      amountLost: 0,
+      price: 20,
+      purchasePrice: 10,
+      voidedAt: now,
+    })
+    await Delivery.create({
+      supplierId: supplier.id,
+      productId: cola.id,
+      amountSupplied: 2,
+      amountLeft: 1,
+      amountLost: 0,
+      price: 20,
+      purchasePrice: 8,
+      createdAt: now.minus({ years: 1 }),
+    })
+    await sell(priced.id, buyer.id, 6, 20, now)
+    await Invoice.create({
+      buyerId: buyer.id,
+      supplierId: supplier.id,
+      totalCost: 35,
+      isPaid: false,
+      isPaymentRequested: false,
+      paidAt: null,
+    })
+
+    const { money } = await service.getSummary(supplier.id, now.year, 0)
+    assert.deepEqual(money, {
+      purchased: 125,
+      stockAtCost: 58,
+      stockUnitsWithoutCost: 6,
+      uninvoiced: 120,
+      unpaid: 35,
+    })
+  })
+
   test('the yearly limit is measured on revenue, warns ahead and flags an excess', async ({
     assert,
   }) => {
@@ -316,6 +521,13 @@ test.group('FinanceService', (group) => {
     })
     assert.deepInclude(service.limitStatus(850), { level: 'warn', percent: 85 })
     assert.deepInclude(service.limitStatus(1200), { level: 'exceeded', percent: 120 })
+    // The level comes from the exact amount; the shown percentage never rounds up to it.
+    env.set('SUPPLIER_INCOME_LIMIT', 10_000)
+    assert.deepInclude(service.limitStatus(9995), { level: 'warn', percent: 99.9 })
+    assert.deepInclude(service.limitStatus(10_000), { level: 'exceeded', percent: 100 })
+    assert.deepInclude(service.limitStatus(7995), { level: 'ok', percent: 79.9 })
+    assert.deepInclude(service.limitStatus(8000), { level: 'warn', percent: 80 })
+    env.set('SUPPLIER_INCOME_LIMIT', 1000)
 
     env.set('SUPPLIER_INCOME_LIMIT', 0)
     assert.deepInclude(service.limitStatus(5000), { enabled: false, level: 'ok' })

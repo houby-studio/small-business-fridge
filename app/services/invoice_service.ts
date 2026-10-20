@@ -1,16 +1,97 @@
 import Invoice from '#models/invoice'
 import { PUBLIC_USER_COLUMNS } from '#helpers/public_user'
 import Order from '#models/order'
+import User from '#models/user'
+import { DateTime } from 'luxon'
 import db from '@adonisjs/lucid/services/db'
+import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 import AuditService from '#services/audit_service'
+import NotificationService from '#services/notification_service'
+import { runAfterResponse } from '#services/side_effects'
+import { DomainError } from '#services/domain_error'
+
+export type InvoiceErrorCode = 'TOTAL_CHANGED' | 'ISSUER_ACTIVE'
+
+/** Who may settle a payment besides the issuer: an admin, for an issuer no longer around. */
+export interface SettleOptions {
+  /** The caller is an admin acting for a disabled supplier or one who is a customer now. */
+  asAdmin?: boolean
+}
+
+/** The issuer left — disabled, or no longer a supplier — so nobody but an admin can settle. */
+export function issuerIsGone(issuer: Pick<User, 'isDisabled' | 'role'>): boolean {
+  return issuer.isDisabled || issuer.role === 'customer'
+}
+
+/**
+ * The issuer settles their own invoices. An admin settles one only when its issuer is gone
+ * (`issuerIsGone`); an active issuer's payments stay theirs to confirm.
+ */
+async function assertCanSettle(
+  invoice: Invoice,
+  actorId: number,
+  options: SettleOptions
+): Promise<void> {
+  if (invoice.supplierId === actorId) return
+  if (!options.asAdmin) throw new Error('FORBIDDEN')
+  const issuer = await User.findOrFail(invoice.supplierId)
+  if (!issuerIsGone(issuer)) throw new DomainError<InvoiceErrorCode>('ISSUER_ACTIVE')
+}
+
+/**
+ * Guards a billing run the user approved from a preview: when purchases changed in between,
+ * nothing is issued. `expected` is what others owe — the supplier's own purchases are left
+ * out, as in the preview.
+ */
+function assertTotal(orders: Order[], expected: number | undefined, supplierId?: number): void {
+  if (expected === undefined) return
+  const total = orders
+    .filter((order) => order.buyerId !== supplierId)
+    .reduce((sum, order) => sum + order.unitPrice, 0)
+  if (total !== expected) throw new DomainError<InvoiceErrorCode>('TOTAL_CHANGED')
+}
+
+/**
+ * E-mails about invoices and payments go out here, not in the controllers, so the web and the
+ * MCP tools tell people the same things. They are sent after the commit and never fail or
+ * delay the call that triggered them.
+ */
+function notify(send: () => Promise<unknown>, what: string): void {
+  runAfterResponse(send, `send ${what}`)
+}
+
+/**
+ * The buyer of each new invoice gets it with the QR payment; a self-invoice (the supplier's
+ * own purchases) is issued as paid and e-mails nobody. `actorId` set = issued by someone else
+ * (an admin), whose suppliers learn about it.
+ */
+function notifyIssued(invoices: Invoice[], actorId?: number): void {
+  const notifications = new NotificationService()
+  for (const invoice of invoices) {
+    if (invoice.buyerId === invoice.supplierId) continue
+    notify(
+      () => notifications.sendInvoiceNotice(invoice),
+      `invoice notice for invoice #${invoice.id}`
+    )
+    if (actorId !== undefined) {
+      notify(async () => {
+        const actor = await User.find(actorId)
+        if (actor) await notifications.sendInvoiceGeneratedToSupplier(invoice, actor)
+      }, `supplier notice for invoice #${invoice.id}`)
+    }
+  }
+}
 
 export default class InvoiceService {
   /**
    * Generate invoices for all uninvoiced orders of a supplier, grouped by buyer.
    * Each buyer gets one invoice covering all their uninvoiced orders from this supplier.
    */
-  async generateInvoices(supplierId: number): Promise<Invoice[]> {
-    return db.transaction(async (trx) => {
+  async generateInvoices(
+    supplierId: number,
+    options: { expectedTotal?: number } = {}
+  ): Promise<Invoice[]> {
+    const issued = await db.transaction(async (trx) => {
       // Find all uninvoiced orders for this supplier's deliveries, grouped by buyer
       const groups = await Order.query({ client: trx })
         .whereNull('invoiceId')
@@ -26,6 +107,7 @@ export default class InvoiceService {
       if (groups.length === 0) {
         return []
       }
+      assertTotal(groups, options.expectedTotal, supplierId)
 
       // Group orders by buyerId
       const byBuyer = new Map<number, typeof groups>()
@@ -50,6 +132,7 @@ export default class InvoiceService {
             totalCost,
             isPaid: isSelfInvoice,
             isPaymentRequested: isSelfInvoice,
+            paidAt: isSelfInvoice ? DateTime.now() : null,
             autoReminderCount: 0,
             manualReminderCount: 0,
           },
@@ -78,6 +161,8 @@ export default class InvoiceService {
 
       return invoices
     })
+    notifyIssued(issued)
+    return issued
   }
 
   /**
@@ -202,23 +287,30 @@ export default class InvoiceService {
    * Customer marks invoice as paid (requests payment confirmation).
    */
   async requestPayment(invoiceId: number, buyerId: number): Promise<Invoice> {
-    const invoice = await Invoice.findOrFail(invoiceId)
-
-    if (invoice.buyerId !== buyerId) {
-      throw new Error('FORBIDDEN')
-    }
-    if (invoice.isPaid) {
-      throw new Error('ALREADY_PAID')
-    }
-
-    const wasPaymentRequested = invoice.isPaymentRequested
-    invoice.isPaymentRequested = true
-    await invoice.save()
-
-    await AuditService.log(buyerId, 'payment.requested', 'invoice', invoiceId, invoice.supplierId, {
-      isPaymentRequested: { from: wasPaymentRequested, to: invoice.isPaymentRequested },
+    const { invoice, changed } = await this.changePayment(invoiceId, async (locked, trx) => {
+      if (locked.buyerId !== buyerId) throw new Error('FORBIDDEN')
+      if (locked.isPaid) throw new Error('ALREADY_PAID')
+      // Reporting the same payment twice changes nothing and tells the supplier once.
+      if (locked.isPaymentRequested) return false
+      locked.isPaymentRequested = true
+      await locked.useTransaction(trx).save()
+      await AuditService.log(
+        buyerId,
+        'payment.requested',
+        'invoice',
+        invoiceId,
+        locked.supplierId,
+        { isPaymentRequested: { from: false, to: true } },
+        { client: trx }
+      )
+      return true
     })
-
+    if (changed) {
+      notify(
+        () => new NotificationService().sendPaymentRequestedNotification(invoice),
+        `payment requested e-mail for invoice #${invoiceId}`
+      )
+    }
     return invoice
   }
 
@@ -226,96 +318,144 @@ export default class InvoiceService {
    * Customer cancels their payment request.
    */
   async cancelPaymentRequest(invoiceId: number, buyerId: number): Promise<Invoice> {
-    const invoice = await Invoice.findOrFail(invoiceId)
-
-    if (invoice.buyerId !== buyerId) {
-      throw new Error('FORBIDDEN')
-    }
-    if (invoice.isPaid) {
-      throw new Error('ALREADY_PAID')
-    }
-
-    const wasPaymentRequested = invoice.isPaymentRequested
-    invoice.isPaymentRequested = false
-    await invoice.save()
-
-    const metadata = {
-      isPaymentRequested: { from: wasPaymentRequested, to: invoice.isPaymentRequested },
-    }
-
-    await AuditService.log(
-      buyerId,
-      'payment.request_cancelled',
-      'invoice',
-      invoiceId,
-      invoice.supplierId,
-      metadata
-    )
-    return invoice
-  }
-
-  /**
-   * Supplier approves a payment.
-   */
-  async approvePayment(invoiceId: number, supplierId: number): Promise<Invoice> {
-    const invoice = await Invoice.findOrFail(invoiceId)
-
-    if (invoice.supplierId !== supplierId) {
-      throw new Error('FORBIDDEN')
-    }
-
-    const wasPaid = invoice.isPaid
-    const wasPaymentRequested = invoice.isPaymentRequested
-    invoice.isPaid = true
-    await invoice.save()
-
-    const metadata = {
-      isPaid: { from: wasPaid, to: invoice.isPaid },
-      wasRequestedByCustomer: wasPaymentRequested,
-    }
-
-    await AuditService.log(
-      supplierId,
-      'payment.approved',
-      'invoice',
-      invoiceId,
-      invoice.buyerId,
-      metadata
-    )
-
-    return invoice
-  }
-
-  /**
-   * Supplier rejects a payment (marks as unpaid).
-   */
-  async rejectPayment(invoiceId: number, supplierId: number): Promise<Invoice> {
-    const invoice = await Invoice.findOrFail(invoiceId)
-
-    if (invoice.supplierId !== supplierId) {
-      throw new Error('FORBIDDEN')
-    }
-
-    const wasPaid = invoice.isPaid
-    const wasPaymentRequested = invoice.isPaymentRequested
-    invoice.isPaid = false
-    invoice.isPaymentRequested = false
-    await invoice.save()
-
-    await AuditService.log(supplierId, 'payment.rejected', 'invoice', invoiceId, invoice.buyerId, {
-      isPaid: { from: wasPaid, to: invoice.isPaid },
-      isPaymentRequested: { from: wasPaymentRequested, to: invoice.isPaymentRequested },
+    const { invoice, changed } = await this.changePayment(invoiceId, async (locked, trx) => {
+      if (locked.buyerId !== buyerId) throw new Error('FORBIDDEN')
+      if (locked.isPaid) throw new Error('ALREADY_PAID')
+      if (!locked.isPaymentRequested) return false
+      locked.isPaymentRequested = false
+      await locked.useTransaction(trx).save()
+      await AuditService.log(
+        buyerId,
+        'payment.request_cancelled',
+        'invoice',
+        invoiceId,
+        locked.supplierId,
+        { isPaymentRequested: { from: true, to: false } },
+        { client: trx }
+      )
+      return true
     })
-
+    if (changed) {
+      notify(
+        () => new NotificationService().sendPaymentWithdrawnNotification(invoice),
+        `payment withdrawn e-mail for invoice #${invoiceId}`
+      )
+    }
     return invoice
+  }
+
+  /**
+   * The issuer (or, with `asAdmin`, an admin for an issuer who left) confirms a payment.
+   * `actorId` is who confirms. Confirming a paid invoice again changes nothing.
+   */
+  async approvePayment(
+    invoiceId: number,
+    actorId: number,
+    options: SettleOptions = {}
+  ): Promise<Invoice> {
+    const { invoice, changed } = await this.changePayment(invoiceId, async (locked, trx) => {
+      await assertCanSettle(locked, actorId, options)
+      if (locked.isPaid) return false
+      const wasPaymentRequested = locked.isPaymentRequested
+      locked.isPaid = true
+      locked.paidAt = DateTime.now()
+      await locked.useTransaction(trx).save()
+      await AuditService.log(
+        actorId,
+        'payment.approved',
+        'invoice',
+        invoiceId,
+        locked.buyerId,
+        {
+          isPaid: { from: false, to: true },
+          wasRequestedByCustomer: wasPaymentRequested,
+          ...(actorId !== locked.supplierId && { onBehalfOf: locked.supplierId }),
+        },
+        { client: trx }
+      )
+      return true
+    })
+    if (changed) {
+      notify(
+        () => new NotificationService().sendPaymentStatusChange(invoice, 'approved'),
+        `payment approved e-mail for invoice #${invoiceId}`
+      )
+    }
+    return invoice
+  }
+
+  /**
+   * The issuer (or an admin, see `approvePayment`) rejects a payment: the invoice is unpaid
+   * and unreported again. Rejecting one that already is changes nothing.
+   */
+  async rejectPayment(
+    invoiceId: number,
+    actorId: number,
+    options: SettleOptions = {}
+  ): Promise<Invoice> {
+    const { invoice, changed } = await this.changePayment(invoiceId, async (locked, trx) => {
+      await assertCanSettle(locked, actorId, options)
+      const wasPaid = locked.isPaid
+      const wasPaymentRequested = locked.isPaymentRequested
+      if (!wasPaid && !wasPaymentRequested) return false
+      locked.isPaid = false
+      locked.isPaymentRequested = false
+      locked.paidAt = null
+      await locked.useTransaction(trx).save()
+      await AuditService.log(
+        actorId,
+        'payment.rejected',
+        'invoice',
+        invoiceId,
+        locked.buyerId,
+        {
+          isPaid: { from: wasPaid, to: false },
+          isPaymentRequested: { from: wasPaymentRequested, to: false },
+          ...(actorId !== locked.supplierId && { onBehalfOf: locked.supplierId }),
+        },
+        { client: trx }
+      )
+      return true
+    })
+    if (changed) {
+      notify(
+        () => new NotificationService().sendPaymentStatusChange(invoice, 'rejected'),
+        `payment rejected e-mail for invoice #${invoiceId}`
+      )
+    }
+    return invoice
+  }
+
+  /**
+   * Runs a payment state change on the invoice row locked for the transaction, so a double
+   * click or the web and an assistant at once decide one after the other: the second sees
+   * the first one's result. `change` returns whether it changed anything — e-mails go out
+   * after the commit, and only then.
+   */
+  private async changePayment(
+    invoiceId: number,
+    change: (invoice: Invoice, trx: TransactionClientContract) => Promise<boolean>
+  ): Promise<{ invoice: Invoice; changed: boolean }> {
+    return db.transaction(async (trx) => {
+      const invoice = await Invoice.query({ client: trx })
+        .where('id', invoiceId)
+        .forUpdate()
+        .firstOrFail()
+      const changed = await change(invoice, trx)
+      return { invoice, changed }
+    })
   }
 
   /**
    * Generate an invoice for a single buyer from a specific supplier.
    * Returns the Invoice or null if no uninvoiced orders exist for that pair.
    */
-  async generateInvoiceForBuyer(supplierId: number, buyerId: number): Promise<Invoice | null> {
-    return db.transaction(async (trx) => {
+  async generateInvoiceForBuyer(
+    supplierId: number,
+    buyerId: number,
+    options: { expectedTotal?: number } = {}
+  ): Promise<Invoice | null> {
+    const issued = await db.transaction(async (trx) => {
       const orders = await Order.query({ client: trx })
         .whereNull('invoiceId')
         .where('buyerId', buyerId)
@@ -329,6 +469,8 @@ export default class InvoiceService {
       if (orders.length === 0) {
         return null
       }
+      // One buyer: the expected total is all of theirs, even the supplier's own purchases.
+      assertTotal(orders, options.expectedTotal)
 
       const totalCost = orders.reduce((sum, o) => sum + o.unitPrice, 0)
       const isSelfInvoice = buyerId === supplierId
@@ -340,6 +482,7 @@ export default class InvoiceService {
           totalCost,
           isPaid: isSelfInvoice,
           isPaymentRequested: isSelfInvoice,
+          paidAt: isSelfInvoice ? DateTime.now() : null,
           autoReminderCount: 0,
           manualReminderCount: 0,
         },
@@ -364,6 +507,8 @@ export default class InvoiceService {
 
       return invoice
     })
+    if (issued) notifyIssued([issued])
+    return issued
   }
 
   /**
@@ -371,7 +516,7 @@ export default class InvoiceService {
    * Groups uninvoiced orders by supplierId and creates one invoice per group.
    */
   async generateInvoicesForUser(actorId: number, buyerId: number): Promise<Invoice[]> {
-    return db.transaction(async (trx) => {
+    const issued = await db.transaction(async (trx) => {
       const allOrders = await Order.query({ client: trx })
         .whereNull('invoiceId')
         .where('buyerId', buyerId)
@@ -404,6 +549,7 @@ export default class InvoiceService {
             totalCost,
             isPaid: isSelfInvoice,
             isPaymentRequested: isSelfInvoice,
+            paidAt: isSelfInvoice ? DateTime.now() : null,
             autoReminderCount: 0,
             manualReminderCount: 0,
           },
@@ -431,6 +577,8 @@ export default class InvoiceService {
 
       return invoices
     })
+    notifyIssued(issued, actorId)
+    return issued
   }
 
   /**

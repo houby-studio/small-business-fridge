@@ -17,7 +17,9 @@ export default class ProductGroupsController {
     const [groups, categories, products] = await Promise.all([
       new ProductGroupService().list(),
       Category.query().where('isDisabled', false).orderBy('name', 'asc'),
+      // Archived products cannot join a group; a member that was archived stays listed.
       Product.query()
+        .where((q) => q.whereNull('archivedAt').orWhereNotNull('productGroupId'))
         .orderBy('displayName', 'asc')
         .select('id', 'displayName', 'categoryId', 'productGroupId'),
     ])
@@ -45,7 +47,7 @@ export default class ProductGroupsController {
     } catch (error) {
       this.flashError(error, session, i18n)
     }
-    return response.redirect().back()
+    return response.redirect('back', true)
   }
 
   async update({ params, request, response, auth, session, i18n }: HttpContext) {
@@ -59,7 +61,7 @@ export default class ProductGroupsController {
     } catch (error) {
       this.flashError(error, session, i18n)
     }
-    return response.redirect().back()
+    return response.redirect('back', true)
   }
 
   async destroy({ params, response, auth, session, i18n }: HttpContext) {
@@ -69,7 +71,7 @@ export default class ProductGroupsController {
     } catch (error) {
       this.flashError(error, session, i18n)
     }
-    return response.redirect().back()
+    return response.redirect('back', true)
   }
 
   private flashError(error: unknown, session: HttpContext['session'], i18n: HttpContext['i18n']) {

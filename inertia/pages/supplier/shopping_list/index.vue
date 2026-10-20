@@ -1,19 +1,21 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
-import { Head, router } from '@inertiajs/vue3'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
+import { Head, router, usePage } from '@inertiajs/vue3'
+import type { SharedProps } from '~/types'
 import AppLayout from '~/layouts/AppLayout.vue'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Checkbox from 'primevue/checkbox'
 import ConfirmDialog from 'primevue/confirmdialog'
 import Dialog from 'primevue/dialog'
-import InputNumber from 'primevue/inputnumber'
+import InputNumber from '~/components/NumberInput.vue'
 import InputText from 'primevue/inputtext'
 import MultiSelect from 'primevue/multiselect'
 import Select from 'primevue/select'
+import SelectButton from 'primevue/selectbutton'
 import Slider from 'primevue/slider'
-import Tag from 'primevue/tag'
 import InfoHint from '~/components/InfoHint.vue'
+import { useSelectEnterKey } from '~/composables/use_select_enter_key'
 import { useI18n } from '~/composables/use_i18n'
 import { useMoney } from '~/composables/use_pricing'
 import { useAppConfirm } from '~/composables/use_app_confirm'
@@ -22,6 +24,7 @@ import {
   MAX_HORIZON_DAYS,
   MIN_HORIZON_DAYS,
   SHOPPING_LABEL_MAX,
+  SHOPPING_MAX_QUANTITY,
   SHOPPING_NOTE_MAX,
   nameError,
 } from '~/composables/use_shopping_validation'
@@ -51,6 +54,7 @@ interface Line {
   quantity: number
   isOverridden: boolean
   packSize: number
+  packSample: number[]
   unitCost: number | null
   costSource: 'purchase' | 'selling' | 'manual' | null
   goodPrice: number | null
@@ -84,9 +88,14 @@ const props = defineProps<{
   products: Array<{ id: number; displayName: string }>
 }>()
 
-const { t, tp } = useI18n()
+const { t, tp, locale } = useI18n()
 const { money } = useMoney()
+const decimal = (value: number) =>
+  new Intl.NumberFormat(locale.value === 'cs' ? 'cs-CZ' : 'en-US', {
+    maximumFractionDigits: 1,
+  }).format(value)
 const confirm = useAppConfirm()
+const page = usePage<SharedProps>()
 
 const visitOptions = {
   preserveScroll: true,
@@ -154,9 +163,31 @@ function onCategoriesChange() {
 }
 
 // ─── Lines ─────────────────────────────────────────────────────────────────────
+// The last action on a line wins. Every edit of a line (quantity, back to the suggestion,
+// tick, remove, restore) goes through one queue per line: a newer action drops a quantity
+// still waiting for its debounce, and while a request of that line is under way the newest
+// action waits for it and is sent next — anything older that was queued is dropped. Requests
+// of one line never overlap, so the server applies them in the order they were made (merely
+// cancelling the browser's request would not stop the server from applying it late). Until
+// the line's last action is answered, the page shows that action's value, not what an
+// earlier response said; once nothing is in flight after edits overlapped, the list is
+// reloaded once, so no response that arrived out of order is left on screen.
+type LineAction = {
+  method: 'put' | 'delete'
+  data: Record<string, number | boolean | null>
+}
+interface LineQueue {
+  seq: number
+  busy: boolean
+  next: { action: LineAction; seq: number } | null
+}
+
 const pendingQuantity = reactive<Record<string, number>>({})
 const pendingChecked = reactive<Record<string, boolean>>({})
 const quantityTimers = new Map<string, ReturnType<typeof setTimeout>>()
+const queues = new Map<string, LineQueue>()
+let inFlight = 0
+let overlapped = false
 
 function lineUrl(key: string) {
   return `/supplier/shopping-list/lines/${key}`
@@ -170,63 +201,111 @@ function checkedOf(line: Line) {
   return pendingChecked[line.key] ?? line.isChecked
 }
 
+function queueOf(key: string): LineQueue {
+  let queue = queues.get(key)
+  if (!queue) {
+    queue = { seq: 0, busy: false, next: null }
+    queues.set(key, queue)
+  }
+  return queue
+}
+
+/** A newer action supersedes a quantity still waiting to be sent. */
+function dropScheduled(key: string) {
+  const timer = quantityTimers.get(key)
+  if (timer) clearTimeout(timer)
+  quantityTimers.delete(key)
+}
+
+function lineAction(key: string, action: LineAction) {
+  const queue = queueOf(key)
+  queue.seq++
+  if (queue.busy) {
+    queue.next = { action, seq: queue.seq }
+    return
+  }
+  send(key, action, queue.seq)
+}
+
+function send(key: string, action: LineAction, seq: number) {
+  const queue = queueOf(key)
+  queue.busy = true
+  if (inFlight > 0) overlapped = true
+  inFlight++
+  router.visit(lineUrl(key), {
+    method: action.method,
+    data: action.data,
+    ...visitOptions,
+    onFinish: () => {
+      inFlight--
+      queue.busy = false
+      const next = queue.next
+      if (next) {
+        queue.next = null
+        send(key, next.action, next.seq)
+        return
+      }
+      if (queue.seq === seq) settle(key)
+      if (inFlight === 0 && overlapped) {
+        overlapped = false
+        router.reload({ only: ['list'] })
+      }
+    },
+  })
+}
+
+/** The line's last action is answered: show what the server says again. */
+function settle(key: string) {
+  if (quantityTimers.has(key)) return
+  delete pendingQuantity[key]
+  delete pendingChecked[key]
+}
+
 function onQuantity(line: Line, value: number | null) {
-  const quantity = Math.max(0, Math.floor(value ?? 0))
+  // The field has no max (CLAUDE.md › Number fields); the server bound is applied here.
+  const quantity = Math.min(SHOPPING_MAX_QUANTITY, Math.max(0, Math.floor(value ?? 0)))
   pendingQuantity[line.key] = quantity
-  const previous = quantityTimers.get(line.key)
-  if (previous) clearTimeout(previous)
+  dropScheduled(line.key)
+  // Typing counts as the newest action right away — a request already queued is dropped.
+  const queue = queueOf(line.key)
+  queue.seq++
+  queue.next = null
   quantityTimers.set(
     line.key,
     setTimeout(() => {
       quantityTimers.delete(line.key)
-      router.put(
-        lineUrl(line.key),
-        { quantity },
-        {
-          ...visitOptions,
-          onFinish: () => {
-            if (pendingQuantity[line.key] === quantity) delete pendingQuantity[line.key]
-          },
-        }
-      )
+      lineAction(line.key, { method: 'put', data: { quantity } })
     }, 500)
   )
 }
 
 function onChecked(line: Line, value: boolean) {
   pendingChecked[line.key] = value
-  router.put(
-    lineUrl(line.key),
-    { isChecked: value },
-    {
-      ...visitOptions,
-      onFinish: () => {
-        delete pendingChecked[line.key]
-      },
-    }
-  )
+  lineAction(line.key, { method: 'put', data: { isChecked: value } })
 }
 
 function resetQuantity(line: Line) {
-  delete pendingQuantity[line.key]
-  router.put(lineUrl(line.key), { quantity: null }, visitOptions)
+  dropScheduled(line.key)
+  pendingQuantity[line.key] = line.suggestedQuantity
+  lineAction(line.key, { method: 'put', data: { quantity: null } })
 }
 
 /** A suggestion is dismissed (can be restored); an own line is deleted outright. */
 function removeLine(line: Line) {
+  dropScheduled(line.key)
   if (line.kind === 'custom' || line.reasons.includes('added')) {
-    router.delete(lineUrl(line.key), visitOptions)
+    lineAction(line.key, { method: 'delete', data: {} })
   } else {
-    router.put(lineUrl(line.key), { isRemoved: true }, visitOptions)
+    lineAction(line.key, { method: 'put', data: { isRemoved: true } })
   }
 }
 
 function restoreLine(line: Line) {
-  router.put(lineUrl(line.key), { isRemoved: false }, visitOptions)
+  lineAction(line.key, { method: 'put', data: { isRemoved: false } })
 }
 
 function addCovered(line: Line) {
-  router.put(lineUrl(line.key), { quantity: Math.max(1, line.packSize) }, visitOptions)
+  lineAction(line.key, { method: 'put', data: { quantity: Math.max(1, line.packSize) } })
 }
 
 const showCovered = ref(false)
@@ -259,11 +338,12 @@ function hintText(line: Line) {
     .join(' · ')
 }
 
+/** Stock, pace and cover — the cover only when no "runs out in N days" badge says it already. */
 function statsText(line: Line) {
   const parts: string[] = []
   if (line.stock !== null) parts.push(t('shopping.stat_stock', { count: line.stock }))
-  if (line.weeklyRate) parts.push(t('shopping.stat_weekly', { count: line.weeklyRate }))
-  if (line.daysOfCover !== null && line.stock) {
+  if (line.weeklyRate) parts.push(t('shopping.stat_weekly', { count: decimal(line.weeklyRate) }))
+  if (line.daysOfCover !== null && line.stock && !reasonBadge(line)) {
     parts.push(tp('shopping.stat_cover', Math.round(line.daysOfCover)))
   }
   return parts.join(' · ')
@@ -293,7 +373,11 @@ const addLabelError = computed(() =>
   addMode.value === 'custom' ? nameError(addLabel.value, SHOPPING_LABEL_MAX, t) : ''
 )
 const addQuantityError = computed(() =>
-  !addQuantity.value || addQuantity.value < 1 ? t('shopping.validation_quantity_min') : ''
+  !addQuantity.value || addQuantity.value < 1
+    ? t('shopping.validation_quantity_min')
+    : addQuantity.value > SHOPPING_MAX_QUANTITY
+      ? t('shopping.validation_quantity_max', { max: SHOPPING_MAX_QUANTITY })
+      : ''
 )
 // Mirrors shoppingLineCreateValidator.unitCost (0 … DELIVERY_MAX_PRICE, optional).
 const addUnitCostError = computed(() =>
@@ -307,6 +391,52 @@ const addValid = computed(
     !addUnitCostError.value &&
     (addMode.value === 'catalog' ? !!addProductId.value : !addLabelError.value)
 )
+
+// Keyboard flow like the stocking draft: the product search opens with the dialog, the
+// first match is highlighted (ArrowDown goes to the second), Enter picks it and moves on —
+// product → quantity → note → Add.
+const addProductSelect = ref()
+const { onSelectShow: onAddProductShow, onSelectFilter: onAddProductFilter } = useSelectEnterKey([
+  {
+    selectRef: addProductSelect,
+    getOptions: () => productOptions.value,
+    getLabel: (option) => option.label,
+    getValue: (option) => option.value,
+    onSelect: (value) => {
+      addProductId.value = Number(value)
+      nextTick(() => focusInput('shopping-add-quantity'))
+    },
+  },
+])
+
+function focusInput(id: string) {
+  const input = document.getElementById(id) as HTMLInputElement | null
+  input?.focus()
+  input?.select()
+}
+
+function openProductSearch() {
+  const instance = addProductSelect.value
+  const trigger = (instance?.$el as HTMLElement | undefined)?.querySelector<HTMLElement>(
+    '[role="combobox"]'
+  )
+  trigger?.focus()
+  if (typeof instance?.show === 'function') instance.show()
+  else trigger?.click()
+}
+
+/** The dialog opens with the first field focused, so typing starts right away. */
+function focusAddField() {
+  if (addMode.value === 'catalog') openProductSearch()
+  else focusInput('shopping-add-label')
+}
+
+/** A product picked with the mouse moves on to the quantity too. */
+function onAddProductChange() {
+  if (addProductId.value) nextTick(() => focusInput('shopping-add-quantity'))
+}
+
+watch(addMode, () => nextTick(focusAddField))
 
 function openAdd() {
   addMode.value = 'catalog'
@@ -437,7 +567,7 @@ function completeList() {
             </div>
           </div>
           <div class="grid gap-3">
-            <div>
+            <div v-if="page.props.hasOtherSuppliers !== false">
               <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300">{{
                 t('common.scope')
               }}</label>
@@ -512,9 +642,15 @@ function completeList() {
             <div class="flex flex-wrap items-center gap-2">
               <label
                 :for="`shopping-check-${line.key}`"
-                class="font-medium text-gray-900 dark:text-zinc-100"
+                class="inline-flex items-center gap-1.5 font-medium text-gray-900 dark:text-zinc-100"
                 :class="{ 'line-through': checkedOf(line) }"
-                >{{ line.name }}</label
+                ><span
+                  v-if="line.categoryName"
+                  class="inline-block h-2 w-2 shrink-0 rounded-full"
+                  :style="{ backgroundColor: line.categoryColor || '#6b7280' }"
+                  :title="line.categoryName"
+                  aria-hidden="true"
+                />{{ line.name }}</label
               >
               <span
                 v-if="line.kind === 'group'"
@@ -534,12 +670,6 @@ function completeList() {
                 :class="reasonBadge(line)!.class"
                 >{{ reasonBadge(line)!.text }}</span
               >
-              <Tag
-                v-if="line.categoryName"
-                :value="line.categoryName"
-                class="text-xs"
-                :style="{ backgroundColor: line.categoryColor || '#6b7280', color: '#fff' }"
-              />
             </div>
             <p v-if="line.hints.length" class="mt-0.5 text-xs text-gray-500 dark:text-zinc-400">
               {{ t('shopping.hints', { products: hintText(line) }) }}
@@ -547,23 +677,28 @@ function completeList() {
             <p v-if="line.note" class="mt-0.5 text-xs text-gray-500 italic dark:text-zinc-400">
               {{ line.note }}
             </p>
-            <p v-if="statsText(line)" class="mt-0.5 text-xs text-gray-500 dark:text-zinc-400">
-              {{ statsText(line) }}
-            </p>
+            <!-- One line of metadata: price first, then stock and pace. -->
             <p
-              v-if="line.unitCost !== null"
-              class="mt-0.5 text-xs text-gray-600 dark:text-zinc-300"
+              v-if="line.unitCost !== null || statsText(line)"
+              class="mt-0.5 text-xs text-gray-500 dark:text-zinc-400"
+              :data-testid="`shopping-meta-${line.key}`"
             >
-              <span>{{ t('shopping.price_per_piece', { price: money(line.unitCost) }) }}</span>
-              <span v-if="line.costSource === 'selling'" class="text-gray-500 dark:text-zinc-400">
-                ({{ t('shopping.price_from_selling') }})</span
-              >
-              <span v-if="line.goodPrice !== null" class="text-green-700 dark:text-green-300">
-                · {{ t('shopping.good_price', { price: money(line.goodPrice) }) }}</span
-              >
-              <span v-if="line.sellingPrice !== null && line.costSource !== 'selling'">
-                · {{ t('shopping.selling_price', { price: line.sellingPrice }) }}</span
-              >
+              <template v-if="line.unitCost !== null">
+                <span class="text-gray-600 dark:text-zinc-300">{{
+                  t('shopping.price_per_piece', { price: money(line.unitCost) })
+                }}</span>
+                <span v-if="line.costSource === 'selling'">
+                  ({{ t('shopping.price_from_selling') }})</span
+                >
+                <span v-if="line.goodPrice !== null" class="text-green-700 dark:text-green-300">
+                  · {{ t('shopping.good_price', { price: money(line.goodPrice) }) }}</span
+                >
+                <span v-if="line.sellingPrice !== null && line.costSource !== 'selling'">
+                  · {{ t('shopping.selling_price', { price: money(line.sellingPrice) }) }}</span
+                >
+                <span v-if="statsText(line)"> · </span>
+              </template>
+              <span>{{ statsText(line) }}</span>
             </p>
           </div>
         </div>
@@ -573,7 +708,6 @@ function completeList() {
             <InputNumber
               :modelValue="quantityOf(line)"
               :min="0"
-              :max="10000"
               showButtons
               buttonLayout="horizontal"
               :step="1"
@@ -601,9 +735,12 @@ function completeList() {
                   @click="resetQuantity(line)"
                 />
               </template>
-              <span v-else-if="line.packSize > 1">{{
-                t('shopping.pack', { count: line.packSize })
-              }}</span>
+              <span v-else-if="line.packSize > 1" class="inline-flex items-center gap-1"
+                >{{ t('shopping.pack', { count: line.packSize }) }}
+                <InfoHint
+                  :text="t('shopping.pack_hint', { amounts: line.packSample.join(', ') })"
+                  :test-id="`shopping-pack-hint-${line.key}`"
+              /></span>
             </div>
           </div>
           <div class="w-24 text-right text-sm font-semibold text-gray-900 dark:text-zinc-100">
@@ -700,34 +837,37 @@ function completeList() {
       modal
       :draggable="false"
       data-testid="shopping-add-dialog"
+      @show="focusAddField"
     >
-      <div class="space-y-4">
-        <div>
-          <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300">{{
-            t('shopping.add_mode')
-          }}</label>
-          <Select
-            v-model="addMode"
-            :options="addModeOptions"
-            optionLabel="label"
-            optionValue="value"
-            class="w-full"
-            data-testid="shopping-add-mode"
-          />
-        </div>
+      <form id="shopping-add-form" class="space-y-4" @submit.prevent="submitAdd">
+        <SelectButton
+          v-model="addMode"
+          :options="addModeOptions"
+          optionLabel="label"
+          optionValue="value"
+          :allowEmpty="false"
+          :aria-label="t('shopping.add_mode')"
+          data-testid="shopping-add-mode"
+        />
         <div v-if="addMode === 'catalog'">
           <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300"
             >{{ t('common.product') }} *</label
           >
           <Select
+            ref="addProductSelect"
             v-model="addProductId"
             :options="productOptions"
             optionLabel="label"
             optionValue="value"
             filter
+            autoFilterFocus
+            appendTo="self"
             :placeholder="t('shopping.add_product_placeholder')"
             class="w-full"
             data-testid="shopping-add-product"
+            @show="onAddProductShow"
+            @filter="onAddProductFilter"
+            @change="onAddProductChange"
           />
         </div>
         <div v-else>
@@ -743,6 +883,7 @@ function completeList() {
             :maxlength="SHOPPING_LABEL_MAX"
             :invalid="!!addLabelError && addLabel.length > 0"
             :placeholder="t('shopping.add_label_placeholder')"
+            @keydown.enter.prevent="focusInput('shopping-add-quantity')"
           />
           <small
             v-if="addLabelError && addLabel.length > 0"
@@ -759,9 +900,9 @@ function completeList() {
               v-model="addQuantity"
               inputId="shopping-add-quantity"
               :min="1"
-              :max="10000"
               fluid
               :invalid="!!addQuantityError"
+              @keydown.enter.prevent="focusInput('shopping-add-note')"
             />
             <small v-if="addQuantityError" class="text-red-500 dark:text-red-400">{{
               addQuantityError
@@ -775,7 +916,6 @@ function completeList() {
               v-model="addUnitCost"
               inputId="shopping-add-cost"
               :min="0"
-              :max="DELIVERY_MAX_PRICE"
               :minFractionDigits="2"
               :maxFractionDigits="2"
               :suffix="' ' + t('common.currency')"
@@ -801,15 +941,16 @@ function completeList() {
             :placeholder="t('shopping.add_note_placeholder')"
           />
         </div>
-      </div>
+      </form>
       <template #footer>
         <Button :label="t('common.cancel')" severity="secondary" text @click="addVisible = false" />
         <Button
+          type="submit"
+          form="shopping-add-form"
           :label="t('shopping.add_submit')"
           :disabled="!addValid || addSubmitting"
           :loading="addSubmitting"
           data-testid="shopping-add-submit"
-          @click="submitAdd"
         />
       </template>
     </Dialog>

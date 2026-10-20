@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ProductImage from '~/components/ProductImage.vue'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useI18n } from '~/composables/use_i18n'
 
@@ -51,14 +52,13 @@ onUnmounted(() => {
         <div :key="currentIndex" class="flex w-full max-w-md flex-col items-center">
           <!-- Image area: fixed height, image always centered here -->
           <div class="flex h-80 w-full items-center justify-center">
-            <img
-              v-if="products[currentIndex].imagePath"
-              :src="products[currentIndex].imagePath ?? undefined"
-              :alt="products[currentIndex].displayName"
-              class="h-full w-full object-contain drop-shadow-2xl"
-            />
-            <div v-else class="flex h-full w-full items-center justify-center">
-              <i class="pi pi-box text-8xl text-gray-600" />
+            <div class="h-full w-full drop-shadow-2xl">
+              <ProductImage
+                :src="products[currentIndex].imagePath"
+                :alt="products[currentIndex].displayName"
+                :color="products[currentIndex].category.color"
+                iconClass="text-4xl"
+              />
             </div>
           </div>
 

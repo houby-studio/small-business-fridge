@@ -27,12 +27,17 @@ test.describe('Admin pages and filters', () => {
 
   test('admin users supports role filter', async ({ page }) => {
     await page.goto('/admin/users')
+    // Filters apply on change: no "Apply" button, and "Clear" only once something is set.
+    await expect(page.getByRole('button', { name: 'Použít filtry' })).toHaveCount(0)
+    await expect(page.getByTestId('filter-clear')).toHaveCount(0)
 
     await page.locator('#admin-users-filter-role').click()
     await page.getByRole('option', { name: 'Dodavatel' }).click()
-    await page.getByRole('button', { name: 'Použít filtry' }).click()
 
     await expect(page).toHaveURL(/\/admin\/users\?.*role=supplier/)
+    await page.getByTestId('filter-clear').click()
+    await expect(page).not.toHaveURL(/role=/)
+    await expect(page.getByTestId('filter-clear')).toHaveCount(0)
     await expect(page.locator('.p-datatable table')).toContainText('Dodavatel')
   })
 
@@ -41,7 +46,6 @@ test.describe('Admin pages and filters', () => {
 
     await page.locator('#admin-users-filter-disabled').click()
     await page.getByRole('option', { name: 'Povolen' }).click()
-    await page.getByRole('button', { name: 'Použít filtry' }).click()
 
     await expect(page).toHaveURL(/\/admin\/users\?.*disabled=enabled/)
   })
@@ -54,7 +58,6 @@ test.describe('Admin pages and filters', () => {
     await expect(searchInput).toBeFocused()
     await searchInput.fill('Supplier User')
     await searchInput.press('Enter')
-    await page.getByRole('button', { name: 'Použít filtry' }).click()
 
     await expect(page).toHaveURL(/\/admin\/users\?.*userId=/)
     await expect(page.locator('.p-datatable table')).toContainText('Supplier User')
@@ -85,8 +88,7 @@ test.describe('Admin pages and filters', () => {
     await page.goto('/admin/orders')
 
     await page.getByRole('combobox').nth(3).click()
-    await page.getByRole('option', { name: 'Supplier User' }).click()
-    await page.getByRole('button', { name: 'Použít filtry' }).click()
+    await page.getByRole('option', { name: 'Supplier User', exact: true }).click()
 
     await expect(page).toHaveURL(/\/admin\/orders\?.*supplierId=/)
     await expect(page.locator('table')).toContainText('Supplier User')
@@ -97,7 +99,6 @@ test.describe('Admin pages and filters', () => {
 
     await page.getByRole('combobox').nth(1).click()
     await page.getByRole('option', { name: 'Fakturováno', exact: true }).click()
-    await page.getByRole('button', { name: 'Použít filtry' }).click()
 
     await expect(page).toHaveURL(/\/admin\/orders\?.*invoiced=yes/)
   })
@@ -119,7 +120,6 @@ test.describe('Admin pages and filters', () => {
     await supplierSearchInput.fill('Supplier User')
     await supplierSearchInput.press('Enter')
 
-    await page.getByRole('button', { name: 'Použít filtry' }).click()
     await expect(page).toHaveURL(/\/admin\/orders\?.*buyerId=.*supplierId=/)
   })
 
@@ -128,7 +128,6 @@ test.describe('Admin pages and filters', () => {
 
     await page.getByRole('combobox').first().click()
     await page.getByRole('option', { name: 'Zaplaceno', exact: true }).click()
-    await page.getByRole('button', { name: 'Použít filtry' }).click()
 
     await expect(page).toHaveURL(/\/admin\/invoices\?.*status=paid/)
     await expect(page.locator('table')).toContainText('Zaplaceno')
@@ -139,7 +138,6 @@ test.describe('Admin pages and filters', () => {
 
     await page.getByRole('combobox').first().click()
     await page.getByRole('option', { name: 'Čeká na schválení' }).click()
-    await page.getByRole('button', { name: 'Použít filtry' }).click()
 
     await expect(page).toHaveURL(/\/admin\/invoices\?.*status=awaiting/)
     await expect(page.locator('table')).toContainText('Čeká na schválení')
@@ -150,7 +148,6 @@ test.describe('Admin pages and filters', () => {
 
     await page.getByRole('combobox').first().click()
     await page.getByRole('option', { name: 'Nezaplaceno' }).click()
-    await page.getByRole('button', { name: 'Použít filtry' }).click()
 
     await expect(page).toHaveURL(/\/admin\/invoices\?.*status=unpaid/)
     await expect(page.locator('table')).toContainText('Nezaplaceno')
@@ -160,10 +157,9 @@ test.describe('Admin pages and filters', () => {
     await page.goto('/admin/invoices')
 
     await page.getByRole('combobox').nth(1).click()
-    await page.getByRole('option', { name: 'Customer User' }).click()
+    await page.getByRole('option', { name: 'Customer User', exact: true }).click()
     await page.getByRole('combobox').nth(2).click()
-    await page.getByRole('option', { name: 'Supplier User' }).click()
-    await page.getByRole('button', { name: 'Použít filtry' }).click()
+    await page.getByRole('option', { name: 'Supplier User', exact: true }).click()
 
     await expect(page).toHaveURL(/\/admin\/invoices\?.*buyerId=.*supplierId=/)
     await expect(page.locator('table')).toContainText('Customer User')
@@ -187,7 +183,6 @@ test.describe('Admin pages and filters', () => {
     await supplierSearchInput.fill('Supplier User')
     await supplierSearchInput.press('Enter')
 
-    await page.getByRole('button', { name: 'Použít filtry' }).click()
     await expect(page).toHaveURL(/\/admin\/invoices\?.*buyerId=.*supplierId=/)
   })
 
@@ -200,7 +195,6 @@ test.describe('Admin pages and filters', () => {
     await searchInput.click()
     await searchInput.fill('Supplier User')
     await searchInput.press('Enter')
-    await page.getByRole('button', { name: 'Použít filtry' }).click()
 
     await expect(page).toHaveURL(/\/admin\/audit\?.*userId=/)
   })

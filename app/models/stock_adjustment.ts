@@ -61,6 +61,13 @@ export default class StockAdjustment extends BaseModel {
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
 
+  /** Set when a mistaken write-off was taken back — the pieces went back onto the lot. */
+  @column.dateTime()
+  declare revertedAt: DateTime | null
+
+  @column()
+  declare revertedBy: number | null
+
   @belongsTo(() => Delivery)
   declare delivery: BelongsTo<typeof Delivery>
 

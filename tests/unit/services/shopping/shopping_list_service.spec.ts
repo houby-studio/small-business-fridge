@@ -113,6 +113,8 @@ test.group('ShoppingListService — demand', (group) => {
     assert.include(line!.reasons, 'out_of_stock')
     assert.equal(line!.stockoutRisk, 1)
     assert.equal(line!.packSize, 24)
+    // The hint names the lot sizes the pack was told from (P6).
+    assert.deepEqual(line!.packSample, [24, 24])
     assert.equal(line!.suggestedQuantity, 24)
     assert.equal(line!.quantity, 24)
     assert.equal(line!.unitCost, 14.9)
@@ -186,6 +188,88 @@ test.group('ShoppingListService — demand', (group) => {
     const view = await service.getView(supplier)
     assert.equal(view.settings.autoHorizonDays, 7)
     assert.equal(view.settings.horizonDays, 7)
+  })
+})
+
+test.group('ShoppingListService — archived products', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('an archived product is neither planned nor named as a hint (F6)', async ({ assert }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+    const category = await CategoryFactory.create()
+    await backgroundTraffic(buyer, category.id)
+    const pepsi = await staple(supplier, buyer, category.id)
+    const energy = await ProductGroup.create({ name: 'Energy', categoryId: category.id })
+    const monster = await ProductFactory.merge({
+      categoryId: category.id,
+      productGroupId: energy.id,
+      displayName: 'Monster',
+    }).create()
+    const tiger = await ProductFactory.merge({
+      categoryId: category.id,
+      productGroupId: energy.id,
+      displayName: 'Tiger',
+    }).create()
+    for (const member of [monster, tiger]) {
+      const memberLot = await lot(supplier.id, member.id, 25, 12, { left: 0 })
+      await sell(memberLot.id, buyer.id, range(24, 13))
+    }
+
+    const before = await service.getView(supplier)
+    assert.exists(before.lines.find((l) => l.key === `p-${pepsi.id}`))
+    const hintsBefore = before.lines.find((l) => l.key === `g-${energy.id}`)!.hints
+    assert.sameMembers(
+      hintsBefore.map((h) => h.name),
+      ['Monster', 'Tiger']
+    )
+
+    for (const archived of [pepsi, tiger]) {
+      archived.archivedAt = DateTime.now()
+      await archived.save()
+    }
+    const after = await service.getView(supplier)
+    const all = [...after.lines, ...after.covered]
+    assert.notExists(all.find((l) => l.key === `p-${pepsi.id}`))
+    const energyLine = all.find((l) => l.key === `g-${energy.id}`)!
+    assert.deepEqual(
+      energyLine.hints.map((h) => h.name),
+      ['Monster']
+    )
+  })
+})
+
+test.group('ShoppingListService — private purchase prices', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('a colleague’s purchase prices never price my list or my draft', async ({ assert }) => {
+    const me = await UserFactory.apply('supplier').create()
+    const colleague = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+    const category = await CategoryFactory.create()
+    await backgroundTraffic(buyer, category.id)
+    // The colleague stocks the staple with a purchase price; I only add it to my list.
+    const pepsi = await staple(colleague, buyer, category.id)
+    await service.addLine(me.id, { productId: pepsi.id, quantity: 6 })
+
+    const view = await service.getView(me)
+    const line = view.lines.find((l) => l.key === `p-${pepsi.id}`)!
+    assert.equal(line.costSource, 'selling')
+    assert.equal(line.unitCost, 15)
+    assert.isNull(line.goodPrice)
+
+    const { draft } = await service.completeIntoDraft(me, { note: 'x', extrasNote: (i) => i })
+    const [item] = await StockDraftItem.query().where('stockDraftId', draft.id)
+    assert.isNull(item.purchasePrice)
+
+    // With a purchase price of my own, only mine counts.
+    await lot(me.id, pepsi.id, 2, 12, { left: 12, purchasePrice: 11.5 })
+    const mine = await service.getView(me, { scope: 'all' })
+    const own = [...mine.lines, ...mine.covered].find((l) => l.key === `p-${pepsi.id}`)!
+    assert.equal(own.costSource, 'purchase')
+    assert.equal(own.unitCost, 11.5)
   })
 })
 
@@ -338,6 +422,8 @@ test.group('ShoppingListService — edits', (group) => {
     assert.deepEqual(parseLineKey('c-7'), { kind: 'custom', id: 7 })
     assert.isNull(parseLineKey('x-1'))
     assert.isNull(parseLineKey('p-1; drop'))
+    // Beyond a PostgreSQL integer — not found, never a database error.
+    assert.isNull(parseLineKey('p-99999999999'))
   })
 })
 
@@ -409,6 +495,76 @@ test.group('ShoppingListService — completing', (group) => {
     assert.include(draft.note, 'Dále: Banány 3×')
   })
 
+  test('a line set to zero is not bought, even when ticked (QA-13)', async ({ assert }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const buyer = await UserFactory.create()
+    const category = await CategoryFactory.create()
+    await backgroundTraffic(buyer, category.id)
+    const pepsi = await staple(supplier, buyer, category.id)
+    const water = await ProductFactory.merge({ categoryId: category.id }).create()
+    await service.addLine(supplier.id, { productId: water.id, quantity: 4 })
+    await service.updateLine(supplier.id, `p-${pepsi.id}`, { quantity: 0, isChecked: true })
+    await service.updateLine(supplier.id, `p-${water.id}`, { isChecked: true })
+
+    const result = await service.completeIntoDraft(supplier, texts)
+    const items = await StockDraftItem.query().where('stockDraftId', result.draft.id)
+    assert.deepEqual(
+      items.map((i) => [i.productId, i.amount]),
+      [[water.id, 4]]
+    )
+  })
+
+  test('free-text lines that do not fit the note are counted, not cut off (BE-18)', async ({
+    assert,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    for (let i = 0; i < 30; i++) {
+      await service.addLine(supplier.id, {
+        label: `Položka číslo ${i} s delším názvem`,
+        quantity: 1,
+      })
+    }
+    const result = await service.completeIntoDraft(supplier, {
+      ...texts,
+      moreExtras: (count) => ` a další (${count})`,
+    })
+    const draft = await StockDraft.findOrFail(result.draft.id)
+    assert.isAtMost(draft.note!.length, 500)
+    assert.match(draft.note!, /, Položka číslo \d+ s delším názvem 1× a další \(\d+\)$/)
+    assert.include(draft.note!, 'Položka číslo 0 s delším názvem 1×')
+  })
+
+  test('the next list starts with the settings of the last one (BE-08)', async ({ assert }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const category = await CategoryFactory.create()
+    await service.updateSettings(supplier.id, {
+      horizonDays: 30,
+      scope: 'all',
+      categoryIds: [category.id],
+    })
+    await service.addLine(supplier.id, { label: 'Banány', quantity: 3 })
+    await service.completeIntoDraft(supplier, texts)
+
+    // Shown before anything changed, and stored once something did.
+    const shown = await service.getView(supplier)
+    assert.deepInclude(shown.settings, {
+      horizonDays: 30,
+      horizonIsAuto: false,
+      scope: 'all',
+      categoryIds: [category.id],
+    })
+    assert.lengthOf(shown.lines, 0)
+    await service.addLine(supplier.id, { label: 'Mléko', quantity: 1 })
+    const active = await service.findActive(supplier.id)
+    assert.deepInclude(
+      { horizonDays: active!.horizonDays, scope: active!.scope, categoryIds: active!.categoryIds },
+      { horizonDays: 30, scope: 'all', categoryIds: [category.id] }
+    )
+    // An assistant's "what if" still wins over the remembered settings.
+    const week = await service.getView(supplier, { horizonDays: 7 })
+    assert.equal(week.settings.horizonDays, 7)
+  })
+
   test('an empty list cannot be completed, and a list only once', async ({ assert }) => {
     const supplier = await UserFactory.apply('supplier').create()
     await assert.rejects(() => service.completeIntoDraft(supplier, texts), 'LIST_EMPTY')
@@ -454,7 +610,9 @@ test.group('ShoppingListService — concurrency', (group) => {
   group.each.setup(cleanAll)
   group.each.teardown(cleanAll)
 
-  test('two tabs changing a new line at once end up with one row', async ({ assert }) => {
+  test('two tabs changing a new line at once end up with one row, fields merged', async ({
+    assert,
+  }) => {
     const supplier = await UserFactory.apply('supplier').create()
     const category = await CategoryFactory.create()
     const product = await ProductFactory.merge({ categoryId: category.id }).create()
@@ -470,6 +628,8 @@ test.group('ShoppingListService — concurrency', (group) => {
 
     const rows = await ShoppingListItem.query().where('productId', product.id)
     assert.lengthOf(rows, 1)
+    // Each edit writes only its own field, so none of them is lost (QA-12).
+    assert.deepEqual([rows[0].quantity, rows[0].isChecked, rows[0].note], [5, true, 've slevě'])
     const view = await service.getView(supplier)
     assert.exists(view.lines.find((line) => line.key === key))
   })

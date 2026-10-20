@@ -46,6 +46,6 @@ export default class FinanceController {
       type: 'success',
       message: i18n.t('messages.margin_updated', { margin: data.marginPercent }),
     })
-    return response.redirect().back()
+    return response.redirect('back', true)
   }
 }

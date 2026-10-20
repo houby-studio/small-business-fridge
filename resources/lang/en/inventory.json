@@ -31,7 +31,6 @@
   "classify_hint": "Pick a reason for the missing pieces.",
   "reason_column": "Reason",
   "reason_for": "Shortfall reason: {name}",
-  "lots": "Affected lots",
   "lots_show": "Show lots",
   "lots_hide": "Hide lots",
   "change": "Change",
@@ -43,7 +42,6 @@
   "reason_surplus": "Surplus from an inventory",
   "write_off": "Write off",
   "write_off_title": "Write off stock",
-  "write_off_hint": "For broken, expired or stolen pieces.",
   "write_off_in_stock": "{count} pcs in stock",
   "write_off_quantity": "How many pieces",
   "write_off_quantity_min": "Enter at least 1 piece.",
@@ -51,5 +49,14 @@
   "write_off_reason": "Reason",
   "write_off_note": "Note",
   "write_off_fifo": "The pieces come off the oldest lots and count as shrinkage. When pieces are just missing and you do not know why, do an inventory instead.",
-  "write_off_confirm": "Write off"
+  "write_off_takes": "Written off",
+  "write_off_notified": "gets an e-mail",
+  "write_off_confirm": "Write off",
+  "stock_now": "now {count} pcs",
+  "counted_outside_filter": "+ {count} counted product outside the filter|+ {count} counted products outside the filter",
+  "leave_title": "Discard the inventory in progress?",
+  "leave_message": "You have counted {count} product. If you leave, the inventory is not saved.|You have counted {count} products. If you leave, the inventory is not saved.",
+  "leave_confirm": "Discard and leave",
+  "sheet_qty_hint": "The sheet showed {sheet} pcs; items were sold or stocked before this product was counted.",
+  "no_category": "No category"
 }

@@ -1,8 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import User from '#models/user'
 import InvoiceService from '#services/invoice_service'
-import NotificationService from '#services/notification_service'
-import logger from '@adonisjs/core/services/logger'
 
 export default class InvoiceController {
   async index({ inertia, auth }: HttpContext) {
@@ -24,14 +22,6 @@ export default class InvoiceController {
         type: 'success',
         message: i18n.t('messages.invoice_generated', { count: invoices.length }),
       })
-
-      // Send invoice notifications (fire-and-forget)
-      const notificationService = new NotificationService()
-      for (const invoice of invoices) {
-        notificationService.sendInvoiceNotice(invoice).catch((err) => {
-          logger.error({ err }, `Failed to send invoice notice for invoice #${invoice.id}`)
-        })
-      }
     }
 
     return response.redirect('/supplier/invoice')
@@ -56,11 +46,6 @@ export default class InvoiceController {
         message: i18n.t('supplier.invoice_generated_for_buyer', {
           name: buyer?.displayName ?? String(buyerId),
         }),
-      })
-
-      const notificationService = new NotificationService()
-      notificationService.sendInvoiceNotice(invoice).catch((err) => {
-        logger.error({ err }, `Failed to send invoice notice for invoice #${invoice.id}`)
       })
     }
 

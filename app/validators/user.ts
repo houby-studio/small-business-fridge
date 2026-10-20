@@ -9,6 +9,13 @@ export const updateUserValidator = vine.compile(
   })
 )
 
+/** Admin hands a leaving supplier's stock over to a colleague. */
+export const transferStockValidator = vine.compile(
+  vine.object({
+    toUserId: vine.number().withoutDecimals().positive().max(2_147_483_647),
+  })
+)
+
 export const toggleColorModeValidator = vine.compile(
   vine.object({
     colorMode: vine.enum(['light', 'dark'] as const),

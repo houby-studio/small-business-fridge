@@ -94,6 +94,12 @@ const productOptions = computed(() =>
     })
 )
 
+function focusName() {
+  const input = document.getElementById('group-name') as HTMLInputElement | null
+  input?.focus()
+  input?.select()
+}
+
 function openCreate() {
   editing.value = null
   name.value = ''
@@ -167,7 +173,7 @@ function membersText(group: Group) {
     <Head :title="t('shopping.groups_title')" />
     <ConfirmDialog />
 
-    <div class="mb-3 flex items-center justify-between gap-3">
+    <div class="mb-3 flex min-h-10 items-center justify-between gap-3">
       <h1 class="text-2xl font-bold text-gray-900 dark:text-zinc-100">
         {{ t('supplier.products_list_title') }}
       </h1>
@@ -250,8 +256,9 @@ function membersText(group: Group) {
       modal
       :draggable="false"
       data-testid="group-dialog"
+      @show="focusName"
     >
-      <div class="space-y-4">
+      <form id="group-form" class="space-y-4" @submit.prevent="submit">
         <div>
           <label for="group-name" class="mb-1 block text-sm text-gray-700 dark:text-zinc-300"
             >{{ t('common.name') }} *</label
@@ -328,7 +335,7 @@ function membersText(group: Group) {
             />
           </div>
         </div>
-      </div>
+      </form>
       <template #footer>
         <Button
           :label="t('common.cancel')"
@@ -337,11 +344,12 @@ function membersText(group: Group) {
           @click="dialogVisible = false"
         />
         <Button
+          type="submit"
+          form="group-form"
           :label="t('common.save')"
           :disabled="!valid || submitting"
           :loading="submitting"
           data-testid="group-save"
-          @click="submit"
         />
       </template>
     </Dialog>

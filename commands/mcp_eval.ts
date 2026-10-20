@@ -1,7 +1,10 @@
 import { BaseCommand, flags } from '@adonisjs/core/ace'
 import { DateTime } from 'luxon'
-import type { ChatCompletionFunctionTool } from 'openai/resources/chat/completions'
-import type { EvalRole } from '#mcp/eval_scenarios'
+import type {
+  ChatCompletionFunctionTool,
+  ChatCompletionMessageParam,
+} from 'openai/resources/chat/completions'
+import type { EvalMessage, EvalRole } from '#mcp/eval_scenarios'
 
 /**
  * Well-known Azure OpenAI deployment → display label mapping.
@@ -189,9 +192,11 @@ export default class McpEval extends BaseCommand {
             model: deployment,
             max_completion_tokens: 1024,
             tools: toolsByRole.get(scenario.role)!,
-            tool_choice: 'required',
+            // "auto" lets the model answer in words — the pass for an "ask first" scenario.
+            tool_choice: scenario.allowNoTool ? 'auto' : 'required',
             messages: [
               ...(system ? [{ role: 'system' as const, content: system }] : []),
+              ...(scenario.history ?? []).map(toOpenAiMessage),
               { role: 'user', content: scenario.userMessage },
             ],
           })
@@ -274,6 +279,30 @@ export default class McpEval extends BaseCommand {
       `Run ID: ${run.id} — results stored in mcp_eval_runs / mcp_eval_results tables`
     )
   }
+}
+
+/** A scenario's earlier turn in the OpenAI chat format. */
+export function toOpenAiMessage(message: EvalMessage): ChatCompletionMessageParam {
+  if (message.role === 'tool') {
+    return { role: 'tool', tool_call_id: message.toolCallId, content: message.content }
+  }
+  if ('toolCall' in message) {
+    return {
+      role: 'assistant',
+      content: null,
+      tool_calls: [
+        {
+          id: message.toolCall.id,
+          type: 'function',
+          function: {
+            name: message.toolCall.name,
+            arguments: JSON.stringify(message.toolCall.input),
+          },
+        },
+      ],
+    }
+  }
+  return { role: message.role, content: message.content }
 }
 
 /**

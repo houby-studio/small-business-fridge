@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ProductImage from '~/components/ProductImage.vue'
 import { router } from '@inertiajs/vue3'
 import Card from 'primevue/card'
 import ConfirmDialog from 'primevue/confirmdialog'
@@ -111,17 +112,13 @@ function purchaseProduct(product: ProductItem) {
                   {{ t('kiosk.low_stock', { count: product.stockSum }) }}
                 </div>
 
-                <img
-                  v-if="product.imagePath"
-                  :src="product.imagePath"
-                  :alt="product.displayName"
-                  class="mx-auto mb-2 h-32 w-full object-contain"
-                />
-                <div
-                  v-else
-                  class="mx-auto mb-2 flex h-32 w-full items-center justify-center rounded-lg bg-gray-700"
-                >
-                  <i class="pi pi-box text-4xl text-gray-500" />
+                <div class="mx-auto mb-2 h-32 w-full">
+                  <ProductImage
+                    :src="product.imagePath"
+                    :alt="product.displayName"
+                    :color="product.category.color"
+                    iconClass="text-4xl"
+                  />
                 </div>
                 <h3 class="text-sm font-semibold text-white">{{ product.displayName }}</h3>
                 <div class="mt-1 text-lg font-bold text-green-400">
@@ -201,17 +198,13 @@ function purchaseProduct(product: ProductItem) {
                   {{ t('kiosk.low_stock', { count: product.stockSum }) }}
                 </div>
 
-                <img
-                  v-if="product.imagePath"
-                  :src="product.imagePath"
-                  :alt="product.displayName"
-                  class="mx-auto mb-2 h-32 w-full object-contain"
-                />
-                <div
-                  v-else
-                  class="mx-auto mb-2 flex h-32 w-full items-center justify-center rounded-lg bg-gray-700"
-                >
-                  <i class="pi pi-box text-4xl text-gray-500" />
+                <div class="mx-auto mb-2 h-32 w-full">
+                  <ProductImage
+                    :src="product.imagePath"
+                    :alt="product.displayName"
+                    :color="product.category.color"
+                    iconClass="text-4xl"
+                  />
                 </div>
                 <h3 class="text-sm font-semibold text-white">{{ product.displayName }}</h3>
                 <div class="mt-1 text-lg font-bold text-green-400">

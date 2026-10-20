@@ -101,9 +101,7 @@ const validation = useProductFormValidation(
     description: form.description,
     categoryId: form.categoryId,
     barcode: form.barcode,
-    hasImage: !!form.image,
-  })),
-  { requireImage: true }
+  }))
 )
 
 const clientErrors = computed(() => ({
@@ -112,11 +110,9 @@ const clientErrors = computed(() => ({
     : validation.displayNameTooLong.value
       ? t('supplier.products_validation_name_max')
       : '',
-  description: validation.descriptionMissing.value
-    ? t('supplier.products_validation_description_required')
-    : validation.descriptionTooLong.value
-      ? t('supplier.products_validation_description_max')
-      : '',
+  description: validation.descriptionTooLong.value
+    ? t('supplier.products_validation_description_max')
+    : '',
   categoryId: validation.categoryMissing.value
     ? t('supplier.products_validation_category_required')
     : '',
@@ -125,9 +121,7 @@ const clientErrors = computed(() => ({
 const missing = computed(() =>
   [
     validation.displayNameMissing.value && t('supplier.products_name_label'),
-    validation.descriptionMissing.value && t('supplier.products_description_label'),
     validation.categoryMissing.value && t('supplier.products_category_label'),
-    validation.imageMissing.value && t('supplier.products_image_label'),
   ].filter(Boolean)
 )
 const submitDisabled = computed(
@@ -226,26 +220,26 @@ useInitialFocus(() => document.getElementById('product-barcode'))
   <AppLayout>
     <Head :title="t('supplier.products_new_title')" />
 
-    <div class="mb-6 flex items-center justify-between">
+    <div class="mb-6 flex items-center gap-2">
+      <Button
+        icon="pi pi-arrow-left"
+        severity="secondary"
+        text
+        :aria-label="t('common.back')"
+        data-testid="product-back"
+        @click="goBack"
+      />
       <h1 class="text-2xl font-bold text-gray-900 dark:text-zinc-100">
         {{ t('supplier.products_new_heading') }}
       </h1>
-      <Button
-        :label="t('common.back')"
-        icon="pi pi-arrow-left"
-        size="small"
-        severity="secondary"
-        text
-        @click="goBack"
-      />
     </div>
 
     <form class="grid items-start gap-6 lg:grid-cols-3" @submit.prevent="submit">
       <Card class="lg:sticky lg:top-20 lg:col-span-1">
         <template #content>
-          <label class="mb-3 block text-sm text-gray-700 dark:text-zinc-300"
-            >{{ t('supplier.products_image_label') }} *</label
-          >
+          <label class="mb-3 block text-sm text-gray-700 dark:text-zinc-300">{{
+            t('supplier.products_image_label')
+          }}</label>
           <ProductImagePicker
             ref="picker"
             :capabilities="imageCapabilities"
@@ -306,7 +300,7 @@ useInitialFocus(() => document.getElementById('product-barcode'))
                 <label
                   for="product-description"
                   class="block text-sm text-gray-700 dark:text-zinc-300"
-                  >{{ t('supplier.products_description_label') }} *</label
+                  >{{ t('supplier.products_description_label') }}</label
                 >
                 <Button
                   v-if="aiSuggestions"

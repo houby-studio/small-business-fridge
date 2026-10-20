@@ -7,9 +7,12 @@ import User from '#models/user'
 import Order from '#models/order'
 import Invoice from '#models/invoice'
 import type Delivery from '#models/delivery'
+import DeliveryModel from '#models/delivery'
+import Product from '#models/product'
 import DeliveryCorrection from '#models/delivery_correction'
 import QrPaymentService from '#services/qr_payment_service'
 import db from '@adonisjs/lucid/services/db'
+import { FRIDGE_TIMEZONE } from '#config/fridge'
 
 export default class NotificationService {
   private get i18n() {
@@ -540,7 +543,13 @@ export default class NotificationService {
   private async sendSupplierChangeNotice(
     supplier: User,
     actor: User,
-    notice: { subject: string; heading: string; rows: Array<{ label: string; value: string }> }
+    notice: {
+      subject: string
+      heading: string
+      rows: Array<{ label: string; value: string }>
+      /** Where the button leads — the supplier's activity unless said otherwise. */
+      cta?: { url: string; label: string }
+    }
   ) {
     if (supplier.id === actor.id || supplier.isDisabled || !supplier.email) return
 
@@ -556,7 +565,8 @@ export default class NotificationService {
             ...notice.rows,
             { label: this.i18n.t('emails.supplier_change_row_actor'), value: actor.displayName },
           ],
-          ctaUrl: `${this.appUrl}/audit`,
+          ctaUrl: notice.cta?.url ?? `${this.appUrl}/audit`,
+          ctaLabel: notice.cta?.label ?? this.i18n.t('emails.supplier_change_cta'),
           appUrl: this.appUrl,
           appName: this.appName,
         })
@@ -565,6 +575,143 @@ export default class NotificationService {
 
   private formatChange(from: string | number, to: string | number) {
     return from === to ? String(to) : `${from} → ${to}`
+  }
+
+  /** An admin changed the selling price of the supplier's lots ("Změnit cenu"). */
+  async sendRepriceToSupplier(input: {
+    supplierId: number
+    actorId: number
+    lots: Array<{ deliveryId: number; productId: number; from: number; to: number; pieces: number }>
+  }) {
+    const [supplier, actor, lots] = await Promise.all([
+      User.findOrFail(input.supplierId),
+      User.findOrFail(input.actorId),
+      this.lotsById(input.lots.map((lot) => lot.deliveryId)),
+    ])
+    const t = (key: string, params?: Record<string, unknown>) => this.i18n.t(key, params)
+    const money = (price: number) => t('emails.price_correction_amount', { price })
+    const rows = input.lots.map((change) => {
+      const lot = lots.get(change.deliveryId)
+      return {
+        label: t('emails.supplier_lot_label', {
+          product: lot?.product?.displayName ?? '—',
+          date: lot ? this.formatDay(lot.createdAt) : '—',
+        }),
+        value: t('emails.supplier_reprice_row', {
+          change: this.formatChange(money(change.from), money(change.to)),
+          count: change.pieces,
+        }),
+      }
+    })
+    rows.push({
+      label: t('emails.supplier_reprice_note_label'),
+      value: t('emails.supplier_reprice_note'),
+    })
+    const productNames = [
+      ...new Set(
+        input.lots.map((change) => lots.get(change.deliveryId)?.product?.displayName ?? '—')
+      ),
+    ]
+    await this.sendSupplierChangeNotice(supplier, actor, {
+      subject: t('emails.supplier_change_subject_repriced', {
+        productName: productNames.join(', '),
+      }),
+      heading: t('emails.supplier_change_heading_repriced'),
+      rows,
+    })
+  }
+
+  /** A colleague wrote off pieces that came off the supplier's lots (FIFO). */
+  async sendWriteOffToSupplier(input: {
+    supplierId: number
+    actorId: number
+    productId: number
+    reason: string
+    note: string | null
+    lots: Array<{ deliveryId: number; quantity: number }>
+  }) {
+    const [supplier, actor, product, lots] = await Promise.all([
+      User.findOrFail(input.supplierId),
+      User.findOrFail(input.actorId),
+      Product.findOrFail(input.productId),
+      this.lotsById(input.lots.map((lot) => lot.deliveryId)),
+    ])
+    const t = (key: string, params?: Record<string, unknown>) => this.i18n.t(key, params)
+    const total = input.lots.reduce((sum, lot) => sum + lot.quantity, 0)
+    const rows = [
+      { label: t('emails.purchase_product'), value: product.displayName },
+      {
+        label: t('emails.supplier_write_off_row_quantity'),
+        value: t('emails.price_correction_pieces', { count: total }),
+      },
+      {
+        label: t('emails.supplier_write_off_row_reason'),
+        value: t(`inventory.reason_${input.reason}`),
+      },
+      ...(input.note ? [{ label: t('emails.supplier_change_row_note'), value: input.note }] : []),
+      ...input.lots.map((change) => {
+        const lot = lots.get(change.deliveryId)
+        return {
+          label: t('emails.supplier_write_off_row_lot', {
+            date: lot ? this.formatDay(lot.createdAt) : '—',
+          }),
+          value: t('emails.price_correction_pieces', { count: change.quantity }),
+        }
+      }),
+    ]
+    await this.sendSupplierChangeNotice(supplier, actor, {
+      subject: t('emails.supplier_change_subject_written_off', {
+        productName: product.displayName,
+      }),
+      heading: t('emails.supplier_change_heading_written_off'),
+      rows,
+    })
+  }
+
+  /** One summary for a colleague whose lots an inventory changed (shortfall or surplus). */
+  async sendInventoryToSupplier(input: {
+    supplierId: number
+    actorId: number
+    inventoryCountId: number
+    items: Array<{ productId: number; kind: 'loss' | 'surplus'; quantity: number }>
+  }) {
+    const [supplier, actor, products] = await Promise.all([
+      User.findOrFail(input.supplierId),
+      User.findOrFail(input.actorId),
+      Product.query().whereIn(
+        'id',
+        input.items.map((item) => item.productId)
+      ),
+    ])
+    const t = (key: string, params?: Record<string, unknown>) => this.i18n.t(key, params)
+    const names = new Map(products.map((p) => [p.id, p.displayName]))
+    const rows = input.items.map((item) => ({
+      label: names.get(item.productId) ?? '—',
+      value: t(
+        item.kind === 'loss'
+          ? 'emails.supplier_inventory_loss'
+          : 'emails.supplier_inventory_surplus',
+        { count: item.quantity }
+      ),
+    }))
+    await this.sendSupplierChangeNotice(supplier, actor, {
+      subject: t('emails.supplier_change_subject_inventory', { id: input.inventoryCountId }),
+      heading: t('emails.supplier_change_heading_inventory'),
+      rows,
+      cta: {
+        url: `${this.appUrl}/supplier/inventory/${input.inventoryCountId}`,
+        label: t('emails.supplier_inventory_cta'),
+      },
+    })
+  }
+
+  private async lotsById(ids: number[]) {
+    const lots = await DeliveryModel.query().whereIn('id', ids).preload('product')
+    return new Map(lots.map((lot) => [lot.id, lot]))
+  }
+
+  private formatDay(date: DateTime) {
+    return date.setZone(FRIDGE_TIMEZONE).toFormat('dd.MM.yyyy')
   }
 
   /** Delivery corrected or voided by someone other than its supplier. */
@@ -757,42 +904,107 @@ export default class NotificationService {
   }
 
   /**
-   * Notify users who favourited a product that it's back in stock.
+   * Notify users who favourited a product that it's back in stock. Only products that had
+   * run out count — topping up a shelf that still had some is no news — and each user gets
+   * one e-mail listing all of them, however many lots came in at once.
+   *
+   * `stockBefore` is the pieces per product before these deliveries (taken inside the
+   * stocking transaction); without it the level is worked out from the current stock.
    */
-  async sendRestockNotification(delivery: Delivery) {
-    await delivery.load('product')
-    await delivery.load('supplier')
+  async sendRestockNotifications(deliveries: Delivery[], stockBefore?: Map<number, number>) {
+    if (deliveries.length === 0) return
+    const productIds = [...new Set(deliveries.map((d) => d.productId))]
+    const before = stockBefore ?? (await this.stockBeforeDeliveries(deliveries, productIds))
+    const restocked = productIds.filter((id) => (before.get(id) ?? 0) <= 0)
+    if (restocked.length === 0) return
 
-    const favouriteUsers = await db
+    const products = await db.from('products').whereIn('id', restocked).select('id', 'display_name')
+    const names = new Map(products.map((p) => [Number(p.id), p.display_name as string]))
+    const supplierIds = [...new Set(deliveries.map((d) => d.supplierId))]
+    const suppliers = await db.from('users').whereIn('id', supplierIds).select('id', 'display_name')
+    const supplierNames = new Map(suppliers.map((u) => [Number(u.id), u.display_name as string]))
+
+    // One row per product: the pieces that came in and the price of the newest lot.
+    const lines = restocked.map((productId) => {
+      const lots = deliveries.filter((d) => d.productId === productId)
+      const newest = lots[lots.length - 1]
+      return {
+        productId,
+        productName: names.get(productId) ?? '—',
+        supplierName: supplierNames.get(newest.supplierId) ?? '—',
+        amount: lots.reduce((sum, d) => sum + d.amountSupplied, 0),
+        price: newest.price,
+      }
+    })
+
+    const favourites = await db
       .from('user_favorites')
       .join('users', 'user_favorites.user_id', 'users.id')
-      .where('user_favorites.product_id', delivery.productId)
+      .whereIn('user_favorites.product_id', restocked)
       .where('users.is_disabled', false)
       .whereNotNull('users.email')
-      .select('users.id', 'users.display_name', 'users.email')
+      .select('users.id', 'users.display_name', 'users.email', 'user_favorites.product_id')
 
-    for (const row of favouriteUsers) {
+    const byUser = new Map<number, { name: string; email: string; productIds: Set<number> }>()
+    for (const row of favourites) {
+      const entry = byUser.get(Number(row.id)) ?? {
+        name: row.display_name as string,
+        email: row.email as string,
+        productIds: new Set<number>(),
+      }
+      entry.productIds.add(Number(row.product_id))
+      byUser.set(Number(row.id), entry)
+    }
+
+    for (const user of byUser.values()) {
+      const items = lines.filter((line) => user.productIds.has(line.productId))
+      const first = items[0]
       await mail.send((message) => {
         message
-          .to(row.email as string)
+          .to(user.email)
           .subject(
-            this.i18n.t('emails.restock_subject', {
-              productName: delivery.product.displayName,
-            })
+            items.length === 1
+              ? this.i18n.t('emails.restock_subject', { productName: first.productName })
+              : this.i18n.t('emails.restock_subject_many', { count: items.length })
           )
           .htmlView('emails/restock', {
             i18n: this.i18n,
-            name: row.display_name as string,
-            productName: delivery.product.displayName,
-            supplierName: delivery.supplier.displayName,
-            amount: delivery.amountSupplied,
-            price: delivery.price,
+            name: user.name,
+            items,
+            productName: first.productName,
+            supplierName: first.supplierName,
+            currency: this.i18n.t('common.currency'),
             shopUrl: this.appUrl,
             appUrl: this.appUrl,
             appName: this.appName,
           })
       })
     }
+  }
+
+  /** One delivery that was just stocked on its own (MCP `add_stock`). */
+  async sendRestockNotification(delivery: Delivery) {
+    await this.sendRestockNotifications([delivery])
+  }
+
+  /** Stock per product minus what `deliveries` brought in — the level just before them. */
+  private async stockBeforeDeliveries(deliveries: Delivery[], productIds: number[]) {
+    const rows = await db
+      .from('deliveries')
+      .whereNull('voided_at')
+      .whereIn('product_id', productIds)
+      .groupBy('product_id')
+      .select('product_id')
+      .sum('amount_left as left')
+    const before = new Map<number, number>(productIds.map((id) => [id, 0]))
+    for (const row of rows) before.set(Number(row.product_id), Number(row.left ?? 0))
+    for (const delivery of deliveries) {
+      before.set(
+        delivery.productId,
+        (before.get(delivery.productId) ?? 0) - delivery.amountSupplied
+      )
+    }
+    return before
   }
 
   /**

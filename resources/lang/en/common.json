@@ -43,7 +43,6 @@
   "unpaid": "Unpaid",
   "payment_review": "Payment review",
   "awaiting_approval": "Awaiting approval",
-  "approved": "Approved",
   "awaiting_payment": "Awaiting payment",
   "not_invoiced": "Not invoiced",
   "channel_web": "Web",
@@ -55,7 +54,6 @@
   "no_data": "No data to display.",
   "price_with_currency": "{price} {currency}",
   "per_piece": "{price} {currency}/pc",
-  "filter_apply": "Apply filters",
   "filter_clear": "Clear filters",
   "switch_to_light_mode": "Switch to light mode",
   "switch_to_dark_mode": "Switch to dark mode",
@@ -92,6 +90,6 @@
   "tab_inventory": "Inventory count",
   "tab_products": "Products",
   "tab_product_groups": "Groups",
-  "nav_receiving": "Receiving",
-  "keypad_code": "Code"
+  "keypad_code": "Kiosk code",
+  "keypad_code_hint": "The number a customer types on the kiosk keypad."
 }

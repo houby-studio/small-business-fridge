@@ -7,6 +7,7 @@ import db from '@adonisjs/lucid/services/db'
 import env from '#start/env'
 import buildInfo from '#services/build_info'
 import StockDraftService from '#services/shopping/stock_draft_service'
+import { hasOtherSuppliers } from '#services/supplier_scope'
 import { readFileSync, readdirSync } from 'node:fs'
 import {
   applyCurrencyPlaceholder,
@@ -115,6 +116,11 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
        */
       openDraftCount: () =>
         user && user.isSupplier ? new StockDraftService().countOpen(user.id) : 0,
+      /**
+       * Hides the "Rozsah" filter on supplier pages when every delivery is the user's own,
+       * so "mine" and "all" would list the same rows. Plain function, like openDraftCount.
+       */
+      hasOtherSuppliers: () => (user && user.isSupplier ? hasOtherSuppliers(user.id) : false),
       appName: env.get('APP_NAME', 'Fridgora'),
       /**
        * Plain value, not `always()`, so it rides along with the first render and is then

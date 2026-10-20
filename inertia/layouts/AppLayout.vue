@@ -71,6 +71,8 @@ type NavItem = {
   compactIconOnly?: boolean
   /** A small red count next to the label (only rendered when > 0). */
   badge?: number
+  /** data-testid of the badge. */
+  testId?: string
 }
 
 function matchesPath(url: string): boolean {
@@ -95,8 +97,8 @@ function matchedLength(url: string): number {
 }
 
 /**
- * The longest matching item wins, so `/supplier/stock/drafts` lights up "Naskladnění"
- * alone and not "Sklad" (`/supplier/stock`) next to it.
+ * The longest matching item wins, so two entries never light up together. A stocking draft
+ * (`/supplier/stock/drafts/:id`) sits under "Sklad" by its URL.
  */
 function isActive(url: string | undefined): boolean {
   if (!url) return false
@@ -152,12 +154,13 @@ const menuItems = computed(() => {
       icon: 'pi pi-box',
       compactIconOnly: true,
       items: [
-        { label: t('common.nav_stock'), icon: 'pi pi-warehouse', url: '/supplier/stock' },
         {
-          label: t('common.nav_receiving'),
-          icon: 'pi pi-truck',
-          url: '/supplier/stock/drafts',
+          label: t('common.nav_stock'),
+          icon: 'pi pi-warehouse',
+          url: '/supplier/stock',
+          // An open stocking draft (příjemka) with lines waits to be stocked.
           badge: page.props.openDraftCount ?? 0,
+          testId: 'nav-stock-badge',
         },
         {
           label: t('common.nav_shopping_list'),
@@ -258,7 +261,7 @@ onUnmounted(() => {
     <!-- Sticky glassmorphism navbar -->
     <div
       class="sbf-nav sticky top-0 z-50 border-b border-slate-200/60 bg-white/85 dark:border-zinc-800/60 dark:bg-zinc-900/82"
-      :class="{ 'sbf-nav-scrolled': isScrolled }"
+      :class="{ 'sbf-nav-scrolled': isScrolled, 'sbf-nav-crowded': isAdmin }"
     >
       <Menubar
         :model="menuItems"
@@ -290,7 +293,7 @@ onUnmounted(() => {
             <span
               v-if="item.badge"
               class="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-semibold text-white"
-              data-testid="nav-receiving-badge"
+              :data-testid="item.testId"
               >{{ item.badge }}</span
             >
           </Link>

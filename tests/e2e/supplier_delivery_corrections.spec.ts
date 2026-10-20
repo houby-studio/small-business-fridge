@@ -1,10 +1,10 @@
 import { test, expect, type Page } from '@playwright/test'
-import { loginAs } from './helpers/auth'
+import { loginAsFreshSupplier } from './helpers/isolated_supplier'
 import { createProduct, stockPreselected, stockProduct } from './helpers/products'
 
 /**
  * Stocks `productName` again by hand and stops at the commit button, so a test can look at
- * the warning dialog itself (the helpers confirm it automatically).
+ * the warning dialog itself (the helpers only confirm a warning they are told to expect).
  */
 async function stockAgainWithoutConfirming(
   page: Page,
@@ -31,7 +31,7 @@ async function stockAgainWithoutConfirming(
 
 test.describe('Supplier delivery corrections', () => {
   test('a repeated stocking asks for confirmation before anything is stocked', async ({ page }) => {
-    await loginAs(page, 'supplier')
+    await loginAsFreshSupplier(page, 'supplier-delivery-co')
     const name = `E2E Duplicita ${Date.now()}`
     const productId = await createProduct(page, name)
     await stockPreselected(page, '3', '49')
@@ -64,11 +64,12 @@ test.describe('Supplier delivery corrections', () => {
   test('supplier can void an unsold duplicate and correct the prices of a delivery', async ({
     page,
   }) => {
-    await loginAs(page, 'supplier')
+    await loginAsFreshSupplier(page, 'supplier-delivery-co')
     const name = `E2E Oprava ${Date.now()}`
     const productId = await createProduct(page, name)
     await stockPreselected(page, '5', '20')
-    await stockProduct(page, name, '5', '20')
+    // The same product again within half an hour: the duplicate warning is expected.
+    await stockProduct(page, name, '5', '20', undefined, { expectWarning: true })
 
     await page.goto(`/supplier/deliveries?productId=${productId}`)
     const rows = page.locator('tbody tr')
@@ -85,7 +86,7 @@ test.describe('Supplier delivery corrections', () => {
     await expect(voidButton).toBeEnabled()
     await voidButton.click()
 
-    await expect(page.getByText('Naskladnění bylo stornováno.')).toBeVisible()
+    await expect(page.getByText('Dodávka byla stornována.')).toBeVisible()
     await expect(rows.first().getByTestId('delivery-status-voided')).toBeVisible()
     await expect(rows.first().getByRole('button', { name: 'Opravit dodávku' })).toHaveCount(0)
 
@@ -98,7 +99,7 @@ test.describe('Supplier delivery corrections', () => {
     await expect(saveButton).toBeDisabled()
     await expect(dialog.getByTestId('correction-amount-help')).toHaveText('Lze jen snížit.')
 
-    const priceInput = dialog.getByRole('spinbutton').nth(1)
+    const priceInput = dialog.getByTestId('correction-price').locator('input')
     await expect(priceInput).toBeFocused()
     await priceInput.fill('25')
     await priceInput.blur()
@@ -111,9 +112,10 @@ test.describe('Supplier delivery corrections', () => {
     await expect(saveButton).toBeEnabled()
     await saveButton.click()
 
-    await expect(page.getByText('Naskladnění bylo opraveno.')).toBeVisible()
+    await expect(page.getByText('Dodávka byla opravena.')).toBeVisible()
     const corrected = rows.nth(1)
-    await expect(corrected.getByTestId('delivery-status-corrected')).toBeVisible()
+    // The sub-row says it was corrected and why — no separate status badge.
+    await expect(corrected.getByTestId('delivery-status-corrected')).toHaveCount(0)
     await expect(corrected.getByTestId('delivery-last-correction')).toContainText('Překlep v ceně')
     await expect(corrected).toContainText('25 Kč')
 
@@ -127,7 +129,7 @@ test.describe('Supplier delivery corrections', () => {
     await dialog.getByTestId('correction-reason').fill('Doplněna nákupní cena')
     await expect(saveButton).toBeEnabled()
     await saveButton.click()
-    await expect(page.getByText('Naskladnění bylo opraveno.')).toBeVisible()
+    await expect(page.getByText('Dodávka byla opravena.')).toBeVisible()
     await expect(corrected).toContainText('nákup 12,50 Kč')
   })
 
@@ -135,7 +137,7 @@ test.describe('Supplier delivery corrections', () => {
     const productName = `E2E Přecenění ${Date.now()}`
     const reason = 'Překlep v ceně – '.repeat(8).trim()
 
-    await loginAs(page, 'supplier')
+    await loginAsFreshSupplier(page, 'supplier-delivery-co')
     const productId = await createProduct(page, productName)
     await stockPreselected(page, '3', '1')
 
@@ -150,7 +152,7 @@ test.describe('Supplier delivery corrections', () => {
     await page.goto(`/supplier/deliveries?productId=${productId}`)
     await page.getByRole('button', { name: 'Opravit dodávku' }).first().click()
     const dialog = page.getByTestId('delivery-correction-dialog')
-    const priceInput = dialog.getByRole('spinbutton').nth(1)
+    const priceInput = dialog.getByTestId('correction-price').locator('input')
     await expect(priceInput).toBeFocused()
     // The whole value is selected on open, so typing replaces it instead of appending.
     await page.keyboard.type('25')
@@ -163,7 +165,7 @@ test.describe('Supplier delivery corrections', () => {
 
     await dialog.getByTestId('correction-reason').fill(reason)
     await dialog.getByRole('button', { name: 'Uložit opravu' }).click()
-    await expect(page.getByText(/Naskladnění bylo opraveno/)).toBeVisible()
+    await expect(page.getByText(/Dodávka byla opravena/)).toBeVisible()
 
     await page.goto('/orders')
     const row = page.locator('tbody tr', { hasText: productName })

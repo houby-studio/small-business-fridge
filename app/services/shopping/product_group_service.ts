@@ -63,11 +63,33 @@ export default class ProductGroupService {
           },
           { client: trx }
         )
+        // Products taken over from another group leave a trace for that group too.
+        const movedFrom = input.productIds?.length
+          ? await Product.query({ client: trx })
+              .whereIn('id', input.productIds)
+              .whereNotNull('productGroupId')
+              .distinct('productGroupId')
+          : []
         if (input.productIds?.length) {
           await Product.query({ client: trx })
             .whereIn('id', input.productIds)
             .update({ productGroupId: created.id })
         }
+        await AuditService.log(
+          actorId,
+          'product_group.created',
+          'product_group',
+          created.id,
+          null,
+          {
+            name: created.name,
+            productCount: input.productIds?.length ?? 0,
+            ...(movedFrom.length && {
+              movedFromGroupIds: movedFrom.map((p) => p.productGroupId),
+            }),
+          },
+          { client: trx }
+        )
         return created
       })
     } catch (err) {
@@ -76,11 +98,6 @@ export default class ProductGroupService {
       }
       throw err
     }
-
-    await AuditService.log(actorId, 'product_group.created', 'product_group', group.id, null, {
-      name: group.name,
-      productCount: input.productIds?.length ?? 0,
-    })
     return group
   }
 
@@ -101,8 +118,15 @@ export default class ProductGroupService {
         group.note = input.note?.trim() || null
         await group.save()
 
+        let movedFrom: number[] = []
         if (input.productIds !== undefined) {
           const wanted = new Set(input.productIds)
+          const previous = await Product.query({ client: trx })
+            .whereIn('id', [...wanted])
+            .whereNotNull('productGroupId')
+            .whereNot('productGroupId', group.id)
+            .distinct('productGroupId')
+          movedFrom = previous.map((p) => p.productGroupId!)
           const leaving = [...beforeIds].filter((id) => !wanted.has(id))
           if (leaving.length) {
             await Product.query({ client: trx })
@@ -115,6 +139,32 @@ export default class ProductGroupService {
               .update({ productGroupId: group.id })
           }
         }
+
+        const changes: Record<string, unknown> = {}
+        if (before.name !== group.name) changes.name = { from: before.name, to: group.name }
+        if (before.categoryId !== group.categoryId) {
+          changes.categoryId = { from: before.categoryId, to: group.categoryId }
+        }
+        if ((before.note ?? '') !== (group.note ?? '')) {
+          changes.note = { from: before.note ?? '—', to: group.note ?? '—' }
+        }
+        if (input.productIds !== undefined) {
+          const after = new Set(input.productIds)
+          const added = [...after].filter((id) => !beforeIds.has(id))
+          const removed = [...beforeIds].filter((id) => !after.has(id))
+          if (added.length) changes.addedProductIds = added
+          if (removed.length) changes.removedProductIds = removed
+          if (movedFrom.length) changes.movedFromGroupIds = movedFrom
+        }
+        await AuditService.log(
+          actorId,
+          'product_group.updated',
+          'product_group',
+          group.id,
+          null,
+          { name: group.name, ...changes },
+          { client: trx }
+        )
       })
     } catch (err) {
       if (isUniqueViolation(err, 'product_groups_name')) {
@@ -123,30 +173,6 @@ export default class ProductGroupService {
       throw err
     }
 
-    const changes: Record<string, unknown> = {}
-    if (before.name !== group.name) changes.name = { from: before.name, to: group.name }
-    if (before.categoryId !== group.categoryId) {
-      changes.categoryId = { from: before.categoryId, to: group.categoryId }
-    }
-    if ((before.note ?? '') !== (group.note ?? '')) {
-      changes.note = { from: before.note ?? '—', to: group.note ?? '—' }
-    }
-    if (input.productIds !== undefined) {
-      const after = new Set(input.productIds)
-      const added = [...after].filter((id) => !beforeIds.has(id))
-      const removed = [...beforeIds].filter((id) => !after.has(id))
-      if (added.length) changes.addedProductIds = added
-      if (removed.length) changes.removedProductIds = removed
-    }
-
-    await AuditService.log(
-      actorId,
-      'product_group.updated',
-      'product_group',
-      group.id,
-      null,
-      Object.keys(changes).length ? { name: group.name, ...changes } : { name: group.name }
-    )
     return group
   }
 
@@ -154,9 +180,17 @@ export default class ProductGroupService {
     const group = await ProductGroup.find(groupId)
     if (!group) throw new DomainError<ProductGroupErrorCode>('GROUP_NOT_FOUND')
     // products.product_group_id is ON DELETE SET NULL — the products simply stand alone again.
-    await group.delete()
-    await AuditService.log(actorId, 'product_group.deleted', 'product_group', groupId, null, {
-      name: group.name,
+    await db.transaction(async (trx) => {
+      await group.useTransaction(trx).delete()
+      await AuditService.log(
+        actorId,
+        'product_group.deleted',
+        'product_group',
+        groupId,
+        null,
+        { name: group.name },
+        { client: trx }
+      )
     })
   }
 

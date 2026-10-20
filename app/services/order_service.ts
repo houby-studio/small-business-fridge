@@ -59,12 +59,18 @@ export default class OrderService {
       // Lock every in-stock lot of the product (as purchaseBasket does) and pick the oldest
       // in JS: FOR UPDATE with LIMIT can come back empty under contention even though a
       // later lot still has stock.
-      const lots = await Delivery.query({ client: trx })
-        .where('productId', requested.productId)
-        .where('amountLeft', '>', 0)
-        .orderBy('createdAt', 'asc')
-        .orderBy('id', 'asc')
-        .forUpdate()
+      const lockInStock = () =>
+        Delivery.query({ client: trx })
+          .where('productId', requested.productId)
+          .where('amountLeft', '>', 0)
+          .orderBy('createdAt', 'asc')
+          .orderBy('id', 'asc')
+          .forUpdate()
+      let lots = await lockInStock()
+      // Nothing left after waiting for a lock: a handover (transferStock) may have moved the
+      // pieces to a new lot that this statement's snapshot cannot see. A fresh statement in
+      // the same transaction can (READ COMMITTED), so look once more before saying sold out.
+      if (lots.length === 0) lots = await lockInStock()
       const delivery = lots[0]
 
       if (!delivery) {
@@ -150,14 +156,44 @@ export default class OrderService {
       const productRows = await Delivery.query({ client: trx })
         .whereIn('id', requestedDeliveryIds)
         .select('id', 'product_id')
-      const lockedLots = await Delivery.query({ client: trx })
-        .whereIn('productId', [...new Set(productRows.map((row) => row.productId))])
-        .orderBy('productId', 'asc')
-        .orderBy('createdAt', 'asc')
-        .orderBy('id', 'asc')
-        .forUpdate()
+      const lockProducts = () =>
+        Delivery.query({ client: trx })
+          .whereIn('productId', [...new Set(productRows.map((row) => row.productId))])
+          .orderBy('productId', 'asc')
+          .orderBy('createdAt', 'asc')
+          .orderBy('id', 'asc')
+          .forUpdate()
+      let lockedLots = await lockProducts()
+      let deliveryMap = new Map(lockedLots.map((d) => [d.id, d]))
 
-      const deliveryMap = new Map(lockedLots.map((d) => [d.id, d]))
+      // A requested lot short of pieces may have been handed over to another supplier
+      // (transferStock) — even while we waited for its lock, in which case this statement
+      // could not see the heir's new lot. Look once more with a fresh statement and follow
+      // each handover to the lot that holds the stock now (same product, same price).
+      const short = (deliveryId: number, quantity: number) =>
+        (deliveryMap.get(deliveryId)?.amountLeft ?? 0) < quantity
+      if ([...requestedByDelivery].some(([id, quantity]) => short(id, quantity))) {
+        lockedLots = await lockProducts()
+        deliveryMap = new Map(lockedLots.map((d) => [d.id, d]))
+        const heirOf = new Map(
+          lockedLots
+            .filter((d) => d.transferredFromId !== null && d.voidedAt === null)
+            .map((d) => [d.transferredFromId!, d])
+        )
+        for (const [deliveryId, quantity] of [...requestedByDelivery]) {
+          if (!short(deliveryId, quantity)) continue
+          let current = deliveryMap.get(deliveryId)
+          while (current && heirOf.has(current.id)) current = heirOf.get(current.id)
+          if (!current || current.id === deliveryId) continue
+          requestedByDelivery.delete(deliveryId)
+          requestedByDelivery.set(current.id, (requestedByDelivery.get(current.id) ?? 0) + quantity)
+          const expected = expectedPriceByDelivery.get(deliveryId)
+          if (expected !== undefined) {
+            expectedPriceByDelivery.delete(deliveryId)
+            expectedPriceByDelivery.set(current.id, expected)
+          }
+        }
+      }
 
       for (const [deliveryId, quantity] of requestedByDelivery) {
         const delivery = deliveryMap.get(deliveryId)

@@ -3,7 +3,6 @@ import { ref, computed, onMounted } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import Column from 'primevue/column'
-import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import Select from 'primevue/select'
 import ConfirmDialog from 'primevue/confirmdialog'
@@ -11,8 +10,11 @@ import { useAppConfirm } from '~/composables/use_app_confirm'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDate } from '~/composables/use_format_date'
 import { useListFilters } from '~/composables/use_list_filters'
+import { hasActiveFilters } from '~/composables/use_filter_params'
 import { useSelectEnterKey } from '~/composables/use_select_enter_key'
+import { useMoney } from '~/composables/use_pricing'
 import FilterBar from '~/components/FilterBar.vue'
+import InfoHint from '~/components/InfoHint.vue'
 import PaginatedDataTable from '~/components/PaginatedDataTable.vue'
 
 interface InvoiceRow {
@@ -36,6 +38,7 @@ const props = defineProps<{
   reviewInvoice: { id: number; totalCost: number; buyerName: string } | null
 }>()
 const { t } = useI18n()
+const { amount, money } = useMoney()
 const confirm = useAppConfirm()
 const ALL = '__all__'
 
@@ -59,6 +62,7 @@ const { onSelectShow } = useSelectEnterKey([
     getValue: (o) => o.id,
     onSelect: (v) => {
       filterBuyerId.value = v
+      applyFilters()
     },
   },
 ])
@@ -70,10 +74,12 @@ const statusOptions = [
   { label: t('invoices.filter_awaiting'), value: 'awaiting' },
 ]
 
-function statusSeverity(invoice: InvoiceRow) {
-  if (invoice.isPaid) return 'success'
-  if (invoice.isPaymentRequested) return 'warn'
-  return 'secondary'
+// Status badge colours from CLAUDE.md › Status Badges.
+function statusClass(invoice: InvoiceRow) {
+  if (invoice.isPaid) return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
+  if (invoice.isPaymentRequested)
+    return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200'
+  return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
 }
 
 function statusLabel(invoice: InvoiceRow) {
@@ -89,7 +95,7 @@ onMounted(() => {
       message: t('supplier.review_payment_message', {
         buyer: inv.buyerName,
         id: inv.id,
-        amount: inv.totalCost,
+        amount: amount(inv.totalCost),
       }),
       header: t('supplier.review_payment_header'),
       icon: 'pi pi-credit-card',
@@ -103,12 +109,44 @@ onMounted(() => {
 // The server redirects back to the referer, so filters and the current page survive the
 // action; preserveScroll keeps the viewport where the supplier was working instead of
 // jumping back to the top of the list.
-function approve(id: number) {
-  router.post(`/supplier/payments/${id}`, { action: 'approve' }, { preserveScroll: true })
+// One request at a time: a double click must not approve or reject twice.
+const processingId = ref<number | null>(null)
+const processingAction = ref<'approve' | 'reject' | null>(null)
+
+function process(id: number, action: 'approve' | 'reject') {
+  if (processingId.value !== null) return
+  processingId.value = id
+  processingAction.value = action
+  router.post(
+    `/supplier/payments/${id}`,
+    { action },
+    {
+      preserveScroll: true,
+      onFinish: () => {
+        processingId.value = null
+        processingAction.value = null
+      },
+    }
+  )
 }
 
-function reject(id: number) {
-  router.post(`/supplier/payments/${id}`, { action: 'reject' }, { preserveScroll: true })
+function approve(id: number) {
+  process(id, 'approve')
+}
+
+/** Rejecting e-mails the buyer, so it is confirmed first. */
+function reject(invoice: InvoiceRow) {
+  confirm.require({
+    message: t('supplier.payments_reject_confirm', {
+      buyer: invoice.buyer?.displayName ?? '—',
+      amount: money(invoice.totalCost),
+    }),
+    header: t('supplier.payments_reject'),
+    acceptLabel: t('supplier.payments_reject'),
+    rejectLabel: t('common.cancel'),
+    destructive: true,
+    accept: () => process(invoice.id, 'reject'),
+  })
 }
 
 function buildFilterParams() {
@@ -126,6 +164,8 @@ const { applyFilters, navigateClear, onPageChange, navigateSort } = useListFilte
   buildParams: buildFilterParams,
   getCurrentPage: () => props.invoices.meta.currentPage,
 })
+
+const filtersActive = computed(() => hasActiveFilters(buildFilterParams()))
 
 function clearFilters() {
   filterStatus.value = ALL
@@ -147,17 +187,17 @@ function onSort(event: any) {
     <Head :title="t('supplier.payments_title')" />
     <ConfirmDialog />
 
-    <h1 class="mb-2 text-2xl font-bold text-gray-900 dark:text-zinc-100">
-      {{ t('supplier.payments_heading') }}
-    </h1>
-    <p class="mb-6 text-sm text-gray-500 dark:text-zinc-400" data-testid="payments-order-hint">
-      {{ t('supplier.payments_order_hint') }}
-    </p>
+    <div class="mb-6 flex items-center gap-1">
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-zinc-100">
+        {{ t('supplier.payments_title') }}
+      </h1>
+      <InfoHint :text="t('supplier.payments_order_hint')" test-id="payments-order-hint" />
+    </div>
 
     <!-- Filter bar -->
-    <FilterBar @apply="applyFilters" @clear="clearFilters">
+    <FilterBar :active="filtersActive" @clear="clearFilters">
       <div>
-        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
+        <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300">{{
           t('supplier.payments_filter_status')
         }}</label>
         <Select
@@ -166,10 +206,11 @@ function onSort(event: any) {
           optionLabel="label"
           optionValue="value"
           class="w-44"
+          @change="applyFilters"
         />
       </div>
       <div>
-        <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
+        <label class="mb-1 block text-sm text-gray-700 dark:text-zinc-300">{{
           t('supplier.payments_filter_customer')
         }}</label>
         <Select
@@ -181,6 +222,7 @@ function onSort(event: any) {
           filter
           class="w-48"
           @show="onSelectShow"
+          @change="applyFilters"
         />
       </div>
     </FilterBar>
@@ -216,18 +258,17 @@ function onSort(event: any) {
         bodyClass="sbf-col-price"
       >
         <template #body="{ data }">
-          <span class="font-semibold">{{
-            t('common.price_with_currency', { price: data.totalCost })
-          }}</span>
+          <span class="font-semibold">{{ money(data.totalCost) }}</span>
         </template>
       </Column>
       <Column :header="t('common.status')" headerClass="sbf-col-tight" bodyClass="sbf-col-tight">
         <template #body="{ data }">
-          <Tag
-            :value="statusLabel(data)"
-            :severity="statusSeverity(data)"
-            class="text-xs whitespace-nowrap"
-          />
+          <span
+            class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap"
+            :class="statusClass(data)"
+            data-testid="payment-status"
+            >{{ statusLabel(data) }}</span
+          >
         </template>
       </Column>
       <Column :header="t('common.actions')" headerClass="sbf-col-action" bodyClass="sbf-col-action">
@@ -239,6 +280,9 @@ function onSort(event: any) {
               icon="pi pi-check"
               size="small"
               severity="success"
+              :loading="processingId === data.id && processingAction === 'approve'"
+              :disabled="processingId !== null"
+              data-testid="payment-approve"
               @click="approve(data.id)"
             />
             <Button
@@ -248,13 +292,10 @@ function onSort(event: any) {
               size="small"
               severity="danger"
               outlined
-              @click="reject(data.id)"
-            />
-            <Tag
-              v-if="data.isPaid"
-              :value="t('common.approved')"
-              severity="success"
-              class="text-xs"
+              :loading="processingId === data.id && processingAction === 'reject'"
+              :disabled="processingId !== null"
+              data-testid="payment-reject"
+              @click="reject(data)"
             />
           </div>
         </template>

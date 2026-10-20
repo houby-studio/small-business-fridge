@@ -28,6 +28,13 @@ export interface EvalToolCall {
   input: Record<string, unknown>
 }
 
+/** An earlier turn of the conversation, sent before `userMessage` (provider-neutral). */
+export type EvalMessage =
+  | { role: 'user'; content: string }
+  | { role: 'assistant'; content: string }
+  | { role: 'assistant'; toolCall: EvalToolCall & { id: string } }
+  | { role: 'tool'; toolCallId: string; content: string }
+
 export interface EvalScenario {
   id: string
   /** Whose tools the model sees — a supplier also sees the customer tools, an admin all. */
@@ -37,6 +44,13 @@ export interface EvalScenario {
   expectedTool: string
   /** Alternative tool names that are also acceptable. */
   allowedTools?: string[]
+  /**
+   * The model may also answer in words without calling a tool (sent with tool_choice
+   * "auto"): "ask before you act" cases, where doing nothing is the right first step.
+   */
+  allowNoTool?: boolean
+  /** Earlier turns, including tool results — the scenario judges only the next step. */
+  history?: EvalMessage[]
   /**
    * Where this scenario came from.
    * - 'synthetic'      handcrafted test covering expected behaviour
@@ -126,6 +140,40 @@ function paramScenario(
 }
 
 const num = (value: unknown) => (value === undefined || value === null ? Number.NaN : Number(value))
+
+/**
+ * A scenario where the right first step is to stop and ask — or at most to read. No call at
+ * all, `expectedTool` or one of `allowedTools` passes; anything in `forbidden` (or any other
+ * tool) fails with its reason.
+ */
+function askFirstScenario(
+  id: string,
+  role: EvalRole,
+  description: string,
+  userMessage: string,
+  expectedTool: string,
+  allowedTools: string[],
+  forbidden: Record<string, string>,
+  history?: EvalMessage[]
+): EvalScenario {
+  return {
+    id,
+    role,
+    description,
+    userMessage,
+    expectedTool,
+    allowedTools,
+    allowNoTool: true,
+    history,
+    source: 'synthetic',
+    validate: (toolCall) => {
+      if (!toolCall) return { passed: true, reason: 'Asked the user first' }
+      if (forbidden[toolCall.name]) return { passed: false, reason: forbidden[toolCall.name] }
+      const check = expectTool(toolCall, expectedTool, allowedTools)
+      return { passed: check.ok, reason: check.ok ? 'Read before acting' : check.reason }
+    },
+  }
+}
 
 export const evalScenarios: EvalScenario[] = [
   // ── Customer: browsing ──────────────────────────────────────────────────────
@@ -221,6 +269,21 @@ export const evalScenarios: EvalScenario[] = [
     'request_payment',
     (input) => (num(input.invoiceId) === 7 ? null : `Expected invoiceId 7, got ${input.invoiceId}`)
   ),
+  paramScenario(
+    'withdraw-payment-report',
+    'customer',
+    'A transfer that did not go out withdraws the reported payment',
+    'Platba za fakturu 9 neodešla, zruš to nahlášení.',
+    'cancel_payment_request',
+    (input) => (num(input.invoiceId) === 9 ? null : `Expected invoiceId 9, got ${input.invoiceId}`)
+  ),
+  simpleScenario(
+    'categories-cs',
+    'customer',
+    'Asking which categories exist lists them',
+    'Jaké kategorie zboží v lednici máte?',
+    'list_categories'
+  ),
   simpleScenario(
     'recommendations-cs',
     'customer',
@@ -296,6 +359,83 @@ export const evalScenarios: EvalScenario[] = [
     'create_stock_draft',
     ['list_catalog_products']
   ),
+  {
+    id: 'receipt-line-not-in-catalog',
+    role: 'supplier',
+    description: 'A receipt line the catalog may not know stays an unmatched draft line',
+    userMessage: 'Na účtence je KOFOLA DRAČÍ OVOCE 2L 6 ks po 39,90, naskladni to.',
+    expectedTool: 'create_stock_draft',
+    allowedTools: ['list_catalog_products'],
+    source: 'synthetic',
+    validate: (toolCall) => {
+      if (toolCall?.name === 'create_product') {
+        return { passed: false, reason: 'Created a product from receipt text' }
+      }
+      if (toolCall?.name === 'add_stock') {
+        return { passed: false, reason: 'Stocked inferred data without a review' }
+      }
+      const check = expectTool(toolCall, 'create_stock_draft', ['list_catalog_products'])
+      return { passed: check.ok, reason: check.ok ? 'Correct' : check.reason }
+    },
+  },
+  askFirstScenario(
+    'warnings-need-consent',
+    'supplier',
+    'After add_stock answered with warnings, a vague reply is no consent to confirmWarnings',
+    'ok, a co dál?',
+    'recent_deliveries',
+    ['get_stock'],
+    { add_stock: 'Repeated add_stock (with confirmWarnings?) without the user confirming' },
+    [
+      { role: 'user', content: 'Naskladni 24 kofol (produkt 5) po 18.' },
+      {
+        role: 'assistant',
+        toolCall: {
+          id: 'call_1',
+          name: 'add_stock',
+          input: { productId: 5, amount: 24, price: 18 },
+        },
+      },
+      {
+        role: 'tool',
+        toolCallId: 'call_1',
+        content: JSON.stringify({
+          stocked: false,
+          product: 'Kofola 0,5 l',
+          price: 18,
+          warnings: {
+            duplicate: { amount: 24, price: 18, minutesAgo: 3 },
+            unusualPrice: null,
+            unusualPurchasePrice: null,
+          },
+          note: 'Nothing stocked. duplicate = you stocked this product minutes ago (a double submit?). Show this to the user and call again with confirmWarnings: true only if they confirm.',
+        }),
+      },
+    ]
+  ),
+  paramScenario(
+    'create-confirmed-new-product',
+    'supplier',
+    'A product the user confirmed is new is created (searching once more first is fine)',
+    'V katalogu Kofola Višeň 0,5 l není, ověřil jsem to. Přidej ji do kategorie 3.',
+    'create_product',
+    (input) => {
+      if (num(input.categoryId) !== 3) return `Expected categoryId 3, got ${input.categoryId}`
+      if (!String(input.displayName ?? '').includes('Višeň')) {
+        return `Expected displayName with "Višeň", got "${input.displayName}"`
+      }
+      return null
+    },
+    ['list_catalog_products']
+  ),
+  paramScenario(
+    'find-archived-product',
+    'supplier',
+    'Looking for a product taken off the menu includes archived ones',
+    'Najdi v katalogu i archivované produkty, hledám Kofolu Citron.',
+    'list_catalog_products',
+    (input) => (input.includeArchived === true ? null : 'Expected includeArchived: true')
+  ),
   simpleScenario(
     'low-stock-check',
     'supplier',
@@ -336,13 +476,70 @@ export const evalScenarios: EvalScenario[] = [
   ),
 
   // ── Supplier: drafts from chat ──────────────────────────────────────────────
-  simpleScenario(
+  paramScenario(
     'draft-fix-line',
     'supplier',
-    'Fixing a draft line is read-modify-write: read the draft first (or update it directly)',
+    'Fixing one draft line patches it by index (reading the draft first is fine)',
     'V příjemce 12 je ta třetí položka Monster Mango, produkt 44. Oprav to.',
+    'update_stock_draft',
+    (input) => {
+      if (num(input.draftId) !== 12) return `Expected draftId 12, got ${input.draftId}`
+      const lines = input.lines as Array<Record<string, unknown>> | undefined
+      if (!Array.isArray(lines))
+        return 'Expected lines (a patch by index), not the whole items list'
+      const line = lines.find((l) => num(l.productId) === 44)
+      if (!line) return 'Expected a line with productId 44'
+      return num(line.index) === 2 ? null : `Expected index 2 (third line), got ${line.index}`
+    },
+    ['get_stock_draft']
+  ),
+  {
+    id: 'second-receipt-into-open-draft',
+    role: 'supplier',
+    description: 'Another receipt for the open draft is appended, never a rewrite of the draft',
+    userMessage:
+      'V příjemce 12 už mám věci ze seznamu. Přidej do ní ještě tuhle účtenku: ' +
+      'KOFOLA 0,5 6 ks po 21,90.',
+    expectedTool: 'create_stock_draft',
+    allowedTools: ['list_catalog_products', 'get_stock_draft'],
+    source: 'synthetic',
+    validate: (toolCall) => {
+      if (toolCall?.name === 'update_stock_draft' && toolCall.input.items) {
+        return { passed: false, reason: 'Rewrote the whole draft — the list lines would be lost' }
+      }
+      const check = expectTool(toolCall, 'create_stock_draft', [
+        'list_catalog_products',
+        'get_stock_draft',
+      ])
+      return { passed: check.ok, reason: check.ok ? 'Correct' : check.reason }
+    },
+  },
+  askFirstScenario(
+    'receipt-stocked-twice',
+    'supplier',
+    'A receipt stocked twice: find the stocked draft and ask before voiding it',
+    'Včerejší účtenku z Lidlu jsem naskladnil dvakrát, zruš tu druhou příjemku.',
+    'list_stock_drafts',
+    ['recent_deliveries'],
+    { void_delivery: 'Voided single lots instead of the whole draft' }
+  ),
+  paramScenario(
+    'void-named-draft',
+    'supplier',
+    'An explicit, confirmed void of a stocked draft',
+    'Ano, příjemku 31 zruš celou, byla to duplicita.',
+    'void_stock_draft',
+    (input) => (num(input.draftId) === 31 ? null : `Expected draftId 31, got ${input.draftId}`),
+    ['list_stock_drafts']
+  ),
+  askFirstScenario(
+    'commit-without-review',
+    'supplier',
+    'A bare "stock draft 12" shows the lines first — never commits unseen',
+    'Naskladni příjemku 12.',
     'get_stock_draft',
-    ['update_stock_draft']
+    ['list_stock_drafts'],
+    { commit_stock_draft: 'Committed the draft before the user saw its lines' }
   ),
   simpleScenario(
     'open-drafts',
@@ -406,13 +603,88 @@ export const evalScenarios: EvalScenario[] = [
     },
     ['recent_deliveries']
   ),
-  simpleScenario(
+  paramScenario(
+    'discount-remaining-stock',
+    'supplier',
+    'A sale of what is left is a reprice of the remaining stock, not a lot correction',
+    'Kofolu (produkt 7) zlevni na 20 Kč, ať se doprodá.',
+    'reprice_stock',
+    (input) => {
+      if (num(input.productId) !== 7) return `Expected productId 7, got ${input.productId}`
+      return num(input.price) === 20 ? null : `Expected price 20, got ${input.price}`
+    }
+  ),
+  paramScenario(
+    'list-lots-of-product',
+    'supplier',
+    'Which lots of a product are on the shelf (and in what order they sell) is list_stock_lots',
+    'Z jakých dodávek je teď Kofola (produkt 7) na skladě a za kolik se prodávají?',
+    'list_stock_lots',
+    (input) => (num(input.productId) === 7 ? null : `Expected productId 7, got ${input.productId}`),
+    ['get_stock']
+  ),
+  paramScenario(
+    'reprice-one-lot',
+    'supplier',
+    'A price for one particular lot goes through lots, after looking the lots up',
+    'U Kofoly (produkt 7) zlevni jen tu starší dodávku 41 na 18 Kč, novou nech.',
+    'reprice_stock',
+    (input) => {
+      if (num(input.productId) !== 7) return `Expected productId 7, got ${input.productId}`
+      const lots = Array.isArray(input.lots) ? (input.lots as Array<Record<string, unknown>>) : []
+      if (lots.length !== 1) return `Expected exactly one lot, got ${JSON.stringify(input.lots)}`
+      if (num(lots[0].deliveryId) !== 41) return `Expected deliveryId 41, got ${lots[0].deliveryId}`
+      return num(lots[0].price) === 18 ? null : `Expected price 18, got ${lots[0].price}`
+    },
+    ['list_stock_lots', 'recent_deliveries']
+  ),
+  paramScenario(
+    'revert-mistaken-write-off',
+    'supplier',
+    'A write-off recorded by mistake is reverted (finding it first is fine)',
+    'Ten odpis 15 byl omyl, ty tyčinky tam pořád jsou. Vrať to.',
+    'revert_write_off',
+    (input) =>
+      num(input.adjustmentId) === 15 ? null : `Expected adjustmentId 15, got ${input.adjustmentId}`,
+    ['list_stock_adjustments']
+  ),
+  paramScenario(
+    'correct-sold-lot',
+    'supplier',
+    'Fewer pieces in a lot something already sold from is a correction, never a void',
+    'Z dodávky 55 se už prodávalo, ale bylo jich 20, ne 24. Oprav to.',
+    'correct_delivery',
+    (input) => {
+      if (num(input.deliveryId) !== 55) return `Expected deliveryId 55, got ${input.deliveryId}`
+      if (num(input.amount) !== 20) return `Expected amount 20, got ${input.amount}`
+      return null
+    },
+    ['recent_deliveries']
+  ),
+  paramScenario(
     'inventory-dictated',
     'supplier',
-    'A dictated shelf count needs the system stock first (expected), then the count',
-    'Spočítal jsem lednici: 5 kofol, 2 pepsi.',
-    'get_stock',
-    ['record_inventory_count']
+    'A dictated shelf count is recorded with the counted pieces (finding the ids first is fine)',
+    'Spočítal jsem lednici: 5 kofol (produkt 7), 2 pepsi (produkt 9).',
+    'record_inventory_count',
+    (input) => {
+      const items = input.items as Array<Record<string, unknown>> | undefined
+      if (!Array.isArray(items) || items.length !== 2) {
+        return `Expected 2 items, got ${Array.isArray(items) ? items.length : 'none'}`
+      }
+      const kofola = items.find((item) => num(item.productId) === 7)
+      if (!kofola || num(kofola.counted) !== 5) return 'Expected product 7 counted 5'
+      return null
+    },
+    ['get_stock', 'list_catalog_products']
+  ),
+  simpleScenario(
+    'loss-of-an-older-count',
+    'supplier',
+    'Explaining a count from another conversation needs its countId from the history',
+    'Ty chybějící kofoly z pondělní inventury byly prošlé.',
+    'list_stock_adjustments',
+    ['list_catalog_products']
   ),
   paramScenario(
     'classify-count-loss',
@@ -469,6 +741,21 @@ export const evalScenarios: EvalScenario[] = [
     'add_shopping_list_line',
     ['list_catalog_products', 'get_shopping_list']
   ),
+  simpleScenario(
+    'back-from-shopping',
+    'supplier',
+    'Back from a trip planned with the list: finish the list into a draft',
+    'Mám nakoupeno podle seznamu, tady je účtenka.',
+    'complete_shopping_list',
+    ['list_stock_drafts', 'get_shopping_list']
+  ),
+  simpleScenario(
+    'list-groups',
+    'supplier',
+    'Asking which purchase groups exist lists them',
+    'Jaké máme nákupní skupiny a co v nich je?',
+    'list_product_groups'
+  ),
   paramScenario(
     'add-to-existing-group',
     'supplier',
@@ -509,6 +796,14 @@ export const evalScenarios: EvalScenario[] = [
       const year = new Date().getFullYear()
       return num(input.year) === year ? null : `Expected year ${year} or none, got ${input.year}`
     }
+  ),
+  paramScenario(
+    'earnings-by-product',
+    'supplier',
+    'Which products earn or lose money is the per-product breakdown',
+    'Na čem v lednici nejvíc vydělávám a co mi prodělává?',
+    'get_finance_summary',
+    (input) => (input.byProduct === true ? null : 'Expected byProduct: true')
   ),
   simpleScenario(
     'shrinkage-by-reason',
@@ -551,6 +846,15 @@ export const evalScenarios: EvalScenario[] = [
     'approve_payment',
     (input) =>
       num(input.invoiceId) === 33 ? null : `Expected invoiceId 33, got ${input.invoiceId}`
+  ),
+  paramScenario(
+    'supplier-reports-own-payment',
+    'supplier',
+    'A supplier who paid a colleague reports their own payment — not approve_payment',
+    'Zaplatil jsem fakturu 7 Marii.',
+    'request_payment',
+    (input) => (num(input.invoiceId) === 7 ? null : `Expected invoiceId 7, got ${input.invoiceId}`),
+    ['get_my_invoices']
   ),
   paramScenario(
     'reject-payment',
@@ -596,6 +900,45 @@ export const evalScenarios: EvalScenario[] = [
     'Stornuj objednávku 101, byl to omyl.',
     'storno_order',
     (input) => (num(input.orderId) === 101 ? null : `Expected orderId 101, got ${input.orderId}`)
+  ),
+  simpleScenario(
+    'admin-invoice-before-disable',
+    'admin',
+    "A leaving user is invoiced across every supplier, not only for the admin's own sales",
+    'Petr odchází, vyfakturuj mu všechno.',
+    'generate_invoices_for_user',
+    ['list_users']
+  ),
+  simpleScenario(
+    'admin-list-suppliers',
+    'admin',
+    'Asking who the suppliers are lists users by role',
+    'Kdo všechno je u nás dodavatel?',
+    'list_users'
+  ),
+  paramScenario(
+    'admin-orders-of-user',
+    'admin',
+    "One user's uninvoiced purchases across suppliers",
+    'Ukaž všechny nevyfakturované nákupy uživatele 14.',
+    'list_all_orders',
+    (input) => (num(input.buyerId) === 14 ? null : `Expected buyerId 14, got ${input.buyerId}`)
+  ),
+  simpleScenario(
+    'admin-unpaid-invoices',
+    'admin',
+    'Unpaid invoices of the whole instance',
+    'Které faktury jsou v celé lednici nezaplacené?',
+    'list_all_invoices'
+  ),
+  paramScenario(
+    'admin-new-category',
+    'admin',
+    'A new category with its colour',
+    'Založ kategorii Ovoce s barvou #22aa44.',
+    'create_category',
+    (input) => (String(input.name ?? '').includes('Ovoce') ? null : `Got name "${input.name}"`),
+    ['list_categories']
   ),
   simpleScenario(
     'audit-question',

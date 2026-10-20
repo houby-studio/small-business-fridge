@@ -30,6 +30,16 @@ export async function createProduct(page: Page, name: string): Promise<number> {
   return Number(await row.last().getAttribute('data-product-id'))
 }
 
+export interface CommitOptions {
+  /**
+   * The commit is expected to stop on the warning dialog (the same product stocked again
+   * within the duplicate window, an unusual price…), which is then confirmed. Without it a
+   * warning is a failure: a regression that flags every line must not hide behind a helper
+   * that clicks "Přesto naskladnit" for every test.
+   */
+  expectWarning?: boolean
+}
+
 /**
  * Finishes stocking on a draft whose amount field is focused (where the product form lands):
  * fills the line with the keyboard, confirms it, stocks the draft and waits for the result.
@@ -38,7 +48,8 @@ export async function stockPreselected(
   page: Page,
   amount: string,
   price: string,
-  purchasePrice?: string
+  purchasePrice?: string,
+  options: CommitOptions = {}
 ) {
   const focused = page.locator(':focus')
   await expect(focused).toHaveAttribute('placeholder', 'ks')
@@ -50,7 +61,7 @@ export async function stockPreselected(
   await page.keyboard.press('Enter')
   await page.locator(':focus').fill(price)
   await page.keyboard.press('Enter')
-  await commitDraft(page)
+  await commitDraft(page, options)
 }
 
 /**
@@ -62,7 +73,8 @@ export async function stockProduct(
   productName: string,
   amount: string,
   price: string,
-  purchasePrice?: string
+  purchasePrice?: string,
+  options: CommitOptions = {}
 ) {
   await page.goto('/supplier/stock')
   await page.getByTestId('stock-receive').click()
@@ -71,27 +83,41 @@ export async function stockProduct(
   await expect(filter).toBeFocused()
   await filter.fill(productName)
   await page.keyboard.press('Enter')
-  await stockPreselected(page, amount, price, purchasePrice)
+  await stockPreselected(page, amount, price, purchasePrice, options)
 }
 
-/** Presses "Naskladnit", confirms a duplicate/price warning if one shows, waits for the toast. */
-export async function commitDraft(page: Page) {
+const STOCKED_URL = /\/supplier\/stock(\?.*)?$/
+
+/**
+ * Presses "Naskladnit" and waits for the stock page with its toast. A warning dialog is
+ * confirmed only when the caller says one is expected; an unexpected one fails the test with
+ * the warning's text, and a missing expected one fails it too.
+ */
+export async function commitDraft(page: Page, { expectWarning = false }: CommitOptions = {}) {
   await page.getByTestId('draft-commit').click()
   const warning = page.getByTestId('draft-warning-dialog')
+  // Whichever comes first decides; neither wait swallows its own timeout.
   const outcome = await Promise.race([
-    warning.waitFor({ state: 'visible', timeout: 3000 }).then(() => 'warning' as const),
-    page.waitForURL(/\/supplier\/stock(\?.*)?$/, { timeout: 15000 }).then(() => 'done' as const),
-  ]).catch(() => 'done' as const)
+    warning.waitFor({ state: 'visible', timeout: 15_000 }).then(() => 'warning' as const),
+    page.waitForURL(STOCKED_URL, { timeout: 15_000 }).then(() => 'stocked' as const),
+  ])
   if (outcome === 'warning') {
-    await page.getByTestId('draft-warning-confirm').click()
-    await page.waitForURL(/\/supplier\/stock(\?.*)?$/)
+    if (!expectWarning) {
+      const text = await warning.innerText()
+      throw new Error(`Stocking stopped on an unexpected warning: ${text.replace(/\s+/g, ' ')}`)
+    }
+    await warning.getByTestId('draft-warning-confirm').click()
+    await page.waitForURL(STOCKED_URL)
+  } else if (expectWarning) {
+    throw new Error('Stocking went through, but a warning dialog was expected first.')
   }
-  await expect(page.getByText(/Naskladněno/).first()).toBeVisible()
+  // The toast itself — the stock table has a "Naskladněno" column header too.
+  await expect(page.getByText(/^Naskladněno \d+ ks \(\d+ dodáv/).first()).toBeVisible()
 }
 
 /** Throws the open draft away (its lines included), so the next test starts from a clean one. */
 export async function discardDraft(page: Page) {
   await page.getByTestId('draft-discard').click()
   await page.locator('.p-confirmdialog').getByRole('button', { name: 'Zahodit' }).click()
-  await expect(page).toHaveURL(/\/supplier\/stock\/drafts$/)
+  await expect(page).toHaveURL(/\/supplier\/stock(\?.*)?$/)
 }

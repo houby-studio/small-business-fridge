@@ -11,7 +11,7 @@
   "upvotes": "Líbí",
   "feed_title": "Hodnocení produktů",
   "feed_heading": "Hodnocení produktů",
-  "banner_unrated_count": "Máš {count} neohodnocený nákup z posledních 14 dnů|Máš {count} neohodnocené nákupy z posledních 14 dnů|Máš {count} neohodnocených nákupů z posledních 14 dnů",
+  "banner_unrated_count": "Máte {count} neohodnocený nákup z posledních 14 dnů|Máte {count} neohodnocené nákupy z posledních 14 dnů|Máte {count} neohodnocených nákupů z posledních 14 dnů",
   "banner_open": "Otevřít",
   "window_closed": "Hodnocení už nelze upravit (uplynulo 14 dní).",
   "no_ratings": "Bez hodnocení",

@@ -36,3 +36,22 @@ export const voidDeliveryValidator = vine.compile(
       .maxLength(CORRECTION_REASON_MAX_LENGTH),
   })
 )
+
+/** Lots one "Změnit cenu" can change at once — far more than a product ever has in stock. */
+export const REPRICE_MAX_LOTS = 200
+
+/** "Změnit cenu": a new selling price for chosen lots that still have pieces. */
+export const repriceLotsValidator = vine.compile(
+  vine.object({
+    items: vine
+      .array(
+        vine.object({
+          deliveryId: vine.number().withoutDecimals().min(1).max(2_147_483_647),
+          price: vine.number().withoutDecimals().min(1).max(DELIVERY_MAX_PRICE),
+        })
+      )
+      .minLength(1)
+      .maxLength(REPRICE_MAX_LOTS)
+      .distinct('deliveryId'),
+  })
+)

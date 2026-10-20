@@ -43,7 +43,6 @@
   "unpaid": "Nezaplaceno",
   "payment_review": "Kontrola platby",
   "awaiting_approval": "Čeká na schválení",
-  "approved": "Schváleno",
   "awaiting_payment": "Čeká na platbu",
   "not_invoiced": "Nefakturováno",
   "channel_web": "Web",
@@ -55,7 +54,6 @@
   "no_data": "Žádná data k zobrazení.",
   "price_with_currency": "{price} {currency}",
   "per_piece": "{price} {currency}/ks",
-  "filter_apply": "Použít filtry",
   "filter_clear": "Zrušit filtry",
   "switch_to_light_mode": "Přepnout na světlý režim",
   "switch_to_dark_mode": "Přepnout na tmavý režim",
@@ -92,6 +90,6 @@
   "tab_inventory": "Inventura",
   "tab_products": "Produkty",
   "tab_product_groups": "Skupiny",
-  "nav_receiving": "Naskladnění",
-  "keypad_code": "Kód"
+  "keypad_code": "Kód v kiosku",
+  "keypad_code_hint": "Číslo, které zákazník zadá na klávesnici kiosku."
 }

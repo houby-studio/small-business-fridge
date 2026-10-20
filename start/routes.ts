@@ -319,42 +319,60 @@ router
   .group(() => {
     // Delivery history and corrections (stock is added through drafts below)
     router.get('/deliveries', [SupplierDeliveriesController, 'index'])
-    router.put('/deliveries/:id', [SupplierDeliveriesController, 'update']).where('id', /^\d+$/)
-    router.delete('/deliveries/:id', [SupplierDeliveriesController, 'destroy']).where('id', /^\d+$/)
+    router.put('/deliveries/:id', [SupplierDeliveriesController, 'update']).where('id', /^\d{1,9}$/)
+    router
+      .delete('/deliveries/:id', [SupplierDeliveriesController, 'destroy'])
+      .where('id', /^\d{1,9}$/)
 
     // Invoice generation
     router.get('/invoice', [SupplierInvoiceController, 'index'])
     router.post('/invoice/generate', [SupplierInvoiceController, 'generate'])
-    router.post('/invoice/generate/:buyerId', [SupplierInvoiceController, 'generateForBuyer'])
+    router
+      .post('/invoice/generate/:buyerId', [SupplierInvoiceController, 'generateForBuyer'])
+      .where('buyerId', /^\d{1,9}$/)
 
     // Payments
     router.get('/payments', [SupplierPaymentsController, 'index'])
-    router.post('/payments/:id', [SupplierPaymentsController, 'update'])
+    router.post('/payments/:id', [SupplierPaymentsController, 'update']).where('id', /^\d{1,9}$/)
 
     // Stock overview
     router.get('/stock', [SupplierStockController, 'index'])
+    router.post('/stock/reprice', [SupplierStockController, 'reprice'])
+    router
+      .get('/stock/products/:productId/lots', [SupplierStockController, 'lots'])
+      .where('productId', /^\d{1,9}$/)
 
     // Bulk stocking drafts (prepared over MCP, by the shopping list or by hand)
     router.get('/stock/drafts', [SupplierStockDraftsController, 'index'])
     router.post('/stock/drafts', [SupplierStockDraftsController, 'store'])
-    router.get('/stock/drafts/:id', [SupplierStockDraftsController, 'show']).where('id', /^\d+$/)
-    router.put('/stock/drafts/:id', [SupplierStockDraftsController, 'update']).where('id', /^\d+$/)
+    router
+      .get('/stock/drafts/:id', [SupplierStockDraftsController, 'show'])
+      .where('id', /^\d{1,9}$/)
+    router
+      .put('/stock/drafts/:id', [SupplierStockDraftsController, 'update'])
+      .where('id', /^\d{1,9}$/)
     router
       .post('/stock/drafts/:id/commit', [SupplierStockDraftsController, 'commit'])
-      .where('id', /^\d+$/)
+      .where('id', /^\d{1,9}$/)
+    router
+      .post('/stock/drafts/:id/void', [SupplierStockDraftsController, 'void'])
+      .where('id', /^\d{1,9}$/)
     router
       .delete('/stock/drafts/:id', [SupplierStockDraftsController, 'destroy'])
-      .where('id', /^\d+$/)
+      .where('id', /^\d{1,9}$/)
 
     // Shrinkage: write-offs and inventories
     router.post('/stock/write-offs', [SupplierInventoryController, 'writeOff'])
+    router
+      .put('/stock/write-offs/:id/revert', [SupplierInventoryController, 'revertWriteOff'])
+      .where('id', /^\d{1,9}$/)
     router.get('/inventory', [SupplierInventoryController, 'index'])
     router.post('/inventory', [SupplierInventoryController, 'store'])
-    router.get('/inventory/:id', [SupplierInventoryController, 'show']).where('id', /^\d+$/)
+    router.get('/inventory/:id', [SupplierInventoryController, 'show']).where('id', /^\d{1,9}$/)
     router
       .put('/inventory/:id/products/:productId', [SupplierInventoryController, 'reclassify'])
-      .where('id', /^\d+$/)
-      .where('productId', /^\d+$/)
+      .where('id', /^\d{1,9}$/)
+      .where('productId', /^\d{1,9}$/)
 
     // Shopping list
     router.get('/shopping-list', [SupplierShoppingListController, 'index'])
@@ -362,10 +380,10 @@ router
     router.post('/shopping-list/lines', [SupplierShoppingListController, 'addLine'])
     router
       .put('/shopping-list/lines/:key', [SupplierShoppingListController, 'updateLine'])
-      .where('key', /^[gpc]-\d+$/)
+      .where('key', /^[gpc]-\d{1,9}$/)
     router
       .delete('/shopping-list/lines/:key', [SupplierShoppingListController, 'resetLine'])
-      .where('key', /^[gpc]-\d+$/)
+      .where('key', /^[gpc]-\d{1,9}$/)
     router.post('/shopping-list/complete', [SupplierShoppingListController, 'complete'])
 
     // Purchase groups (interchangeable products the shopping list plans as one line)
@@ -373,10 +391,10 @@ router
     router.post('/product-groups', [SupplierProductGroupsController, 'store'])
     router
       .put('/product-groups/:id', [SupplierProductGroupsController, 'update'])
-      .where('id', /^\d+$/)
+      .where('id', /^\d{1,9}$/)
     router
       .delete('/product-groups/:id', [SupplierProductGroupsController, 'destroy'])
-      .where('id', /^\d+$/)
+      .where('id', /^\d{1,9}$/)
 
     // Earnings, shrinkage and margin
     router.get('/finance', [SupplierFinanceController, 'index'])
@@ -386,8 +404,14 @@ router
     router.get('/products', [SupplierProductsController, 'index'])
     router.get('/products/new', [SupplierProductsController, 'create'])
     router.post('/products', [SupplierProductsController, 'store'])
-    router.get('/products/:id/edit', [SupplierProductsController, 'edit'])
-    router.put('/products/:id', [SupplierProductsController, 'update'])
+    router.get('/products/:id/edit', [SupplierProductsController, 'edit']).where('id', /^\d{1,9}$/)
+    router.put('/products/:id', [SupplierProductsController, 'update']).where('id', /^\d{1,9}$/)
+    router
+      .post('/products/:id/archive', [SupplierProductsController, 'archive'])
+      .where('id', /^\d{1,9}$/)
+    router
+      .post('/products/:id/unarchive', [SupplierProductsController, 'unarchive'])
+      .where('id', /^\d{1,9}$/)
     router.post('/products/image/process', [SupplierProductImagesController, 'process'])
     router.get('/products/image/candidates', [SupplierProductImagesController, 'candidates'])
     router.post('/products/suggest', [SupplierProductSuggestionsController, 'suggest'])
@@ -437,6 +461,9 @@ router
     // Orders & invoices oversight
     router.get('/orders', [AdminOrdersController, 'index'])
     router.get('/invoices', [AdminInvoicesController, 'index'])
+    router
+      .post('/invoices/:id/payment', [AdminInvoicesController, 'settlePayment'])
+      .where('id', /^\d{1,9}$/)
 
     // Storno
     router.post('/storno/:id', [AdminStornoController, 'store'])
@@ -449,6 +476,9 @@ router
 
     // Generate invoice for a user (across all suppliers)
     router.post('/users/:id/generate-invoice', [AdminUsersController, 'generateInvoice'])
+    router
+      .post('/users/:id/transfer-stock', [AdminUsersController, 'transferStock'])
+      .where('id', /^\d{1,9}$/)
     router.post('/users/:id/send-password-reset', [AdminUsersController, 'sendPasswordReset'])
   })
   .prefix('/admin')

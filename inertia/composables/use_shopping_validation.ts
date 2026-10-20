@@ -7,6 +7,10 @@ export const SHOPPING_NOTE_MAX = 255
 export const STOCK_DRAFT_NOTE_MAX = 500
 export const STOCK_DRAFT_MAX_ITEMS = 200
 export const ADJUSTMENT_NOTE_MAX = 500
+/** inventory.ts INVENTORY_MAX_COUNT = DELIVERY_MAX_AMOUNT × 10 */
+export const INVENTORY_MAX_COUNT = 100_000
+/** delivery.ts DELIVERY_MAX_AMOUNT — the most pieces one shopping line can plan. */
+export const SHOPPING_MAX_QUANTITY = 10_000
 export const WRITE_OFF_REASONS = ['expired', 'damaged', 'stolen', 'other'] as const
 export const LOSS_REASONS = ['inventory', 'damaged', 'expired', 'stolen', 'other'] as const
 export type LossReason = (typeof LOSS_REASONS)[number]

@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, type Ref } from 'vue'
-import { Head, Link, router, usePage } from '@inertiajs/vue3'
+import { Head, router, usePage } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import Button from 'primevue/button'
 import ConfirmDialog from 'primevue/confirmdialog'
 import Dialog from 'primevue/dialog'
-import InputNumber from 'primevue/inputnumber'
+import InputNumber from '~/components/NumberInput.vue'
 import InputText from 'primevue/inputtext'
+import Textarea from 'primevue/textarea'
 import Message from 'primevue/message'
 import Select from 'primevue/select'
 import InfoHint from '~/components/InfoHint.vue'
@@ -14,15 +15,19 @@ import { useI18n } from '~/composables/use_i18n'
 import { useAppConfirm } from '~/composables/use_app_confirm'
 import { useSelectEnterKey } from '~/composables/use_select_enter_key'
 import { formatDate } from '~/composables/use_format_date'
-import { suggestSellingPrice, useMoney } from '~/composables/use_pricing'
+import { suggestDraftPrice, useMoney } from '~/composables/use_pricing'
 import { STOCK_DRAFT_MAX_ITEMS, STOCK_DRAFT_NOTE_MAX } from '~/composables/use_shopping_validation'
 import {
+  CORRECTION_REASON_MAX_LENGTH,
+  CORRECTION_REASON_MIN_LENGTH,
   DELIVERY_MAX_AMOUNT,
   DELIVERY_MAX_PRICE,
 } from '~/composables/use_delivery_correction_validation'
 import type { SharedProps } from '~/types'
 
 type DraftSource = 'web' | 'mcp' | 'shopping_list'
+/** Who put a line on the draft — one draft collects lines from all of them. */
+type LineSource = 'web' | 'shopping_list' | 'assistant'
 
 interface DraftItem {
   id: number
@@ -31,7 +36,9 @@ interface DraftItem {
   label: string | null
   amount: number
   purchasePrice: number | null
+  purchasePriceEstimated: boolean
   price: number | null
+  source: LineSource
   deliveryId: number | null
 }
 
@@ -48,6 +55,8 @@ interface DraftWarning {
   index: number
   productId: number
   productName: string
+  /** The selling price the line will be stocked at. */
+  price: number
   duplicate: { amount: number; price: number; minutesAgo: number } | null
   unusualPrice: {
     lastPrice: number
@@ -55,16 +64,29 @@ interface DraftWarning {
     lastSupplierName: string
     lastCreatedAt: string
   } | null
+  unusualPurchasePrice: { lastPurchasePrice: number; lastCreatedAt: string } | null
+  estimatedPurchasePrice: boolean
 }
+
+type SaveErrorCode = 'DRAFT_STALE' | 'DRAFT_CLOSED' | 'DRAFT_NOT_FOUND' | string
+
+/** A draft older than this carries a "since {date}" badge: is it really today's shopping? */
+const DRAFT_OLD_HOURS = 24
 
 const props = defineProps<{
   draft: {
     id: number
     source: DraftSource
     note: string | null
-    status: 'open' | 'committed' | 'discarded'
+    status: 'open' | 'committed' | 'discarded' | 'voided'
     createdAt: string
+    updatedAt: string
     committedAt: string | null
+    voidedAt: string | null
+    voidReason: string | null
+    canVoid: boolean
+    /** Sent back with every save; the server refuses a save over a newer draft. */
+    version: number
     items: DraftItem[]
   }
   products: ProductOption[]
@@ -74,14 +96,14 @@ const props = defineProps<{
 }>()
 
 const { t, tp } = useI18n()
-const { money } = useMoney()
+const { amount: formatAmount, money } = useMoney()
 const confirm = useAppConfirm()
 const page = usePage<SharedProps>()
 const currentUserId = computed(() => page.props.user?.id)
 
-const SOURCE_BADGE: Record<DraftSource, string> = {
-  web: 'bg-gray-100 text-gray-800 dark:bg-zinc-700 dark:text-zinc-200',
-  mcp: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
+/** A line by hand carries no badge; one from the list or an assistant says so. */
+const LINE_BADGE: Record<Exclude<LineSource, 'web'>, string> = {
+  assistant: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
   shopping_list: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
 }
 
@@ -94,7 +116,10 @@ interface Row {
   label: string | null
   amount: number | null
   purchasePrice: number | null
+  /** Still the shopping list's estimate — cleared once the supplier types a price. */
+  purchasePriceEstimated: boolean
   price: number | null
+  source: LineSource
   /** The trailing empty line: never counted, never red, waits for a product. */
   ghost: boolean
   /** Problems are only shown once the supplier has worked on the line. */
@@ -113,30 +138,45 @@ function ghostRow(): Row {
     label: null,
     amount: null,
     purchasePrice: null,
+    purchasePriceEstimated: false,
     price: null,
+    source: 'web',
     ghost: true,
     touched: false,
   }
 }
 
-const rows = ref<Row[]>([
-  ...props.draft.items.map(
-    (item): Row => ({
-      uid: nextUid++,
-      itemId: item.id,
-      productId: item.productId,
-      productGroupId: item.productGroupId,
-      label: item.label,
-      amount: item.amount,
-      purchasePrice: item.purchasePrice,
-      price: item.price,
-      ghost: false,
-      touched: true,
-    })
-  ),
-  ...(props.draft.status === 'open' ? [ghostRow()] : []),
-])
+function rowsFromProps(): Row[] {
+  return [
+    ...props.draft.items.map(
+      (item): Row => ({
+        uid: nextUid++,
+        itemId: item.id,
+        productId: item.productId,
+        productGroupId: item.productGroupId,
+        label: item.label,
+        amount: item.amount,
+        purchasePrice: item.purchasePrice,
+        purchasePriceEstimated: item.purchasePriceEstimated,
+        price: item.price,
+        source: item.source,
+        ghost: false,
+        touched: true,
+      })
+    ),
+    ...(props.draft.status === 'open' ? [ghostRow()] : []),
+  ]
+}
+
+const rows = ref<Row[]>(rowsFromProps())
 const note = ref(props.draft.note ?? '')
+
+/** "Rozpracováno {date}" on a draft started more than a day ago. */
+const startedLongAgo = computed(
+  () =>
+    isOpen.value &&
+    Date.now() - new Date(props.draft.createdAt).getTime() > DRAFT_OLD_HOURS * 3_600_000
+)
 const submitting = ref<'commit' | null>(null)
 
 /** The lines that count: everything but the trailing empty one. */
@@ -183,22 +223,28 @@ function selectOptionsFor(row: Row) {
 }
 
 /** A receipt line reads "Na účtence: …", a shopping-list line "Ze seznamu: …". */
-const labelKey = computed(() =>
-  props.draft.source === 'mcp' ? 'shopping.draft_label' : 'shopping.draft_label_list'
-)
+function labelKey(row: Row): string {
+  return row.source === 'assistant' ? 'shopping.draft_label' : 'shopping.draft_label_list'
+}
 
 /**
- * The selling price offered when the supplier types none: what the product sold for last
- * time, never below the purchase price plus the margin — or that alone for a new product.
+ * What a list line came from, once: a group line is labelled with the group's name, so
+ * "Ze seznamu: Energy drink · skupina Energy drink" says it only as "skupina Energy drink".
+ */
+function rowOrigin(row: Row): { label: string | null; group: string | null } {
+  const group = row.productGroupId ? (groupName.value.get(row.productGroupId) ?? null) : null
+  const label = row.label && row.label !== group ? row.label : null
+  return { label, group }
+}
+
+/**
+ * The selling price offered when the supplier types none — the same rule the server applies
+ * on commit (`suggestDraftPrice`): purchase price plus the owner's margin, never below what
+ * the product sold for last time.
  */
 function suggestedPrice(row: Row): number | null {
-  const fromMargin =
-    row.purchasePrice !== null && row.purchasePrice > 0
-      ? suggestSellingPrice(row.purchasePrice, props.marginPercent)
-      : null
-  const last = (row.productId ? productById.value.get(row.productId)?.lastPrice : null) ?? null
-  if (fromMargin !== null && last !== null) return Math.max(fromMargin, last)
-  return fromMargin ?? last
+  const last = row.productId ? productById.value.get(row.productId)?.lastPrice : null
+  return suggestDraftPrice(row.purchasePrice, props.marginPercent, last)
 }
 
 function effectivePrice(row: Row): number | null {
@@ -209,7 +255,15 @@ function rowProblem(row: Row): string {
   if (row.ghost) return ''
   if (!row.productId) return t('shopping.draft_problem_product')
   if (!row.amount || row.amount < 1) return t('shopping.draft_problem_amount')
-  if (!effectivePrice(row)) return t('shopping.draft_problem_price')
+  // Upper bounds are checked here, not by InputNumber's max (CLAUDE.md › Number fields).
+  if (row.amount > DELIVERY_MAX_AMOUNT) {
+    return t('shopping.draft_problem_amount_max', { max: DELIVERY_MAX_AMOUNT })
+  }
+  const price = effectivePrice(row)
+  if (!price) return t('shopping.draft_problem_price')
+  if (price > DELIVERY_MAX_PRICE || (row.purchasePrice ?? 0) > DELIVERY_MAX_PRICE) {
+    return t('shopping.draft_problem_price_max', { max: DELIVERY_MAX_PRICE })
+  }
   return ''
 }
 
@@ -232,6 +286,13 @@ function lastPricesText(row: Row): string {
     : t('supplier.deliveries_last_price', { price: money(product.lastPrice) })
 }
 
+/** 1-based number of an earlier line with the same product, for the duplicate hint. */
+function duplicateOf(row: Row): number | null {
+  if (row.ghost || !row.productId) return null
+  const index = lines.value.findIndex((other) => other.productId === row.productId)
+  return index >= 0 && lines.value[index] !== row ? index + 1 : null
+}
+
 function pricePlaceholder(row: Row): string {
   const suggested = suggestedPrice(row)
   return suggested !== null
@@ -241,6 +302,10 @@ function pricePlaceholder(row: Row): string {
 
 const problems = computed(() => lines.value.filter((row) => rowProblem(row)).length)
 const completeLines = computed(() => lines.value.filter((row) => !rowProblem(row)))
+/** The pieces the button stocks — the summary beside it counts every line. */
+const completePieces = computed(() =>
+  completeLines.value.reduce((sum, row) => sum + (row.amount ?? 0), 0)
+)
 const totals = computed(() => {
   let pieces = 0
   let purchase = 0
@@ -263,7 +328,9 @@ const totals = computed(() => {
 
 const commitLabel = computed(() =>
   completeLines.value.length > 0
-    ? tp('shopping.draft_commit_count', completeLines.value.length, { pieces: totals.value.pieces })
+    ? tp('shopping.draft_commit_count', completeLines.value.length, {
+        pieces: completePieces.value,
+      })
     : t('shopping.draft_commit')
 )
 const canCommit = computed(
@@ -291,16 +358,31 @@ function inputOf(component: any): HTMLInputElement | null {
   return el instanceof HTMLInputElement ? el : el.querySelector('input')
 }
 
-/** Focus and select — twice, because PrimeVue re-renders the input right after mount. */
+/**
+ * Focus and select — and once more shortly after, because PrimeVue re-renders the input
+ * right after mount and the focus can drop to the page. Only the newest request counts, and
+ * the second pass never pulls the focus back from a field the supplier has already moved on
+ * to (a quick Enter, Enter would otherwise land in the field two steps back).
+ */
+let focusTimer: ReturnType<typeof setTimeout> | null = null
 function focusField(map: Map<number, any>, uid: number) {
-  const run = () => {
+  if (focusTimer) clearTimeout(focusTimer)
+  let focused: HTMLInputElement | null = null
+  const run = (retry: boolean) => {
     const input = inputOf(map.get(uid))
     if (!input) return
+    const active = document.activeElement
+    if (retry && active && active !== document.body && active !== focused) return
+    if (active === input) return
     input.focus()
     input.select()
+    focused = input
   }
-  nextTick(run)
-  window.setTimeout(run, 120)
+  nextTick(() => run(false))
+  focusTimer = setTimeout(() => {
+    focusTimer = null
+    run(true)
+  }, 120)
 }
 
 function openSelectEntry(): { uid: number; instance: any } | null {
@@ -377,9 +459,14 @@ function rememberFadingOverlay(uid: number) {
 
 /** Runs `action` once no product search is open or still fading out (at most ~2 s later). */
 function whenOverlaysSettled(action: () => void, attempts = 40) {
+  // Stocking started meanwhile (a click right after Enter): opening the next line's search
+  // now would pull the focus out of the warning dialog.
+  if (submitting.value !== null || warningVisible.value) return
   fadingOverlays = fadingOverlays.filter((el) => el.isConnected)
   if ((fadingOverlays.length === 0 && !openSelectEntry()) || attempts <= 0) {
-    nextTick(action)
+    nextTick(() => {
+      if (submitting.value === null && !warningVisible.value) action()
+    })
     return
   }
   window.setTimeout(() => whenOverlaysSettled(action, attempts - 1), 50)
@@ -442,9 +529,32 @@ function onPriceEnter(row: Row) {
   if (ghost) whenOverlaysSettled(() => openProductSelect(ghost.uid))
 }
 
+/** Typing a purchase price replaces the shopping list's estimate. */
+function onPurchaseInput(row: Row, value: number | null) {
+  row.purchasePrice = value
+  row.purchasePriceEstimated = false
+}
+
+// A removed line can be put back for a few seconds — one tap on a phone is easy to miss.
+const removed = ref<{ row: Row; index: number } | null>(null)
+let removedTimer: ReturnType<typeof setTimeout> | null = null
+
 function removeRow(uid: number) {
+  const index = rows.value.findIndex((row) => row.uid === uid)
+  if (index < 0) return
+  removed.value = { row: rows.value[index], index }
   rows.value = rows.value.filter((row) => row.uid !== uid)
   ensureGhost()
+  if (removedTimer) clearTimeout(removedTimer)
+  removedTimer = setTimeout(() => (removed.value = null), 6000)
+}
+
+function undoRemove() {
+  if (!removed.value || !isOpen.value) return
+  const { row, index } = removed.value
+  rows.value.splice(Math.min(index, rows.value.length), 0, row)
+  removed.value = null
+  if (removedTimer) clearTimeout(removedTimer)
 }
 
 // ─── Save / commit / discard ──────────────────────────────────────────────────
@@ -458,9 +568,58 @@ function payload(materialize = false) {
       label: row.label,
       amount: row.amount ?? 1,
       purchasePrice: row.purchasePrice,
+      purchasePriceEstimated: row.purchasePriceEstimated,
+      source: row.source,
       price: materialize ? (row.price ?? suggestedPrice(row)) : row.price,
     })),
   }
+}
+
+/** The page's state is the draft as the server now has it (after a refused save). */
+function resetFromProps() {
+  cancelSave()
+  rows.value = rowsFromProps()
+  note.value = props.draft.note ?? ''
+  lastSaved = JSON.stringify(payload())
+  saveState.value = 'saved'
+}
+
+/** Inertia's partial reload, as a promise (the page waits for the server's draft). */
+function reloadProps(only: string[]): Promise<void> {
+  return new Promise((resolve) => {
+    router.reload({ only, onFinish: () => resolve() })
+  })
+}
+
+/**
+ * A JSON request to the draft endpoint, outside the Inertia router: whatever the server
+ * answers — 409, 419, 422, 500, nothing at all — the page stays and only the footer says the
+ * save failed. The XSRF cookie is what Inertia's own requests send.
+ */
+function draftRequest(body: unknown, options: { keepalive?: boolean } = {}) {
+  const token = document.cookie
+    .split('; ')
+    .find((part) => part.startsWith('XSRF-TOKEN='))
+    ?.slice('XSRF-TOKEN='.length)
+  return fetch(`/supplier/stock/drafts/${props.draft.id}`, {
+    method: 'PUT',
+    keepalive: options.keepalive,
+    redirect: 'manual',
+    credentials: 'same-origin',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+      'X-Draft-Autosave': '1',
+      ...(token ? { 'X-XSRF-TOKEN': decodeURIComponent(token) } : {}),
+    },
+    body: JSON.stringify(body),
+  })
+}
+
+function saveErrorOf(response: { props: Record<string, unknown> }): SaveErrorCode | null {
+  const flash = response.props.flash as Record<string, unknown> | undefined
+  return (flash?.draftSaveError as SaveErrorCode | undefined) ?? null
 }
 
 /**
@@ -481,14 +640,27 @@ function newProductFromRow(row: Row) {
 
 // ─── Autosave ─────────────────────────────────────────────────────────────────
 // Every change is saved after a short pause, so nothing is lost when the supplier walks away;
-// the footer says "Uloženo" / "Ukládám…". Nothing is stocked by a save.
+// the footer says "Uloženo" / "Ukládám…". Nothing is stocked by a save. Each save carries the
+// draft version the page has; a save over a newer draft (an assistant fixed a line, another
+// tab) is refused and the page shows the newer draft instead of overwriting it.
 type SaveState = 'saved' | 'pending' | 'saving' | 'error'
 const saveState = ref<SaveState>('saved')
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 let saveInFlight = false
 let saveQueued = false
 let lastSaved = JSON.stringify(payload())
+/** The draft version this page edits; every save moves it on (see `draftVersion`). */
+let version = props.draft.version
+watch(
+  () => props.draft.version,
+  (next) => (version = next)
+)
+/** Lines the server holds — the menu badge counts drafts with at least one. */
+let savedLineCount = props.draft.items.length
+/** Run once the draft is stored — never after a failed save (a held navigation, a commit). */
 const afterSave: Array<() => void> = []
+/** Run instead when the save failed. */
+const afterFailure: Array<() => void> = []
 
 const hasUnsavedChanges = computed(() => saveState.value !== 'saved')
 
@@ -503,19 +675,24 @@ function scheduleSave() {
   saveTimer = setTimeout(() => flushSave(), 700)
 }
 
-/** Saves now (a pending save first) and calls `done` once the draft is stored. */
-function flushSave(done?: () => void) {
+/**
+ * Saves now (a pending save first). `done` runs once the draft is stored; `failed` runs
+ * instead when the server refused the save or it never got there — the page then keeps
+ * the "Uložení selhalo" state rather than pretending all is well.
+ */
+function flushSave(done?: () => void, failed?: () => void) {
   if (saveTimer) {
     clearTimeout(saveTimer)
     saveTimer = null
   }
   if (done) afterSave.push(done)
-  if (!isOpen.value || submitting.value === 'commit') return runAfterSave()
+  if (failed) afterFailure.push(failed)
+  if (!isOpen.value || submitting.value === 'commit') return settleSave(true)
   const body = payload()
   const snapshot = JSON.stringify(body)
   if (snapshot === lastSaved && !saveInFlight) {
     saveState.value = 'saved'
-    return runAfterSave()
+    return settleSave(true)
   }
   if (saveInFlight) {
     saveQueued = true
@@ -523,36 +700,75 @@ function flushSave(done?: () => void) {
   }
   saveInFlight = true
   saveState.value = 'saving'
-  router.put(`/supplier/stock/drafts/${props.draft.id}`, body, {
-    preserveScroll: true,
-    preserveState: true,
-    only: ['draft'],
-    onSuccess: () => {
-      lastSaved = snapshot
-      saveState.value = 'saved'
-    },
-    onError: () => {
+  let stored = false
+  draftRequest({ ...body, version })
+    .then(async (response) => {
+      if (response.ok) {
+        const saved = (await response.json()) as { version: number; lines: number }
+        stored = true
+        version = saved.version
+        lastSaved = snapshot
+        saveState.value = 'saved'
+        // The first line in (or the last one out) changes the menu badge.
+        if (saved.lines > 0 !== savedLineCount > 0) reloadProps(['openDraftCount'])
+        savedLineCount = saved.lines
+        return
+      }
+      const refusal =
+        response.status === 409
+          ? ((await response.json().catch(() => ({}))) as { error?: SaveErrorCode }).error
+          : undefined
+      if (refusal === 'DRAFT_STALE' || refusal === 'DRAFT_CLOSED') {
+        // The server's draft wins; the reload brings it and the flash saying why. Not a
+        // success: a commit waiting for this save must not stock lines nobody has seen.
+        await reloadProps(['draft', 'openDraftCount'])
+        resetFromProps()
+        return
+      }
+      if (refusal === 'DRAFT_NOT_FOUND') {
+        await reloadProps(['draft'])
+      }
       saveState.value = 'error'
-    },
-    onFinish: () => {
+    })
+    .catch(() => {
+      saveState.value = 'error'
+    })
+    .finally(() => {
       saveInFlight = false
-      if (saveQueued) {
+      if (!stored && saveState.value !== 'saved') saveState.value = 'error'
+      if (saveQueued && stored) {
         saveQueued = false
         flushSave()
-      } else {
-        runAfterSave()
+        return
       }
-    },
-  })
+      saveQueued = false
+      settleSave(stored)
+    })
 }
 
-function runAfterSave() {
-  while (afterSave.length) afterSave.shift()!()
+function settleSave(ok: boolean) {
+  const run = ok ? afterSave.splice(0) : afterFailure.splice(0)
+  if (ok) afterFailure.length = 0
+  else afterSave.length = 0
+  for (const callback of run) callback()
 }
 
 function cancelSave() {
   if (saveTimer) clearTimeout(saveTimer)
   saveTimer = null
+}
+
+/**
+ * The last resort when the page goes away without the navigation guard (browser Back,
+ * which Inertia replays without a `before` event): the unsaved lines go out in a request
+ * that outlives the page.
+ */
+function saveOnLeave() {
+  if (!isOpen.value || submitting.value === 'commit') return
+  const snapshot = JSON.stringify(payload())
+  if (snapshot === lastSaved) return
+  lastSaved = snapshot
+  draftRequest({ ...payload(), version }, { keepalive: true }).catch(() => {})
 }
 
 watch([rows, note], scheduleSave, { deep: true })
@@ -568,18 +784,36 @@ function commit(confirmWarnings = false) {
   // the warning dialog and swallow its Esc.
   openSelectEntry()?.instance.hide()
 
+  // A save still on its way would move the version under the commit; let it land first.
+  if (saveInFlight) {
+    flushSave(() => commit(confirmWarnings))
+    return
+  }
   cancelSave()
   submitting.value = 'commit'
   router.post(
     `/supplier/stock/drafts/${props.draft.id}/commit`,
-    { ...payload(true), ...(confirmWarnings ? { confirmWarnings: true } : {}) },
+    {
+      ...payload(true),
+      version,
+      ...(confirmWarnings ? { confirmWarnings: true } : {}),
+    },
     {
       preserveScroll: true,
       preserveState: true,
       onSuccess: (response) => {
+        const error = saveErrorOf(response)
+        if (error === 'DRAFT_STALE' || error === 'DRAFT_CLOSED') {
+          warningVisible.value = false
+          warnings.value = []
+          resetFromProps()
+          return
+        }
         const flagged = (response.props.flash as Record<string, unknown> | undefined)
           ?.draftWarnings as DraftWarning[] | undefined
         if (flagged?.length) {
+          // The lines were saved with the commit attempt.
+          lastSaved = JSON.stringify(payload())
           // Nothing was stocked — the lines are saved; ask before stocking anyway.
           warnings.value = flagged
           warningVisible.value = true
@@ -595,6 +829,17 @@ function commit(confirmWarnings = false) {
 function lineFor(warning: DraftWarning) {
   return lines.value[warning.index] ?? null
 }
+
+/** Lines flagged only because their purchase price is still the list's estimate. */
+const estimatedCount = computed(
+  () => warnings.value.filter((warning) => warning.estimatedPurchasePrice).length
+)
+/** Lines with something besides the estimate to look at — each gets its own section. */
+const detailedWarnings = computed(() =>
+  warnings.value.filter(
+    (warning) => warning.duplicate || warning.unusualPrice || warning.unusualPurchasePrice
+  )
+)
 
 function warningSupplier(warning: DraftWarning): string {
   return warning.unusualPrice?.lastSupplierId === currentUserId.value
@@ -628,6 +873,42 @@ function discard() {
   })
 }
 
+// ─── Void a stocked draft as a whole ──────────────────────────────────────────
+const voidVisible = ref(false)
+const voidReason = ref('')
+const voiding = ref(false)
+const voidReasonValid = computed(() => {
+  const length = voidReason.value.trim().length
+  return length >= CORRECTION_REASON_MIN_LENGTH && length <= CORRECTION_REASON_MAX_LENGTH
+})
+
+function openVoid() {
+  voidReason.value = ''
+  voidVisible.value = true
+}
+
+function focusVoidReason() {
+  nextTick(() => (document.getElementById('draft-void-reason') as HTMLElement | null)?.focus())
+}
+
+function submitVoid() {
+  if (!voidReasonValid.value || voiding.value) return
+  voiding.value = true
+  router.post(
+    `/supplier/stock/drafts/${props.draft.id}/void`,
+    { reason: voidReason.value.trim() },
+    {
+      preserveScroll: true,
+      onSuccess: () => {
+        if (props.draft.status === 'voided') voidVisible.value = false
+      },
+      onFinish: () => {
+        voiding.value = false
+      },
+    }
+  )
+}
+
 /** Ctrl+Enter (⌘+Enter) anywhere on the page stocks the draft. */
 function onGlobalKeydown(event: KeyboardEvent) {
   if (event.key !== 'Enter' || !(event.ctrlKey || event.metaKey)) return
@@ -637,21 +918,44 @@ function onGlobalKeydown(event: KeyboardEvent) {
 
 /**
  * Leaving the page (Zpět, the menu, a tab) first stores a pending change — the navigation
- * is held back for the few hundred milliseconds the save takes, then replayed.
+ * is held back for the few hundred milliseconds the save takes, then replayed. If the save
+ * fails, the supplier is asked before the changes are left behind.
  */
 let stopBeforeVisit: (() => void) | null = null
+let leavingAnyway = false
 function onBeforeUnload(event: BeforeUnloadEvent) {
   if (hasUnsavedChanges.value) event.preventDefault()
+}
+
+function goBack() {
+  router.get('/supplier/stock')
 }
 
 onMounted(() => {
   stopBeforeVisit = router.on('before', (event) => {
     const visit = event.detail.visit
-    if (visit.method !== 'get' || !hasUnsavedChanges.value || !isOpen.value) return
+    // A partial reload (the draft after a refused save, the badge) is not leaving the page.
+    if (leavingAnyway || visit.method !== 'get' || !isOpen.value || visit.only.length) return
+    if (!hasUnsavedChanges.value) return
     event.preventDefault()
-    flushSave(() =>
+    const replay = () =>
       router.visit(visit.url, { method: 'get', preserveScroll: visit.preserveScroll })
-    )
+    flushSave(replay, () => {
+      // Refused because the draft changed or closed meanwhile: the page already shows the
+      // server's version, so there is nothing left to lose.
+      if (!hasUnsavedChanges.value) return replay()
+      confirm.require({
+        header: t('shopping.draft_leave_title'),
+        message: t('shopping.draft_leave_message'),
+        acceptLabel: t('shopping.draft_leave_confirm'),
+        rejectLabel: t('common.cancel'),
+        destructive: true,
+        accept: () => {
+          leavingAnyway = true
+          replay()
+        },
+      })
+    })
   })
   window.addEventListener('beforeunload', onBeforeUnload)
   document.addEventListener('keydown', onGlobalKeydown)
@@ -667,7 +971,7 @@ onMounted(() => {
   if (!ghost) return
   // A draft built by hand starts in the product search ("Stock" brought the supplier here to
   // add something); one prepared by the list or an assistant is reviewed first.
-  if (lines.value.length === 0 || props.draft.source === 'web') {
+  if (lines.value.every((row) => row.source === 'web')) {
     nextTick(() => openProductSelect(ghost.uid))
   } else {
     nextTick(() => inputOf(selectRefs.get(ghost.uid))?.focus())
@@ -675,6 +979,8 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  if (!leavingAnyway) saveOnLeave()
+  if (removedTimer) clearTimeout(removedTimer)
   stopBeforeVisit?.()
   window.removeEventListener('beforeunload', onBeforeUnload)
   document.removeEventListener('keydown', onGlobalKeydown)
@@ -693,21 +999,22 @@ onBeforeUnmount(() => {
     -->
     <div class="mb-6 flex flex-col gap-3 lg:flex-row lg:items-end lg:gap-8">
       <div class="order-1 flex min-w-0 items-center gap-2">
-        <Link href="/supplier/stock/drafts">
-          <Button
-            icon="pi pi-arrow-left"
-            severity="secondary"
-            text
-            :aria-label="t('common.back')"
-          />
-        </Link>
+        <Button
+          icon="pi pi-arrow-left"
+          severity="secondary"
+          text
+          :aria-label="t('common.back')"
+          data-testid="draft-back"
+          @click="goBack"
+        />
         <h1 class="text-2xl font-bold text-gray-900 dark:text-zinc-100">
           {{ t('shopping.draft_title') }}
         </h1>
         <span
-          class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-          :class="SOURCE_BADGE[draft.source]"
-          >{{ t(`shopping.draft_source_${draft.source}`) }}</span
+          v-if="startedLongAgo"
+          class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-200"
+          data-testid="draft-in-progress"
+          >{{ t('shopping.draft_in_progress', { date: formatDate(draft.createdAt) }) }}</span
         >
       </div>
       <div v-if="isOpen" class="order-3 w-full lg:order-2 lg:mr-auto lg:w-96">
@@ -763,19 +1070,100 @@ onBeforeUnmount(() => {
 
     <Message
       v-if="!isOpen"
-      severity="info"
+      :severity="draft.status === 'voided' ? 'warn' : 'info'"
       class="mb-4"
       :closable="false"
       data-testid="draft-closed"
     >
-      {{
-        draft.status === 'committed'
-          ? t('shopping.draft_committed_info', {
-              date: draft.committedAt ? formatDate(draft.committedAt) : '',
-            })
-          : t('shopping.draft_discarded_info')
-      }}
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <span>{{
+          draft.status === 'committed'
+            ? t('shopping.draft_committed_info', {
+                date: draft.committedAt ? formatDate(draft.committedAt) : '',
+              })
+            : draft.status === 'voided'
+              ? t('shopping.draft_voided_info', {
+                  date: draft.voidedAt ? formatDate(draft.voidedAt) : '',
+                  reason: draft.voidReason ?? '',
+                })
+              : t('shopping.draft_discarded_info')
+        }}</span>
+        <span v-if="draft.status === 'committed'" class="inline-flex items-center gap-1">
+          <Button
+            :label="t('shopping.draft_void')"
+            severity="danger"
+            text
+            size="small"
+            :disabled="!draft.canVoid"
+            data-testid="draft-void"
+            @click="openVoid"
+          />
+          <InfoHint
+            v-if="!draft.canVoid"
+            :text="t('shopping.draft_void_unavailable')"
+            test-id="draft-void-unavailable"
+          />
+        </span>
+      </div>
     </Message>
+
+    <Dialog
+      v-model:visible="voidVisible"
+      :header="t('shopping.draft_void')"
+      :style="{ width: '28rem' }"
+      modal
+      :draggable="false"
+      data-testid="draft-void-dialog"
+      @show="focusVoidReason"
+    >
+      <form id="draft-void-form" class="space-y-3" @submit.prevent="submitVoid">
+        <p class="text-sm text-gray-700 dark:text-zinc-300">
+          {{ t('shopping.draft_void_message') }}
+        </p>
+        <div>
+          <label for="draft-void-reason" class="mb-1 block text-sm text-gray-700 dark:text-zinc-300"
+            >{{ t('supplier.void_reason') }} *</label
+          >
+          <Textarea
+            id="draft-void-reason"
+            v-model="voidReason"
+            rows="2"
+            class="w-full"
+            autoResize
+            :maxlength="CORRECTION_REASON_MAX_LENGTH"
+            :placeholder="t('supplier.void_reason_placeholder')"
+            data-testid="draft-void-reason"
+          />
+          <small
+            v-if="voidReason.trim().length > 0 && !voidReasonValid"
+            class="text-red-500 dark:text-red-400"
+            >{{
+              t('supplier.correction_reason_hint', {
+                min: CORRECTION_REASON_MIN_LENGTH,
+                max: CORRECTION_REASON_MAX_LENGTH,
+              })
+            }}</small
+          >
+        </div>
+      </form>
+      <template #footer>
+        <Button
+          :label="t('common.cancel')"
+          severity="secondary"
+          text
+          @click="voidVisible = false"
+        />
+        <Button
+          type="submit"
+          form="draft-void-form"
+          :label="t('shopping.draft_void_confirm')"
+          severity="danger"
+          :disabled="!voidReasonValid || voiding"
+          :loading="voiding"
+          data-testid="draft-void-confirm"
+        />
+      </template>
+    </Dialog>
 
     <!-- Column headers, once; on a phone each line carries its own small labels instead -->
     <div
@@ -834,13 +1222,32 @@ onBeforeUnmount(() => {
             @keydown.enter.capture="onProductEnter(row, $event)"
           />
           <div
-            v-if="row.label || row.productGroupId"
-            class="mt-1 text-xs text-gray-500 dark:text-zinc-400"
+            v-if="row.source !== 'web' || rowOrigin(row).label || rowOrigin(row).group"
+            class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-gray-500 dark:text-zinc-400"
+            data-testid="draft-row-origin"
           >
-            <span v-if="row.label">{{ t(labelKey, { label: row.label }) }}</span>
-            <span v-if="row.productGroupId && groupName.get(row.productGroupId)">
-              · {{ t('shopping.draft_group', { name: groupName.get(row.productGroupId)! }) }}</span
+            <span
+              v-if="row.source !== 'web'"
+              class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+              :class="LINE_BADGE[row.source]"
+              :data-source="row.source"
+              data-testid="draft-row-source"
+              >{{ t(`shopping.draft_line_source_${row.source}`) }}</span
             >
+            <span>{{
+              [
+                rowOrigin(row).label ? t(labelKey(row), { label: rowOrigin(row).label! }) : null,
+                rowOrigin(row).group
+                  ? rowOrigin(row).label
+                    ? t('shopping.draft_group', { name: rowOrigin(row).group! })
+                    : t(labelKey(row), {
+                        label: t('shopping.draft_group', { name: rowOrigin(row).group! }),
+                      })
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')
+            }}</span>
           </div>
           <Button
             v-if="isOpen && !row.productId"
@@ -869,9 +1276,9 @@ onBeforeUnmount(() => {
             v-model="row.amount"
             :inputId="`draft-amount-${row.uid}`"
             :min="1"
-            :max="DELIVERY_MAX_AMOUNT"
             fluid
             highlightOnFocus
+            :live="false"
             :disabled="!isOpen"
             :invalid="row.touched && !row.ghost && (!row.amount || row.amount < 1)"
             :placeholder="t('common.pieces')"
@@ -889,19 +1296,29 @@ onBeforeUnmount(() => {
           >
           <InputNumber
             :ref="keep(purchaseRefs, row.uid)"
-            v-model="row.purchasePrice"
+            :modelValue="row.purchasePrice"
             :inputId="`draft-purchase-${row.uid}`"
             :min="0"
-            :max="DELIVERY_MAX_PRICE"
             :minFractionDigits="2"
             :maxFractionDigits="2"
             fluid
             highlightOnFocus
+            :live="false"
             :disabled="!isOpen"
             :suffix="' ' + t('common.currency')"
             :placeholder="t('common.currency')"
             :pt="{ pcInputText: { root: { 'data-testid': 'draft-row-purchase-price' } } }"
+            @update:modelValue="onPurchaseInput(row, $event)"
           />
+          <div
+            v-if="row.purchasePriceEstimated && row.purchasePrice !== null"
+            class="mt-1 inline-flex items-center gap-1 text-xs text-amber-700 dark:text-amber-300"
+            data-testid="draft-row-estimated"
+          >
+            <span class="h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />
+            {{ t('shopping.draft_estimated_badge') }}
+            <InfoHint :text="t('shopping.draft_estimated')" />
+          </div>
         </div>
         <div
           class="order-5 col-span-5 md:order-none md:col-span-2"
@@ -917,9 +1334,9 @@ onBeforeUnmount(() => {
             v-model="row.price"
             :inputId="`draft-price-${row.uid}`"
             :min="1"
-            :max="DELIVERY_MAX_PRICE"
             fluid
             highlightOnFocus
+            :live="false"
             :disabled="!isOpen"
             :invalid="row.touched && !row.ghost && !effectivePrice(row)"
             :suffix="' ' + t('common.currency')"
@@ -934,16 +1351,22 @@ onBeforeUnmount(() => {
           <Button
             v-if="isOpen && !row.ghost"
             icon="pi pi-times"
-            severity="danger"
+            severity="secondary"
             text
             size="small"
+            class="hover:!text-red-600 dark:hover:!text-red-400"
             :aria-label="t('shopping.draft_remove_line')"
             data-testid="draft-row-remove"
             @click="removeRow(row.uid)"
           />
         </div>
         <div
-          v-if="lastPricesText(row) || (row.touched && rowProblem(row)) || rowWarning(row)"
+          v-if="
+            lastPricesText(row) ||
+            (row.touched && rowProblem(row)) ||
+            rowWarning(row) ||
+            duplicateOf(row)
+          "
           class="order-6 col-span-12 flex flex-wrap gap-x-3 gap-y-0.5 text-xs md:order-none"
         >
           <span v-if="lastPricesText(row)" class="text-gray-500 dark:text-zinc-400">{{
@@ -958,6 +1381,12 @@ onBeforeUnmount(() => {
           <span v-if="rowWarning(row)" class="text-red-600 dark:text-red-400">{{
             rowWarning(row)
           }}</span>
+          <span
+            v-if="duplicateOf(row)"
+            class="text-amber-700 dark:text-amber-300"
+            data-testid="draft-row-duplicate"
+            >{{ t('shopping.draft_duplicate', { line: duplicateOf(row)! }) }}</span
+          >
         </div>
       </div>
     </div>
@@ -967,8 +1396,27 @@ onBeforeUnmount(() => {
       button, Stock as the one filled button. On a phone the actions stack under the totals
       with Stock full width where the thumb is and Discard beneath it.
     -->
-    <div class="mt-6 border-t border-gray-200 pt-4 dark:border-zinc-700">
-      <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div
+      class="sticky bottom-0 z-10 -mx-4 mt-6 border-t border-gray-200 bg-white/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur md:static md:mx-0 md:bg-transparent md:px-0 md:pt-4 md:pb-0 md:backdrop-blur-none dark:border-zinc-700 dark:bg-zinc-900/95 md:dark:bg-transparent"
+      data-testid="draft-footer"
+    >
+      <div
+        v-if="removed"
+        class="mb-3 flex items-center justify-between gap-3 rounded-md bg-gray-100 px-3 py-2 text-sm text-gray-800 dark:bg-zinc-800 dark:text-zinc-200"
+        role="status"
+        data-testid="draft-row-removed"
+      >
+        {{ t('shopping.draft_removed') }}
+        <Button
+          :label="t('shopping.draft_undo')"
+          severity="secondary"
+          text
+          size="small"
+          data-testid="draft-row-undo"
+          @click="undoRemove"
+        />
+      </div>
+      <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
         <div class="space-y-1">
           <div
             class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-700 dark:text-zinc-300"
@@ -984,6 +1432,14 @@ onBeforeUnmount(() => {
             <span v-if="totals.profit !== null" class="font-semibold">{{
               t('shopping.draft_total_profit', { amount: money(totals.profit) })
             }}</span>
+            <span
+              v-else-if="lines.length > 0"
+              class="inline-flex items-center gap-1 font-semibold"
+              data-testid="draft-profit-unknown"
+            >
+              {{ t('shopping.draft_profit_unknown') }}
+              <InfoHint :text="t('shopping.draft_profit_unknown_hint')" />
+            </span>
           </div>
           <!-- Why Stock is greyed out — read before the button, on every screen size -->
           <p
@@ -1029,8 +1485,19 @@ onBeforeUnmount(() => {
       @hide="onWarningHide"
     >
       <div class="space-y-5">
+        <p
+          v-if="estimatedCount > 0"
+          class="flex gap-3 text-sm text-gray-700 dark:text-zinc-300"
+          data-testid="draft-warning-estimated"
+        >
+          <span
+            class="pi pi-exclamation-triangle mt-0.5 text-amber-600 dark:text-amber-400"
+            aria-hidden="true"
+          />
+          {{ tp('shopping.draft_warning_estimated', estimatedCount) }}
+        </p>
         <section
-          v-for="warning in warnings"
+          v-for="warning in detailedWarnings"
           :key="warning.index"
           class="space-y-2"
           data-testid="draft-warning-line"
@@ -1043,9 +1510,7 @@ onBeforeUnmount(() => {
               data-testid="draft-warning-summary"
             >
               · {{ t('supplier.warning_amount', { amount: lineFor(warning)!.amount ?? 1 }) }}
-              {{
-                t('supplier.warning_unit_price', { price: effectivePrice(lineFor(warning)!) ?? '' })
-              }}
+              {{ t('supplier.warning_unit_price', { price: formatAmount(warning.price) }) }}
             </span>
           </p>
           <div v-if="warning.duplicate" class="flex gap-3" data-testid="draft-warning-duplicate">
@@ -1062,7 +1527,7 @@ onBeforeUnmount(() => {
                   t('supplier.warning_duplicate_detail', {
                     minutes: warning.duplicate.minutesAgo,
                     amount: warning.duplicate.amount,
-                    price: warning.duplicate.price,
+                    price: formatAmount(warning.duplicate.price),
                   })
                 }}
               </p>
@@ -1083,13 +1548,43 @@ onBeforeUnmount(() => {
               <p class="text-gray-700 dark:text-zinc-300">
                 {{
                   t('supplier.warning_price_detail', {
-                    price: warning.unusualPrice.lastPrice,
+                    price: formatAmount(warning.unusualPrice.lastPrice),
                     supplier: warningSupplier(warning),
-                    date: formatDate(warning.unusualPrice.lastCreatedAt).replace(/ /g, ' '),
+                    date: formatDate(warning.unusualPrice.lastCreatedAt).replace(/ /g, '\u00a0'),
                   })
                 }}
               </p>
               <p class="text-gray-500 dark:text-zinc-400">{{ t('supplier.warning_price_hint') }}</p>
+            </div>
+          </div>
+          <div
+            v-if="warning.unusualPurchasePrice"
+            class="flex gap-3"
+            data-testid="draft-warning-purchase-price"
+          >
+            <span
+              class="pi pi-exclamation-triangle mt-0.5 text-amber-600 dark:text-amber-400"
+              aria-hidden="true"
+            />
+            <div class="min-w-0 flex-1 text-sm">
+              <p class="font-medium text-gray-900 dark:text-zinc-100">
+                {{ t('shopping.draft_warning_purchase_title') }}
+              </p>
+              <p class="text-gray-700 dark:text-zinc-300">
+                {{
+                  t('shopping.draft_warning_purchase_detail', {
+                    price: formatAmount(lineFor(warning)?.purchasePrice ?? null),
+                    last: formatAmount(warning.unusualPurchasePrice.lastPurchasePrice),
+                    date: formatDate(warning.unusualPurchasePrice.lastCreatedAt).replace(
+                      / /g,
+                      '\u00a0'
+                    ),
+                  })
+                }}
+              </p>
+              <p class="text-gray-500 dark:text-zinc-400">
+                {{ t('shopping.draft_warning_purchase_hint') }}
+              </p>
             </div>
           </div>
         </section>

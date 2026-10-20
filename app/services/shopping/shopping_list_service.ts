@@ -82,6 +82,8 @@ export interface ShoppingLine {
   quantity: number
   isOverridden: boolean
   packSize: number
+  /** The lot sizes the pack size was told from (newest first, at most 5) — shown as a hint. */
+  packSample: number[]
   unitCost: number | null
   costSource: CostSource | null
   /** A price worth stocking up at — the cheapest quarter of past purchases. */
@@ -143,6 +145,11 @@ export interface CompleteListOptions {
    * second line — they are bought, but there is nothing to stock.
    */
   extrasNote: (items: string) => string
+  /**
+   * What stands for the free-text lines that did not fit into the note (" a další 3").
+   * Defaults to " +3".
+   */
+  moreExtras?: (count: number, afterOthers: boolean) => string
 }
 
 export interface CompletedList {
@@ -190,7 +197,7 @@ interface Context {
 }
 
 export function parseLineKey(key: string): { kind: LineKind; id: number } | null {
-  const match = /^([gpc])-(\d+)$/.exec(key)
+  const match = /^([gpc])-(\d{1,9})$/.exec(key)
   if (!match) return null
   const kind = ({ g: 'group', p: 'product', c: 'custom' } as const)[match[1] as 'g' | 'p' | 'c']
   return { kind, id: Number(match[2]) }
@@ -211,7 +218,29 @@ export default class ShoppingListService {
     overrides: SettingsOverrides = {}
   ): Promise<ShoppingListView> {
     const list = await this.findActive(supplier.id)
-    return this.buildView(supplier, list, overrides)
+    // Before the first change the list exists only on screen — it plans with the settings
+    // the supplier left on their last list.
+    const settings = list ? {} : await this.lastSettings(supplier.id)
+    return this.buildView(supplier, list, { ...settings, ...overrides })
+  }
+
+  /**
+   * The planning settings of the supplier's last finished list. They are the supplier's
+   * habit (how far ahead, whose stock, which categories), not a property of one trip, so a
+   * new list starts with them; the lines do not carry over.
+   */
+  async lastSettings(supplierId: number): Promise<Required<SettingsOverrides>> {
+    const last = await ShoppingList.query()
+      .where('supplierId', supplierId)
+      .where('status', 'done')
+      .orderBy('completedAt', 'desc')
+      .orderBy('id', 'desc')
+      .first()
+    return {
+      horizonDays: last?.horizonDays ?? null,
+      scope: last?.scope ?? 'mine',
+      categoryIds: last?.categoryIds ?? [],
+    }
   }
 
   /** The active list; inside a transaction it is locked, so two completions cannot cross. */
@@ -234,9 +263,7 @@ export default class ShoppingListService {
       const created = await ShoppingList.create({
         supplierId,
         status: 'active',
-        horizonDays: null,
-        scope: 'mine',
-        categoryIds: [],
+        ...(await this.lastSettings(supplierId)),
       })
       await created.load('items')
       return created
@@ -260,6 +287,11 @@ export default class ShoppingListService {
     await list.save()
   }
 
+  /**
+   * Changes only the fields in `patch`. Edits of one line from two tabs (or the web and an
+   * assistant) merge field by field: Lucid writes just the changed columns, so a tick and a
+   * quantity sent at once both stick; the same field changed twice is last write wins.
+   */
   async updateLine(supplierId: number, key: string, patch: LinePatch): Promise<void> {
     const ref = parseLineKey(key)
     if (!ref) throw new DomainError<ShoppingListErrorCode>('LINE_NOT_FOUND')
@@ -353,10 +385,7 @@ export default class ShoppingListService {
       const stockable = picked.filter((line) => line.kind !== 'custom')
       const extras = picked.filter((line) => line.kind === 'custom')
       let note = options.note
-      if (extras.length) {
-        const items = extras.map((line) => `${line.name} ${line.quantity}×`).join(', ')
-        note = `${note}\n${options.extrasNote(items)}`.slice(0, STOCK_DRAFT_NOTE_MAX)
-      }
+      if (extras.length) note = this.noteWithExtras(options, extras)
 
       const draft = await new StockDraftService().create(
         supplier.id,
@@ -388,6 +417,22 @@ export default class ShoppingListService {
       )
       return { draft, lines: stockable.length, pieces, extras: extras.length }
     })
+  }
+
+  /**
+   * The draft note with the free-text lines — as many as fit, then "and N more" instead of
+   * a list silently cut off mid-word.
+   */
+  private noteWithExtras(options: CompleteListOptions, extras: ShoppingLine[]): string {
+    const names = extras.map((line) => `${line.name} ${line.quantity}×`)
+    const more = options.moreExtras ?? ((count: number) => ` +${count}`)
+    for (let shown = names.length; shown >= 0; shown--) {
+      const rest = names.length - shown
+      const items = names.slice(0, shown).join(', ') + (rest ? more(rest, shown > 0) : '')
+      const note = `${options.note}\n${options.extrasNote(items)}`
+      if (note.length <= STOCK_DRAFT_NOTE_MAX) return note
+    }
+    return options.note.slice(0, STOCK_DRAFT_NOTE_MAX)
   }
 
   // ── Computation ────────────────────────────────────────────────────────────────
@@ -454,7 +499,7 @@ export default class ShoppingListService {
         `SELECT product_id, to_char((created_at AT TIME ZONE ?)::date, 'YYYY-MM-DD') AS day,
                 SUM(CASE WHEN kind = 'loss' THEN quantity ELSE -quantity END)::int AS lost
            FROM stock_adjustments
-          WHERE created_at >= ?
+          WHERE created_at >= ? AND reverted_at IS NULL
           GROUP BY 1, 2`,
         [FRIDGE_TIMEZONE, windowStart.toJSDate()]
       ),
@@ -612,7 +657,8 @@ export default class ShoppingListService {
 
     // Group lines.
     for (const group of groups) {
-      const members = products.filter((p) => p.productGroupId === group.id)
+      // Archived products are no longer bought — not a member to plan or hint at.
+      const members = products.filter((p) => p.productGroupId === group.id && !p.archivedAt)
       const memberStats = members.map((p) => ({ product: p, stats: productStats(p.id) }))
       const deliveries = memberStats
         .flatMap((m) => m.stats.deliveries)
@@ -687,6 +733,7 @@ export default class ShoppingListService {
       const recentDeliveries = stats.deliveries.filter((d) => d.createdAt >= ctx.stapleSince).length
       const isStaple =
         !product.productGroupId &&
+        !product.archivedAt &&
         recentDeliveries >= STAPLE_MIN_DELIVERIES &&
         stats.soldInWindow >= STAPLE_MIN_SOLD
       const suggested =
@@ -742,6 +789,7 @@ export default class ShoppingListService {
           quantity,
           isOverridden: true,
           packSize: 1,
+          packSample: [],
           unitCost,
           costSource: unitCost === null ? null : ('manual' as const),
           goodPrice: null,
@@ -836,9 +884,8 @@ export default class ShoppingListService {
       suggestible: boolean
     }
   ): ShoppingLine {
-    const packSize = inferPackSize(
-      input.deliveries.slice(0, PRICE_SAMPLE_LOTS).map((d) => d.amountSupplied)
-    )
+    const packAmounts = input.deliveries.slice(0, PRICE_SAMPLE_LOTS).map((d) => d.amountSupplied)
+    const packSize = inferPackSize(packAmounts)
     const suggestion = suggestQuantity({
       ratePerOpenDay: input.rate,
       openDays: ctx.openDaysInHorizon,
@@ -848,7 +895,7 @@ export default class ShoppingListService {
     const suggestedQuantity = input.suggestible ? suggestion.quantity : 0
     const item = input.item
     const quantity = item?.quantity ?? suggestedQuantity
-    const prices = this.priceStats(input.deliveries)
+    const prices = this.priceStats(input.deliveries, ctx.supplierId)
     const unitCost = item?.unitCost ?? prices.expected
     const costSource: CostSource | null =
       item?.unitCost !== null && item?.unitCost !== undefined ? 'manual' : prices.source
@@ -888,6 +935,7 @@ export default class ShoppingListService {
       quantity,
       isOverridden: item?.quantity !== null && item?.quantity !== undefined,
       packSize,
+      packSample: packSize > 1 ? packAmounts.slice(0, 5) : [],
       unitCost: unitCost === null ? null : roundMoney(unitCost),
       costSource: unitCost === null ? null : costSource,
       // Within a group the cheapest quarter is just the cheapest product, not a promotion.
@@ -902,15 +950,22 @@ export default class ShoppingListService {
   }
 
   /**
-   * Expected price per piece: what the supplier paid lately (or, without recorded purchase
-   * prices, what they sold for). The "good" price is the cheapest quarter of the year.
+   * Expected price per piece: what the supplier paid lately (or, without purchase prices of
+   * their own, what the product sold for). The "good" price is the cheapest quarter of the
+   * year. A colleague's purchase prices are theirs — they never feed someone else's list,
+   * not even an admin's; selling prices are public and may come from anyone's lots.
    */
-  private priceStats(deliveries: DeliveryRow[]): {
+  private priceStats(
+    deliveries: DeliveryRow[],
+    supplierId: number
+  ): {
     expected: number | null
     good: number | null
     source: 'purchase' | 'selling' | null
   } {
-    const withCost = deliveries.filter((d) => d.purchasePrice !== null)
+    const withCost = deliveries.filter(
+      (d) => d.purchasePrice !== null && d.supplierId === supplierId
+    )
     const pool = withCost.length ? withCost : deliveries
     if (pool.length === 0) return { expected: null, good: null, source: null }
     const valueOf = (d: DeliveryRow) => (withCost.length ? d.purchasePrice! : d.price)

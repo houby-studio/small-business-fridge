@@ -25,7 +25,10 @@ export default class ShoppingListController {
     const [list, categories, products] = await Promise.all([
       new ShoppingListService().getView(user),
       Category.query().where('isDisabled', false).orderBy('name', 'asc'),
-      Product.query().orderBy('displayName', 'asc').select('id', 'displayName'),
+      Product.query()
+        .whereNull('archivedAt')
+        .orderBy('displayName', 'asc')
+        .select('id', 'displayName'),
     ])
 
     return inertia.render('supplier/shopping_list/index', {
@@ -38,7 +41,7 @@ export default class ShoppingListController {
   async updateSettings({ request, response, auth }: HttpContext) {
     const data = await request.validateUsing(shoppingListSettingsValidator)
     await new ShoppingListService().updateSettings(auth.user!.id, data)
-    return response.redirect().back()
+    return response.redirect('back', true)
   }
 
   async addLine({ request, response, auth, session, i18n }: HttpContext) {
@@ -48,7 +51,7 @@ export default class ShoppingListController {
     } catch (error) {
       this.flashError(error, session, i18n)
     }
-    return response.redirect().back()
+    return response.redirect('back', true)
   }
 
   async updateLine({ params, request, response, auth, session, i18n }: HttpContext) {
@@ -58,7 +61,7 @@ export default class ShoppingListController {
     } catch (error) {
       this.flashError(error, session, i18n)
     }
-    return response.redirect().back()
+    return response.redirect('back', true)
   }
 
   async resetLine({ params, response, auth, session, i18n }: HttpContext) {
@@ -67,7 +70,7 @@ export default class ShoppingListController {
     } catch (error) {
       this.flashError(error, session, i18n)
     }
-    return response.redirect().back()
+    return response.redirect('back', true)
   }
 
   /**
@@ -80,6 +83,10 @@ export default class ShoppingListController {
       const { draft, lines } = await new ShoppingListService().completeIntoDraft(auth.user!, {
         note: i18n.t('shopping.draft_note_from_list', { date }),
         extrasNote: (items) => i18n.t('shopping.draft_note_extras', { items }),
+        moreExtras: (count, afterOthers) =>
+          i18n.t(afterOthers ? 'shopping.draft_note_more' : 'shopping.draft_note_more_only', {
+            count,
+          }),
       })
       session.flash('alert', {
         type: 'success',

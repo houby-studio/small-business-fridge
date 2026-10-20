@@ -7,14 +7,16 @@ import Tag from 'primevue/tag'
 import Select from 'primevue/select'
 import ToggleSwitch from 'primevue/toggleswitch'
 import Button from 'primevue/button'
-import InputNumber from 'primevue/inputnumber'
+import InputNumber from '~/components/NumberInput.vue'
 import InputText from 'primevue/inputtext'
 import ConfirmDialog from 'primevue/confirmdialog'
+import Dialog from 'primevue/dialog'
 import Paginator from 'primevue/paginator'
 import { useAppConfirm } from '~/composables/use_app_confirm'
 import { useToast } from 'primevue/usetoast'
 import { useI18n } from '~/composables/use_i18n'
 import { useListFilters } from '~/composables/use_list_filters'
+import { hasActiveFilters } from '~/composables/use_filter_params'
 import { useSelectEnterKey } from '~/composables/use_select_enter_key'
 import FilterBar from '~/components/FilterBar.vue'
 import PaginatedDataTable from '~/components/PaginatedDataTable.vue'
@@ -31,6 +33,8 @@ interface UserRow {
   createdAt: string
   hasUninvoicedOrders: boolean
   hasUnpaidInvoices: boolean
+  /** Stock and uninvoiced sales — while any is left, the supplier cannot be switched off. */
+  openBusiness: { lotsWithStock: number; piecesLeft: number; uninvoicedOrders: number }
 }
 
 interface PaginatedUsers {
@@ -58,6 +62,7 @@ const props = defineProps<{
   users: PaginatedUsers
   filters: { role: string; userId: string; disabled: string; sortBy: string; sortOrder: string }
   userOptions: { id: number; displayName: string }[]
+  supplierOptions: { id: number; displayName: string }[]
   invitations: PaginatedInvites
   inviteFilters: { invitePage: number }
   registrationPolicy: {
@@ -108,6 +113,7 @@ const { onSelectShow } = useSelectEnterKey([
     getValue: (o) => o.id,
     onSelect: (v) => {
       filterUserId.value = v
+      applyFilters()
     },
   },
 ])
@@ -131,6 +137,10 @@ const { applyFilters, navigateClear, onPageChange, navigateSort } = useListFilte
   getCurrentPage: () => props.users.meta.currentPage,
 })
 
+const filtersActive = computed(() =>
+  hasActiveFilters(buildFilterParams(), ['sortBy', 'sortOrder', 'page', 'invitePage'])
+)
+
 function updateRole(userId: number, role: string) {
   router.put(`/admin/users/${userId}`, { role }, { preserveState: true })
 }
@@ -150,6 +160,53 @@ function generateInvoiceForUser(userId: number, displayName: string) {
       router.post(`/admin/users/${userId}/generate-invoice`)
     },
   })
+}
+
+function hasOpenBusiness(user: UserRow) {
+  return user.openBusiness.lotsWithStock > 0 || user.openBusiness.uninvoicedOrders > 0
+}
+
+function blockedReason(user: UserRow) {
+  if (hasOpenBusiness(user)) {
+    return t('admin.users_open_business', {
+      pieces: user.openBusiness.piecesLeft,
+      orders: user.openBusiness.uninvoicedOrders,
+    })
+  }
+  return t('messages.user_has_uninvoiced_orders')
+}
+
+// ── Hand a leaving supplier's stock over ────────────────────────────────────────
+const transferFrom = ref<UserRow | null>(null)
+const transferTo = ref<number | null>(null)
+const transferring = ref(false)
+const transferTargets = computed(() =>
+  props.supplierOptions.filter((option) => option.id !== transferFrom.value?.id)
+)
+
+function openTransfer(user: UserRow) {
+  transferFrom.value = user
+  transferTo.value = props.supplierOptions.find((option) => option.id !== user.id)?.id ?? null
+}
+
+function closeTransfer() {
+  transferFrom.value = null
+}
+
+function submitTransfer() {
+  if (!transferFrom.value || !transferTo.value) return
+  transferring.value = true
+  router.post(
+    `/admin/users/${transferFrom.value.id}/transfer-stock`,
+    { toUserId: transferTo.value },
+    {
+      preserveScroll: true,
+      onSuccess: closeTransfer,
+      onFinish: () => {
+        transferring.value = false
+      },
+    }
+  )
 }
 
 function toggleKiosk(userId: number, isKiosk: boolean) {
@@ -362,7 +419,7 @@ function changeInvitePage(page: number) {
     </div>
 
     <!-- Filter bar -->
-    <FilterBar @apply="applyFilters" @clear="clearFilters">
+    <FilterBar :active="filtersActive" @clear="clearFilters">
       <div>
         <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
           t('admin.users_filter_user')
@@ -377,6 +434,7 @@ function changeInvitePage(page: number) {
           filter
           class="w-56"
           @show="onSelectShow"
+          @change="applyFilters"
         />
       </div>
       <div>
@@ -390,6 +448,7 @@ function changeInvitePage(page: number) {
           optionLabel="label"
           optionValue="value"
           class="w-40"
+          @change="applyFilters"
         />
       </div>
       <div>
@@ -403,6 +462,7 @@ function changeInvitePage(page: number) {
           optionLabel="label"
           optionValue="value"
           class="w-40"
+          @change="applyFilters"
         />
       </div>
     </FilterBar>
@@ -494,9 +554,13 @@ function changeInvitePage(page: number) {
         <template #body="{ data }">
           <!-- If user has pending issues and is currently active, show warning instead of toggle -->
           <span
-            v-if="!data.isDisabled && (data.hasUninvoicedOrders || data.hasUnpaidInvoices)"
-            :title="t('messages.user_has_uninvoiced_orders')"
-            :aria-label="t('messages.user_has_uninvoiced_orders')"
+            v-if="
+              !data.isDisabled &&
+              (data.hasUninvoicedOrders || data.hasUnpaidInvoices || hasOpenBusiness(data))
+            "
+            :title="blockedReason(data)"
+            :aria-label="blockedReason(data)"
+            :data-testid="`user-blocked-${data.id}`"
           >
             <Tag severity="warn" icon="pi pi-exclamation-circle" />
           </span>
@@ -523,6 +587,17 @@ function changeInvitePage(page: number) {
               text
               :aria-label="t('admin.users_generate_invoice')"
               @click="generateInvoiceForUser(data.id, data.displayName)"
+            />
+            <Button
+              v-if="data.openBusiness.piecesLeft > 0"
+              icon="pi pi-arrow-right-arrow-left"
+              severity="secondary"
+              size="small"
+              text
+              :aria-label="t('admin.users_transfer_stock')"
+              :title="t('admin.users_transfer_stock')"
+              :data-testid="`user-transfer-${data.id}`"
+              @click="openTransfer(data)"
             />
             <Button
               icon="pi pi-envelope"
@@ -556,5 +631,50 @@ function changeInvitePage(page: number) {
         </div>
       </template>
     </PaginatedDataTable>
+
+    <Dialog
+      :visible="transferFrom !== null"
+      modal
+      :draggable="false"
+      :header="t('admin.users_transfer_stock')"
+      :style="{ width: '28rem' }"
+      data-testid="transfer-stock-dialog"
+      @update:visible="(open: boolean) => !open && closeTransfer()"
+    >
+      <div v-if="transferFrom">
+        <label
+          for="transfer-stock-target"
+          class="mb-1 block text-sm text-gray-700 dark:text-zinc-300"
+          >{{ t('admin.users_transfer_stock_target') }}</label
+        >
+        <Select
+          v-model="transferTo"
+          inputId="transfer-stock-target"
+          :options="transferTargets"
+          optionLabel="displayName"
+          optionValue="id"
+          filter
+          class="w-full"
+        />
+        <p class="mt-3 text-sm text-gray-600 dark:text-zinc-400">
+          {{
+            t('admin.users_transfer_stock_summary', {
+              pieces: transferFrom.openBusiness.piecesLeft,
+              lots: transferFrom.openBusiness.lotsWithStock,
+            })
+          }}
+        </p>
+      </div>
+      <template #footer>
+        <Button :label="t('common.cancel')" severity="secondary" text @click="closeTransfer" />
+        <Button
+          :label="t('admin.users_transfer_stock')"
+          :disabled="!transferTo || transferring"
+          :loading="transferring"
+          data-testid="transfer-stock-submit"
+          @click="submitTransfer"
+        />
+      </template>
+    </Dialog>
   </AppLayout>
 </template>

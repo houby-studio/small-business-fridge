@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Head } from '@inertiajs/vue3'
+import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '~/layouts/AppLayout.vue'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Select from 'primevue/select'
+import Button from 'primevue/button'
+import ConfirmDialog from 'primevue/confirmdialog'
+import InfoHint from '~/components/InfoHint.vue'
+import { useAppConfirm } from '~/composables/use_app_confirm'
 import { useI18n } from '~/composables/use_i18n'
 import { formatDate } from '~/composables/use_format_date'
 import { useListFilters } from '~/composables/use_list_filters'
+import { hasActiveFilters } from '~/composables/use_filter_params'
 import { useSelectEnterKey } from '~/composables/use_select_enter_key'
 import FilterBar from '~/components/FilterBar.vue'
 import PaginatedDataTable from '~/components/PaginatedDataTable.vue'
@@ -20,6 +25,8 @@ interface InvoiceRow {
   createdAt: string
   buyer: { displayName: string }
   supplier: { displayName: string }
+  /** The issuer left — the admin confirms or rejects this payment. */
+  canSettle: boolean
 }
 
 interface PaginatedInvoices {
@@ -40,7 +47,27 @@ const props = defineProps<{
   suppliers: { id: number; displayName: string }[]
 }>()
 const { t } = useI18n()
+const confirm = useAppConfirm()
 const ALL = '__all__'
+
+const anySettleable = computed(() => props.invoices.data.some((inv) => inv.canSettle))
+
+function settle(invoice: InvoiceRow, action: 'approve' | 'reject') {
+  confirm.require({
+    header: t(
+      action === 'approve' ? 'admin.invoices_approve_payment' : 'admin.invoices_reject_payment'
+    ),
+    message: `#${invoice.id} · ${invoice.buyer.displayName} · ${t('common.price_with_currency', { price: invoice.totalCost })}`,
+    acceptLabel: t(
+      action === 'approve' ? 'admin.invoices_approve_payment' : 'admin.invoices_reject_payment'
+    ),
+    rejectLabel: t('common.cancel'),
+    destructive: action === 'reject',
+    accept: () => {
+      router.post(`/admin/invoices/${invoice.id}/payment`, { action }, { preserveScroll: true })
+    },
+  })
+}
 
 const filterStatus = ref(props.filters.status || ALL)
 const filterBuyerId = ref<number | string>(
@@ -75,6 +102,7 @@ const { onSelectShow } = useSelectEnterKey([
     getValue: (o) => o.id,
     onSelect: (v) => {
       filterBuyerId.value = v
+      applyFilters()
     },
   },
   {
@@ -84,6 +112,7 @@ const { onSelectShow } = useSelectEnterKey([
     getValue: (o) => o.id,
     onSelect: (v) => {
       filterSupplierId.value = v
+      applyFilters()
     },
   },
 ])
@@ -117,6 +146,8 @@ const { applyFilters, navigateClear, onPageChange, navigateSort } = useListFilte
   getCurrentPage: () => props.invoices.meta.currentPage,
 })
 
+const filtersActive = computed(() => hasActiveFilters(buildFilterParams()))
+
 function clearFilters() {
   filterStatus.value = ALL
   filterBuyerId.value = ALL
@@ -136,13 +167,14 @@ function onSort(event: any) {
 <template>
   <AppLayout>
     <Head :title="t('admin.invoices_title')" />
+    <ConfirmDialog />
 
     <h1 class="mb-6 text-2xl font-bold text-gray-900 dark:text-zinc-100">
       {{ t('admin.invoices_heading') }}
     </h1>
 
     <!-- Filter bar -->
-    <FilterBar @apply="applyFilters" @clear="clearFilters">
+    <FilterBar :active="filtersActive" @clear="clearFilters">
       <div>
         <label class="mb-1 block text-sm text-gray-600 dark:text-zinc-400">{{
           t('admin.invoices_filter_status')
@@ -153,6 +185,7 @@ function onSort(event: any) {
           optionLabel="label"
           optionValue="value"
           class="w-44"
+          @change="applyFilters"
         />
       </div>
       <div>
@@ -168,6 +201,7 @@ function onSort(event: any) {
           filter
           class="w-56"
           @show="onSelectShow"
+          @change="applyFilters"
         />
       </div>
       <div>
@@ -183,6 +217,7 @@ function onSort(event: any) {
           filter
           class="w-56"
           @show="onSelectShow"
+          @change="applyFilters"
         />
       </div>
     </FilterBar>
@@ -233,6 +268,40 @@ function onSort(event: any) {
             :severity="statusSeverity(data)"
             class="text-xs whitespace-nowrap"
           />
+        </template>
+      </Column>
+
+      <Column v-if="anySettleable" headerClass="sbf-col-action" bodyClass="sbf-col-action">
+        <template #header>
+          <span class="flex items-center gap-1">
+            {{ t('admin.users_actions') }}
+            <InfoHint :text="t('admin.invoices_settle_hint')" />
+          </span>
+        </template>
+        <template #body="{ data }">
+          <div v-if="data.canSettle" class="flex items-center gap-1">
+            <Button
+              icon="pi pi-check"
+              severity="success"
+              text
+              size="small"
+              :aria-label="t('admin.invoices_approve_payment')"
+              :title="t('admin.invoices_approve_payment')"
+              :data-testid="`invoice-approve-${data.id}`"
+              @click="settle(data, 'approve')"
+            />
+            <Button
+              v-if="data.isPaymentRequested"
+              icon="pi pi-times"
+              severity="danger"
+              text
+              size="small"
+              :aria-label="t('admin.invoices_reject_payment')"
+              :title="t('admin.invoices_reject_payment')"
+              :data-testid="`invoice-reject-${data.id}`"
+              @click="settle(data, 'reject')"
+            />
+          </div>
         </template>
       </Column>
 

@@ -10,11 +10,15 @@ import DeliveryService from '#services/delivery_service'
 import InvoiceService from '#services/invoice_service'
 import AdminService from '#services/admin_service'
 import NotificationService from '#services/notification_service'
+import { settleSideEffects } from '#services/side_effects'
 import InventoryService from '#services/inventory_service'
+import StockHistoryService from '#services/stock_history_service'
 import DeliveryCorrection from '#models/delivery_correction'
 import StockDraft from '#models/stock_draft'
 import StockDraftItem from '#models/stock_draft_item'
 import db from '@adonisjs/lucid/services/db'
+import type { ApiClient } from '@japa/api-client'
+import type User from '#models/user'
 
 const cleanAll = async () => {
   await db.from('audit_logs').delete()
@@ -173,8 +177,8 @@ test.group('Web Supplier - delivery corrections', (group) => {
       assert.equal(correction.reason, 'Price typo')
       assert.equal(correction.repricedOrderCount, 2)
 
-      // The controller sends fire-and-forget; call it directly to assert deterministically.
-      await new NotificationService().sendPriceCorrectionNotifications(correction.id)
+      // Sent after the response — wait for exactly those e-mails.
+      assert.deepEqual(await settleSideEffects(), [])
       fakeMailer.messages.assertSent((message) => message.hasTo(buyer.email))
       assertFullyTranslated(assert, fakeMailer.messages.sent())
     } finally {
@@ -374,14 +378,15 @@ test.group('Web Supplier - delivery corrections', (group) => {
     const { delivery } = await setup({ amount: 10, price: 5 })
     const other = await UserFactory.apply('supplier').create()
 
-    const mine = await client.get('/supplier/deliveries').loginAs(other).headers(inertia)
+    const mine = await client.get('/supplier/deliveries?scope=mine').loginAs(other).headers(inertia)
     assert.lengthOf(mine.body().props.recentDeliveries.data, 0)
     assert.equal(mine.body().props.filters.scope, 'mine')
     assert.equal(mine.body().props.filters.type, 'deliveries')
     // The other table is not loaded for this view.
     assert.deepEqual(mine.body().props.adjustments.data, [])
 
-    const all = await client.get('/supplier/deliveries?scope=all').loginAs(other).headers(inertia)
+    // The whole fridge is the default (PLAN4 P1).
+    const all = await client.get('/supplier/deliveries').loginAs(other).headers(inertia)
     const row = all.body().props.recentDeliveries.data[0]
     assert.equal(row.id, delivery.id)
     assert.isFalse(row.canCorrect)
@@ -407,7 +412,7 @@ test.group('Web Supplier - delivery corrections', (group) => {
     })
 
     const page = await client
-      .get('/supplier/deliveries?type=adjustments')
+      .get('/supplier/deliveries?type=adjustments&scope=mine')
       .loginAs(supplier)
       .headers(inertia)
     page.assertStatus(200)
@@ -433,7 +438,7 @@ test.group('Web Supplier - delivery corrections', (group) => {
 
     // The colleague recorded it, but it is not their loss — only scope=all shows it to them.
     const theirs = await client
-      .get('/supplier/deliveries?type=adjustments')
+      .get('/supplier/deliveries?type=adjustments&scope=mine')
       .loginAs(colleague)
       .headers(inertia)
     assert.deepEqual(theirs.body().props.adjustments.data, [])
@@ -463,27 +468,27 @@ test.group('Supplier is told when someone else changes their records', (group) =
       const { supplier, delivery } = await setup({ amount: 10, price: 1 })
       const admin = await UserFactory.apply('admin').create()
       const service = new DeliveryService()
-      const notifications = new NotificationService()
 
-      const own = await service.correctDelivery(supplier, delivery.id, {
+      await service.correctDelivery(supplier, delivery.id, {
         amount: 9,
         price: 1,
         reason: 'Own fix',
       })
-      await notifications.sendDeliveryCorrectionToSupplier(own.correction.id)
+      assert.deepEqual(await settleSideEffects(), [])
       assert.lengthOf(fakeMailer.messages.sent(), 0)
 
-      const foreign = await service.correctDelivery(admin, delivery.id, {
+      await service.correctDelivery(admin, delivery.id, {
         amount: 9,
         price: 25,
         reason: 'Admin fixed the price',
       })
-      await notifications.sendDeliveryCorrectionToSupplier(foreign.correction.id)
+
+      assert.deepEqual(await settleSideEffects(), [])
       fakeMailer.messages.assertSent((message) => message.hasTo(supplier.email))
 
       const voided = await setup({ amount: 4, price: 10 })
-      const { correction } = await service.voidDelivery(admin, voided.delivery.id, 'Duplicate')
-      await notifications.sendDeliveryCorrectionToSupplier(correction.id)
+      await service.voidDelivery(admin, voided.delivery.id, 'Duplicate')
+      assert.deepEqual(await settleSideEffects(), [])
       fakeMailer.messages.assertSent((message) => message.hasTo(voided.supplier.email))
       assertFullyTranslated(assert, fakeMailer.messages.sent())
     } finally {
@@ -692,14 +697,14 @@ test.group('Corrections under contention and impersonation', (group) => {
     assert.equal(delivery.amountLeft, 9)
   })
 
-  test('two quick corrections still email the buyers of the first one', async () => {
+  test('two quick corrections still email the buyers of the first one', async ({ assert }) => {
     const fakeMailer = mail.fake()
     try {
       const { supplier, delivery } = await setup({ amount: 10, price: 20 })
       const buyer = await UserFactory.create()
       await new OrderService().purchase(buyer.id, delivery.id, 'web')
 
-      const first = await new DeliveryService().correctDelivery(supplier, delivery.id, {
+      await new DeliveryService().correctDelivery(supplier, delivery.id, {
         amount: 10,
         price: 25,
         reason: 'First',
@@ -710,12 +715,10 @@ test.group('Corrections under contention and impersonation', (group) => {
         reason: 'Second',
       })
 
-      // The first email runs after the second correction already re-pointed the orders.
-      await new NotificationService().sendPriceCorrectionNotifications(
-        first.correction.id,
-        first.repricedOrderIds
-      )
-      fakeMailer.messages.assertSent((message) => message.hasTo(buyer.email))
+      // Both e-mails run after the second correction already re-pointed the orders.
+      assert.deepEqual(await settleSideEffects(), [])
+      const toBuyer = fakeMailer.messages.sent().filter((message) => message.hasTo(buyer.email))
+      assert.lengthOf(toBuyer, 2)
     } finally {
       mail.restore()
     }
@@ -744,7 +747,7 @@ test.group('Corrections under contention and impersonation', (group) => {
       assert.equal(correction.actorId, supplier.id)
       assert.equal(correction.impersonatorId, admin.id)
 
-      await new NotificationService().sendDeliveryCorrectionToSupplier(correction.id)
+      assert.deepEqual(await settleSideEffects(), [])
       const notice = fakeMailer.messages.sent().find((message) => message.hasTo(supplier.email))
       assert.exists(notice)
       assert.include(JSON.stringify(notice!.toJSON()), admin.displayName)
@@ -788,11 +791,448 @@ test.group('Controllers trigger the notifications', (group) => {
         .json({ amount: 10, price: 6, reason: 'Admin fix' })
         .redirects(0)
       response.assertStatus(302)
+      await settleSideEffects()
     } finally {
       proto.sendDeliveryCorrectionToSupplier = original.supplier
       proto.sendPriceCorrectionNotifications = original.buyers
     }
 
     assert.sameMembers(calls, ['supplier', 'buyers'])
+  })
+})
+
+test.group('Web Supplier - history privacy, filters and odd input', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test("a colleague's purchase prices stay private in the history", async ({ client, assert }) => {
+    const { supplier, product } = await setup({ amount: 10, price: 5, purchasePrice: 3.5 })
+    await new InventoryService().writeOff(supplier, {
+      productId: product.id,
+      quantity: 1,
+      reason: 'damaged',
+    })
+    const colleague = await UserFactory.apply('supplier').create()
+    const admin = await UserFactory.apply('admin').create()
+
+    const deliveries = await client
+      .get('/supplier/deliveries?scope=all')
+      .loginAs(colleague)
+      .headers(inertia)
+    const [lot] = deliveries.body().props.recentDeliveries.data
+    assert.isNull(lot.purchasePrice)
+    // The selling price is public.
+    assert.equal(lot.price, 5)
+
+    const adjustments = await client
+      .get('/supplier/deliveries?type=adjustments&scope=all')
+      .loginAs(colleague)
+      .headers(inertia)
+    const [loss] = adjustments.body().props.adjustments.data
+    assert.isNull(loss.unitCost)
+    assert.equal(loss.unitPrice, 5)
+
+    // The owner and an admin still see it.
+    for (const viewer of [supplier, admin]) {
+      const seen = await client
+        .get('/supplier/deliveries?scope=all')
+        .loginAs(viewer)
+        .headers(inertia)
+      assert.equal(seen.body().props.recentDeliveries.data[0].purchasePrice, 3.5)
+      const seenLoss = await client
+        .get('/supplier/deliveries?type=adjustments&scope=all')
+        .loginAs(viewer)
+        .headers(inertia)
+      assert.equal(seenLoss.body().props.adjustments.data[0].unitCost, 3.5)
+    }
+  })
+
+  test('reason=inventory lists the losses nobody explained yet (UX-27)', async ({
+    client,
+    assert,
+  }) => {
+    const { supplier, product } = await setup({ amount: 10, price: 5 })
+    const inventory = new InventoryService()
+    await inventory.writeOff(supplier, { productId: product.id, quantity: 1, reason: 'expired' })
+    // An inventory that finds 2 pieces missing: a loss without a reason yet.
+    await inventory.commitCount(supplier, {
+      scope: 'all',
+      items: [{ productId: product.id, expected: 9, counted: 7 }],
+    })
+
+    const response = await client
+      .get('/supplier/deliveries?type=adjustments&scope=mine&reason=inventory')
+      .loginAs(supplier)
+      .headers(inertia)
+    response.assertStatus(200)
+    const { adjustments, filters } = response.body().props
+    assert.equal(filters.reason, 'inventory')
+    assert.equal(adjustments.meta.total, 1)
+    assert.equal(adjustments.data[0].quantity, 2)
+    assert.equal(adjustments.data[0].reason, 'inventory')
+
+    // The MCP tool narrows by where a row came from: a count, or a write-off by hand.
+    const history = new StockHistoryService()
+    const fromCount = await history.listAdjustments(supplier, 1, 20, { origin: 'inventory' })
+    assert.deepEqual(
+      fromCount.data.map((row) => row.reason),
+      ['inventory']
+    )
+    const byHand = await history.listAdjustments(supplier, 1, 20, { origin: 'write_off' })
+    assert.deepEqual(
+      byHand.data.map((row) => row.reason),
+      ['expired']
+    )
+
+    // An unknown reason is ignored rather than matching nothing.
+    const unknown = await client
+      .get('/supplier/deliveries?type=adjustments&reason=drop')
+      .loginAs(supplier)
+      .headers(inertia)
+    assert.equal(unknown.body().props.filters.reason, '')
+    assert.equal(unknown.body().props.adjustments.meta.total, 2)
+  })
+
+  test('pieces an inventory found never show as a negative sold count (PRO-19)', async ({
+    client,
+    assert,
+  }) => {
+    const { supplier, delivery } = await setup({ amount: 10, price: 5 })
+    // What a surplus on an untouched lot leaves behind.
+    await db
+      .from('deliveries')
+      .where('id', delivery.id)
+      .update({ amount_left: 11, amount_lost: -1 })
+
+    const response = await client.get('/supplier/deliveries').loginAs(supplier).headers(inertia)
+    const [row] = response.body().props.recentDeliveries.data
+    assert.equal(row.soldCount, 0)
+    assert.equal(row.lostCount, -1)
+  })
+
+  test('DELETE of a lot with a write-off explains why it cannot be voided (BE-15)', async ({
+    client,
+    assert,
+  }) => {
+    const { supplier, product, delivery } = await setup({ amount: 10, price: 5 })
+    await new InventoryService().writeOff(supplier, {
+      productId: product.id,
+      quantity: 1,
+      reason: 'damaged',
+    })
+
+    const response = await client
+      .delete(`/supplier/deliveries/${delivery.id}`)
+      .loginAs(supplier)
+      .withCsrfToken()
+      .json({ reason: 'Stocked twice' })
+      .redirects(0)
+
+    response.assertStatus(302)
+    response.assertFlashMessage('alert', {
+      type: 'danger',
+      message:
+        'Z dodávky už je něco odepsané nebo ji upravila inventura, proto ji nelze stornovat. Snižte množství přes Opravit.',
+    })
+    const row = await db.from('deliveries').where('id', delivery.id).first()
+    assert.isNull(row.voided_at)
+  })
+
+  test('ids beyond the integer column are a 404 or an ignored filter, never a 500', async ({
+    client,
+  }) => {
+    const supplier = await UserFactory.apply('supplier').create()
+    const huge = '99999999999'
+
+    for (const url of [
+      `/supplier/stock/drafts/${huge}`,
+      `/supplier/inventory/${huge}`,
+      `/supplier/products/${huge}/edit`,
+    ]) {
+      const response = await client.get(url).loginAs(supplier).redirects(0)
+      response.assertStatus(404)
+    }
+    const put = await client
+      .put(`/supplier/deliveries/${huge}`)
+      .loginAs(supplier)
+      .withCsrfToken()
+      .json({ amount: 1, price: 1, reason: 'Typo' })
+      .redirects(0)
+    put.assertStatus(404)
+
+    for (const url of [
+      `/supplier/stock?categoryId=${huge}`,
+      `/supplier/deliveries?productId=${huge}`,
+      `/supplier/deliveries?type=adjustments&productId=${huge}`,
+    ]) {
+      const response = await client.get(url).loginAs(supplier).headers(inertia)
+      response.assertStatus(200)
+    }
+  })
+})
+
+test.group('Web Supplier - change the price of the remaining stock', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(async () => {
+    await settleSideEffects()
+    await cleanAll()
+  })
+
+  const reprice = (
+    client: ApiClient,
+    user: User,
+    items: Array<{ deliveryId: number; price: number }>
+  ) =>
+    client
+      .post('/supplier/stock/reprice')
+      .loginAs(user)
+      .withCsrfToken()
+      .header('referer', '/supplier/stock?stockState=low&page=2')
+      .json({ items })
+      .redirects(0)
+
+  test('POST /supplier/stock/reprice changes the chosen lots and keeps the filters', async ({
+    client,
+    assert,
+  }) => {
+    const { supplier, product, delivery } = await setup({ amount: 6, price: 20 })
+    const second = await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountSupplied: 3,
+      amountLeft: 3,
+      price: 20,
+    }).create()
+    const buyer = await UserFactory.create()
+    await new OrderService().purchase(buyer.id, delivery.id, 'web')
+
+    const response = await reprice(client, supplier, [{ deliveryId: delivery.id, price: 15 }])
+
+    response.assertStatus(302)
+    // Back to the filtered list it came from, query string and all.
+    assert.equal(response.header('location'), '/supplier/stock?stockState=low&page=2')
+    response.assertFlashMessage('alert', {
+      type: 'success',
+      message: 'Cena změněna u 1 dodávky (5 ks na skladě). Prodané kusy se nemění.',
+    })
+    const prices = await db.from('deliveries').orderBy('id').select('id', 'price')
+    assert.deepEqual(
+      prices.map((row) => [Number(row.id), Number(row.price)]),
+      [
+        [delivery.id, 15],
+        [second.id, 20],
+      ]
+    )
+    const [order] = await db.from('orders').where('delivery_id', delivery.id)
+    assert.equal(Number(order.unit_price), 20)
+    const log = await db.from('audit_logs').where('action', 'delivery.repriced').first()
+    assert.equal(log.user_id, supplier.id)
+  })
+
+  test('the history shows the new price on the lot', async ({ client, assert }) => {
+    const { supplier, product } = await setup({ amount: 6, price: 20 })
+    await new DeliveryService().repriceRemaining(supplier, product.id, 15)
+
+    const page = await client.get('/supplier/deliveries').loginAs(supplier).headers(inertia)
+    const [row] = page.body().props.recentDeliveries.data
+    assert.equal(row.price, 15)
+    assert.include(row.lastCorrection, { kind: 'reprice', oldPrice: 20, newPrice: 15 })
+  })
+
+  test('invalid input is a validation error and changes nothing', async ({ client, assert }) => {
+    const { supplier, delivery } = await setup({ amount: 6, price: 20 })
+
+    for (const items of [
+      [{ deliveryId: delivery.id, price: 0 }],
+      [{ deliveryId: delivery.id, price: 2.5 }],
+      [{ deliveryId: delivery.id, price: 100_001 }],
+      [],
+      [
+        { deliveryId: delivery.id, price: 15 },
+        { deliveryId: delivery.id, price: 16 },
+      ],
+    ]) {
+      const invalid = await client
+        .post('/supplier/stock/reprice')
+        .headers(inertia)
+        .header('referer', '/supplier/stock')
+        .loginAs(supplier)
+        .withCsrfToken()
+        .json({ items })
+        .redirects(1)
+      assert.isNotEmpty(invalid.body().props.errors, JSON.stringify(items))
+    }
+    const row = await db.from('deliveries').where('id', delivery.id).first()
+    assert.equal(Number(row.price), 20)
+  })
+
+  test("a supplier cannot reprice a colleague's lot (IDOR); an admin can", async ({
+    client,
+    assert,
+  }) => {
+    const { supplier, delivery } = await setup({ amount: 6, price: 20 })
+    const colleague = await UserFactory.apply('supplier').create()
+
+    const refused = await reprice(client, colleague, [{ deliveryId: delivery.id, price: 15 }])
+    refused.assertFlashMessage('alert', {
+      type: 'danger',
+      message: 'Cenu cizí dodávky může změnit jen administrátor.',
+    })
+    const unchanged = await db.from('deliveries').where('id', delivery.id).first()
+    assert.equal(Number(unchanged.price), 20)
+
+    const admin = await UserFactory.apply('admin').create()
+    const done = await reprice(client, admin, [{ deliveryId: delivery.id, price: 15 }])
+    done.assertFlashMessage('alert', {
+      type: 'success',
+      message: 'Cena změněna u 1 dodávky (6 ks na skladě). Prodané kusy se nemění.',
+    })
+    const log = await db.from('audit_logs').where('action', 'delivery.repriced').first()
+    assert.equal(log.target_user_id, supplier.id)
+  })
+
+  test('a customer can neither reprice nor list the lots', async ({ client, assert }) => {
+    const { product, delivery } = await setup({ amount: 6, price: 20 })
+    const customer = await UserFactory.create()
+
+    const response = await reprice(client, customer, [{ deliveryId: delivery.id, price: 15 }])
+    response.assertStatus(302)
+    assert.equal(response.header('location'), '/')
+    const lots = await client
+      .get(`/supplier/stock/products/${product.id}/lots`)
+      .loginAs(customer)
+      .redirects(0)
+    lots.assertStatus(302)
+    const row = await db.from('deliveries').where('id', delivery.id).first()
+    assert.equal(Number(row.price), 20)
+  })
+
+  test('the dialog data lists lots in FIFO order without purchase prices', async ({
+    client,
+    assert,
+  }) => {
+    const { supplier, product, delivery } = await setup({
+      amount: 4,
+      price: 20,
+      purchasePrice: 9.9,
+    })
+    const colleague = await UserFactory.apply('supplier').create()
+    const theirs = await DeliveryFactory.merge({
+      supplierId: colleague.id,
+      productId: product.id,
+      amountSupplied: 3,
+      amountLeft: 3,
+      price: 22,
+      purchasePrice: 7.5,
+    }).create()
+
+    const response = await client
+      .get(`/supplier/stock/products/${product.id}/lots`)
+      .loginAs(colleague)
+      .header('accept', 'application/json')
+    response.assertStatus(200)
+    const { lots } = response.body()
+    assert.deepEqual(
+      lots.map((l: any) => [l.deliveryId, l.amountLeft, l.price, l.mine, l.editable]),
+      [
+        [delivery.id, 4, 20, false, false],
+        [theirs.id, 3, 22, true, true],
+      ]
+    )
+    assert.equal(lots[0].supplier.name, supplier.displayName)
+    assert.notInclude(JSON.stringify(response.body()), '9.9')
+    assert.notInclude(JSON.stringify(response.body()), 'purchase')
+  })
+})
+
+test.group('Web Supplier - write-off says where the pieces really came from', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(async () => {
+    await settleSideEffects()
+    await cleanAll()
+  })
+
+  test('a preview that still holds is a plain success; a stale one is spelled out', async ({
+    client,
+    assert,
+  }) => {
+    const { supplier, product, delivery } = await setup({ amount: 2, price: 20 })
+    const newer = await DeliveryFactory.merge({
+      supplierId: supplier.id,
+      productId: product.id,
+      amountSupplied: 5,
+      amountLeft: 5,
+      price: 20,
+    }).create()
+
+    const ok = await client
+      .post('/supplier/stock/write-offs')
+      .loginAs(supplier)
+      .withCsrfToken()
+      .json({
+        productId: product.id,
+        quantity: 1,
+        reason: 'damaged',
+        preview: [{ deliveryId: delivery.id, quantity: 1 }],
+      })
+      .redirects(0)
+    ok.assertFlashMessage('alert', { type: 'success', message: 'Odepsáno 1 ks.' })
+
+    // The dialog still thinks the old lot has 2 pieces; a sale took one meanwhile.
+    const stale = await client
+      .post('/supplier/stock/write-offs')
+      .loginAs(supplier)
+      .withCsrfToken()
+      .json({
+        productId: product.id,
+        quantity: 2,
+        reason: 'damaged',
+        preview: [{ deliveryId: delivery.id, quantity: 2 }],
+      })
+      .redirects(0)
+    const alert = stale.flashMessages().alert as { type: string; message: string }
+    assert.equal(alert.type, 'warn')
+    assert.include(alert.message, 'Odepsáno 2 ks')
+    assert.include(alert.message, `${supplier.displayName} 1 ks`)
+    const lots = await db.from('deliveries').orderBy('id').select('id', 'amount_left')
+    assert.deepEqual(
+      lots.map((row) => [Number(row.id), Number(row.amount_left)]),
+      [
+        [delivery.id, 0],
+        [newer.id, 4],
+      ]
+    )
+  })
+})
+
+test.group('Web Supplier - handed-over stock in the history', (group) => {
+  group.each.setup(cleanAll)
+  group.each.teardown(cleanAll)
+
+  test('both sides see who handed over what, not an empty correction', async ({
+    client,
+    assert,
+  }) => {
+    const { supplier: leaving, product } = await setup({ amount: 5, price: 20 })
+    const heir = await UserFactory.apply('supplier').create()
+    const admin = await UserFactory.apply('admin').create()
+    await new DeliveryService().transferStock(leaving.id, heir.id, admin)
+
+    const theirs = await client
+      .get('/supplier/deliveries?scope=mine')
+      .loginAs(leaving)
+      .headers(inertia)
+    const [out] = theirs.body().props.recentDeliveries.data
+    assert.include(out.transfer, { direction: 'out', counterpart: heir.displayName, pieces: 5 })
+    assert.isNull(out.lastCorrection)
+    assert.equal(out.correctionCount, 0)
+
+    const mine = await client
+      .get(`/supplier/deliveries?productId=${product.id}&scope=mine`)
+      .loginAs(heir)
+      .headers(inertia)
+    const [taken] = mine.body().props.recentDeliveries.data
+    assert.include(taken.transfer, { direction: 'in', counterpart: leaving.displayName, pieces: 5 })
+    assert.equal(taken.amountLeft, 5)
   })
 })

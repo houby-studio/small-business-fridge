@@ -1,12 +1,13 @@
 import { test, expect } from '@playwright/test'
 import { loginAs } from './helpers/auth'
+import { loginAsFreshSupplier } from './helpers/isolated_supplier'
 import { commitDraft, createProduct, stockPreselected } from './helpers/products'
 
 test.describe('Delivery review follow-ups', () => {
   test('an unusual price is flagged at commit and Esc returns to the price field', async ({
     page,
   }) => {
-    await loginAs(page, 'supplier')
+    await loginAsFreshSupplier(page, 'delivery-review-foll')
     const name = `E2E Cena ${Date.now()}`
     await createProduct(page, name)
     await stockPreselected(page, '3', '20')
@@ -42,30 +43,29 @@ test.describe('Delivery review follow-ups', () => {
     await expect(price).toHaveValue('200 Kč')
     await expect(price).toBeFocused()
 
-    await commitDraft(page)
+    // The price is still ten times the last one, so stocking asks again.
+    await commitDraft(page, { expectWarning: true })
   })
 
   test('the Supplier column follows the applied scope filter', async ({ page }) => {
     await loginAs(page, 'supplier')
     await page.goto('/supplier/deliveries')
+    // The whole fridge by default (PLAN4 P1): whose delivery it is matters, so the column shows.
     const supplierHeader = page.getByRole('columnheader', { name: 'Dodavatel' })
-    await expect(supplierHeader).toHaveCount(0)
-
-    await page.getByTestId('deliveries-scope').click()
-    await page.getByRole('option', { name: 'Celá lednice' }).click()
-    // Not applied yet — the table still shows the old rows, so no column either.
-    await expect(supplierHeader).toHaveCount(0)
-
-    await page.getByRole('button', { name: 'Použít filtry' }).click()
     await expect(supplierHeader).toBeVisible()
-    await expect(page).toHaveURL(/scope=all/)
+
+    // The filter applies the moment it changes, and the column goes with the applied scope.
+    await page.getByTestId('deliveries-scope').click()
+    await page.getByRole('option', { name: 'Jen moje' }).click()
+    await expect(page).toHaveURL(/scope=mine/)
+    await expect(supplierHeader).toHaveCount(0)
   })
 
   test("a supplier's Activity names the admin who voided their delivery", async ({
     page,
     browser,
   }) => {
-    await loginAs(page, 'supplier')
+    await loginAsFreshSupplier(page, 'delivery-review-foll')
     const productName = `E2E Aktivita ${Date.now()}`
     const productId = await createProduct(page, productName)
     await stockPreselected(page, '2', '15')
@@ -78,11 +78,11 @@ test.describe('Delivery review follow-ups', () => {
     const dialog = admin.getByTestId('delivery-correction-dialog')
     await dialog.getByTestId('correction-reason').fill('Kontrola admina')
     await dialog.getByRole('button', { name: 'Stornovat', exact: true }).click()
-    await expect(admin.getByText('Naskladnění bylo stornováno.')).toBeVisible()
+    await expect(admin.getByText('Dodávka byla stornována.')).toBeVisible()
     await adminContext.close()
 
     await page.goto('/audit')
-    const row = page.locator('tbody tr', { hasText: 'Storno naskladnění' }).first()
+    const row = page.locator('tbody tr', { hasText: 'Storno dodávky' }).first()
     await expect(row.getByTestId('audit-foreign-actor')).toHaveText('Admin User')
   })
 
@@ -90,7 +90,7 @@ test.describe('Delivery review follow-ups', () => {
     page,
     browser,
   }) => {
-    await loginAs(page, 'supplier')
+    await loginAsFreshSupplier(page, 'delivery-review-foll')
     const productName = `E2E Modal ${Date.now()}`
     const productId = await createProduct(page, productName)
     await stockPreselected(page, '3', '20')
@@ -110,7 +110,7 @@ test.describe('Delivery review follow-ups', () => {
     await page.keyboard.type('22')
     await correction.getByTestId('correction-reason').fill('Nová cena')
     await correction.getByRole('button', { name: 'Uložit opravu' }).click()
-    await expect(page.getByText(/Naskladnění bylo opraveno/)).toBeVisible()
+    await expect(page.getByText(/Dodávka byla opravena/)).toBeVisible()
 
     // The customer buys from the stale page: nothing is bought, a modal asks.
     await customer.getByRole('button', { name: 'Koupit' }).first().click()

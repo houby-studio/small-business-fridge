@@ -3,9 +3,7 @@ import { resolvePage } from '#helpers/pagination'
 import { listRedirectUrl } from '#helpers/list_redirect'
 import InvoiceService from '#services/invoice_service'
 import QrPaymentService from '#services/qr_payment_service'
-import NotificationService from '#services/notification_service'
 import Invoice from '#models/invoice'
-import logger from '@adonisjs/core/services/logger'
 
 export default class InvoicesController {
   async index({ inertia, auth, request }: HttpContext) {
@@ -49,14 +47,9 @@ export default class InvoicesController {
     const invoiceService = new InvoiceService()
 
     try {
-      const invoice = await invoiceService.requestPayment(Number(params.id), auth.user!.id)
+      // The service tells the supplier.
+      await invoiceService.requestPayment(Number(params.id), auth.user!.id)
       session.flash('alert', { type: 'success', message: i18n.t('messages.payment_requested') })
-
-      // Notify supplier that customer has sent payment (fire-and-forget)
-      const notificationService = new NotificationService()
-      notificationService.sendPaymentRequestedNotification(invoice).catch((err) => {
-        logger.error({ err }, `Failed to send payment requested email for invoice #${params.id}`)
-      })
     } catch (error) {
       if (error instanceof Error && error.message === 'FORBIDDEN') {
         session.flash('alert', { type: 'danger', message: i18n.t('messages.invoice_forbidden') })
@@ -74,16 +67,10 @@ export default class InvoicesController {
     const invoiceService = new InvoiceService()
 
     try {
-      const invoice = await invoiceService.cancelPaymentRequest(Number(params.id), auth.user!.id)
+      await invoiceService.cancelPaymentRequest(Number(params.id), auth.user!.id)
       session.flash('alert', {
         type: 'success',
         message: i18n.t('messages.payment_request_cancelled'),
-      })
-
-      // Notify supplier that buyer withdrew payment confirmation (fire-and-forget)
-      const notificationService = new NotificationService()
-      notificationService.sendPaymentWithdrawnNotification(invoice).catch((err) => {
-        logger.error({ err }, `Failed to send payment withdrawn email for invoice #${params.id}`)
       })
     } catch (error) {
       if (error instanceof Error && error.message === 'FORBIDDEN') {

@@ -33,6 +33,10 @@ export default class Product extends BaseModel {
   @column()
   declare productGroupId: number | null
 
+  /** Set while the product is archived: hidden from the shop, kiosk and pickers. */
+  @column.dateTime()
+  declare archivedAt: DateTime | null
+
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
 

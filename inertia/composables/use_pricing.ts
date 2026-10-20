@@ -1,15 +1,10 @@
 import { useI18n } from '~/composables/use_i18n'
 
-// Mirrors app/services/shopping/pricing.ts — change both together.
-export const MAX_MARGIN_PERCENT = 100
-
-/** Selling price from a purchase price and a markup, rounded up to whole currency units. */
-export function suggestSellingPrice(purchasePrice: number, marginPercent: number): number {
-  const margin = Math.min(MAX_MARGIN_PERCENT, Math.max(0, marginPercent))
-  const raw = purchasePrice * (1 + margin / 100)
-  const cents = Math.round(raw * 100) / 100
-  return Math.max(1, Math.ceil(cents - 1e-9))
-}
+export {
+  MAX_MARGIN_PERCENT,
+  suggestDraftPrice,
+  suggestSellingPrice,
+} from '~/composables/pricing_rules'
 
 /**
  * Money with up to two decimals in the user's locale and the instance currency:

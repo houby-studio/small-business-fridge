@@ -65,5 +65,6 @@
   "linked_accounts_heading": "Propojené účty",
   "email_active": "Aktivní e-mail",
   "field_required": "Toto pole je povinné.",
-  "field_too_long": "Maximálně {max} znaků."
+  "field_too_long": "Maximálně {max} znaků.",
+  "tokens_expires_max": "Nejvýš {max} dní."
 }

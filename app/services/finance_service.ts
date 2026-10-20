@@ -10,10 +10,32 @@ export interface IncomeLimitStatus {
   enabled: boolean
   limit: number
   warnPercent: number
-  /** This year's revenue from other people — the legal notion of income. */
+  /**
+   * Money received in the year: invoices other people paid, by the date they were paid
+   * (a December purchase paid in January is January's income). The levels come from it.
+   */
   amount: number
+  /**
+   * Money still to come in from other people — unpaid invoices and purchases not invoiced
+   * yet. Only for the current year; null for a past one.
+   */
+  pending: number | null
   percent: number
   level: 'ok' | 'warn' | 'exceeded'
+}
+
+/** Where the supplier's money is: what they bought, what sits in the fridge, who owes them. */
+export interface MoneyOverview {
+  /** Purchase prices of the year's deliveries (lots without one are left out). */
+  purchased: number
+  /** Pieces in stock now, at purchase price… */
+  stockAtCost: number
+  /** …and how many pieces in stock have no purchase price. */
+  stockUnitsWithoutCost: number
+  /** Purchases by other people not invoiced yet. */
+  uninvoiced: number
+  /** Issued invoices other people have not paid yet. */
+  unpaid: number
 }
 
 export interface ShrinkageByReason {
@@ -60,11 +82,34 @@ export interface FinanceSummary {
     /** Lost pieces per reason (surplus not netted in), the costliest first. */
     byReason: ShrinkageByReason[]
   }
-  netProfit: number
+  /**
+   * Gross profit minus the shrinkage of lots with a known purchase price — both sides on
+   * the same footing. Null while no sale has a purchase price: the profit is unknown then,
+   * and a loss valued at selling prices would only show a made-up deficit.
+   */
+  netProfit: number | null
   /** The markup that just covers the shrinkage rate. */
   breakEvenMarginPercent: number
   marginPercent: number
   incomeLimit: IncomeLimitStatus
+  money: MoneyOverview
+}
+
+/** One product of the per-product breakdown. */
+export interface ProductBreakdownRow {
+  productId: number
+  productName: string
+  unitsSold: number
+  revenue: number
+  unitsWithCost: number
+  revenueWithCost: number
+  costOfSales: number
+  /** Null while none of its sales has a purchase price. */
+  grossProfit: number | null
+  /** Net lost pieces; negative = an inventory found more than was lost. */
+  lostUnits: number
+  lossCost: number
+  lossRate: number
 }
 
 /** A sale to someone else — buying from your own lot is own consumption, not income. */
@@ -125,7 +170,8 @@ export default class FinanceService {
   ): Promise<FinanceSummary> {
     const { start, end } = this.yearRange(year)
 
-    const [sales, adjustments] = await Promise.all([
+    const isCurrentYear = year === this.currentYear()
+    const [sales, adjustments, received, owed, stocked] = await Promise.all([
       db
         .from('orders')
         .join('deliveries', 'deliveries.id', 'orders.delivery_id')
@@ -155,6 +201,7 @@ export default class FinanceService {
       db
         .from('stock_adjustments')
         .where('supplier_id', supplierId)
+        .whereNull('reverted_at')
         .where('created_at', '>=', start)
         .where('created_at', '<', end)
         .groupBy('kind', 'reason')
@@ -162,8 +209,14 @@ export default class FinanceService {
         .select(
           db.raw('SUM(quantity)::int AS quantity'),
           db.raw('SUM(quantity * COALESCE(unit_cost, unit_price))::numeric AS cost'),
+          db.raw(
+            'COALESCE(SUM(quantity * unit_cost) FILTER (WHERE unit_cost IS NOT NULL), 0)::numeric AS cost_known'
+          ),
           db.raw('SUM(quantity * unit_price)::int AS value')
         ),
+      this.receivedIn(supplierId, year),
+      this.owedNow(supplierId),
+      this.stockAndPurchases(supplierId, start, end),
     ])
 
     const unitsSold = Number(sales?.units ?? 0)
@@ -182,14 +235,18 @@ export default class FinanceService {
     let surplusCost = 0
     let grossLossValue = 0
     let surplusValue = 0
+    let lossCostKnown = 0
+    let surplusCostKnown = 0
     const byReason: ShrinkageByReason[] = []
     for (const row of adjustments) {
       const quantity = Number(row.quantity)
       const cost = Number(row.cost)
       const value = Number(row.value)
+      const costKnown = Number(row.cost_known)
       if (row.kind === 'loss') {
         lostUnits += quantity
         grossLossCost += cost
+        lossCostKnown += costKnown
         grossLossValue += value
         byReason.push({
           reason: row.reason as StockAdjustmentReason,
@@ -200,6 +257,7 @@ export default class FinanceService {
       } else {
         surplusUnits += quantity
         surplusCost += cost
+        surplusCostKnown += costKnown
         surplusValue += value
       }
     }
@@ -211,7 +269,12 @@ export default class FinanceService {
     // Everything that left the shelf: sold to others, eaten by the supplier, or lost.
     const leftShelf = unitsSold + ownUnits + netLost
     const lossRate = leftShelf > 0 ? netLost / leftShelf : 0
-    const netProfit = roundMoney(grossProfit - lossCost)
+    // Only shrinkage of lots with a purchase price comes off: the gross profit knows nothing
+    // about the others either.
+    const netProfit =
+      unitsWithCost > 0
+        ? roundMoney(grossProfit - Math.max(0, roundMoney(lossCostKnown - surplusCostKnown)))
+        : null
 
     return {
       year,
@@ -237,37 +300,105 @@ export default class FinanceService {
       netProfit,
       breakEvenMarginPercent: breakEvenMarginPercent(lossRate),
       marginPercent,
-      incomeLimit: this.limitStatus(revenue),
+      incomeLimit: this.limitStatus(received, isCurrentYear ? owed.uninvoiced + owed.unpaid : null),
+      money: { ...stocked, ...owed },
     }
   }
 
-  /** Where the year's sales to other people stand against the configured limit. */
-  limitStatus(revenue: number): IncomeLimitStatus {
-    const config = FinanceService.incomeLimitConfig()
-    const amount = revenue
-    const percent = config.limit > 0 ? Math.round((amount / config.limit) * 1000) / 10 : 0
+  /** Invoices other people paid in `year`, by the payment date in the fridge's timezone. */
+  async receivedIn(supplierId: number, year = this.currentYear()): Promise<number> {
+    const { start, end } = this.yearRange(year)
+    const row = await db
+      .from('invoices')
+      .where('supplier_id', supplierId)
+      .whereRaw('buyer_id <> supplier_id')
+      .where('is_paid', true)
+      .where('paid_at', '>=', start)
+      .where('paid_at', '<', end)
+      .select(db.raw('COALESCE(SUM(total_cost), 0)::int AS total'))
+      .first()
+    return Number(row?.total ?? 0)
+  }
+
+  /** What other people owe the supplier now: purchases not invoiced yet and unpaid invoices. */
+  async owedNow(supplierId: number): Promise<{ uninvoiced: number; unpaid: number }> {
+    const [uninvoiced, unpaid] = await Promise.all([
+      db
+        .from('orders')
+        .join('deliveries', 'deliveries.id', 'orders.delivery_id')
+        .where('deliveries.supplier_id', supplierId)
+        .whereNull('orders.invoice_id')
+        .whereRaw(SOLD_TO_OTHERS)
+        .select(db.raw('COALESCE(SUM(orders.unit_price), 0)::int AS total'))
+        .first(),
+      db
+        .from('invoices')
+        .where('supplier_id', supplierId)
+        .whereRaw('buyer_id <> supplier_id')
+        .where('is_paid', false)
+        .select(db.raw('COALESCE(SUM(total_cost), 0)::int AS total'))
+        .first(),
+    ])
+    return { uninvoiced: Number(uninvoiced?.total ?? 0), unpaid: Number(unpaid?.total ?? 0) }
+  }
+
+  private async stockAndPurchases(supplierId: number, start: Date, end: Date) {
+    const row = await db
+      .from('deliveries')
+      .where('supplier_id', supplierId)
+      .whereNull('voided_at')
+      .select(
+        db.raw(
+          'COALESCE(SUM(purchase_price * amount_supplied) FILTER (WHERE created_at >= ? AND created_at < ?), 0)::numeric AS purchased',
+          [start, end]
+        ),
+        db.raw('COALESCE(SUM(purchase_price * amount_left), 0)::numeric AS stock_at_cost'),
+        db.raw(
+          'COALESCE(SUM(amount_left) FILTER (WHERE purchase_price IS NULL), 0)::int AS without_cost'
+        )
+      )
+      .first()
     return {
-      enabled: config.limit > 0,
+      purchased: roundMoney(Number(row?.purchased ?? 0)),
+      stockAtCost: roundMoney(Number(row?.stock_at_cost ?? 0)),
+      stockUnitsWithoutCost: Number(row?.without_cost ?? 0),
+    }
+  }
+
+  /** Where the money received in a year stands against the configured limit. */
+  limitStatus(received: number, pending: number | null = null): IncomeLimitStatus {
+    const config = FinanceService.incomeLimitConfig()
+    const amount = received
+    const enabled = config.limit > 0
+    // The level is decided on the exact amounts; the percentage is for display only and is
+    // rounded down, so 9 995 of 10 000 reads "99,9 %", never a "100 %" that is not reached.
+    const level: IncomeLimitStatus['level'] = !enabled
+      ? 'ok'
+      : amount >= config.limit
+        ? 'exceeded'
+        : amount * 100 >= config.limit * config.warnPercent
+          ? 'warn'
+          : 'ok'
+    const percent = enabled ? Math.floor((amount * 1000) / config.limit) / 10 : 0
+    return {
+      enabled,
       limit: config.limit,
       warnPercent: config.warnPercent,
       amount: roundMoney(amount),
+      pending: pending === null ? null : roundMoney(pending),
       percent,
-      level:
-        config.limit <= 0
-          ? 'ok'
-          : percent >= 100
-            ? 'exceeded'
-            : percent >= config.warnPercent
-              ? 'warn'
-              : 'ok',
+      level,
     }
   }
 
-  /** This year's limit status — cheap enough for the stock page banner. */
-  async currentLimitStatus(supplierId: number, marginPercent: number) {
+  /** This year's limit status — two sums, cheap enough for the stock page banner. */
+  async currentLimitStatus(supplierId: number, _marginPercent?: number) {
     if (!FinanceService.incomeLimitConfig().limit) return null
-    const summary = await this.getSummary(supplierId, this.currentYear(), marginPercent)
-    return summary.incomeLimit
+    const [received, owed] = await Promise.all([
+      this.receivedIn(supplierId),
+      this.owedNow(supplierId),
+    ])
+    return this.limitStatus(received, owed.uninvoiced + owed.unpaid)
   }
 
   /** Per-product breakdown of a year, server-side paginated and sorted. */
@@ -300,7 +431,7 @@ export default class FinanceService {
              SUM(CASE WHEN kind = 'loss' THEN quantity ELSE -quantity END)::int AS lost_units,
              SUM(CASE WHEN kind = 'loss' THEN 1 ELSE -1 END * quantity * COALESCE(unit_cost, unit_price))::numeric AS loss_cost
         FROM stock_adjustments
-       WHERE supplier_id = ? AND created_at >= ? AND created_at < ?
+       WHERE supplier_id = ? AND reverted_at IS NULL AND created_at >= ? AND created_at < ?
        GROUP BY product_id`
     const bindings = [supplierId, start, end, supplierId, start, end]
 
@@ -311,6 +442,7 @@ export default class FinanceService {
              COALESCE(s.units_sold, 0) AS units_sold,
              COALESCE(s.revenue, 0) AS revenue,
              COALESCE(s.units_with_cost, 0) AS units_with_cost,
+             COALESCE(s.revenue_with_cost, 0) AS revenue_with_cost,
              COALESCE(s.cost, 0) AS cost,
              (COALESCE(s.revenue_with_cost, 0) - COALESCE(s.cost, 0))::numeric AS gross_profit,
              COALESCE(s.own_units, 0) AS own_units,
@@ -331,7 +463,7 @@ export default class FinanceService {
 
     const totalCount = Number(total.rows[0]?.total ?? 0)
     return {
-      data: rows.rows.map((row: Record<string, unknown>) => {
+      data: (rows.rows as Array<Record<string, unknown>>).map((row): ProductBreakdownRow => {
         const unitsSold = Number(row.units_sold)
         const lostUnits = Number(row.lost_units)
         const netLost = Math.max(0, lostUnits)
@@ -342,6 +474,7 @@ export default class FinanceService {
           unitsSold,
           revenue: Number(row.revenue),
           unitsWithCost: Number(row.units_with_cost),
+          revenueWithCost: Number(row.revenue_with_cost),
           costOfSales: roundMoney(Number(row.cost)),
           grossProfit:
             Number(row.units_with_cost) > 0 ? roundMoney(Number(row.gross_profit)) : null,

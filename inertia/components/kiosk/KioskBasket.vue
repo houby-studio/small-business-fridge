@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ProductImage from '~/components/ProductImage.vue'
 import { computed } from 'vue'
 import { useI18n } from '~/composables/use_i18n'
 
@@ -79,17 +80,13 @@ const countdownClass = computed(() => {
           "
         >
           <!-- Image -->
-          <img
-            v-if="item.imagePath"
-            :src="item.imagePath"
-            :alt="item.displayName"
-            class="h-20 w-20 flex-shrink-0 rounded-xl object-contain"
-          />
-          <div
-            v-else
-            class="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-xl bg-gray-700"
-          >
-            <i class="pi pi-box text-2xl text-gray-500" />
+          <div class="h-20 w-20 flex-shrink-0 rounded-xl">
+            <ProductImage
+              :src="item.imagePath"
+              :alt="item.displayName"
+              :color="'#6b7280'"
+              iconClass="text-2xl"
+            />
           </div>
 
           <!-- Name + price -->

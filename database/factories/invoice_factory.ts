@@ -1,4 +1,5 @@
 import factory from '@adonisjs/lucid/factories'
+import { DateTime } from 'luxon'
 import Invoice from '#models/invoice'
 import { UserFactory } from '#database/factories/user_factory'
 
@@ -15,6 +16,7 @@ export const InvoiceFactory = factory
   .state('paid', (invoice) => {
     invoice.isPaid = true
     invoice.isPaymentRequested = true
+    invoice.paidAt = DateTime.now()
   })
   .state('paymentRequested', (invoice) => {
     invoice.isPaymentRequested = true

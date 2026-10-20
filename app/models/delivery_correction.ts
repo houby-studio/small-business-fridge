@@ -4,7 +4,7 @@ import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 import User from '#models/user'
 import Delivery from '#models/delivery'
 
-export type DeliveryCorrectionKind = 'update' | 'void'
+export type DeliveryCorrectionKind = 'update' | 'void' | 'reprice' | 'transfer'
 
 export default class DeliveryCorrection extends BaseModel {
   @column({ isPrimary: true })

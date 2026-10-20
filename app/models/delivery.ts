@@ -41,6 +41,10 @@ export default class Delivery extends BaseModel {
   @column.dateTime()
   declare voidedAt: DateTime | null
 
+  /** The lot this one was split off when a leaving supplier handed their stock over. */
+  @column()
+  declare transferredFromId: number | null
+
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
 
@@ -60,4 +64,11 @@ export default class Delivery extends BaseModel {
 
   @hasMany(() => DeliveryCorrection)
   declare corrections: HasMany<typeof DeliveryCorrection>
+
+  @belongsTo(() => Delivery, { foreignKey: 'transferredFromId' })
+  declare transferredFrom: BelongsTo<typeof Delivery>
+
+  /** The lots split off this one by a handover (one per handover; usually none). */
+  @hasMany(() => Delivery, { foreignKey: 'transferredFromId' })
+  declare transferredTo: HasMany<typeof Delivery>
 }
