@@ -246,6 +246,64 @@ test.describe('Barcode lookup', () => {
     await expect(page.locator('#product-name')).toHaveValue('')
   })
 
+  test('pictures pulse until they arrive and a broken one is dropped', async ({ page }) => {
+    await loginAs(page, 'supplier')
+    await page.goto('/supplier/products/new')
+    await page.route('**/supplier/products/image/candidates?**', (route) =>
+      route.fulfill({
+        json: {
+          productName: 'Mentos fruits 38g',
+          candidates: [
+            { url: 'https://off.e2e.test/slow.jpg', thumbUrl: 'https://off.e2e.test/slow.400.jpg' },
+            { url: 'https://off.e2e.test/gone.jpg', thumbUrl: 'https://off.e2e.test/gone.400.jpg' },
+          ],
+          facts: null,
+        },
+      })
+    )
+    // The slow picture is held back until the test lets it through.
+    let release!: () => void
+    const released = new Promise<void>((resolve) => (release = resolve))
+    const png = await whiteBackdropPng()
+    await page.route('https://off.e2e.test/slow.400.jpg', async (route) => {
+      await released
+      await route.fulfill({ body: png, contentType: 'image/png' })
+    })
+    await page.route('https://off.e2e.test/gone.400.jpg', (route) => route.abort())
+
+    await page.locator('#product-barcode').fill('87108026')
+    await page.keyboard.press('Enter')
+
+    const pictures = page.getByTestId('barcode-lookup-picture')
+    await expect(pictures).toHaveCount(1)
+    await expect(page.getByTestId('barcode-lookup-picture-loading')).toBeVisible()
+    await expect(pictures.first()).toHaveAttribute('aria-busy', 'true')
+
+    release()
+    await expect(page.getByTestId('barcode-lookup-picture-loading')).toHaveCount(0)
+    await expect(pictures.first()).toHaveAttribute('aria-busy', 'false')
+  })
+
+  test('says so when no picture could be loaded', async ({ page }) => {
+    await loginAs(page, 'supplier')
+    await page.goto('/supplier/products/new')
+    await page.route('**/supplier/products/image/candidates?**', (route) =>
+      route.fulfill({
+        json: {
+          productName: null,
+          candidates: [
+            { url: 'https://off.e2e.test/gone.jpg', thumbUrl: 'https://off.e2e.test/gone.400.jpg' },
+          ],
+          facts: null,
+        },
+      })
+    )
+    await page.route('https://off.e2e.test/gone.400.jpg', (route) => route.abort())
+    await page.locator('#product-barcode').fill('87108026')
+    await page.keyboard.press('Enter')
+    await expect(page.getByText('Fotky z Open Food Facts se nepodařilo načíst.')).toBeVisible()
+  })
+
   test('the suggest button only exists when AI is configured', async ({ page }) => {
     await loginAs(page, 'supplier')
     await page.goto('/supplier/products/new')

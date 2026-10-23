@@ -134,6 +134,7 @@
   "barcode_lookup_pictures": "Fotky z Open Food Facts",
   "barcode_lookup_use_picture": "Použít tuto fotku",
   "barcode_lookup_none": "Pro tento kód jsme žádnou fotku nenašli.",
+  "barcode_lookup_pictures_failed": "Fotky z Open Food Facts se nepodařilo načíst.",
   "products_category_placeholder": "Vyberte kategorii",
   "products_allergens_none": "Žádné",
   "products_waiting_for_image": "Čekám na obrázek…",

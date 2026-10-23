@@ -134,6 +134,7 @@
   "barcode_lookup_pictures": "Pictures from Open Food Facts",
   "barcode_lookup_use_picture": "Use this picture",
   "barcode_lookup_none": "No pictures found for this barcode.",
+  "barcode_lookup_pictures_failed": "The Open Food Facts pictures could not be loaded.",
   "products_category_placeholder": "Choose a category",
   "products_allergens_none": "None",
   "products_waiting_for_image": "Waiting for the image…",

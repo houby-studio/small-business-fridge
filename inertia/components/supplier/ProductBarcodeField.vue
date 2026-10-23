@@ -45,6 +45,14 @@ const hint = ref('')
 const candidates = ref<Candidate[]>([])
 const foundName = ref<string | null>(null)
 const picked = ref<string | null>(null)
+/**
+ * Thumbnails come straight from the OFF image server, which can take a while — or never
+ * answer. Each tile pulses until its picture arrives; one that fails is dropped.
+ */
+const thumbState = ref<Record<string, 'loaded' | 'failed'>>({})
+const shownCandidates = computed(() =>
+  candidates.value.filter((c) => thumbState.value[c.url] !== 'failed')
+)
 
 const searchable = computed(() => /^\d{8,14}$/.test(model.value.trim()))
 const known = ref(false)
@@ -72,6 +80,7 @@ async function search() {
         })
       : { productName: null, candidates: [], facts: null }
     candidates.value = body.candidates
+    thumbState.value = {}
     foundName.value = body.productName
     known.value = body.facts !== null
     picked.value = null
@@ -168,20 +177,36 @@ function onEnter() {
           @click="close"
         />
       </div>
-      <div v-if="candidates.length" class="grid grid-cols-4 gap-2 sm:grid-cols-6">
+      <div v-if="shownCandidates.length" class="grid grid-cols-4 gap-2 sm:grid-cols-6">
         <Button
-          v-for="candidate in candidates"
+          v-for="candidate in shownCandidates"
           :key="candidate.url"
           severity="secondary"
           :outlined="picked !== candidate.url"
-          class="h-20 w-full overflow-hidden !p-1"
+          class="relative h-20 w-full overflow-hidden !p-1"
           :aria-label="t('supplier.barcode_lookup_use_picture')"
           :aria-pressed="picked === candidate.url"
+          :aria-busy="thumbState[candidate.url] !== 'loaded'"
+          data-testid="barcode-lookup-picture"
           @click="pick(candidate)"
         >
-          <img :src="candidate.thumbUrl" alt="" class="h-full w-full rounded object-contain" />
+          <span
+            v-if="thumbState[candidate.url] !== 'loaded'"
+            class="absolute inset-1 animate-pulse rounded bg-gray-200 dark:bg-zinc-700"
+            data-testid="barcode-lookup-picture-loading"
+          />
+          <img
+            :src="candidate.thumbUrl"
+            alt=""
+            class="h-full w-full rounded object-contain"
+            @load="thumbState[candidate.url] = 'loaded'"
+            @error="thumbState[candidate.url] = 'failed'"
+          />
         </Button>
       </div>
+      <Message v-else-if="candidates.length" severity="secondary" size="small">{{
+        t('supplier.barcode_lookup_pictures_failed')
+      }}</Message>
       <Message v-else-if="known" severity="secondary" size="small">{{
         t('supplier.barcode_lookup_none')
       }}</Message>
